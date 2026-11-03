@@ -884,7 +884,6 @@ bool EditorKit::OnKeyDown(int keyCode, const KeyModifiers& specKeysState)
 // Types one character: inserts it, replaces the selection with it (or the character under the cursor in overwrite
 // mode); Return inserts the document's new line character in multiline fields. A restricted character is retried
 // in the other case.
-// MS2-FUNCTIONAL register allocation and frame layout differ (the exe uses fewer callee-saved registers)
 // @0x142618120
 bool EditorKit::OnChar(UInt32 wcharCode)
 {
@@ -899,7 +898,7 @@ bool EditorKit::OnChar(UInt32 wcharCode)
             wcharCode = UInt32(up);
         else
             wcharCode = UInt32(low);
-        if (!CheckRestrict(wcharCode))
+        if (pRestrict->RestrictRanges.GetIteratorAt(int(wcharCode)).IsFinished())
             return false;
     }
 
@@ -909,54 +908,55 @@ bool EditorKit::OnChar(UInt32 wcharCode)
     UPInt    beginSel  = pDocView->GetBeginSelection(), endSel = pDocView->GetEndSelection();
     bool     needChangeNotify = false;
 
-    if (IsReadOnly())
-        return rv;
-    wchar_t wc = wchar_t(wcharCode);
-    if (wc != 13 && wc < 32)
-        return rv;
+    if (!IsReadOnly())
+    {
+        wchar_t wc = wchar_t(wcharCode);
+        if (wc == 13 || wc >= 32)
+        {
+            if (wc >= 32)
+            {
+                if (beginSel == endSel && IsOverwriteMode())
+                    ++endSel;
+                if (beginSel == endSel)
+                {
+                    DocView::InsertCharCommand cmd(CursorPos, wc);
+                    newPos += pDocView->EditCommand(DocView::Cmd_InsertChar, &cmd);
+                }
+                else
+                {
+                    DocView::ReplaceTextByCharCommand cmd(beginSel, endSel, wc);
+                    UPInt n = pDocView->EditCommand(DocView::Cmd_ReplaceTextByChar, &cmd);
+                    newPos  = Alg::PMin(beginSel, endSel) + n;
+                }
+                needChangeNotify = true;
+            }
+            else if (pDocView->IsMultiline())
+            {
+                ClearShiftPressed();
+                if (beginSel == endSel)
+                {
+                    DocView::InsertCharCommand cmd(CursorPos, pDocView->NewLineChar());
+                    pDocView->EditCommand(DocView::Cmd_InsertChar, &cmd);
+                    ++newPos;
+                }
+                else
+                {
+                    DocView::ReplaceTextByCharCommand cmd(beginSel, endSel, pDocView->NewLineChar());
+                    pDocView->EditCommand(DocView::Cmd_ReplaceTextByChar, &cmd);
+                    newPos = Alg::PMin(beginSel, endSel) + 1;
+                }
+                needChangeNotify = true;
+            }
 
-    if (wc >= 32)
-    {
-        if (beginSel == endSel && IsOverwriteMode())
-            ++endSel;
-        if (beginSel == endSel)
-        {
-            DocView::InsertCharCommand cmd(CursorPos, wc);
-            newPos += pDocView->EditCommand(DocView::Cmd_InsertChar, &cmd);
+            if (CursorPos != newPos || beginSel != newPos || endSel != newPos)
+            {
+                SetCursorPos(newPos, false);
+                rv = true;
+            }
+            if (needChangeNotify && pdocument->GetDocumentListener())
+                pdocument->GetDocumentListener()->Editor_OnChanged(*this);
         }
-        else
-        {
-            DocView::ReplaceTextByCharCommand cmd(beginSel, endSel, wc);
-            UPInt n = pDocView->EditCommand(DocView::Cmd_ReplaceTextByChar, &cmd);
-            newPos  = Alg::PMin(beginSel, endSel) + n;
-        }
-        needChangeNotify = true;
     }
-    else if (pDocView->IsMultiline())
-    {
-        ClearShiftPressed();
-        if (beginSel == endSel)
-        {
-            DocView::InsertCharCommand cmd(CursorPos, pDocView->NewLineChar());
-            pDocView->EditCommand(DocView::Cmd_InsertChar, &cmd);
-            ++newPos;
-        }
-        else
-        {
-            DocView::ReplaceTextByCharCommand cmd(beginSel, endSel, pDocView->NewLineChar());
-            pDocView->EditCommand(DocView::Cmd_ReplaceTextByChar, &cmd);
-            newPos = Alg::PMin(beginSel, endSel) + 1;
-        }
-        needChangeNotify = true;
-    }
-
-    if (CursorPos != newPos || beginSel != newPos || endSel != newPos)
-    {
-        SetCursorPos(newPos, false);
-        rv = true;
-    }
-    if (needChangeNotify && pdocument->GetDocumentListener())
-        pdocument->GetDocumentListener()->Editor_OnChanged(*this);
     return rv;
 }
 
