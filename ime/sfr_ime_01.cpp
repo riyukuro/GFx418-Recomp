@@ -3644,42 +3644,48 @@ static __forceinline void Ime01StatusWindowCommand(void* raw, const char* comman
     ImmReleaseContext(*reinterpret_cast<HWND*>(*reinterpret_cast<unsigned char**>(manager + 0x78) + 0x68), context);
 }
 
-// MS2-FUNCTIONAL: selects a registered IME through its COM provider and logs the executable's failure cases.
+struct Ime01ImeRecord { const char* name; void* reserved[2]; HKL layout; };
+
+static __forceinline const Ime01ImeRecord& Ime01ImeAt(unsigned char* manager, unsigned long long index)
+{
+    return (*reinterpret_cast<Ime01ImeRecord**>(manager + 0x90))[index];
+}
+
+// Selects a registered IME through its COM provider and logs the executable's failure cases. The name and log pointers are not NULL-checked, as in the exe.
 // @0x1423d5910
 void FUN_1423d5910(void* raw, const char* requested)
 {
     auto* manager = static_cast<unsigned char*>(raw);
-    void* state = *reinterpret_cast<void**>(manager + 0x78);
-    if (!state) return;
-    auto* names = *reinterpret_cast<unsigned char**>(manager + 0x90);
+    if (!*reinterpret_cast<void**>(manager + 0x78)) return;
+    int found = -1;
     const unsigned count = *reinterpret_cast<unsigned*>(manager + 0x80);
     for (unsigned i = 0; i < count; ++i) {
-        auto* record = names + i * 0x20;
-        const char* name = *reinterpret_cast<const char**>(record);
-        const HKL layout = *reinterpret_cast<HKL*>(record + 0x18);
-        if (!name || std::strcmp(name, requested) != 0 || !layout) continue;
-
-        void* provider = nullptr;
-        HRESULT hr = CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4898), nullptr,
-            CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(&DAT_1431c5068), &provider);
-        if (hr == CO_E_NOTINITIALIZED) {
-            auto* log = *reinterpret_cast<void**>(static_cast<unsigned char*>(state) + 0x60);
-            if (log) FUN_1423cd060(log, Scaleform::String(
-                "\n Failure in COM, perhaps you called CoCreateInstance in another thread... ").ToCStr());
-            return;
+        const Ime01ImeRecord& record = Ime01ImeAt(manager, i);
+        if (std::strcmp(record.name, requested) == 0 && record.layout) {
+            found = static_cast<int>(i);
+            break;
         }
-        if (FAILED(hr) || !provider) return;
-        reinterpret_cast<void(*)(void*, unsigned short)>((*reinterpret_cast<void***>(provider))[14])(
-            provider, *reinterpret_cast<unsigned short*>(record + 0x18));
-        reinterpret_cast<ULONG(*)(void*)>((*reinterpret_cast<void***>(provider))[2])(provider);
+    }
+    if (found == -1) {
+        // The exe logs through FUN_1423cd060 (log vtable slot 1), the second line as one String.
+        FUN_1423cd060(*reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(manager + 0x78) + 0x60),
+            "\nCould not find requested IME in supported IME list!");
+        FUN_1423cd060(*reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(manager + 0x78) + 0x60),
+            (Scaleform::String("\n--> You requested: ") + requested).ToCStr());
         return;
     }
-    auto* log = *reinterpret_cast<void**>(static_cast<unsigned char*>(state) + 0x60);
-    if (log) {
-        // The exe logs through FUN_1423cd060 (log vtable slot 1), the second line as one String.
-        FUN_1423cd060(log, "\nCould not find requested IME in supported IME list!");
-        FUN_1423cd060(log, (Scaleform::String("\n--> You requested: ") + requested).ToCStr());
+    void* provider;
+    HRESULT hr = CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4898), nullptr,
+        CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(&DAT_1431c5068), &provider);
+    if (hr == CO_E_NOTINITIALIZED) {
+        FUN_1423cd060(*reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(manager + 0x78) + 0x60),
+            Scaleform::String("\n Failure in COM, perhaps you called CoCreateInstance in another thread... ").ToCStr());
+        return;
     }
+    if (FAILED(hr) || !provider) return;
+    reinterpret_cast<void(*)(void*, unsigned short)>((*reinterpret_cast<void***>(provider))[14])(
+        provider, LOWORD(Ime01ImeAt(manager, found).layout));
+    reinterpret_cast<ULONG(*)(void*)>((*reinterpret_cast<void***>(provider))[2])(provider);
 }
 
 // The exe's own copy of FUN_1423d7e80 (StatusWindow mode updates through IMM32).
