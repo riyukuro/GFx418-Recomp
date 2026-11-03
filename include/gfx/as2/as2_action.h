@@ -144,7 +144,7 @@ public:
         }
     }
     // Pops three; page by page only when that crosses into the previous page (exe 0x14296efd0 for Value).
-    void Pop3()
+    SF_NOINLINE void Pop3()
     {
         if (pCurrent - 3 < pPageStart)
             Pop(3);

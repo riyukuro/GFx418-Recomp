@@ -13,6 +13,7 @@
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
+#include "../include/gfx/as2/as2_broadcastlocal.h"
 #include "../include/gfx/as2/as2_keyobject.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_assupport.h"
@@ -215,11 +216,10 @@ void KeyCtorFunction::NotifyListeners(InteractiveObject*, const EventId& evt)
     int nargs = 0;
     if (penv->CheckExtensions())
     {
-        penv->Push(Value(int(evt.KeyboardIndex)));
+        penv->Push(int(evt.KeyboardIndex));
         nargs = 1;
     }
-    AsBroadcaster::BroadcastMessage(penv, static_cast<ObjectInterface*>(this), handlerName, nargs,
-                                    penv->GetTopIndex());
+    BroadcastMessageLocal(penv, static_cast<ObjectInterface*>(this), handlerName, nargs, penv->GetTopIndex());
     penv->Drop(nargs);
 }
 
@@ -309,7 +309,7 @@ void MovieRoot::NotifyMouseEvent(const GFx::InputEventsQueueEntry* qe, const GFx
 
 // Records the byte counts of ptarget's movie (by its absolute path) and broadcasts onLoadProgress(target, loaded,
 // total) to the loader's listeners.
-// MS2-FUNCTIONAL: the exe inlines AsBroadcaster::BroadcastMessage (a BroadcastMessageWithCallback call).
+// MS2-FUNCTIONAL: the ProgressInfo lookup and add are laid out differently (ours is 804 bytes, the exe's 600).
 // @0x14296a0a0
 void MovieClipLoader::NotifyOnLoadProgress(Environment* penv, InteractiveObject* ptarget, int loadedBytes,
                                            int totalBytes)
@@ -327,12 +327,11 @@ void MovieClipLoader::NotifyOnLoadProgress(Environment* penv, InteractiveObject*
         else
             ProgressInfo.Add(path, ProgressDesc(loadedBytes, totalBytes));
     }
-    penv->Push(Value(totalBytes));
-    penv->Push(Value(loadedBytes));
-    penv->Push(Value(ptarget));
-    ASString eventName = penv->CreateConstString("onLoadProgress");
-    AsBroadcaster::BroadcastMessage(penv, this, eventName, 3, penv->GetTopIndex());
-    penv->Drop(3);
+    penv->Push(totalBytes);
+    penv->Push(loadedBytes);
+    penv->Push(ptarget);
+    BroadcastMessageLocal(penv, this, penv->CreateConstString("onLoadProgress"), 3, penv->GetTopIndex());
+    penv->Stack.Pop3();
 }
 
 }}} // namespace Scaleform::GFx::AS2
@@ -340,3 +339,5 @@ void MovieClipLoader::NotifyOnLoadProgress(Environment* penv, InteractiveObject*
 // MS2-PIN: ??_7GlobalContext@AS2@GFx@Scaleform@@6B@ 0x143215af8
 // MS2-PIN: ??_7?$RefCountBaseNTS@VGlobalContext@AS2@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x143183600
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x143183600
+// MS2-PIN: ??_7InvokeCallback@AsBroadcaster@AS2@GFx@Scaleform@@6B@ 0x14321bdb8
+// MS2-PIN: ??_7SetFocusInvokeCallback@AS2@GFx@Scaleform@@6B@ 0x143221850

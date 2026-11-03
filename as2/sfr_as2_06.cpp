@@ -205,6 +205,7 @@
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_objectproto.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
+#include "../include/gfx/as2/as2_broadcastlocal.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/as2/as2_rectangleobject.h"
 #include "../include/gfx/as2/as2_date.h"
@@ -378,76 +379,62 @@ bool AvmTextField::IsTabable() const
     return !reinterpret_cast<TextField*>(pDispObj)->IsReadOnly();
 }
 
-// MS2-FUNCTIONAL: broadcasts the one pushed argument through the recovered broadcaster helper; the exe uses an equivalent local callback.
 // @0x1429696d0
 void LoadVarsObject::NotifyOnData(Environment* penv, ASString& data)
 {
-    penv->Push(Value(data));
-    ASString eventName = penv->CreateConstString("onData");
-    AsBroadcaster::BroadcastMessage(penv, this, eventName, 1, penv->GetTopIndex());
+    penv->Push(data);
+    BroadcastMessageLocal(penv, this, penv->CreateConstString("onData"), 1, penv->GetTopIndex());
     penv->Drop1();
 }
 
-// MS2-FUNCTIONAL: uses the recovered broadcaster helper for the exe's local one-argument callback.
 // @0x142969850
 void LoadVarsObject::NotifyOnHTTPStatus(Environment* penv, double status)
 {
-    penv->Push(Value(static_cast<Number>(status)));
-    ASString eventName = penv->CreateConstString("onHTTPStatus");
-    AsBroadcaster::BroadcastMessage(penv, this, eventName, 1, penv->GetTopIndex());
+    penv->Push(static_cast<Number>(status));
+    BroadcastMessageLocal(penv, this, penv->CreateConstString("onHTTPStatus"), 1, penv->GetTopIndex());
     penv->Drop1();
 }
 
-// MS2-FUNCTIONAL: uses the recovered broadcaster helper for the exe's local one-argument callback.
 // @0x142969980
 void LoadVarsObject::NotifyOnLoad(Environment* penv, bool success)
 {
-    penv->Push(Value(success));
-    ASString eventName = penv->GetBuiltin(ASBuiltin_onLoad);
-    AsBroadcaster::BroadcastMessage(penv, this, eventName, 1, penv->GetTopIndex());
+    penv->Push(success);
+    BroadcastMessageLocal(penv, this, penv->CreateConstString("onLoad"), 1, penv->GetTopIndex());
     penv->Drop1();
 }
 
-// MS2-FUNCTIONAL: broadcasts the recovered argument list through AsBroadcaster's equivalent local callback.
 // @0x142969bd0
 void MovieClipLoader::NotifyOnLoadComplete(Environment* penv, InteractiveObject* ptarget, int status)
 {
-    penv->Push(Value(status));
-    penv->Push(Value(ptarget));
-    ASString eventName = penv->CreateConstString("onLoadComplete");
-    AsBroadcaster::BroadcastMessage(penv, this, eventName, 2, penv->GetTopIndex());
-    penv->Drop(2);
+    penv->Push(status);
+    penv->Push(ptarget);
+    BroadcastMessageLocal(penv, this, penv->CreateConstString("onLoadComplete"), 2, penv->GetTopIndex());
+    penv->Drop2();
 }
 
-// MS2-FUNCTIONAL: broadcasts the recovered argument list through AsBroadcaster's equivalent local callback.
 // @0x142969d90
 void MovieClipLoader::NotifyOnLoadError(Environment* penv, InteractiveObject* ptarget, const char* errorCode, int status)
 {
-    penv->Push(Value(status));
-    penv->Push(Value(penv->CreateConstString(errorCode)));
-    penv->Push(Value(ptarget));
-    ASString eventName = penv->CreateConstString("onLoadError");
-    AsBroadcaster::BroadcastMessage(penv, this, eventName, 3, penv->GetTopIndex());
-    penv->Drop(3);
+    penv->Push(status);
+    penv->Push(penv->CreateConstString(errorCode));
+    penv->Push(ptarget);
+    BroadcastMessageLocal(penv, this, penv->CreateConstString("onLoadError"), 3, penv->GetTopIndex());
+    penv->Stack.Pop3();
 }
 
-// MS2-FUNCTIONAL: broadcasts the recovered argument through AsBroadcaster's equivalent local callback.
 // @0x142969f50
 void MovieClipLoader::NotifyOnLoadInit(Environment* penv, InteractiveObject* ptarget)
 {
-    penv->Push(Value(ptarget));
-    ASString eventName = penv->CreateConstString("onLoadInit");
-    AsBroadcaster::BroadcastMessage(penv, this, eventName, 1, penv->GetTopIndex());
+    penv->Push(ptarget);
+    BroadcastMessageLocal(penv, this, penv->CreateConstString("onLoadInit"), 1, penv->GetTopIndex());
     penv->Drop1();
 }
 
-// MS2-FUNCTIONAL: broadcasts the recovered argument through AsBroadcaster's equivalent local callback.
 // @0x14296a300
 void MovieClipLoader::NotifyOnLoadStart(Environment* penv, InteractiveObject* ptarget)
 {
-    penv->Push(Value(ptarget));
-    ASString eventName = penv->CreateConstString("onLoadStart");
-    AsBroadcaster::BroadcastMessage(penv, this, eventName, 1, penv->GetTopIndex());
+    penv->Push(ptarget);
+    BroadcastMessageLocal(penv, this, penv->CreateConstString("onLoadStart"), 1, penv->GetTopIndex());
     penv->Drop1();
 }
 
@@ -3129,6 +3116,7 @@ void ClassHash_RemoveCaseCheck(ASStringHash<FunctionRef>* phash, const ASString&
 // MS2-PIN: ??_7ButtonCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143217f28
 // MS2-PIN: ??_7ButtonCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143217fb0
 // MS2-PIN: ??_7InvokeCallback@AsBroadcaster@AS2@GFx@Scaleform@@6B@ 0x14321bdb8
+// MS2-PIN: ??_7SetFocusInvokeCallback@AS2@GFx@Scaleform@@6B@ 0x143221850
 // MS2-PIN: ??_7LocalInvokeCallback@MouseCtorFunction@AS2@GFx@Scaleform@@6B@ 0x14321ccf8
 
 // data_rdata_sf_b names these vftable slots by their address
