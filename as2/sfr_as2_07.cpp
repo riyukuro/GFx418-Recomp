@@ -1723,7 +1723,11 @@ template <> template <> void MS2_AS2_STRING_SET(char, HashsetNodeEntry)::add<Has
     void* pheapAddr, const HashNode<GFx::ASString, char, GFx::ASStringHashFunctor>& key, UPInt h);
 // @0x1429956b0
 template void MS2_AS2_STRING_SET(char, HashsetNodeEntry)::setRawCapacity(void*, UPInt);
-// MS2-FUNCTIONAL cl inlines the Clear / Add the exe calls out of line (paired by the pin below)
+// The exe calls this set's add out of line (0x142914ff0).
+template <> template <> void MS2_AS2_STRING_SET(GFx::AS2::MovieRoot::InvokeAliasInfo, HashsetNodeEntry)::add<
+    HashNode<GFx::ASString, GFx::AS2::MovieRoot::InvokeAliasInfo, GFx::ASStringHashFunctor> >(
+    void* pheapAddr, const HashNode<GFx::ASString, GFx::AS2::MovieRoot::InvokeAliasInfo, GFx::ASStringHashFunctor>& key,
+    UPInt h);
 // @0x1429957f0
 template void MS2_AS2_STRING_SET(GFx::AS2::MovieRoot::InvokeAliasInfo, HashsetNodeEntry)::setRawCapacity(void*, UPInt);
 // MS2-FUNCTIONAL cl inlines the Clear / Add the exe calls out of line (paired by the pin below)
@@ -1749,7 +1753,8 @@ template <> void decltype(HashLH<GFx::EventId, ArrayLH<GFx::AS2::Value, GFx::AS2
 // @0x1429961b0
 template void decltype(HashLH<GFx::EventId, ArrayLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>, GFx::EventIdHashFunctor,
                               GFx::AS2::StatMV_ActionScript_Mem>::mHash)::BaseType::setRawCapacity(void*, UPInt);
-// MS2-FUNCTIONAL cl inlines the Clear / Add the exe calls out of line (paired by the pin below)
+// The exe calls this set's CheckExpand out of line (0x142933b80).
+template <> void decltype(StringHashLH<GFx::AS2::MovieClipLoader::ProgressDesc>::mHash)::BaseType::CheckExpand(void* pheapAddr);
 // @0x1429962f0
 template void decltype(StringHashLH<GFx::AS2::MovieClipLoader::ProgressDesc>::mHash)::BaseType::setRawCapacity(void*,
                                                                                                              UPInt);
