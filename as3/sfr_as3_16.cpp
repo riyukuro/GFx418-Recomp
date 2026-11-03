@@ -2010,8 +2010,8 @@ Scaleform::GFx::AS3::AvmLoader::~AvmLoader()
     AvmObjOffset = 0;
 }
 
-// Invokes an object-like value with no arguments and an undefined receiver.
-// MS2-FUNCTIONAL 0x1424e1a20: preserves the kind range, undefined result initialization, owning VM lookup, and zero-argument call.
+// Invokes an object-like value with no arguments and an undefined receiver. The VM and the undefined receiver are
+// named locals: that gives the exe's argument order (r9 before r8).
 // @0x1424e1a20
 Scaleform::GFx::AS3::Value* FUN_1424e1a20(const Scaleform::GFx::AS3::Value* func,
                                          Scaleform::GFx::AS3::Value* result)
@@ -2021,7 +2021,9 @@ Scaleform::GFx::AS3::Value* FUN_1424e1a20(const Scaleform::GFx::AS3::Value* func
     if (Value::IsObject(func->GetKind()))
     {
         Object& object = *const_cast<Value*>(func);
-        object.GetTraits().GetVM().ExecuteInternalUnsafe(*func, Value::GetUndefined(), *result, 0, nullptr, false);
+        VM& vm = object.GetTraits().GetVM();
+        const Value& undef = Value::GetUndefined();
+        vm.ExecuteInternalUnsafe(*func, undef, *result, 0, nullptr, false);
     }
     return result;
 }
