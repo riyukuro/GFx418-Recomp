@@ -2477,8 +2477,9 @@ typedef Scaleform::HashSetBase<MS2_ScriptPtr, Scaleform::FixedSizeHash<MS2_Scrip
                                Scaleform::AllocatorLH<MS2_ScriptPtr, 2>,
                                Scaleform::HashsetCachedEntry<MS2_ScriptPtr,
                                    Scaleform::FixedSizeHash<MS2_ScriptPtr> > > MS2_ScriptSet;
+// The new table's dtor is the out-of-line one (sfr_as3_16's copy, 0x1424dd250).
+template <> MS2_ScriptSet::~HashSetBase();
 // @0x142542820
-// MS2-FUNCTIONAL ?setRawCapacity@?$HashSetBase@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@V54@U?$AllocatorLH@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@V?$HashsetCachedEntry@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@@4@@Scaleform@@AEAAXPEAX_K@Z: Clear is out of line now; only the registers of the zero and the hash constants differ
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@V54@U?$AllocatorLH@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@V?$HashsetCachedEntry@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@@4@@Scaleform@@AEAAXPEAX_K@Z 0x142542820
 template void MS2_ScriptSet::setRawCapacity(void*, Scaleform::UPInt);
 
