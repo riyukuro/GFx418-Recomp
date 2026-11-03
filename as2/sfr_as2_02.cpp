@@ -1521,7 +1521,6 @@ void AvmSprite::SpriteDuplicateMovieClip(const FnCall& fn)
 }
 
 // createEmptyMovieClip(name, depth): a fresh empty clip on this one; it is returned.
-// MS2-FUNCTIONAL the exe calls FnCall::Arg(0) out of line; IsInteractiveObject tested as al&1
 // @0x142905e00
 void AvmSprite::SpriteCreateEmptyMovieClip(const FnCall& fn)
 {
@@ -1533,11 +1532,12 @@ void AvmSprite::SpriteCreateEmptyMovieClip(const FnCall& fn)
                     1, Render::Cxform::Identity, 1, Render::Matrix2F::Identity);
     if (unsigned(pos.Depth) > 0x7efffffdu)
         return;
-    Ptr<DisplayObjectBase> newch = psprite->AddDisplayObject(pos, fn.Arg(0).ToString(fn.Env), 0, 0, ~0u, 1, 0, 0);
+    Value* pname = ArgCopy(&fn, 0);
+    Ptr<DisplayObjectBase> newch = psprite->AddDisplayObject(pos, pname->ToString(fn.Env), 0, 0, ~0u, 1, 0, 0);
     if (newch)
     {
         newch->SetAcceptAnimMoves(false);
-        fn.Result->SetAsCharacter(newch->IsInteractiveObject() ? static_cast<InteractiveObject*>(newch.GetPtr()) : 0);
+        fn.Result->SetAsCharacter(Sfr02CharToInteractiveObject(newch));
     }
 }
 
@@ -2225,7 +2225,6 @@ void TextSnapshotProto::HitTestTextNearPos(const FnCall& fn)
 }
 
 // createTextField(name, depth, x, y, width, height): a new empty text field.
-// MS2-FUNCTIONAL the exe calls FnCall::Arg out of line (as createEmptyMovieClip)
 // @0x142906040
 void AvmSprite::SpriteCreateTextField(const FnCall& fn)
 {
@@ -2237,16 +2236,17 @@ void AvmSprite::SpriteCreateTextField(const FnCall& fn)
                     1, Render::Cxform::Identity, 1, Render::Matrix2F::Identity);
     if (unsigned(pos.Depth) > 0x7efffffdu)
         return;
-    Ptr<DisplayObjectBase> newch = psprite->AddDisplayObject(pos, fn.Arg(0).ToString(fn.Env), 0, 0, ~0u, 1, 0, 0);
+    Value* pname = ArgCopy(&fn, 0);
+    Ptr<DisplayObjectBase> newch = psprite->AddDisplayObject(pos, pname->ToString(fn.Env), 0, 0, ~0u, 1, 0, 0);
     if (newch)
     {
         newch->SetAcceptAnimMoves(false);
-        InteractiveObject* ptextField = newch->IsInteractiveObject() ? static_cast<InteractiveObject*>(newch.GetPtr()) : 0;
+        InteractiveObject* ptextField = Sfr02CharToInteractiveObject(newch);
         AvmCharacter* pavm = ptextField ? AS2::ToAvmCharacter(ptextField) : 0;
-        pavm->SetStandardMember(AvmCharacter::M_x, fn.Arg(2), false);
-        pavm->SetStandardMember(AvmCharacter::M_y, fn.Arg(3), false);
-        pavm->SetStandardMember(AvmCharacter::M_width, fn.Arg(4), false);
-        pavm->SetStandardMember(AvmCharacter::M_height, fn.Arg(5), false);
+        pavm->SetStandardMember(AvmCharacter::M_x, *ArgCopy(&fn, 2), false);
+        pavm->SetStandardMember(AvmCharacter::M_y, *ArgCopy(&fn, 3), false);
+        pavm->SetStandardMember(AvmCharacter::M_width, *ArgCopy(&fn, 4), false);
+        pavm->SetStandardMember(AvmCharacter::M_height, *ArgCopy(&fn, 5), false);
         fn.Result->SetAsCharacter(ptextField);
     }
 }
