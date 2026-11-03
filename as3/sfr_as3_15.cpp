@@ -3883,26 +3883,20 @@ UPInt* FUN_1424dbd10(UPInt* self, UPInt vm)
     return self;
 }
 
-// ArrayBase::Append over the counted-pointer array: copies take a reference on each node.
+// ArrayBase::Append over the string array, as in the SDK: the copies go through the allocator's ConstructArray, so
+// each one takes a reference on its node.
 static __forceinline void Sfr15AppendNodes(Sfr34StringArray* parr, const UPInt* other, UPInt count)
 {
     if (count)
     {
         UPInt size = parr->Size;
         parr->ResizeNoConstruct(parr, size + count);
-        UPInt* to = reinterpret_cast<UPInt*>(parr->Data) + size;
-        for (UPInt i = 0; i < count; ++i)
-        {
-            UPInt node = *other++;
-            *to++ = node;
-            ++*reinterpret_cast<int*>(node + 0x18);
-        }
+        ConstructorMov<GFx::ASString>::ConstructArray(parr->Data + size, count, reinterpret_cast<const GFx::ASString*>(other));
     }
 }
 
-// Copy of a state holding a Value array, a counted-pointer array and one counted pointer.
-// MS2-FUNCTIONAL: the arrays are built in place and appended to as in ArrayBase::Append; the only difference
-// left is the node copy loop, where cl swaps rax/rcx between the destination and the loaded node
+// Copy of a state holding a Value array, a string array and one counted pointer. The arrays are built in place
+// and appended to as in ArrayBase::Append.
 // @0x1424dbd70
 UPInt* FUN_1424dbd70(UPInt* self, UPInt vm, const UPInt* src)
 {
