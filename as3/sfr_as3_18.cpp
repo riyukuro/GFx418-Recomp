@@ -4695,7 +4695,7 @@ static inline void Sfr34_OutputTraitsName(FlashUI* ui, const Traits& tr)
 }
 
 // One value: its kind's text form, references with their addresses.
-// MS2-FUNCTIONAL the switch is laid out by the compiler; the number case inlines its formatter
+// MS2-FUNCTIONAL the exe merges the Output call tails of the cases (rbp frame), scheduling
 // @0x14251b350
 void FUN_14251b350(const VM* vm, FlashUI* ui, const Value* v)
 {
@@ -4716,29 +4716,162 @@ void FUN_14251b350(const VM* vm, FlashUI* ui, const Value* v)
         break;
     case Value::kNumber:
         if (value.IsNaN())
+        {
             ui->Output(FlashUI::Output_Action, "NaN");
-        else if (value.IsPOSITIVE_ZERO())
+            break;
+        }
+
+        if (value.IsPOSITIVE_ZERO())
+        {
             ui->Output(FlashUI::Output_Action, "+0");
-        else if (value.IsNEGATIVE_ZERO())
+            break;
+        }
+
+        if (value.IsNEGATIVE_ZERO())
+        {
             ui->Output(FlashUI::Output_Action, "-0");
-        else if (value.IsPOSITIVE_INFINITY())
+            break;
+        }
+
+        if (value.IsPOSITIVE_INFINITY())
+        {
             ui->Output(FlashUI::Output_Action, "+Infinity");
-        else if (value.IsNEGATIVE_INFINITY())
+            break;
+        }
+
+        if (value.IsNEGATIVE_INFINITY())
+        {
             ui->Output(FlashUI::Output_Action, "-Infinity");
-        else
+            break;
+        }
+
         {
             DoubleFormatter f(value.AsNumber());
             f.Convert();
             ui->Output(FlashUI::Output_Action, f.ToCStr());
         }
         break;
+    case Value::kString:
+        if (value.GetStringNode())
+        {
+            ui->Output(FlashUI::Output_Action, "\"");
+            ui->Output(FlashUI::Output_Action, value.AsString().ToCStr());
+            ui->Output(FlashUI::Output_Action, "\"");
+        }
+        else
+            ui->Output(FlashUI::Output_Action, "null");
+        break;
     case Value::kThunk:
         ui->Output(FlashUI::Output_Action, "thunk@");
         FUN_14251b210(ui, UInt64(&value.AsThunk()), true);
         break;
+    case Value::kThunkFunction:
+        if (value.IsNull())
+            ui->Output(FlashUI::Output_Action, "null");
+        else
+        {
+            ui->Output(FlashUI::Output_Action, "thunk function@");
+            Sfr34_OutputTraitsName(ui, value.GetObject()->GetTraits());
+            FUN_14251b210(ui, UInt64(value.GetObject()), true);
+        }
+        break;
     case Value::kVTableInd:
         ui->Output(FlashUI::Output_Action, "VTable ind: ");
         FUN_14251b190(ui, SInt64(value.GetVTableInd()));
+        break;
+    case Value::kVTableIndClosure:
+        if (value.GetClosure())
+        {
+            ui->Output(FlashUI::Output_Action, "VTableIndClosure@");
+            Sfr34_OutputTraitsName(ui, value.GetClosure()->GetTraits());
+            ui->Output(FlashUI::Output_Action, "@");
+            FUN_14251b210(ui, UInt64(value.GetClosure()), true);
+            ui->Output(FlashUI::Output_Action, "@");
+            FUN_14251b210(ui, UInt64(SInt64(value.GetVTableInd())), true);
+        }
+        else
+            ui->Output(FlashUI::Output_Action, "null");
+        break;
+    case Value::kFunction:
+        if (value.IsNull())
+            ui->Output(FlashUI::Output_Action, "null");
+        else
+        {
+            ui->Output(FlashUI::Output_Action, "function@");
+            FUN_14251b210(ui, UInt64(value.GetObject()), true);
+        }
+        break;
+    case Value::kObject:
+        if (value.IsNull())
+            ui->Output(FlashUI::Output_Action, "null");
+        else
+        {
+            const Object* obj = value.GetObject();
+            const Traits& tr  = obj->GetTraits();
+            if (tr.IsGlobal())
+            {
+                if (obj == vm->GlobalObject.GetPtr())
+                    ui->Output(FlashUI::Output_Action, "globalCPP");
+                else
+                {
+                    // the global object of a script: its method index and the file name of its ABC source
+                    const InstanceTraits::fl::GlobalObjectScript& str =
+                        static_cast<const InstanceTraits::fl::GlobalObjectScript&>(tr);
+                    const Abc::ScriptInfo& si = str.GetScript();
+                    const String&          src = str.GetFile().GetAbcFile().Source;
+                    const StringDataPtr    fn(src.ToCStr(), src.GetSize());
+                    ui->Output(FlashUI::Output_Action, "script_");
+                    LongFormatter f(si.method_info_ind);
+                    f.Convert();
+                    ui->Output(FlashUI::Output_Action, f.GetResult().ToCStr());
+                    ui->Output(FlashUI::Output_Action, "@");
+                    SPInt pos = fn.FindLastChar('\\');
+                    if (pos < 0)
+                        pos = fn.FindLastChar('/');
+                    ++pos;
+                    ui->Output(FlashUI::Output_Action, fn.GetTrimLeft(UPInt(pos)).ToCStr());
+                }
+            }
+            else
+            {
+                Sfr34_OutputTraitsName(ui, tr);
+                ui->Output(FlashUI::Output_Action, "@");
+                FUN_14251b210(ui, UInt64(obj), true);
+            }
+        }
+        break;
+    case Value::kClass:
+        if (value.GetObject())
+        {
+            Sfr34_OutputTraitsName(ui, value.GetObject()->GetTraits());
+            ui->Output(FlashUI::Output_Action, "$$");
+        }
+        else
+            ui->Output(FlashUI::Output_Action, "null");
+        break;
+    case Value::kNamespace:
+    {
+        const Instances::Namespace& ns = value.AsNamespace();
+        ui->Output(FlashUI::Output_Action, FUN_1424ed700(ns.GetKind()));
+        if (!ns.GetUri().IsEmpty())
+        {
+            ui->Output(FlashUI::Output_Action, " ");
+            ui->Output(FlashUI::Output_Action, ns.GetUri().ToCStr());
+        }
+        break;
+    }
+    case Value::kThunkClosure:
+        if (value.GetClosure())
+        {
+            ui->Output(FlashUI::Output_Action, "ThunkClosure@");
+            Sfr34_OutputTraitsName(ui, value.GetClosure()->GetTraits());
+            ui->Output(FlashUI::Output_Action, "@");
+            FUN_14251b210(ui, UInt64(value.GetClosure()), true);
+            ui->Output(FlashUI::Output_Action, "@");
+            FUN_14251b210(ui, UInt64(&value.AsThunk()), true);
+        }
+        else
+            ui->Output(FlashUI::Output_Action, "null");
         break;
     case Value::kInstanceTraits:
     {
@@ -4764,116 +4897,7 @@ void FUN_14251b350(const VM* vm, FlashUI* ui, const Value* v)
         Sfr34_OutputTraitsName(ui, value.GetClassTraits());
         ui->Output(FlashUI::Output_Action, "$$");
         break;
-    case Value::kString:
-        if (value.GetStringNode())
-        {
-            ui->Output(FlashUI::Output_Action, "\"");
-            ui->Output(FlashUI::Output_Action, value.AsString().ToCStr());
-            ui->Output(FlashUI::Output_Action, "\"");
-        }
-        else
-            ui->Output(FlashUI::Output_Action, "null");
-        break;
-    case Value::kNamespace:
-    {
-        const Instances::Namespace& ns = value.AsNamespace();
-        ui->Output(FlashUI::Output_Action, FUN_1424ed700(ns.GetKind()));
-        if (!ns.GetUri().IsEmpty())
-        {
-            ui->Output(FlashUI::Output_Action, " ");
-            ui->Output(FlashUI::Output_Action, ns.GetUri().ToCStr());
-        }
-        break;
-    }
-    case Value::kObject:
-        if (value.IsNull())
-            ui->Output(FlashUI::Output_Action, "null");
-        else
-        {
-            const Object* obj = value.GetObject();
-            const Traits& tr  = obj->GetTraits();
-            if (!tr.IsGlobal())
-            {
-                Sfr34_OutputTraitsName(ui, tr);
-                ui->Output(FlashUI::Output_Action, "@");
-                FUN_14251b210(ui, UInt64(obj), true);
-            }
-            else if (obj == vm->GlobalObject.GetPtr())
-                ui->Output(FlashUI::Output_Action, "globalCPP");
-            else
-            {
-                // the global object of a script: its method index and the file name of its ABC source
-                const InstanceTraits::fl::GlobalObjectScript& str =
-                    static_cast<const InstanceTraits::fl::GlobalObjectScript&>(tr);
-                const Abc::ScriptInfo& si = str.GetScript();
-                const String&          src = str.GetFile().GetAbcFile().Source;
-                const StringDataPtr    fn(src.ToCStr(), src.GetSize());
-                ui->Output(FlashUI::Output_Action, "script_");
-                LongFormatter f(si.method_info_ind);
-                f.Convert();
-                ui->Output(FlashUI::Output_Action, f.GetResult().ToCStr());
-                ui->Output(FlashUI::Output_Action, "@");
-                SPInt pos = fn.FindLastChar('\\');
-                if (pos < 0)
-                    pos = fn.FindLastChar('/');
-                ++pos;
-                ui->Output(FlashUI::Output_Action, fn.GetTrimLeft(UPInt(pos)).ToCStr());
-            }
-        }
-        break;
-    case Value::kClass:
-        if (value.GetObject())
-        {
-            Sfr34_OutputTraitsName(ui, value.GetObject()->GetTraits());
-            ui->Output(FlashUI::Output_Action, "$$");
-        }
-        else
-            ui->Output(FlashUI::Output_Action, "null");
-        break;
-    case Value::kFunction:
-        if (value.IsNull())
-            ui->Output(FlashUI::Output_Action, "null");
-        else
-        {
-            ui->Output(FlashUI::Output_Action, "function@");
-            FUN_14251b210(ui, UInt64(value.GetObject()), true);
-        }
-        break;
-    case Value::kThunkFunction:
-        if (value.IsNull())
-            ui->Output(FlashUI::Output_Action, "null");
-        else
-        {
-            ui->Output(FlashUI::Output_Action, "thunk function@");
-            Sfr34_OutputTraitsName(ui, value.GetObject()->GetTraits());
-            FUN_14251b210(ui, UInt64(value.GetObject()), true);
-        }
-        break;
-    case Value::kThunkClosure:
-        if (value.GetClosure())
-        {
-            ui->Output(FlashUI::Output_Action, "ThunkClosure@");
-            Sfr34_OutputTraitsName(ui, value.GetClosure()->GetTraits());
-            ui->Output(FlashUI::Output_Action, "@");
-            FUN_14251b210(ui, UInt64(value.GetClosure()), true);
-            ui->Output(FlashUI::Output_Action, "@");
-            FUN_14251b210(ui, UInt64(&value.AsThunk()), true);
-        }
-        else
-            ui->Output(FlashUI::Output_Action, "null");
-        break;
-    case Value::kVTableIndClosure:
-        if (value.GetClosure())
-        {
-            ui->Output(FlashUI::Output_Action, "VTableIndClosure@");
-            Sfr34_OutputTraitsName(ui, value.GetClosure()->GetTraits());
-            ui->Output(FlashUI::Output_Action, "@");
-            FUN_14251b210(ui, UInt64(value.GetClosure()), true);
-            ui->Output(FlashUI::Output_Action, "@");
-            FUN_14251b210(ui, UInt64(SInt64(value.GetVTableInd())), true);
-        }
-        else
-            ui->Output(FlashUI::Output_Action, "null");
+    case Value::kMethodInd:
         break;
     default:
         break;
