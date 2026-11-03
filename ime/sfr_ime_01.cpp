@@ -2903,7 +2903,7 @@ struct Ime01ValueArgs
 
 // Stores the data item and, when notify is set, calls the input window's SelectDataItem (with the item) and SetList.
 // @0x1423d97f0
-void FUN_1423d97f0(void* raw, unsigned long long item, unsigned char notify)
+__declspec(noinline) void FUN_1423d97f0(void* raw, unsigned long long item, unsigned char notify)
 {
     auto* self = static_cast<unsigned char*>(raw);
     *reinterpret_cast<unsigned long long*>(self + 0x860) = item;
@@ -4329,81 +4329,106 @@ void FUN_1423d2410(void* raw, unsigned* outputLength)
     if (text) Scaleform::Memory::Free(text);
 }
 
-// MS2-FUNCTIONAL: IMM candidate-list update of the Vista IME object (vtable slot 36). It stores the count at +0xd8, the
-// page start at +0x70 and the page size at +0x6c, recreates the movie list with RemoveList() and
-// CreateList(pageSize, +0xdc), and refills the manager's list at +0x30 with the entries from the page start to the end
-// of the list as UTF-8. The selection is dwSelection % dwPageSize for the candidate modes, else -1. Like the exe, it
-// does not release the context when the list is empty and releases it twice after a fill. Reviewed against the exe,
-// same behaviour; the exe builds the CreateList arguments in an inlined Value array (FUN_1423d12e0/FUN_1423ce6c0),
-// shares one result Value between RemoveList and CreateList and keeps an unused Value local.
+// The allocator of the local Value arrays: GH POD storage of 32-byte elements whose DestructArray is the out-of-line
+// ConstructorMov<Value>::DestructArray (FUN_1423ce6c0).
+struct Ime01ArgAlloc : AllocatorGH_POD<Ime01Pod<0x20>>
+{
+    static void DestructArray(Ime01Pod<0x20>* p, UPInt count)
+    {
+        FUN_1423ce6c0(reinterpret_cast<Scaleform::GFx::Value*>(p), count);
+    }
+};
+// A local ArrayData<Value>: the SDK ArrayDataBase ctor/dtor (one movdqu for Data and Size, the capacity apart).
+struct Ime01ArgArray
+{
+    ArrayData<Ime01Pod<0x20>, Ime01ArgAlloc, ArrayDefaultPolicy> array;
+    Scaleform::GFx::Value* data() const { return reinterpret_cast<Scaleform::GFx::Value*>(array.Data); }
+};
+static inline void Ime01PushArg(Ime01ArgArray& args, const Scaleform::GFx::Value& value)
+{
+    auto& array = args.array;
+    const unsigned long long oldLength = array.Size;
+    const unsigned long long newLength = oldLength + 1;
+    if (newLength < oldLength) {
+        FUN_1423ce6c0(args.data() + newLength, oldLength - newLength);
+        if (newLength < (array.Policy.GetCapacity() >> 1))
+            reinterpret_cast<Ime01ArrayGH<0x20>*>(&array)->Reserve(&array, newLength);
+    } else if (newLength >= array.Policy.GetCapacity()) {
+        reinterpret_cast<Ime01ArrayGH<0x20>*>(&array)->Reserve(&array, (newLength >> 2) + newLength);
+    }
+    array.Size = newLength;
+    ::new (static_cast<void*>(args.data() + newLength - 1)) Scaleform::GFx::Value(value);
+}
+
+// IMM candidate-list update of the Vista IME object (vtable slot 36). It stores the count at +0xd8, the page start at
+// +0x70 and the page size at +0x6c, recreates the movie list with RemoveList() and CreateList(pageSize, +0xdc), and
+// refills the manager's list at +0x30 with the entries from the page start to the end of the list as UTF-8. The
+// selection is dwSelection % dwPageSize for the candidate modes, else -1. Like the exe, it releases the context once
+// before the empty-list return and once more after the fill.
 // @0x1423d0850
 void FUN_1423d0850(void* raw, DWORD listIndex)
 {
     typedef void (*InvokeFn)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned);
     auto* self = static_cast<unsigned char*>(raw);
-    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
-    HIMC context = cx18_ImmGetContext(hwnd);
+    Scaleform::GFx::Value unused;
+    HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(self + 0x28));
     const DWORD bytes = cx18_ImmGetCandidateListW(context, listIndex, nullptr, 0);
     if (!bytes) return;
     auto* candidates = static_cast<LPCANDIDATELIST>(Scaleform::Memory::Alloc(bytes * sizeof(CANDIDATELIST)));
     const DWORD fetched = cx18_ImmGetCandidateListW(context, listIndex, candidates, bytes);
     *reinterpret_cast<DWORD*>(self + 0xd8) = candidates->dwCount;
+    const DWORD selection = candidates->dwSelection;
     *reinterpret_cast<DWORD*>(self + 0x70) = candidates->dwPageStart;
     const DWORD pageSize = candidates->dwPageSize;
-    const DWORD selection = candidates->dwSelection;
-    cx18_ImmReleaseContext(hwnd, context);
-    if (candidates->dwCount == 0) {
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(self + 0x28), context);
+    if (*reinterpret_cast<DWORD*>(self + 0xd8) == 0) {
         Scaleform::Memory::Free(candidates);
         return;
     }
     *reinterpret_cast<DWORD*>(self + 0x6c) = pageSize;
-
     {
         Scaleform::GFx::Value result;
         if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
             reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
                 bridge, "RemoveList", &result, nullptr, 0);
-    }
-    {
-        Scaleform::GFx::Value args[2];
-        args[0] = Scaleform::GFx::Value(static_cast<double>(static_cast<int>(pageSize)));
-        args[1] = Scaleform::GFx::Value(static_cast<double>(*reinterpret_cast<int*>(self + 0xdc)));
-        Scaleform::GFx::Value result;
+        Ime01ArgArray args;
+        Ime01PushArg(args, Scaleform::GFx::Value(static_cast<double>(static_cast<int>(pageSize))));
+        Ime01PushArg(args, Scaleform::GFx::Value(static_cast<double>(*reinterpret_cast<int*>(self + 0xdc))));
         if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
             reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
-                bridge, "CreateList", &result, args, 2);
+                bridge, "CreateList", &result, args.data(), 2);
     }
 
-    void* list = *reinterpret_cast<void**>(self + 0x30);
-    FUN_1423d9500(list);
-    for (int i = static_cast<int>(candidates->dwPageStart); i < static_cast<int>(candidates->dwCount); ++i) {
+    FUN_1423d9500(*reinterpret_cast<void**>(self + 0x30));
+    for (int i = *reinterpret_cast<int*>(self + 0x70); i < *reinterpret_cast<int*>(self + 0xd8); ++i) {
         const DWORD offset = candidates->dwOffset[i];
         if (offset > fetched || offset < sizeof(CANDIDATELIST)) break;
         const wchar_t* wide = reinterpret_cast<const wchar_t*>(reinterpret_cast<const unsigned char*>(candidates) + offset);
-        const SPInt size = Scaleform::UTF8Util::GetEncodeStringSize(wide, -1);
+        const int size = static_cast<int>(Scaleform::UTF8Util::GetEncodeStringSize(wide, -1));
         char* text = static_cast<char*>(Scaleform::Memory::Alloc(static_cast<Scaleform::UPInt>(size) + 1));
         Scaleform::UTF8Util::EncodeStringSafe(text, static_cast<Scaleform::UPInt>(size) + 1, wide, -1);
         text[size] = 0;
-        auto* item = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x20));
-        if (item) {
-            FUN_1423cdb60(item, text);
-            ++*reinterpret_cast<int*>(item + 1);
-        }
+        void* memory = Scaleform::Memory::Alloc(0x20);
+        auto* item = memory ? static_cast<unsigned long long*>(
+            FUN_1423cdb60(static_cast<unsigned long long*>(memory), text)) : nullptr;
+        if (item) ++*reinterpret_cast<int*>(item + 1);
         unsigned long long retained = reinterpret_cast<unsigned long long>(item);
-        FUN_1423d9490(list, &retained, 0);
+        FUN_1423d9490(*reinterpret_cast<void**>(self + 0x30), &retained, 0);
         Scaleform::Memory::Free(text);
         if (item) FUN_14257dcd0(item);
     }
     Scaleform::Memory::Free(candidates);
-    cx18_ImmReleaseContext(hwnd, context);
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(self + 0x28), context);
 
-    long long selected = -1;
     const unsigned state = *reinterpret_cast<unsigned*>(self + 0x98);
+    long long selected;
     if (state == 0x110000 || state == 0x210000 || state == 0xd00800 ||
         state == 0xd00900 || state == 0xd00a00 || state == 0xd10000)
         selected = static_cast<int>(selection) % static_cast<int>(pageSize);
-    FUN_1423d97f0(list, static_cast<unsigned long long>(selected), 0);
-    FUN_1423d9b40(list);
+    else
+        selected = -1;
+    FUN_1423d97f0(*reinterpret_cast<void**>(self + 0x30), static_cast<unsigned long long>(selected), 0);
+    FUN_1423d9b40(*reinterpret_cast<void**>(self + 0x30));
     *reinterpret_cast<unsigned char*>(self + 0xb9) = 1;
 }
 
@@ -4758,37 +4783,6 @@ addToLists:
         if (mode & 0xf) FUN_1422fd480(manager + 0xb, &selected);
     }
     return result;
-}
-
-// The allocator of the local Value arrays: GH POD storage of 32-byte elements whose DestructArray is the out-of-line
-// ConstructorMov<Value>::DestructArray (FUN_1423ce6c0).
-struct Ime01ArgAlloc : AllocatorGH_POD<Ime01Pod<0x20>>
-{
-    static void DestructArray(Ime01Pod<0x20>* p, UPInt count)
-    {
-        FUN_1423ce6c0(reinterpret_cast<Scaleform::GFx::Value*>(p), count);
-    }
-};
-// A local ArrayData<Value>: the SDK ArrayDataBase ctor/dtor (one movdqu for Data and Size, the capacity apart).
-struct Ime01ArgArray
-{
-    ArrayData<Ime01Pod<0x20>, Ime01ArgAlloc, ArrayDefaultPolicy> array;
-    Scaleform::GFx::Value* data() const { return reinterpret_cast<Scaleform::GFx::Value*>(array.Data); }
-};
-static inline void Ime01PushArg(Ime01ArgArray& args, const Scaleform::GFx::Value& value)
-{
-    auto& array = args.array;
-    const unsigned long long oldLength = array.Size;
-    const unsigned long long newLength = oldLength + 1;
-    if (newLength < oldLength) {
-        FUN_1423ce6c0(args.data() + newLength, oldLength - newLength);
-        if (newLength < (array.Policy.GetCapacity() >> 1))
-            reinterpret_cast<Ime01ArrayGH<0x20>*>(&array)->Reserve(&array, newLength);
-    } else if (newLength >= array.Policy.GetCapacity()) {
-        reinterpret_cast<Ime01ArrayGH<0x20>*>(&array)->Reserve(&array, (newLength >> 2) + newLength);
-    }
-    array.Size = newLength;
-    ::new (static_cast<void*>(args.data() + newLength - 1)) Scaleform::GFx::Value(value);
 }
 
 // The out-of-line ArrayData<Value>::PushBack (FUN_1423d4fa0) on a local Ime01ValueArgs.
