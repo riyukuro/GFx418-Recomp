@@ -1190,7 +1190,7 @@ void criSj_Destroy(void* object)
 
 // MS2-FUNCTIONAL: split a stream-joint chunk into a bounded prefix and its remaining suffix.
 // @0x1400467c0
-__declspec(noinline) inline void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void* suffix)
+void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void* suffix)
 {
     struct SjChunk
     {
