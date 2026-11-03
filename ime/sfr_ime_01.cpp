@@ -5176,46 +5176,49 @@ void FUN_1423d1d10(void* raw, long long message, long long compositionFlag, long
     }
 }
 
-// MS2-FUNCTIONAL: formats the executable's native/alphanumeric, shape, and Japanese IME conversion state labels.
+// Formats the native/alphanumeric, shape, and Japanese IME conversion state labels.
 // @0x1423cc7c0
 void FUN_1423cc7c0(void* raw, unsigned conversion)
 {
     auto* self = static_cast<unsigned char*>(raw);
-    void* state = *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x78);
-    if (!state) return;
-    HWND hwnd = *reinterpret_cast<HWND*>(static_cast<unsigned char*>(state) + 0x68);
-    HIMC context = cx18_ImmGetContext(hwnd);
-    if (!context) return;
-    DWORD sentence = 0;
-    if (conversion == 0xffffffffu)
-        cx18_ImmGetConversionStatus(context, reinterpret_cast<DWORD*>(&conversion), &sentence);
+    if (!*reinterpret_cast<void**>(self + 0x78)) return;
     Scaleform::String label;
-    const unsigned mode = *reinterpret_cast<unsigned*>(static_cast<unsigned char*>(self) + 0x84);
-    // Each token is appended as String(token) + ",", e.g. "Native,full,half,".
-    if (mode == 9 || mode == 0x80000 || mode == 0x2000) {
-        label += (conversion & 1) ? "Native" : "Alphanumeric";
-        label += ",";
-        label += (conversion & 8) ? "full" : "half";
-        label += ",";
-        label += (conversion & 0x400) ? "full" : "half";
-        label += ",";
-    } else if (mode == 0x400) {
-        if (!cx18_ImmGetOpenStatus(context)) {
-            *reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(self) + 0xa8) = 0;
-            label += "DirectInput";
-        } else if (!(conversion & 1)) {
-            label += (conversion & 8) ? "Alphanumeric_FullShape" : "Alphanumeric_HalfShape";
-        } else {
-            *reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(self) + 0xa8) = 1;
-            if ((conversion & 0xa) == 0xa) label += "Katakana_FullShape";
-            else if ((conversion & 0xa) == 8) label += "Hiragana_FullShape";
-            else label += "Katakana_HalfShape";
+    HIMC context = ImmGetContext(*reinterpret_cast<HWND*>(*reinterpret_cast<unsigned char**>(self + 0x78) + 0x68));
+    if (!context) return;
+    {
+        DWORD sentence;
+        if (conversion == 0xffffffffu)
+            cx18_ImmGetConversionStatus(context, reinterpret_cast<DWORD*>(&conversion), &sentence);
+        Scaleform::String saved(*reinterpret_cast<const Scaleform::String*>(*reinterpret_cast<unsigned char**>(self + 0x78) + 0x88));
+        const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x84);
+        // Each token is appended as String(token) + ",", e.g. "Native,full,half,".
+        if (mode == 0x80000 || mode == 9 || mode == 0x2000) {
+            if (conversion & 1) label += Scaleform::String("Native") + ",";
+            else label += Scaleform::String("Alphanumeric") + ",";
+            if (conversion & 8) label += Scaleform::String("full") + ",";
+            else label += Scaleform::String("half") + ",";
+            if (conversion & 0x400) label += Scaleform::String("full") + ",";
+            else label += Scaleform::String("half") + ",";
         }
-        label += ",";
+        if (*reinterpret_cast<unsigned*>(self + 0x84) == 0x400) {
+            if (!cx18_ImmGetOpenStatus(context)) {
+                *reinterpret_cast<unsigned char*>(self + 0xa8) = 0;
+                label += Scaleform::String("DirectInput") + ",";
+            } else if (conversion & 1) {
+                *reinterpret_cast<unsigned char*>(self + 0xa8) = 1;
+                if ((conversion & 0xa) == 0xa) label += Scaleform::String("Katakana_FullShape") + ",";
+                else if ((conversion & 0xa) == 8) label += Scaleform::String("Hiragana_FullShape") + ",";
+                else label += Scaleform::String("Katakana_HalfShape") + ",";
+            } else {
+                if (conversion & 8) label += Scaleform::String("Alphanumeric_FullShape") + ",";
+                else label += Scaleform::String("Alphanumeric_HalfShape") + ",";
+            }
+        }
+        void* state = *reinterpret_cast<void**>(self + 0x78);
+        reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(state))[0x88 / sizeof(void*)])(
+            state, label.ToCStr());
+        cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(*reinterpret_cast<unsigned char**>(self + 0x78) + 0x68), context);
     }
-    reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(state))[0x88 / sizeof(void*)])(
-        state, label.ToCStr());
-    cx18_ImmReleaseContext(hwnd, context);
 }
 
 // Asks the IME manager for the cursor rect at the given offset and calls
