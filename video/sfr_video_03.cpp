@@ -1596,13 +1596,15 @@ void FUN_14001b620(void* state)
     *reinterpret_cast<uint32_t*>(bytes + 0x38) = 0;
 }
 
-// MS2-FUNCTIONAL: reads interleaved PCM words from the per-channel stream buffers.
+// MS2-FUNCTIONAL: reads interleaved PCM words from the per-channel stream buffers. Left: the exe loads the stream state
+// for the interleave loop after the frame-loop guard and numbers the loop registers differently (r11/r10/r9/r8).
 // @0x14001b6b0
 int FUN_14001b6b0(void* player, uint32_t* output, uint32_t requestedBytes)
 {
     // the stream state is reread through the player after every reader call: [player+0x10]
 #define VIDEO_PCM_STATE (*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(player) + 0x10))
     typedef uint32_t (*ReadFn)(void*, uint32_t, void*, uint32_t);
+    uint32_t* dst = output;
     uint32_t samples = 0;
     uint32_t remaining = requestedBytes * 8 / 32 / *reinterpret_cast<uint32_t*>(VIDEO_PCM_STATE + 0x38);
     if (*reinterpret_cast<void**>(VIDEO_PCM_STATE + 0x30)) {
@@ -1610,7 +1612,7 @@ int FUN_14001b6b0(void* player, uint32_t* output, uint32_t requestedBytes)
         // multi-channel reads are capped at the 0x1000-sample (0x4000-byte) staging buffers (0x14001b749)
         if (*reinterpret_cast<uint32_t*>(VIDEO_PCM_STATE + 0x38) == 1) {
             void* reader = *reinterpret_cast<void**>(VIDEO_PCM_STATE + 0x30);
-            samples = reinterpret_cast<ReadFn>((*reinterpret_cast<void***>(reader))[2])(reader, 1, &output, remaining);
+            samples = reinterpret_cast<ReadFn>((*reinterpret_cast<void***>(reader))[2])(reader, 1, &dst, remaining);
         } else {
             while (remaining) {
                 void* reader = *reinterpret_cast<void**>(VIDEO_PCM_STATE + 0x30);
@@ -1621,7 +1623,7 @@ int FUN_14001b6b0(void* player, uint32_t* output, uint32_t requestedBytes)
                 unsigned char* state = VIDEO_PCM_STATE;
                 for (uint32_t frame = 0; frame < received; ++frame) {
                     for (uint32_t channel = 0; channel < *reinterpret_cast<uint32_t*>(state + 0x38); ++channel)
-                        *output++ = reinterpret_cast<uint32_t*>(reinterpret_cast<void**>(state + 0x50)[channel])[frame];
+                        *dst++ = reinterpret_cast<uint32_t*>(reinterpret_cast<void**>(state + 0x50)[channel])[frame];
                 }
                 samples += received;
                 remaining -= received;
