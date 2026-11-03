@@ -42,7 +42,7 @@ inline FontHandle::~FontHandle()
         static_cast<FontManager*>(pFontManager)->RemoveFontHandle(this);
     if (pFont)
         pFont->Release();
-    pFont = 0;
+    *(Render::Font* volatile*)&pFont = 0;
 }
 
 }} // namespace Scaleform::GFx
