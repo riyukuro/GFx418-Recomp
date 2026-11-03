@@ -193,8 +193,6 @@ bool AvmButton::OnMouseEvent(const EventId& event)
 
 // The key of a controller goes into its state, then the handler (onKeyDown/onKeyUp) is broadcast to the Key
 // listeners in _level0's environment, with the controller index when the extensions are on.
-// MS2-FUNCTIONAL: the exe's frame is 0x10 larger and keeps evt in rbp (rbx saved only once the environment is
-// known); ours saves rbx at entry. Same flow and calls.
 // @0x142969250
 void KeyCtorFunction::NotifyListeners(InteractiveObject*, const EventId& evt)
 {
@@ -224,7 +222,7 @@ void KeyCtorFunction::NotifyListeners(InteractiveObject*, const EventId& evt)
     int nargs = 0;
     if (penv->CheckExtensions())
     {
-        penv->Push(int(evt.KeyboardIndex));
+        penv->Push(evt.KeyboardIndex);
         nargs = 1;
     }
     BroadcastMessageLocal(penv, static_cast<ObjectInterface*>(this), handlerName, nargs, penv->GetTopIndex());
