@@ -5559,96 +5559,127 @@ static void cx18_DisplayReading(unsigned char* self, const char* text, bool with
 // reading string; 0x110000 appends a..z; 0x40000/0x50000/0x70000/0x90000/0xa0000 restart the text when the target
 // clause (first attribute 1) moves (its index kept at +0x5a4) and append otherwise. Escape clears it. A non-empty
 // result goes to DisplayInputWindow.
-// MS2-FUNCTIONAL: the exe builds the four arguments in a heap Value array
+// MS2-FUNCTIONAL: register allocation (key/attributes swap r14/rbx) and the 0x40000 group's append, which the exe
+// keeps separate with a reload of +0xd0 while cl tail-merges it with the 0x110000 append. Same behaviour.
 // @0x1423d2710
 void FUN_1423d2710(void* manager, int key, unsigned length, long long attributes, wchar_t* reading)
 {
+    typedef void (*InvokeFn)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned);
     auto* self = static_cast<unsigned char*>(manager);
-    cx18_InvokeInputWindow(self, "RemoveInputWindow", nullptr, 0);
-    const wchar_t ch = *reinterpret_cast<wchar_t*>(self + 0xd0);
-    wchar_t* text = *reinterpret_cast<wchar_t**>(self + 0x40);
+    Scaleform::GFx::Value unused;
+    {
+        Scaleform::GFx::Value result;
+        if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
+            reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+                bridge, "RemoveInputWindow", &result, nullptr, 0);
+    }
+    const wchar_t& ch = *reinterpret_cast<wchar_t*>(self + 0xd0);
+    wchar_t*& text = *reinterpret_cast<wchar_t**>(self + 0x40);
+    Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime;
     if (ch == 0x1b) {
         *text = 0;
         return;
     }
     const int textLength = static_cast<int>(wcslen(text));
+    const int count = static_cast<int>(length);
     const auto* attrs = reinterpret_cast<const char*>(attributes);
-    auto append = [&](wchar_t c) {
-        text[textLength] = c;
-        text[textLength + 1] = 0;
-    };
-    const int mode = *reinterpret_cast<int*>(self + 0x98);
-    switch (mode) {
-    case 1: case 3: case 5: case 7:
-        Scaleform::SFwcscpy(text, wcslen(reading) + 1, reading);
-        break;
-    case 2: {
-        const int index = *reinterpret_cast<int*>(self + 0xc8);
-        if (index > 4) return;
-        wchar_t* buffer = *reinterpret_cast<wchar_t**>(self + 0xb0);
-        if (key != 0x3000) {
-            buffer[0] = buffer[1] = buffer[2] = buffer[3] = L' ';
-            buffer[4] = 0;
-            return;
-        }
-        buffer[index] = ch;
-        Scaleform::SFwcscpy(text, wcslen(buffer) + 1, buffer);
-        break;
-    }
+    switch (*reinterpret_cast<int*>(self + 0x98)) {
     case 4: case 10:
         if (key != 0x3000) {
             *text = 0;
             return;
         }
-        if (ch != L'\r' && ch != L' ' && ch != L'\b' && textLength < 5) append(ch);
+        if (ch != L'\r' && ch != L' ' && ch != L'\b') {
+            const int n = static_cast<int>(wcslen(text));
+            if (n <= 4) {
+                text[n] = ch;
+                text[n + 1] = 0;
+            }
+        }
         if (ch == L'\b') {
             const int n = static_cast<int>(wcslen(text));
             if (n > 0) text[n - 1] = 0;
         }
         break;
-    case 0x10000: case 0x20000: case 0x30000: case 0x60000: case 0xa10000: case 0xb10000: case 0xd00001: case 0xd00002: {
-        const int n = static_cast<int>(wcslen(reading));
-        memcpy(text, reading, static_cast<size_t>(n) * 2);
-        text[n] = 0;
-        break;
+    case 2: {
+        const int index = *reinterpret_cast<int*>(self + 0xc8);
+        if (index > 4) return;
+        wchar_t*& buffer = *reinterpret_cast<wchar_t**>(self + 0xb0);
+        if (key == 0x3000) {
+            buffer[index] = ch;
+            Scaleform::SFwcscpy(text, wcslen(buffer) + 1, buffer);
+            break;
+        }
+        buffer[0] = L' ';
+        buffer[1] = L' ';
+        buffer[2] = L' ';
+        buffer[3] = L' ';
+        buffer[4] = 0;
+        return;
     }
+    case 1: case 3: case 5: case 7:
+        Scaleform::SFwcscpy(text, wcslen(reading) + 1, reading);
+        break;
+    case 0x40000: case 0x50000: case 0x70000: case 0x90000: case 0xa0000:
+        if (key == 0x3000) {
+            if (ch == L'\b') {
+                if (textLength > 0) text[textLength - 1] = 0;
+            } else if (ch != L'\r' && ch != L' ') {
+                int target = 0;
+                for (; target < count; ++target)
+                    if (attrs[target] == ATTR_TARGET_CONVERTED) break;
+                if (target == count) return;
+                auto& lastTarget = *reinterpret_cast<int*>(self + 0x5a4);
+                if (lastTarget == target) {
+                    text[textLength] = ch;
+                    text[textLength + 1] = 0;
+                } else {
+                    lastTarget = target;
+                    text[0] = ch;
+                    text[1] = 0;
+                }
+            }
+        } else {
+            *text = 0;
+        }
+        break;
     case 0x110000:
         if (ch == L'\b') {
             if (textLength > 0) text[textLength - 1] = 0;
-        } else if (static_cast<unsigned short>(ch - L'a') < 26) {
-            append(ch);
+        } else if (static_cast<unsigned short>(ch - L'a') <= 0x19) {
+            text[textLength] = ch;
+            text[textLength + 1] = 0;
         }
         break;
-    case 0x40000: case 0x50000: case 0x70000: case 0x90000: case 0xa0000:
-        if (key != 0x3000) {
-            *text = 0;
-        } else if (ch == L'\b') {
-            if (textLength > 0) text[textLength - 1] = 0;
-        } else if (ch != L'\r' && ch != L' ') {
-            unsigned target = 0;
-            while (static_cast<int>(target) < static_cast<int>(length) && attrs[target] != ATTR_TARGET_CONVERTED)
-                ++target;
-            if (target == length) return;
-            auto& lastTarget = *reinterpret_cast<unsigned*>(self + 0x5a4);
-            if (lastTarget == target) {
-                append(ch);
-            } else {
-                lastTarget = target;
-                text[0] = ch;
-                text[1] = 0;
-            }
-        }
+    case 0x10000: case 0x20000: case 0x30000: case 0x60000: case 0xa10000: case 0xb10000: case 0xd00001: case 0xd00002: {
+        const int n = static_cast<int>(wcslen(reading));
+        memcpy(text, reading, n * 2);
+        text[n] = 0;
         break;
+    }
     default:
         break;
     }
-    text = *reinterpret_cast<wchar_t**>(self + 0x40);
-    const SPInt size = Scaleform::UTF8Util::GetEncodeStringSize(text, -1);
-    if (!static_cast<int>(size)) return;
-    char* utf8 = static_cast<char*>(Scaleform::Memory::Alloc(static_cast<UPInt>(static_cast<int>(size) + 1)));
+    const int size = static_cast<int>(Scaleform::UTF8Util::GetEncodeStringSize(text, -1));
+    if (!size) return;
+    char* utf8 = static_cast<char*>(Scaleform::Memory::Alloc(size + 1));
     Scaleform::UTF8Util::EncodeString(utf8, text, -1);
-    cx18_DisplayReading(self, utf8, true);
-    Scaleform::Memory::Free(utf8);
+    void* owner = *reinterpret_cast<void**>(self + 8);
+    ime = reinterpret_cast<Scaleform::GFx::StateBag*>(static_cast<unsigned char*>(owner) + 0x10)->GetIMEManager();
+    Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
+    ime->GetMetrics(&viewRect, &cursorRect, -*reinterpret_cast<int*>(self + 0x64));
+    {
+        Ime01ArgArray args;
+        Scaleform::GFx::Value result;
+        Ime01PushArg(args, Scaleform::GFx::Value(static_cast<const char*>(utf8)));
+        Ime01PushArg(args, Scaleform::GFx::Value(static_cast<double>(cursorRect.x1)));
+        Ime01PushArg(args, Scaleform::GFx::Value(static_cast<double>(cursorRect.y2)));
+        Ime01PushArg(args, Scaleform::GFx::Value(static_cast<double>(cursorRect.y2 - cursorRect.y1)));
+        if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
+            reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+                bridge, "DisplayInputWindow", &result, args.data(), 4);
+    }
+    if (utf8) Scaleform::Memory::Free(utf8);
 }
 
 // WM_IME_COMPOSITION of the IMM IME object (vtbl 0x14313a5f8 slot 10). No flags: clears the composition length
