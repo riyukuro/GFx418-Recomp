@@ -388,7 +388,12 @@ class DataAllocator
     void* OverflowAlloc(UPInt bytes);
 
 public:
-    DataAllocator(MemoryHeap* pheap) : pCurrent(0), BytesLeft(0), pAllocations(0), pHeap(pheap) {}
+    DataAllocator(MemoryHeap* pheap) : pHeap(pheap)
+    {
+        pAllocations = 0;
+        pCurrent     = 0;
+        BytesLeft    = 0;
+    }
     ~DataAllocator();
 
     void* Alloc(UPInt bytes)

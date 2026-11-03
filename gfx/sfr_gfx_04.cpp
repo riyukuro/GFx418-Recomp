@@ -251,7 +251,6 @@ void* DataAllocator::AllocIndividual(UPInt bytes)
 // *** MovieDataDef
 
 // @0x1425cb000
-// MS2-FUNCTIONAL: HeapDesc member store order and the heap-name String release differ
 MovieDataDef::MovieDataDef(const ResourceKey& creationKey, MovieDataType mtype, const char* purl,
                            MemoryHeap* pargHeap, bool debugHeap, UPInt memoryArena)
     : mResourceKey(creationKey), MovieType(mtype)
@@ -260,8 +259,13 @@ MovieDataDef::MovieDataDef(const ResourceKey& creationKey, MovieDataType mtype, 
     if (!pheap)
     {
         String   heapName("MovieData \"", GetShortFilename(purl), "\"");
-        HeapDesc desc((debugHeap << 12) | HeapDesc::Heap_FixedGranularity, 16, 8 * 1024, 0, ~UPInt(0), 0,
-                      HeapId_MovieData, memoryArena);
+        unsigned heapFlags = debugHeap ? HeapDesc::Heap_UserDebug : 0;
+        HeapDesc desc(heapFlags);
+        desc.Flags      |= HeapDesc::Heap_FixedGranularity;
+        desc.Granularity = 8 * 1024;
+        desc.Reserve     = 0;
+        desc.HeapId      = HeapId_MovieData;
+        desc.Arena       = memoryArena;
         pheap = Memory::GetGlobalHeap()->CreateHeap(heapName.ToCStr(), desc);
     }
 
