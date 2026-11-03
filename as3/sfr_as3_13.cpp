@@ -1354,20 +1354,18 @@ namespace Instances { namespace fl_text
     }
 
     // @0x1424b0c00
-    // MS2-FUNCTIONAL: the exe builds each Number Value through a 16-byte union temp; ours stores it directly
     void TextField::getCharBoundaries(SPtr<Instances::fl_geom::Rectangle>& result, SInt32 charIndex)
     {
         Render::RectF bounds(0, 0, 0, 0);
         if (FUN_142611ff0(DocViewOf(DisplayTextField(this)), &bounds, (SPInt)charIndex))
         {
-            Value params[] = {
-                Value((Value::Number)Alg::IRound(TwipsToPixels(bounds.x1))),
-                Value((Value::Number)Alg::IRound(TwipsToPixels(bounds.y1))),
-                Value((Value::Number)Alg::IRound(TwipsToPixels(bounds.Width()))),
-                Value((Value::Number)Alg::IRound(TwipsToPixels(bounds.Height())))
-            };
+            Value argv[4];
+            argv[0].SetNumber(Alg::IRound(TwipsToPixels(bounds.x1)));
+            argv[1].SetNumber(Alg::IRound(TwipsToPixels(bounds.y1)));
+            argv[2].SetNumber(Alg::IRound(TwipsToPixels(bounds.Width())));
+            argv[3].SetNumber(Alg::IRound(TwipsToPixels(bounds.Height())));
             ASVM& asvm = static_cast<ASVM&>(GetVM());
-            asvm.ConstructInstance(result, asvm.RectangleClass, 4, params);
+            asvm.ConstructInstance(result, asvm.RectangleClass, 4, argv);
         }
     }
 
@@ -1639,6 +1637,16 @@ namespace Instances { namespace fl_text
         f.FontSize = 0;
         f.FormatFlags = 0;
         f.PresentMask = 0;
+    }
+    // The implicit Render::Text::TextFormat destructor, inline: Ptr<FontHandle>, Ptr<HTMLImageTagDesc>, Url, FontList.
+    static inline void DestroyTextFormat(TextFormatStorage& f)
+    {
+        if (f.pFontHandle)
+            static_cast<RefCountImpl*>(f.pFontHandle)->Release();
+        if (f.pImageDesc)
+            static_cast<RefCountNTSImpl*>(f.pImageDesc)->Release();
+        reinterpret_cast<String*>(&f.Url)->~String();
+        reinterpret_cast<String*>(&f.FontList)->~String();
     }
     static inline void InitParagraphFormat(ParagraphFormatStorage& p)
     {
@@ -1974,8 +1982,21 @@ namespace Instances { namespace fl_text
                               reinterpret_cast<const Render::Text::TextFormat*>(pfmt));
     }
 
+    // GFx::TextField::SetDefaultTextFormat / SetDefaultParagraphFormat (inline): the document's setter, then the
+    // reformat flag.
+    static inline void SetDefaultTextFormatOf(void* ptf, const Render::Text::TextFormat& fmt)
+    {
+        FUN_14259c250(DocumentOf(ptf), &fmt);
+        FieldFlags(ptf) |= 0x10000;
+    }
+    static inline void SetDefaultParaFormatOf(void* ptf, const Render::Text::ParagraphFormat& fmt)
+    {
+        FUN_14259c170(DocumentOf(ptf), &fmt);
+        FieldFlags(ptf) |= 0x10000;
+    }
+
     // @0x1424b0020
-    // MS2-FUNCTIONAL: written from the exe's control flow (format storage opaque; the exe inlines the destructors)
+    // the SDK body; the format storage is opaque here
     void TextField::defaultTextFormatSet(const Value& result, Instances::fl_text::TextFormat* value)
     {
         SF_UNUSED(result);
@@ -1990,17 +2011,13 @@ namespace Instances { namespace fl_text
         value->GetTextFormat(reinterpret_cast<Render::Text::ParagraphFormat*>(&para),
                              reinterpret_cast<Render::Text::TextFormat*>(&fmt));
 
-        TextFormatStorage mergedFmt;
-        FUN_14259c250(DocumentOf(ptf), ::new (&mergedFmt) Render::Text::TextFormat(reinterpret_cast<const Render::Text::TextFormat*>(DefaultTextFormat(DocumentOf(ptf)))->Merge(*reinterpret_cast<const Render::Text::TextFormat*>(&fmt))));
-        FieldFlags(ptf) |= 0x10000;
-        FUN_1424aa0f0(&mergedFmt);
-
-        ParagraphFormatStorage mergedPara;
-        FUN_14259c170(DocumentOf(ptf), ::new (&mergedPara) Render::Text::ParagraphFormat(reinterpret_cast<const Render::Text::ParagraphFormat*>(DefaultParaFormat(DocumentOf(ptf)))->Merge(reinterpret_cast<const Render::Text::ParagraphFormat&>(para))));
-        FieldFlags(ptf) |= 0x10000;
-        FUN_142606690(&mergedPara);
+        void* pdoc = DocumentOf(ptf);
+        const Render::Text::TextFormat* ptextFmt = reinterpret_cast<const Render::Text::TextFormat*>(DefaultTextFormat(pdoc));
+        const Render::Text::ParagraphFormat* pparaFmt = reinterpret_cast<const Render::Text::ParagraphFormat*>(DefaultParaFormat(pdoc));
+        SetDefaultTextFormatOf(ptf, ptextFmt->Merge(*reinterpret_cast<const Render::Text::TextFormat*>(&fmt)));
+        SetDefaultParaFormatOf(ptf, pparaFmt->Merge(reinterpret_cast<const Render::Text::ParagraphFormat&>(para)));
         FUN_142606690(&para);
-        FUN_1424aa0f0(&fmt);
+        DestroyTextFormat(fmt);
     }
 
     // DocView::LineMetrics, in twips.
@@ -2016,20 +2033,18 @@ namespace Instances { namespace fl_text
     static inline Value::Number TwipsToWholePixels(int twips)      { return (Value::Number)Alg::IRound((double)(twips / 20)); }
 
     // @0x1424b1000
-    // MS2-FUNCTIONAL: the exe builds each Number Value through a 16-byte union temp; ours stores it directly
     void TextField::getLineMetrics(SPtr<Instances::fl_text::TextLineMetrics>& result, SInt32 lineIndex)
     {
         DocLineMetrics metrics;
         if (FUN_142612d50(DocViewOf(DisplayTextField(this)), (unsigned)lineIndex, &metrics))
         {
-            Value params[] = {
-                Value(TwipsToWholePixels(metrics.Ascent)),
-                Value(TwipsToWholePixels(metrics.Descent)),
-                Value(TwipsToWholePixels(metrics.Height)),
-                Value(TwipsToWholePixels(metrics.Leading)),
-                Value(TwipsToWholePixels(metrics.Width)),
-                Value(TwipsToWholePixels(metrics.FirstCharXOff))
-            };
+            Value params[6];
+            params[0].SetNumber(TwipsToWholePixels(metrics.Ascent));
+            params[1].SetNumber(TwipsToWholePixels(metrics.Descent));
+            params[2].SetNumber(TwipsToWholePixels(metrics.Height));
+            params[3].SetNumber(TwipsToWholePixels(metrics.Leading));
+            params[4].SetNumber(TwipsToWholePixels(metrics.Width));
+            params[5].SetNumber(TwipsToWholePixels(metrics.FirstCharXOff));
             ASVM& asvm = static_cast<ASVM&>(GetVM());
             SPtr<Class> cls = asvm.GetClass(StringDataPtr("flash.text.TextLineMetrics"));
             asvm.ConstructInstance(result, cls, 6, params);
@@ -2356,35 +2371,35 @@ namespace Instances { namespace fl_text
     // @0x1424ae370
     void AppendCSSDeclarations(String& css, AS3::Object* pstyle)
     {
-        for (GlobalSlotIndex ind = pstyle->GetNextDynPropIndex(GlobalSlotIndex(0)); ind.IsValid();
-             ind = pstyle->GetNextDynPropIndex(ind))
+        GlobalSlotIndex ind(0);
+        while ((ind = pstyle->GetNextDynPropIndex(ind)).IsValid())
         {
             Value name, value;
             pstyle->GetNextPropertyName(name, ind);
             pstyle->GetNextPropertyValue(value, ind);
-            if (!name.IsString())
-                continue;
-
-            ASString    nameStr = name.AsString();
-            const char* pname   = nameStr.ToCStr();
-            const char* pcss;
-            if (!strcmp(pname, "fontFamily"))           pcss = "font-family";
-            else if (!strcmp(pname, "fontSize"))        pcss = "font-size";
-            else if (!strcmp(pname, "fontStyle"))       pcss = "font-style";
-            else if (!strcmp(pname, "fontWeight"))      pcss = "font-weight";
-            else if (!strcmp(pname, "letterSpacing"))   pcss = "letter-spacing";
-            else if (!strcmp(pname, "marginLeft"))      pcss = "margin-left";
-            else if (!strcmp(pname, "marginRight"))     pcss = "margin-right";
-            else if (!strcmp(pname, "textAlign"))       pcss = "text-align";
-            else if (!strcmp(pname, "textDecoration"))  pcss = "text-decoration";
-            else if (!strcmp(pname, "textIndent"))      pcss = "text-indent";
-            else                                        pcss = pname;
-            css.AppendString(pcss);
-            css.AppendString(":");
-            StringBuffer buf;
-            value.Convert2String(buf);
-            css.AppendString(buf.ToCStr());
-            css.AppendString(";");
+            if (name.IsString())
+            {
+                ASString    nameStr = name.AsString();
+                const char* pname   = nameStr.ToCStr();
+                const char* pcss;
+                if (!strcmp(pname, "fontFamily"))           pcss = "font-family";
+                else if (!strcmp(pname, "fontSize"))        pcss = "font-size";
+                else if (!strcmp(pname, "fontStyle"))       pcss = "font-style";
+                else if (!strcmp(pname, "fontWeight"))      pcss = "font-weight";
+                else if (!strcmp(pname, "letterSpacing"))   pcss = "letter-spacing";
+                else if (!strcmp(pname, "marginLeft"))      pcss = "margin-left";
+                else if (!strcmp(pname, "marginRight"))     pcss = "margin-right";
+                else if (!strcmp(pname, "textAlign"))       pcss = "text-align";
+                else if (!strcmp(pname, "textDecoration"))  pcss = "text-decoration";
+                else if (!strcmp(pname, "textIndent"))      pcss = "text-indent";
+                else                                        pcss = pname;
+                css.AppendString(pcss);
+                css.AppendString(":");
+                StringBuffer buf;
+                value.Convert2String(buf);
+                css.AppendString(buf.ToCStr());
+                css.AppendString(";");
+            }
         }
     }
 
@@ -2849,7 +2864,8 @@ public:
     TextSnapshotGlyphVisitor(VM* vm, Instances::fl::Array* parr) : pVM(vm), pArray(parr) {}
 
     // @0x1424ad870
-    // MS2-FUNCTIONAL: register allocation (the matrix entries are scaled before the value is released)
+    // The pixel values go through a Number local, so cl scales each one before SetNumber releases the old value,
+    // as the exe does.
     void OnVisit()
     {
         SPtr<Instances::fl::Object> pobj = pVM->MakeObject();
@@ -2872,38 +2888,52 @@ public:
         pobj->AddDynamicSlotValuePair(sm.CreateConstString("height"), val);
 
         const Render::Matrix2F& mat = GetMatrix();
-        val.SetNumber(TwipsToPixels(mat.Sx()));
+        Value::Number n = TwipsToPixels(mat.Sx());
+        val.SetNumber(n);
         pobj->AddDynamicSlotValuePair(sm.CreateString("matrix_a"), val);
-        val.SetNumber(TwipsToPixels(mat.Shy()));
+        n = TwipsToPixels(mat.Shy());
+        val.SetNumber(n);
         pobj->AddDynamicSlotValuePair(sm.CreateString("matrix_b"), val);
-        val.SetNumber(TwipsToPixels(mat.Shx()));
+        n = TwipsToPixels(mat.Shx());
+        val.SetNumber(n);
         pobj->AddDynamicSlotValuePair(sm.CreateString("matrix_c"), val);
-        val.SetNumber(TwipsToPixels(mat.Sy()));
+        n = TwipsToPixels(mat.Sy());
+        val.SetNumber(n);
         pobj->AddDynamicSlotValuePair(sm.CreateString("matrix_d"), val);
-        val.SetNumber(TwipsToPixels(mat.Tx()));
+        n = TwipsToPixels(mat.Tx());
+        val.SetNumber(n);
         pobj->AddDynamicSlotValuePair(sm.CreateString("matrix_tx"), val);
-        val.SetNumber(TwipsToPixels(mat.Ty()));
+        n = TwipsToPixels(mat.Ty());
+        val.SetNumber(n);
         pobj->AddDynamicSlotValuePair(sm.CreateString("matrix_ty"), val);
 
         const Render::PointF& bl = GetCorners().BottomLeft();
         const Render::PointF& br = GetCorners().BottomRight();
         const Render::PointF& tl = GetCorners().TopLeft();
         const Render::PointF& tr = GetCorners().TopRight();
-        val.SetNumber(TwipsToPixels(bl.x));
+        n = TwipsToPixels(bl.x);
+        val.SetNumber(n);
         pobj->AddDynamicSlotValuePair(sm.CreateString("corner0x"), val);
-        val.SetNumber(TwipsToPixels(bl.y));
+        n = TwipsToPixels(bl.y);
+        val.SetNumber(n);
         pobj->AddDynamicSlotValuePair(sm.CreateString("corner0y"), val);
-        val.SetNumber(TwipsToPixels(br.x));
+        n = TwipsToPixels(br.x);
+        val.SetNumber(n);
         pobj->AddDynamicSlotValuePair(sm.CreateString("corner1x"), val);
-        val.SetNumber(TwipsToPixels(br.y));
+        n = TwipsToPixels(br.y);
+        val.SetNumber(n);
         pobj->AddDynamicSlotValuePair(sm.CreateString("corner1y"), val);
-        val.SetNumber(TwipsToPixels(tr.x));
+        n = TwipsToPixels(tr.x);
+        val.SetNumber(n);
         pobj->AddDynamicSlotValuePair(sm.CreateString("corner2x"), val);
-        val.SetNumber(TwipsToPixels(tr.y));
+        n = TwipsToPixels(tr.y);
+        val.SetNumber(n);
         pobj->AddDynamicSlotValuePair(sm.CreateString("corner2y"), val);
-        val.SetNumber(TwipsToPixels(tl.x));
+        n = TwipsToPixels(tl.x);
+        val.SetNumber(n);
         pobj->AddDynamicSlotValuePair(sm.CreateString("corner3x"), val);
-        val.SetNumber(TwipsToPixels(tl.y));
+        n = TwipsToPixels(tl.y);
+        val.SetNumber(n);
         pobj->AddDynamicSlotValuePair(sm.CreateString("corner3y"), val);
 
         pArray->SA.PushBack(Value(pobj));
