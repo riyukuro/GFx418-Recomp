@@ -475,7 +475,6 @@ XmlNodeObject::~XmlNodeObject()
 }
 
 // Writes the markup of preal (and its subtree) to dest; an XML document contributes its declaration and children.
-// MS2-FUNCTIONAL: register allocation and block layout differ
 // @0x14299d3c0
 void BuildXMLString(Environment* penv, XML::Node* proot, StringBuffer& dest)
 {
@@ -490,12 +489,12 @@ void BuildXMLString(Environment* penv, XML::Node* proot, StringBuffer& dest)
     {
         XmlNodeObject* pobj = pshadow->pASNode;
         Value          xmldecl;
-        pobj->GetMember(penv, penv->GetSC()->CreateConstString("xmlDecl"), &xmldecl);
+        pobj->GetMember(penv, penv->GetSC()->pContext->GetStringManager()->CreateConstString("xmlDecl"), &xmldecl);
         if (!xmldecl.IsUndefined())
         {
             dest.AppendString(xmldecl.ToString(penv).ToCStr());
             Value ignorews;
-            pobj->GetMember(penv, penv->GetSC()->CreateConstString("ignoreWhite"), &ignorews);
+            pobj->GetMember(penv, penv->GetSC()->pContext->GetStringManager()->CreateConstString("ignoreWhite"), &ignorews);
             if (!ignorews.ToBool(penv))
                 dest.AppendString("\n");
         }
