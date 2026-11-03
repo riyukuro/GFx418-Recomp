@@ -2459,73 +2459,81 @@ void FUN_140051360(longlong a1)
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
+// Big-endian 32-bit word from four stream bytes; the top byte goes through movsx as in the exe.
+#define CRI05B_BE32(a, b, c, d) ((((((int)(signed char)(a) << 8) | (b)) << 8 | (c)) << 8) | (d))
 // @0x140051380
 cri_u64 FUN_140051380(longlong a1,longlong *a2)
 {
-  uint u_v1;
-  uint u_v2;
-  int i_v3;
-  uint u_v4;
-  int i_v5;
-  ulonglong u_v6;
-  cri_u8 *pu_v7;
+  int pos;
+  uint low;
+  uint next;
+  uint tc;
+  cri_u8 *cur;
   struct Chunk { cri_u8 *Data; cri_u32 Size; } loc_18;
   
   CriAt<cri_u32>(a1, 0x1850) = 2;
-  CriAt<int>(a1, 0x15c8) = CriAt<int>(a1, 0x15c8) + 1;
+  CriAt<int>(a1, 0x15c8)++;
   CriAt<cri_u32>(a1, 0x18e4) = 0;
   CriAt<cri_u32>(a1, 0x18e8) = 0;
   CriAt<cri_u32>(a1, 0x1600) = 0;
   (**(code **)(*a2 + 0x30))(a2,1,0x7fffffff,a1 + 0x1800);
-  u_v6 = CriAt<ulonglong>(a1, 0x1800) & 0xfffffffffffffffc;
-  i_v3 = CriAt<int>(a1, 0x1800) * 8 + (int)u_v6 * -8;
-  u_v1 = CONCAT31(CONCAT21(CONCAT11(CriAt<cri_u8>(u_v6, 0x4),CriAt<cri_u8>(u_v6, 0x5)),
-                            CriAt<cri_u8>(u_v6, 0x6)),CriAt<cri_u8>(u_v6, 0x7));
-  if (i_v3 != 0) {
-    u_v1 = u_v1 << ((byte)i_v3 & 0x1f);
+  // The GOP start code (00 00 01 b8) sits in the first word; low/next are the bit window after it.
+  cur = (cri_u8 *)(CriAt<ulonglong>(a1, 0x1800) & 0xfffffffffffffffc);
+  pos = (int)((uint)CriAt<ulonglong>(a1, 0x1800) << 3);
+  pos -= (int)((uint)(ulonglong)cur << 3);
+  low = CRI05B_BE32(cur[4],cur[5],cur[6],cur[7]);
+  if (pos != 0) {
+    low <<= pos;
   }
-  pu_v7 = (&CriAt<cri_u8>(u_v6, 0xc));
-  u_v4 = CONCAT31(CONCAT21(CONCAT11(CriAt<cri_u8>(u_v6, 0x8),CriAt<cri_u8>(u_v6, 0x9)),
-                            CriAt<cri_u8>(u_v6, 0xa)),CriAt<cri_u8>(u_v6, 0xb));
-  if (i_v3 < 7) {
-    i_v3 = i_v3 + 0x19;
-    u_v2 = u_v1 << 0x19;
-  }
-  else {
-    i_v3 = i_v3 + -7;
-    u_v2 = u_v4;
-    if (i_v3 != 0) {
-      u_v1 = u_v4 >> (0x19 - (byte)i_v3 & 0x1f) | u_v1;
-      u_v2 = u_v4 << ((byte)i_v3 & 0x1f);
+  next = CRI05B_BE32(cur[8],cur[9],cur[10],cur[11]);
+  cur += 0xc;
+  // time_code (25 bits)
+  if (pos >= 7) {
+    pos -= 7;
+    if (pos != 0) {
+      tc = (next >> (0x19 - pos) | low) >> 7;
+      low = next << pos;
     }
-    u_v4 = CONCAT31(CONCAT21(CONCAT11(*pu_v7,CriAt<cri_u8>(u_v6, 0xd)),
-                              CriAt<cri_u8>(u_v6, 0xe)),CriAt<cri_u8>(u_v6, 0xf));
-    pu_v7 = (&CriAt<cri_u8>(u_v6, 0x10));
-  }
-  i_v5 = (int)pu_v7;
-  CriAt<uint>(a1, 0x15c4) = u_v1 >> 7 & 0x3f;
-  CriAt<uint>(a1, 0x15c0) = u_v1 >> 0xd & 0x3f;
-  CriAt<uint>(a1, 0x15bc) = u_v1 >> 0x14 & 0x3f;
-  CriAt<uint>(a1, 0x15b4) = u_v1 >> 0x1f;
-  CriAt<uint>(a1, 0x15b8) = u_v1 >> 0x1a & 0x1f;
-  CriAt<uint>(a1, 0x16e0) = (uint)((int)u_v2 < 0);
-  if (i_v3 == 0x1f) {
-    i_v3 = 0;
-    i_v5 = i_v5 + 4;
+    else {
+      tc = low >> 7;
+      low = next;
+    }
+    next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+    cur += 4;
   }
   else {
-    i_v3 = i_v3 + 1;
-    u_v4 = u_v2 * 2;
+    pos += 0x19;
+    tc = low >> 7;
+    low <<= 0x19;
   }
-  CriAt<uint>(a1, 0x16e4) = (uint)((int)u_v4 < 0);
-  if (i_v3 == 0x1f) {
-    i_v3 = 0;
-    i_v5 = i_v5 + 4;
+  CriAt<uint>(a1, 0x15c4) = tc & 0x3f;
+  tc >>= 6;
+  CriAt<uint>(a1, 0x15c0) = tc & 0x3f;
+  tc >>= 7;
+  CriAt<uint>(a1, 0x15bc) = tc & 0x3f;
+  tc >>= 6;
+  CriAt<uint>(a1, 0x15b8) = tc & 0x1f;
+  CriAt<uint>(a1, 0x15b4) = tc >> 5;
+  // closed_gop, broken_link (1 bit each)
+  CriAt<uint>(a1, 0x16e0) = (uint)((int)low < 0);
+  if (pos == 0x1f) {
+    pos = 0;
+    low = next;
+    cur += 4;
   }
   else {
-    i_v3 = i_v3 + 1;
+    pos += 1;
+    low <<= 1;
   }
-  FUN_140069020(&CriAt<__int64>(a1, 0x1800),((i_v3 + 7 >> 3) - CriAt<int>(a1, 0x1800)) + -8 + i_v5,
+  CriAt<uint>(a1, 0x16e4) = (uint)((int)low < 0);
+  if (pos == 0x1f) {
+    pos = 0;
+    cur += 4;
+  }
+  else {
+    pos += 1;
+  }
+  FUN_140069020(&CriAt<__int64>(a1, 0x1800),(int)(cur + (pos + 7 >> 3) - 8 - CriAt<cri_u8 *>(a1, 0x1800)),
                 &CriAt<__int64>(a1, 0x1800),(__int64 *)&loc_18);
   (**(code **)(*a2 + 0x40))(a2,0,a1 + 0x1800);
   (**(code **)(*a2 + 0x38))(a2,1,&loc_18);
