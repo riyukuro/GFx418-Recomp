@@ -3976,10 +3976,8 @@ uint m2vhdec_ParseSj(cri_any cri_p0, cri_any cri_p1)
   longlong *arg2 = cri_p1;
   int i_v1;
   longlong l_v2;
-  // Slot 0x30 fills a {ptr, len @+8} struct at rsp+0x20 in the exe; loc_28/uStack_24 are its pointer halves.
-  struct Head { int Lo; cri_u4 Hi; int Size; int Pad; } frame_;
-  int &loc_28 = frame_.Lo;
-  cri_u4 &uStack_24 = frame_.Hi;
+  // The stream hands back a {ptr, len @+8} chunk at rsp+0x20; the parsers take the pointer by value.
+  struct Head { longlong Data; int Size; } head;
   struct Chunk { void *Data; int Size; } loc_18;
   
   *(cri_u4 *)((char *)arg1 + 0xd0c) = 0;
@@ -3988,43 +3986,43 @@ uint m2vhdec_ParseSj(cri_any cri_p0, cri_any cri_p1)
   *(cri_u4 *)((char *)arg1 + 0x70c) = 0;
   i_v1 = FUN_140051d90(arg2);
   if (i_v1 != 0) {
-    while( true ) {
-      (**(cri_code **)(*arg2 + 0x30))(arg2,1,0x7fffffff,&loc_28);
+    do {
+      (**(cri_code **)(*arg2 + 0x30))(arg2,1,0x7fffffff,&head);
       switch(i_v1) {
-      case 4:
-        l_v2 = parsePsc(arg1,CONCAT44(uStack_24,loc_28));
-        break;
-      default:
-        goto switchD_140058e8d_caseD_5;
-      case 8:
-        l_v2 = parseGsc(arg1,CONCAT44(uStack_24,loc_28));
-        break;
-      case 0x10:
-        l_v2 = parseEsc(arg1,CONCAT44(uStack_24,loc_28));
-        break;
-      case 0x20:
-        l_v2 = parseUdsc(arg1,CONCAT44(uStack_24,loc_28));
-        break;
       case 0x40:
-        l_v2 = parseShc(arg1,CONCAT44(uStack_24,loc_28));
+        l_v2 = parseShc(arg1,head.Data);
         break;
       case 0x80:
-        l_v2 = parseSec(arg1,CONCAT44(uStack_24,loc_28));
+        l_v2 = parseSec(arg1,head.Data);
+        break;
+      case 0x20:
+        l_v2 = parseUdsc(arg1,head.Data);
+        break;
+      case 0x10:
+        l_v2 = parseEsc(arg1,head.Data);
+        break;
+      case 8:
+        l_v2 = parseGsc(arg1,head.Data);
+        break;
+      case 4:
+        l_v2 = parsePsc(arg1,head.Data);
+        break;
+      default:
+        l_v2 = 0;
       }
-      if (l_v2 == 0) break;
-      FUN_140069020((__int64 *)&loc_28,(int)l_v2 - loc_28,(__int64 *)&loc_28,(__int64 *)&loc_18);
-      (**(cri_code **)(*arg2 + 0x40))(arg2,0,&loc_28);
+      if (l_v2 == 0) {
+        (**(cri_code **)(*arg2 + 0x38))(arg2,1,&head);
+        break;
+      }
+      FUN_140069020((__int64 *)&head,(int)l_v2 - (int)head.Data,(__int64 *)&head,(__int64 *)&loc_18);
+      (**(cri_code **)(*arg2 + 0x40))(arg2,0,&head);
       (**(cri_code **)(*arg2 + 0x38))(arg2,1,&loc_18);
-      if ((*(int *)((char *)arg1 + 0xd0c) != 0) || (i_v1 = FUN_140051d90(arg2), i_v1 == 0))
-      goto LAB_140058f60;
-    }
-switchD_140058e8d_caseD_5:
-    (**(cri_code **)(*arg2 + 0x38))(arg2,1,&loc_28);
+    } while ((*(int *)((char *)arg1 + 0xd0c) == 0) && ((i_v1 = FUN_140051d90(arg2)) != 0));
   }
-LAB_140058f60:
+  i_v1 = *(int *)((char *)arg1 + 0xd0c);
   *(int *)((char *)arg1 + 0xd18) = *(int *)((char *)arg1 + 0xd18) + *(int *)((char *)arg1 + 0xd10);
-  *(int *)((char *)arg1 + 0xd14) = *(int *)((char *)arg1 + 0xd14) + *(int *)((char *)arg1 + 0xd0c);
-  return -(uint)(*(int *)((char *)arg1 + 0xd0c) != 0) & 0xfffffffe;
+  *(int *)((char *)arg1 + 0xd14) = *(int *)((char *)arg1 + 0xd14) + i_v1;
+  return (i_v1 != 0) ? 0xfffffffe : 0;
 }
 
 // @0x140059030
