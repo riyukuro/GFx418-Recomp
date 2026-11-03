@@ -3291,58 +3291,68 @@ struct Sfr33TrBlockView
     TR::State*  pState;     // +0x18
 };
 
+// vm.ThrowVerifyError(e): raises e as a VerifyError.
+static SF_FORCEINLINE void Sfr33ThrowVerifyError(VM& vm, const VM::Error& e)
+{
+    FUN_14252ecb0(&vm, &e, &fl::VerifyErrorCI);
+}
+
 // Tracer::EmitCode: seeds each exception handler block with its caught type, traces the body from the
 // first block, then patches the recorded branch offsets and copies the remapped exception table.
-// MS2-FUNCTIONAL 0x1424f7840: TR::Block is a layout view and the block and trace helpers stay FUN_ calls
+// MS2-FUNCTIONAL 0x1424f7840: TR::Block is a layout view; register choice and the exception-info argument load order
 // @0x1424f7840
 void Tracer::EmitCode()
 {
     typedef Abc::MethodBodyInfo::ExceptionInfo ExcInfo;
     if (Done)
         return;
-    VMAbcFile& file = *CF.pFile;
-    const Abc::File& abc = file.GetAbcFile();
-    VM& vm = file.GetVM();
-    const Abc::MethodBodyInfo& mbi = *abc.MethodBodies.Info[CF.MBIIndex];
-    const ArrayLH_POD<ExcInfo, StatMV_VM_AbcFile_Mem>& ei = mbi.exception.info;
-    for (UPInt i = 0; i < ei.GetSize(); ++i)
+    VM& vm = GetVM();
+    const Abc::MethodBodyInfo::Exception& e = CF.pFile->GetAbcFile().MethodBodies.Info[CF.MBIIndex]->exception;
     {
-        const ExcInfo& e = ei[i];
-        Sfr33TrBlockView* b = reinterpret_cast<Sfr33TrBlockView*>(
-            FUN_1424e6aa0(this, reinterpret_cast<Sfr33TrBlockView*>(Blocks.pNext)->pState, e.from, 0, false));
-        if (b)
+        for (UPInt i = 0; i < e.info.GetSize(); ++i)
         {
-            b->Flags &= ~1u;
-            b->Type |= 2;
-        }
-        b = reinterpret_cast<Sfr33TrBlockView*>(
-            FUN_1424e6aa0(this, reinterpret_cast<Sfr33TrBlockView*>(Blocks.pNext)->pState, e.target, 0, false));
-        if (!b)
-            continue;
-        b->Type |= 4;
-        unsigned flags = 0x48;
-        InstanceTraits::Traits* rt;
-        if (e.exc_type_ind == 0)
-            rt = &vm.GetClassTraitsObject().GetInstanceTraits();
-        else
-        {
-            const Abc::Multiname& mn = abc.Const_Pool.const_multiname[e.exc_type_ind];
-            ClassTraits::Traits* ct = static_cast<ClassTraits::Traits*>(FUN_142524f60(&vm, &file, &mn));
-            if (!ct)
+            const ExcInfo& ei = e.info[i];
+            Sfr33TrBlockView* try_block = reinterpret_cast<Sfr33TrBlockView*>(
+                FUN_1424e6aa0(this, reinterpret_cast<Sfr33TrBlockView*>(Blocks.pNext)->pState, static_cast<UInt32>(ei.from), 0, false));
+            if (try_block)
             {
-                const Value name(file.GetInternedString(mn.NameIndex));
-                const VM::Error err(VM::ErrorID(1014) /* eClassNotFoundError */, vm, name);
-                FUN_14252ecb0(&vm, &err, &fl::VerifyErrorCI);
-                return;
+                try_block->Flags &= ~1u;
+                try_block->Type |= 2;
             }
-            rt = &ct->GetInstanceTraits();
-            if (rt == &vm.GetClassTraitsSInt().GetInstanceTraits() || rt == &vm.GetClassTraitsUInt().GetInstanceTraits() ||
-                rt == &vm.GetClassTraitsNumber().GetInstanceTraits() || rt == &vm.GetClassTraitsBoolean().GetInstanceTraits())
-                flags = 8;
+            Sfr33TrBlockView* catch_block = reinterpret_cast<Sfr33TrBlockView*>(
+                FUN_1424e6aa0(this, reinterpret_cast<Sfr33TrBlockView*>(Blocks.pNext)->pState, static_cast<UInt32>(ei.target), 0, false));
+            if (catch_block)
+            {
+                catch_block->Type |= 4;
+                TR::State& state = *catch_block->pState;
+                const SInt32 et_ind = ei.exc_type_ind;
+                if (et_ind == 0)
+                    state.GetOpStack().PushBack(
+                        Value(GetVM().GetClassTraitsObject().GetInstanceTraits(), Value::NullOrNot));
+                else
+                {
+                    VMAbcFile& file = *CF.pFile;
+                    const Abc::Multiname& amn = file.GetAbcFile().Const_Pool.GetMultiname(et_ind);
+                    const ClassTraits::Traits* etr =
+                        static_cast<const ClassTraits::Traits*>(FUN_142524f60(&vm, &file, &amn));
+                    if (etr)
+                    {
+                        InstanceTraits::Traits& itr = etr->GetInstanceTraits();
+                        VM& tvm = GetVM();
+                        const Value::TraceNullType tn = (&itr == &tvm.GetClassTraitsSInt().GetInstanceTraits() ||
+                            &itr == &tvm.GetClassTraitsUInt().GetInstanceTraits() ||
+                            &itr == &tvm.GetClassTraitsNumber().GetInstanceTraits() ||
+                            &itr == &tvm.GetClassTraitsBoolean().GetInstanceTraits()) ? Value::NotNull : Value::NullOrNot;
+                        state.GetOpStack().PushBack(Value(itr, tn));
+                    }
+                    else
+                    {
+                        return Sfr33ThrowVerifyError(vm, VM::Error(VM::ErrorID(1014) /* eClassNotFoundError */, vm,
+                            Value(file.GetInternedString(amn.NameIndex), Value::InlineStr)));
+                    }
+                }
+            }
         }
-        Value v;
-        Sfr33TracerValueSet(v, flags, rt, false);
-        b->pState->GetOpStack().PushBack(v);
     }
     FUN_142530220(this, 0, Blocks.pNext);
     if (vm.IsException())
@@ -3353,15 +3363,24 @@ void Tracer::EmitCode()
     for (UPInt i = 0; i < PosToRecalculate.GetSize(); ++i)
     {
         const Recalculate& r = PosToRecalculate[i];
-        UPInt& c = WCode[r.pos];
-        c = c < Orig2newPosMap.GetSize() ? Orig2newPosMap[c] + r.base - r.pos : 0;
+        const Abc::TCodeOffset pos = r.pos;
+        const UPInt absolute_address = WCode[pos];
+        UPInt new_address = 0;
+        if (absolute_address < Orig2newPosMap.GetSize())
+        {
+            new_address = static_cast<UPInt>(Orig2newPosMap[absolute_address]);
+            new_address -= static_cast<UPInt>(pos);
+            new_address += r.base;
+        }
+        WCode[pos] = new_address;
     }
-    for (UPInt i = 0; i < ei.GetSize(); ++i)
+    const Abc::MethodBodyInfo::Exception& e2 = CF.pFile->GetAbcFile().MethodBodies.Info[CF.MBIIndex]->exception;
+    for (UPInt i = 0; i < e2.info.GetSize(); ++i)
     {
-        const ExcInfo& e = ei[i];
-        WException.info.PushBack(ExcInfo(static_cast<Abc::SInd>(Orig2newPosMap[e.from]),
-                                         static_cast<Abc::SInd>(Orig2newPosMap[e.to]),
-                                         static_cast<Abc::SInd>(Orig2newPosMap[e.target]), e.exc_type_ind,
+        const ExcInfo& e = e2.info[i];
+        WException.info.PushBack(ExcInfo(static_cast<Abc::SInd>(Orig2newPosMap[static_cast<UInt32>(e.from)]),
+                                         static_cast<Abc::SInd>(Orig2newPosMap[static_cast<UInt32>(e.to)]),
+                                         static_cast<Abc::SInd>(Orig2newPosMap[static_cast<UInt32>(e.target)]), e.exc_type_ind,
                                          e.var_name_ind));
     }
     Done = true;
