@@ -1493,6 +1493,9 @@ namespace Instances { namespace fl
 
 }}} // namespace Scaleform::GFx::AS3
 
+// ArrayDataBase<SPtr<Namespace>, AllocatorDH>::ResizeNoConstruct, called out of line by the exe's inlined PushBack.
+void FUN_14241ff20(void* self, const void* pheapAddr, Scaleform::UPInt newSize);
+
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // Defined in sfr_as3_04 (exe 0x142419b10).
@@ -2139,14 +2142,20 @@ namespace Instances { namespace fl
         for (UPInt i = 0; i < arr.GetSize(); ++i)
             if (*arr[i] == ns)
                 return;
-        arr.PushBack(SPtr<Instances::Namespace>(&ns));
+        // arr.PushBack(&ns), with the exe's out-of-line ResizeNoConstruct
+        typedef SPtr<Instances::Namespace> NsPtr;
+        typedef Scaleform::ArrayDataDH<NsPtr, Scaleform::AllocatorDH<NsPtr>, Scaleform::ArrayDefaultPolicy> NsPtrData;
+        const NsPtr v(&ns);
+        NsPtrData* d = reinterpret_cast<NsPtrData*>(&arr);
+        ::FUN_14241ff20(d, d->pHeap, d->Size + 1);
+        NsPtrData::AllocatorType::Construct(d->Data + d->Size - 1, v);
     }
 
     // The prefixed namespaces declared on this element. The ancestors' prefixed namespaces are
     // collected but, as in the exe, not used to filter the result.
     // The exe calls the SPtr<Namespace> ArrayDH resize (0x14241ff20) and the array destructor (0x1423f06a0)
-    // out of line but inlines Value(Namespace*) (0x1423ef9b0); ours does the reverse.
-    // MS2-FUNCTIONAL: inlining of the array resize/destructor and of Value(Namespace*) differs
+    // out of line but inlines Value(Namespace*) (0x1423ef9b0) and the Value array push.
+    // MS2-FUNCTIONAL: register choice; the exe keeps the arrays' Data/Size in registers across the loops
     // @0x1423fc4b0
     __declspec(noinline) void XML::AS3namespaceDeclarations(SPtr<Instances::fl::Array>& result)
     {
@@ -2197,7 +2206,7 @@ namespace Instances { namespace fl
         }
 
         for (UPInt i = 0; i < declaredNS.GetSize(); ++i)
-            PushBackValue(a->SA, Value(declaredNS[i].GetPtr()));
+            PushBackValue(a->SA, Value(declaredNS[i].GetPtr(), Value::InlineObj));
     }
 
     // @0x1423fc8d0
