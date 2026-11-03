@@ -2306,14 +2306,26 @@ void FUN_1424efe30(Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::Value* valu
     }
 }
 
-void FUN_1424d29d0(void* set, void* pheapAddr, const Scaleform::UPInt* key, Scaleform::UPInt hash);   // HashSetLH<SPtr>::add
+// The ABC file's set of referenced constants (HashSetLH<SPtr<GASRefCountBase>> by pointer value). Its add by raw
+// pointer is 0x1424d29d0 and SPtr::SetPtr is 0x1424e0710 (both out of line in the exe).
+namespace Scaleform {
+typedef GFx::AS3::SPtr<GFx::AS3::GASRefCountBase> Sfr33GCRootPtr;
+typedef HashSetBase<Sfr33GCRootPtr, FixedSizeHash<Sfr33GCRootPtr>, FixedSizeHash<Sfr33GCRootPtr>, AllocatorLH<Sfr33GCRootPtr, 2>,
+                    HashsetCachedEntry<Sfr33GCRootPtr, FixedSizeHash<Sfr33GCRootPtr> > > Sfr33GCRootSet;
+template<> template<>
+void Sfr33GCRootSet::add<GFx::AS3::GASRefCountBase*>(void* pheapAddr, GFx::AS3::GASRefCountBase* const& key, UPInt h);
+namespace GFx { namespace AS3 {
+template<> SPtr<GASRefCountBase>& SPtr<GASRefCountBase>::SetPtr(GASRefCountBase* p);
+}}
+}
 namespace Scaleform { namespace GFx { namespace AS3 {
 const SlotInfo* FindFixedSlot(VM& vm, const Traits& tr, const Multiname& mn, UPInt& index, Object* obj);
 }}}
 
 // Tracer: emits the push of the object constant v (pop: drop the last pushed value first) and keeps the object in
 // the ABC file's set of referenced constants (+0x38). The argument carries the value kind in the pointer's low bits.
-// MS2-FUNCTIONAL 0x1424f86d0: written on raw offsets (tracer +0x20 state, +0x28 file); the exe calls SPtr::SetPtr out of line
+// MS2-FUNCTIONAL 0x1424f86d0: written on raw offsets (tracer +0x20 state, +0x28 file); the exe keeps the key in rbx
+// across the inlined Set (ours reloads it from its slot) and does not align the chain loop
 // @0x1424f86d0
 bool FUN_1424f86d0(void* tr, const Scaleform::GFx::AS3::Value& v, bool pop)
 {
@@ -2338,37 +2350,13 @@ bool FUN_1424f86d0(void* tr, const Scaleform::GFx::AS3::Value& v, bool pop)
         reinterpret_cast<Tracer*>(self)->PopPrevValue();
     const UByte* pv = reinterpret_cast<const UByte*>(&v);
     FUN_14251fb90(self, 0xb5, *reinterpret_cast<const UPInt*>(pv + 0x10) + tag);
-    file = *reinterpret_cast<UByte**>(*reinterpret_cast<UByte**>(self + 0x20) + 0x28);
     const UPInt obj = *reinterpret_cast<const UPInt*>(pv + 0x10);
+    file = *reinterpret_cast<UByte**>(*reinterpret_cast<UByte**>(self + 0x20) + 0x28);
     if (obj == *reinterpret_cast<const UPInt*>(*reinterpret_cast<UByte**>(file + 0x20) + 0x298))
         return true;
-    UByte* set = file + 0x38;
-    const UPInt hash = FixedSizeHash<UPInt>::SDBM_Hash(&obj, sizeof(obj));
-    const UPInt* table = *reinterpret_cast<UPInt* const*>(set);
-    if (table)
-    {
-        const UPInt mask = table[1];
-        const UPInt home = hash & mask;
-        const UPInt* e = table + 2 + home * 3;
-        if (e[0] != UPInt(-2) && e[1] == home)
-        {
-            UPInt i = home;
-            for (;;)
-            {
-                if (e[1] == home && e[2] == obj)
-                {
-                    reinterpret_cast<SPtr<GASRefCountBase>*>(const_cast<UPInt*>(table + 4 + i * 3))
-                        ->SetPtr(reinterpret_cast<GASRefCountBase*>(obj));
-                    return true;
-                }
-                i = e[0];
-                if (i == UPInt(-1))
-                    break;
-                e = table + 2 + i * 3;
-            }
-        }
-    }
-    FUN_1424d29d0(set, set, &obj, hash);
+    Sfr33GCRootSet* set = reinterpret_cast<Sfr33GCRootSet*>(file + 0x38);
+    GASRefCountBase* const key = reinterpret_cast<GASRefCountBase*>(obj);
+    set->Set(set, key);
     return true;
 }
 
