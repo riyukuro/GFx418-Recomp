@@ -5269,22 +5269,66 @@ void FUN_1423d9090(void* raw, void*, unsigned long long requested)
     slot[0] = reinterpret_cast<unsigned long long>(replacement);
 }
 
-// MS2-FUNCTIONAL: grows the executable's command hash table and inserts a key plus its two-word handler payload.
+// MS2-FUNCTIONAL: HashSetBase::add on the command table (grow, then insert at the home slot, moving the old head
+// or a borrowed slot to the next free entry). Left: cl keeps the table base in r9 and the mask in rdx, the exe the reverse.
 // @0x1423d8b80
-__declspec(noinline) void FUN_1423d8b80(unsigned long long* map, void*, void** item, unsigned long long hash)
+__declspec(noinline) void FUN_1423d8b80(unsigned long long* map, void* heap, void** item, unsigned long long hash)
 {
+    struct Payload { unsigned long long value0, value1; };
     auto* table = reinterpret_cast<unsigned long long*>(map[0]);
-    if (!table) {
-        FUN_1423d9090(map, map, 8);
-        table = reinterpret_cast<unsigned long long*>(map[0]);
-    } else if (table[0] * 5 > table[1] * 4 + 4) {
-        FUN_1423d9090(map, map, table[1] * 2 + 2);
-        table = reinterpret_cast<unsigned long long*>(map[0]);
+    if (!table)
+        FUN_1423d9090(map, heap, 8);
+    else if (table[0] * 5 > table[1] * 4 + 4)
+        FUN_1423d9090(map, heap, table[1] * 2 + 2);
+
+    hash &= reinterpret_cast<unsigned long long*>(map[0])[1];
+    ++reinterpret_cast<unsigned long long*>(map[0])[0];
+
+    const long long index = static_cast<long long>(hash);
+    table = reinterpret_cast<unsigned long long*>(map[0]);
+    cx18_CommandEntry* natural = &reinterpret_cast<cx18_CommandEntry*>(table + 2)[index];
+    if (static_cast<long long>(natural->next) == -2) {
+        natural->next = ~0ull;
+        natural->key = *static_cast<unsigned long long*>(item[0]);
+        *reinterpret_cast<Payload*>(&natural->value0) = *static_cast<Payload*>(item[1]);
+    } else {
+        auto* entries = reinterpret_cast<cx18_CommandEntry*>(table + 2);
+        long long blank = index;
+        do {
+            blank = (blank + 1) & table[1];
+        } while (static_cast<long long>(entries[blank].next) != -2);
+        cx18_CommandEntry* free = &entries[blank];
+        if (natural->home == static_cast<unsigned long long>(index)) {
+            free->next = natural->next;
+            free->home = natural->home;
+            free->key = natural->key;
+            *reinterpret_cast<Payload*>(&free->value0) = *reinterpret_cast<Payload*>(&natural->value0);
+            natural->key = *static_cast<unsigned long long*>(item[0]);
+            *reinterpret_cast<Payload*>(&natural->value0) = *static_cast<Payload*>(item[1]);
+            _ReadWriteBarrier();
+            natural->next = blank;
+        } else {
+            long long walk = static_cast<long long>(natural->home);
+            for (;;) {
+                cx18_CommandEntry* e = &entries[walk];
+                if (static_cast<long long>(e->next) == index) {
+                    free->next = natural->next;
+                    free->home = natural->home;
+                    free->key = natural->key;
+                    *reinterpret_cast<Payload*>(&free->value0) = *reinterpret_cast<Payload*>(&natural->value0);
+                    e->next = blank;
+                    break;
+                }
+                walk = static_cast<long long>(e->next);
+            }
+            natural->key = *static_cast<unsigned long long*>(item[0]);
+            *reinterpret_cast<Payload*>(&natural->value0) = *static_cast<Payload*>(item[1]);
+            _ReadWriteBarrier();
+            natural->next = ~0ull;
+        }
     }
-    if (!table || !item || !item[0] || !item[1]) return;
-    const auto key = reinterpret_cast<unsigned long long>(*static_cast<void**>(item[0]));
-    auto* value = static_cast<unsigned long long*>(item[1]);
-    cx18_CommandInsert(table, hash, key, value[0], value[1]);
+    _ReadWriteBarrier();
+    natural->home = hash;
 }
 
 // Invokes an ActionScript callback of the IMM IME object's movie (+0xa8, bridge at +0x18, Invoke = slot 0x78).
