@@ -342,18 +342,17 @@ void StyleSheetProto::GetStyleNames(const FnCall& fn)
 class CSSFileLoaderAndParserImpl : public ASCSSFileLoader
 {
 public:
-    UByte    Unrecovered_10[8];
+    int      Unrecovered_10;
     wchar_t* Buffer;
     int      BufferLen;
 
-    CSSFileLoaderAndParserImpl() : Buffer(0), BufferLen(0) {}
+    CSSFileLoaderAndParserImpl() : Unrecovered_10(0), Buffer(0), BufferLen(0) {}
     virtual ~CSSFileLoaderAndParserImpl();
     virtual void Load(const String& fileName, FileOpener* opener);
     virtual void Init(Environment* penv, Object* sheet);
 };
 
 // StyleSheet.prototype.load(url): queues the CSS load; true once queued, false without an argument.
-// MS2-FUNCTIONAL: register allocation differs (the exe keeps the zero in rbx and needs no r14/r15 saves).
 // @0x1428f99f0
 void StyleSheetProto::Load(const FnCall& fn)
 {
@@ -375,7 +374,8 @@ void StyleSheetProto::Load(const FnCall& fn)
     // the style manager's State (+0x28): Loading
     *(int*)&pthis->Data68[5] = 1;
     Ptr<ASCSSFileLoader> ploader = *SF_NEW CSSFileLoaderAndParserImpl();
-    fn.Env->GetAS2Root()->AddCssLoadQueueEntry(pthis, ploader, url.ToCStr());
+    static_cast<MovieRoot*>(fn.Env->GetTarget()->GetMovieImpl()->pASMovieRoot)
+        ->AddCssLoadQueueEntry(pthis, ploader, url.ToCStr());
     fn.Result->SetBool(true);
 }
 
