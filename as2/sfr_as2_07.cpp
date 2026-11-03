@@ -108,8 +108,8 @@ void WatchpointHash_Add(ASStringHash_GC<Object::Watchpoint>* phash, void* pheapA
 typedef ASStringHash_GC<Object::Watchpoint>::SetType WatchpointSet;
 
 // Hash::SetCaseCheck of the watchpoint table, inline in the exe around the out-of-line findIndexAlt and add.
-inline void WatchpointHash_SetCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key,
-                                        const Object::Watchpoint& value, bool caseSensitive)
+SF_FORCEINLINE void WatchpointHash_SetCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key,
+                                                const Object::Watchpoint& value, bool caseSensitive)
 {
     SPInt index;
     if (caseSensitive)
@@ -1602,8 +1602,7 @@ Object* Value::ToObject(const Environment* penv) const
 }
 
 
-// MS2-FUNCTIONAL the exe builds the found / end iterator in one temporary (no cmov) and stores the new table's
-// null pointer as an immediate
+// MS2-FUNCTIONAL the exe builds the found / end iterator in one temporary (no cmov)
 // @0x142994c50
 bool Object::Watch(ASStringContext* psc, const ASString& prop, const FunctionRef& callback, const Value& userData)
 {
