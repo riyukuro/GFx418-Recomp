@@ -80,13 +80,16 @@ bool AS2ValueObjectInterface::Invoke(void* pdata, Value* presult, const char* na
     return ok;
 }
 
-// MS2-FUNCTIONAL: the exe inlines ArrayObject::PushBack (the new element allocated and constructed in place).
+// MS2-FUNCTIONAL: ArrayObject::PushBack is inlined as in the exe; what is left is order: the exe reads asval's
+// type byte (for its destructor) before the size and element stores, ours after them.
 // @0x142971ac0
 bool AS2ValueObjectInterface::PushBack(void* pdata, const Value& value)
 {
+    // ArrayObject::PushBack (0x142971ba0) inlined
+    AS2::ArrayObject* parr = static_cast<AS2::ArrayObject*>(static_cast<AS2::ObjectInterface*>(pdata));
     AS2::Value asval;
     InvRoot(pMovieRoot)->Value2ASValue(value, &asval);
-    static_cast<AS2::ArrayObject*>(static_cast<AS2::ObjectInterface*>(pdata))->PushBack(asval);
+    parr->Elements.PushBack(SF_HEAP_AUTO_NEW(parr) AS2::Value(asval));
     return true;
 }
 
