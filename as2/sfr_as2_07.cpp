@@ -108,19 +108,31 @@ void WatchpointHash_Add(ASStringHash_GC<Object::Watchpoint>* phash, void* pheapA
 typedef ASStringHash_GC<Object::Watchpoint>::SetType WatchpointSet;
 
 // Hash::SetCaseCheck of the watchpoint table, inline in the exe around the out-of-line findIndexAlt and add.
-SF_FORCEINLINE void WatchpointHash_SetCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key,
-                                                const Object::Watchpoint& value, bool caseSensitive)
+SF_INLINE WatchpointSet::Iterator WatchpointHash_Find(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key)
 {
-    SPInt index;
-    if (caseSensitive)
-        index = HashFindIndex(phash, key);
-    else
-    {
-        ASStringNoCaseKey ikey(key);
-        index = HashFindIndex(phash, ikey);
-    }
-    WatchpointSet::Iterator it = index >= 0 ? WatchpointSet::Iterator(reinterpret_cast<WatchpointSet*>(phash), index)
-                                            : WatchpointSet::Iterator(0, 0);
+    SPInt index = HashFindIndex(phash, key);
+    if (index >= 0)
+        return WatchpointSet::Iterator(reinterpret_cast<WatchpointSet*>(phash), index);
+    return WatchpointSet::Iterator(0, 0);
+}
+SF_INLINE WatchpointSet::Iterator WatchpointHash_FindNoCase(ASStringHash_GC<Object::Watchpoint>* phash,
+                                                            const ASString& key)
+{
+    ASStringNoCaseKey ikey(key);
+    SPInt             index = HashFindIndex(phash, ikey);
+    if (index >= 0)
+        return WatchpointSet::Iterator(reinterpret_cast<WatchpointSet*>(phash), index);
+    return WatchpointSet::Iterator(0, 0);
+}
+inline WatchpointSet::Iterator WatchpointHash_FindCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash,
+                                                               const ASString& key, bool caseSensitive)
+{
+    return caseSensitive ? WatchpointHash_Find(phash, key) : WatchpointHash_FindNoCase(phash, key);
+}
+SF_INLINE void WatchpointHash_SetCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key,
+                                           const Object::Watchpoint& value, bool caseSensitive)
+{
+    WatchpointSet::Iterator it = WatchpointHash_FindCaseCheck(phash, key, caseSensitive);
     if (it != reinterpret_cast<WatchpointSet*>(phash)->End())
         it->Second = value;
     else
@@ -1602,7 +1614,8 @@ Object* Value::ToObject(const Environment* penv) const
 }
 
 
-// MS2-FUNCTIONAL the exe builds the found / end iterator in one temporary (no cmov)
+// MS2-FUNCTIONAL block order: the exe lays out the case-sensitive lookup with a jump past the no-case one to the
+// shared iterator test
 // @0x142994c50
 bool Object::Watch(ASStringContext* psc, const ASString& prop, const FunctionRef& callback, const Value& userData)
 {
