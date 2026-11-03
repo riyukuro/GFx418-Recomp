@@ -2,7 +2,8 @@
 // source, written from the exe.
 // MS2-UNIT: sfr_as3_16
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1424dc870-0x1424ddb00 .text$mn
+// MS2-RANGE: 0x1424dc870-0x1424dd500 .text$mn
+// MS2-RANGE: 0x1424dda00-0x1424ddb00 .text$mn
 // MS2-RANGE: 0x1424ddb00-0x1424ddb74 .text$mn
 // MS2-RANGE: 0x1424ddb74-0x1424ddb80 .text$mn
 // MS2-RANGE: 0x1424ddbee-0x1424ddcb0 .text$mn
@@ -11,7 +12,6 @@
 // MS2-RANGE: 0x1424de0e0-0x1424e0a70 .text$mn
 // MS2-RANGE: 0x1424e0b40-0x1424e2040 .text$mn
 // MS2-RANGE: 0x1424e2210-0x1424e2290 .text$mn
-// MS2-RANGE: 0x1424e2330-0x1424e2390 .text$mn
 // MS2-RANGE: 0x1424e28e0-0x1424e29a0 .text$mn
 // MS2-RANGE: 0x1424e2bb0-0x1424e2c10 .text$mn
 // MS2-RANGE: 0x1424e3020-0x1424e3150 .text$mn
@@ -198,9 +198,7 @@ ASMovieRootBase::~ASMovieRootBase() = default;
 }} // namespace Scaleform::GFx
 
 namespace Scaleform { namespace GFx { namespace AS3 {
-// MS2-FUNCTIONAL 0x1424dd500: releases the ASVM's owned builtin-class references, then delegates VM cleanup to its base.
-// @0x1424dd500
-ASVM::~ASVM() = default;
+// ASVM::~ASVM (0x1424dd500) is implicit (as3_asvm.h); it is emitted with the vftable in sfr_as3_15.
 }}} // namespace Scaleform::GFx::AS3
 
 void FUN_1424de460(long long* owner);
@@ -2656,7 +2654,6 @@ SFR21_DTHUNK(FUN_1424e1b94, 0x18, DeleteAs3_1424e3890)
 SFR21_DTHUNK(FUN_1424e1ba0, 0x90, DeleteAs3_1424e3890)
 #undef SFR21_DTHUNK
 // MS2-PIN: ??_GASMovieRootBase@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2210
-// MS2-PIN: ??_GASVM@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2330
 // MS2-PIN: ??_GAvmLoader@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e28e0
 // MS2-PIN: ??_GMovieDefRootNode@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3290
 // MS2-PIN: ??_GMovieDefRootNode@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3380

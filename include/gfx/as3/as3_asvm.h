@@ -378,7 +378,7 @@ public:
 
     // (appended, sfr19) vftable 0x14317d8b0
     ASVM(MovieRoot* pmr, FlashUI& ui, FileLoader& loader, StringManager& sm, ASRefCountCollector& gc);   // 0x1424d5600
-    virtual ~ASVM();                    // 0x1424dd500
+    // ~ASVM() is implicit (0x1424dd500, sfr_as3_15: the exe has no vptr store)
     virtual void* Unk01() { return 0; } // slot 1 (its own copy, 0x1425071f0)
 
     MovieImpl* GetMovieImpl() const { return pMovieRoot->GetMovieImpl(); }
