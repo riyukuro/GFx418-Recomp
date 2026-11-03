@@ -26058,8 +26058,6 @@ void Dual_Prime_Arithmetic(longlong arg1, int *arg2, int *arg3, int arg4, int ar
   }
 }
 
-// MS2-FUNCTIONAL: code identical except one scheduling slot: the exe masks flag bit 2 before the loop counter's inc,
-// ours after (for/while/hoisted-increment forms tried).
 // @0x14008a970
 void M2VMC_Skipped(longlong arg1, uint arg2)
 {
@@ -26070,6 +26068,7 @@ void M2VMC_Skipped(longlong arg1, uint arg2)
   uint u_v5;
   cri_u4 u_v6;
   uint u_v7;
+  uint i;
   
   u_v2 = *(cri_u4 *)((char *)arg1 + 0xb90);
   u_v3 = *(uint *)((char *)arg1 + 0x6f0);
@@ -26092,8 +26091,8 @@ void M2VMC_Skipped(longlong arg1, uint arg2)
   }
   *(cri_u4 *)((char *)arg1 + 0xc14) = u_v6;
   *(uint *)((char *)arg1 + 0x5e8) = u_v5 & 0xfffffffb;
-  while (arg2 = arg2 + 1, arg2 < u_v3) {
-    *(uint *)((char *)arg1 + 0x6f0) = arg2;
+  for (i = arg2 + 1; i < u_v3; i++) {
+    *(uint *)((char *)arg1 + 0x6f0) = i;
     M2VMC_MacroBlock(arg1);
   }
   *(uint *)((char *)arg1 + 0x6f0) = u_v3;
@@ -27150,35 +27149,23 @@ void FUN_14008ce50(longlong arg1, uint arg2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// the 8 motion-vector predictors at +0xb9c, saved and restored as one struct copy, as the exe does
+struct cri07_pmv { int v[8]; };
+
 // @0x14008d0b0
 void FUN_14008d0b0(longlong arg1, int arg2)
 {
   int i_v1;
-  cri_u4 u_v2;
   cri_u4 u_v3;
-  cri_u4 u_v4;
-  cri_u4 u_v5;
-  cri_u4 u_v6;
-  cri_u4 u_v7;
-  cri_u4 u_v8;
-  cri_u4 u_v9;
-  cri_u4 u_v10;
+  cri07_pmv save;
   
   i_v1 = *(int *)((char *)arg1 + 0x2e0);
   if ((i_v1 == 1) && (*(int *)((char *)arg1 + 0xd28) == 0)) {
     FUN_14008c890(arg1,arg2);  // the exe passes rcx/rdx through
     return;
   }
-  u_v2 = *(cri_u4 *)((char *)arg1 + 0xb9c);
+  save = *(cri07_pmv *)((char *)arg1 + 0xb9c);
   u_v3 = *(cri_u4 *)((char *)arg1 + 0x5e8);
-  u_v4 = *(cri_u4 *)((char *)arg1 + 0xba0);
-  u_v5 = *(cri_u4 *)((char *)arg1 + 0xba4);
-  u_v6 = *(cri_u4 *)((char *)arg1 + 0xba8);
-  u_v7 = *(cri_u4 *)((char *)arg1 + 0xbac);
-  u_v8 = *(cri_u4 *)((char *)arg1 + 0xbb0);
-  u_v9 = *(cri_u4 *)((char *)arg1 + 0xbb4);
-  u_v10 = *(cri_u4 *)(arg1 + 3000);
   if (i_v1 == 1) {
     *(cri_u4 *)((char *)arg1 + 0x2e0) = 2;
     *(cri_u4 *)((char *)arg1 + 0x5e8) = 0x20;
@@ -27196,18 +27183,11 @@ void FUN_14008d0b0(longlong arg1, int arg2)
   *(cri_u4 *)((char *)arg1 + 0xbac) = 0;
   *(cri_u4 *)((char *)arg1 + 0xbb0) = 0;
   *(cri_u4 *)((char *)arg1 + 0xbb4) = 0;
-  *(cri_u4 *)(arg1 + 3000) = 0;
+  *(cri_u4 *)((char *)arg1 + 0xbb8) = 0;
   M2VMC_Skipped(arg1,arg2 + -1);
   *(cri_u4 *)((char *)arg1 + 0x5e8) = u_v3;
   *(int *)((char *)arg1 + 0x2e0) = i_v1;
-  *(cri_u4 *)((char *)arg1 + 0xb9c) = u_v2;
-  *(cri_u4 *)((char *)arg1 + 0xba0) = u_v4;
-  *(cri_u4 *)((char *)arg1 + 0xba4) = u_v5;
-  *(cri_u4 *)((char *)arg1 + 0xba8) = u_v6;
-  *(cri_u4 *)((char *)arg1 + 0xbac) = u_v7;
-  *(cri_u4 *)((char *)arg1 + 0xbb0) = u_v8;
-  *(cri_u4 *)((char *)arg1 + 0xbb4) = u_v9;
-  *(cri_u4 *)(arg1 + 3000) = u_v10;
+  *(cri07_pmv *)((char *)arg1 + 0xb9c) = save;
   return;
 }
 
@@ -54223,7 +54203,6 @@ void SVM_SetCbBdr(int arg1, cri_u8 arg2, cri_u8 arg3)
 // One 0x18-byte entry of a server slot callback table (DAT_143d683d0, 6 entries per slot).
 struct cri07_srvcb { uint (*fn)(cri_u8); cri_u8 arg; cri_u8 spare; };
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400b0610
 // Runs the 6 callbacks registered for server slot arg1 (each 0x18-byte entry: function, argument, spare) with the
 // slot's busy flag set around each call; returns the OR of their results and bumps the slot's run count.
@@ -54232,7 +54211,7 @@ uint SVM_ExecSvrFunc(int arg1)
   uint (*fn)(cri_u8);
   cri_u8 arg;
   uint u_v3;
-  cri07_srvcb *pu_v4;
+  volatile cri07_srvcb *pu_v4;  // the C exe obj loads fn and arg before the test; volatile keeps that
   uint u_v5;
   longlong l_v6;
   longlong l_v7;
@@ -54241,7 +54220,7 @@ uint SVM_ExecSvrFunc(int arg1)
   u_v5 = 0;
   svm_enterCriticalSection(arg1);
   l_v6 = 6;
-  pu_v4 = (cri07_srvcb *)(&DAT_143d683d0 + l_v7 * 0x90);
+  pu_v4 = (volatile cri07_srvcb *)(&DAT_143d683d0 + l_v7 * 0x90);
   do {
     fn = pu_v4->fn;
     arg = pu_v4->arg;

@@ -5286,41 +5286,49 @@ void calcVector(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p3)
   int arg4 = cri_p3;
   longlong l_v1;
   longlong l_v2;
-  bool b_v3;
+  int b_v3;
   int i_v4;
   int i_v5;
-  int i_v6;
+  int f;
+  int delta;
+  int vec;
+  int high;
+  int low;
+  int range;
   
   l_v1 = (longlong)arg3 + (longlong)arg2 * 2;
-  b_v3 = true;
+  b_v3 = 1;
   l_v2 = (longlong)arg4 + l_v1 * 2;
   i_v5 = *(int *)(arg1 + 0x60c + l_v2 * 4);
-  i_v6 = 1 << ((char)*(cri_u4 *)
-                       (arg1 + 0x304 + ((longlong)arg4 + (longlong)arg3 * 2) * 4) - 1U &
-               0x1f);
-  if ((i_v6 != 1) && (i_v5 != 0)) {
+  f = 1 << (*(int *)(arg1 + 0x304 + ((longlong)arg4 + (longlong)arg3 * 2) * 4) - 1);
+  high = f * 0x10 - 1;
+  low = -f * 0x10;
+  range = f * 0x20;
+  if ((f != 1) && (i_v5 != 0)) {
     if (i_v5 < 0) {
-      i_v5 = (-1 - *(int *)(arg1 + 0x64c + l_v2 * 4)) - (-1 - i_v5) * i_v6;
+      delta = (-1 - *(int *)(arg1 + 0x64c + l_v2 * 4)) - (-1 - i_v5) * f;
     }
     else {
-      i_v5 = *(int *)(arg1 + 0x64c + l_v2 * 4) + 1 + (i_v5 + -1) * i_v6;
+      delta = *(int *)(arg1 + 0x64c + l_v2 * 4) + 1 + (i_v5 + -1) * f;
     }
+  }
+  else {
+    delta = i_v5;
   }
   if (((*(int *)((char *)arg1 + 0xb94) == 1) && (arg4 == 1)) && (*(int *)((char *)arg1 + 0x318) == 3)) {
     i_v4 = *(int *)(arg1 + 0xba0 + l_v1 * 8) >> 1;
   }
   else {
     i_v4 = *(int *)(arg1 + 0xb9c + l_v2 * 4);
-    b_v3 = false;
+    b_v3 = 0;
   }
-  i_v4 = i_v4 + i_v5;
-  *(int *)(arg1 + 0xbbc + l_v2 * 4) = i_v4;
-  if (i_v4 < i_v6 * -0x10) {
-    *(int *)(arg1 + 0xbbc + l_v2 * 4) = i_v4 + i_v6 * 0x20;
+  vec = i_v4 + delta;
+  *(int *)(arg1 + 0xbbc + l_v2 * 4) = vec;
+  if (vec < low) {
+    *(int *)(arg1 + 0xbbc + l_v2 * 4) = vec + range;
   }
-  i_v5 = *(int *)(arg1 + 0xbbc + l_v2 * 4);
-  if (i_v6 * 0x10 + -1 < i_v5) {
-    *(int *)(arg1 + 0xbbc + l_v2 * 4) = i_v5 + i_v6 * -0x20;
+  if (*(int *)(arg1 + 0xbbc + l_v2 * 4) > high) {
+    *(int *)(arg1 + 0xbbc + l_v2 * 4) = *(int *)(arg1 + 0xbbc + l_v2 * 4) - range;
   }
   i_v5 = *(int *)(arg1 + 0xbbc + l_v2 * 4);
   if (b_v3) {
