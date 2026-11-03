@@ -696,7 +696,7 @@ int seq2dctfsir(int);
 void DCT_FsriInitScanTbl(const cri_u1 *, cri_u1 *);
 void initB0Tbl();
 void DCT_FsriTrans(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
-void DCT_FsriTransCore(cri_any = cri_any(), cri_any = cri_any());
+void DCT_FsriTransCore(char *, int);
 void FUN_140066180(cri_any = cri_any());
 void FUN_140066320(cri_any = cri_any());
 void FUN_140066370(__int64);  // C3: the definition's signature
@@ -8777,12 +8777,10 @@ void DCT_FsriTrans(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: typed params, rounding inside the cast; left: VC9 regalloc (rbx/rdi/rsi rotation).
 // @0x140065e70
-void DCT_FsriTransCore(cri_any cri_p0, cri_any cri_p1)
+void DCT_FsriTransCore(char *arg1, int arg2)
 {
-  char *arg1 = cri_p0;
-  int arg2 = cri_p1;
   cri_u8 u_v1;
   uint *pu_v2;
   uint u_v3;
@@ -8790,6 +8788,7 @@ void DCT_FsriTransCore(cri_any cri_p0, cri_any cri_p1)
   longlong *pl_v5;
   longlong l_v6;
   float f_v7;
+  int i_s;
   
   u_v1 = *(cri_u8 *)((char *)arg1 + 0x68);
   pf_v4 = *(float **)((char *)arg1 + 0x38);
@@ -8800,13 +8799,8 @@ void DCT_FsriTransCore(cri_any cri_p0, cri_any cri_p1)
       if (*arg1 == '\0') {
         f_v7 = *pf_v4;
         pu_v2 = (uint *)*pl_v5;
-        if (0.0f > f_v7) {
-          f_v7 = f_v7 - 0.5f;
-        }
-        else {
-          f_v7 = f_v7 + 0.5f;
-        }
-        u_v3 = (uint)(ushort)(short)(int)f_v7 << 0x10 | (ushort)(short)(int)f_v7;
+        i_s = (short)(int)(0.0f > f_v7 ? f_v7 - 0.5f : f_v7 + 0.5f);
+        u_v3 = i_s << 0x10 | (ushort)i_s;
         pu_v2[0x1f] = u_v3;
         pu_v2[0x1e] = u_v3;
         pu_v2[0x1d] = u_v3;
