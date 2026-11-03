@@ -31,6 +31,7 @@ unsigned __int64 FUN_1425e3480();  // Timer::GetProfileTicks
 namespace Scaleform {
 void* FindAudioRequestEntry(void** set, const unsigned char* key);  // sync-point set: the value at key
 unsigned FUN_142745f50(void* streamer);   // AuxStreamer ReadAndFill: bytes queued
+void CheckExpandAS3PointerSet(void** set, void* owner);  // CheckExpand of the sync-point set (sfr_as3_22)
 
 namespace GFx {
 
@@ -612,8 +613,69 @@ __declspec(noinline) void FUN_1427474d0(void* channel, const void* transform)
 } // namespace GFx
 } // namespace Scaleform
 
+// The node's twelve-byte value, copied member-wise.
+struct Sfr22bWord12
+{
+    UInt32 Words[3];
+};
+
+// The sync-point set's {key, twelve-byte value} node, assigned as a whole.
+struct Sfr22bSyncNode
+{
+    U      Key;
+    UInt32 Words[3];
+};
+
+// HashSetBase::add from an existing node (0x142742b50's body), which the exe inlines into setRawCapacity.
+static __forceinline void Sfr22bSyncAdd(U** self, void* heap, const char* v, U hash)
+{
+    CheckExpandAS3PointerSet((void**)self, heap);
+    hash &= (*self)[1];
+    (*self)[0]++;
+    U* table = *self;
+    char* e = RawEntry(table, hash, 0x28);
+    if (*(SPInt*)e == -2)
+    {
+        *(SPInt*)e = -1;
+        RawField<U>(e, 0x10) = *(const U*)v;
+        RawField<Sfr22bWord12>(e, 0x18) = RawField<Sfr22bWord12>(v, 8);
+    }
+    else
+    {
+        U blank = hash;
+        do
+            blank = (blank + 1) & table[1];
+        while (*(SPInt*)RawEntry(table, blank, 0x28) != -2);
+        char* b = RawEntry(table, blank, 0x28);
+        if (*(U*)(e + 8) == hash)
+        {
+            *(SPInt*)b = *(SPInt*)e;
+            *(U*)(b + 8) = *(U*)(e + 8);
+            RawField<U>(b, 0x10) = RawField<U>(e, 0x10);
+            RawField<Sfr22bWord12>(b, 0x18) = RawField<Sfr22bWord12>(e, 0x18);
+            RawField<Sfr22bSyncNode>(e, 0x10) = *(const Sfr22bSyncNode*)v;
+            *(U*)e = blank;
+        }
+        else
+        {
+            U* link = (U*)RawEntry(table, *(U*)(e + 8), 0x28);
+            while (*link != hash)
+                link = (U*)RawEntry(table, *link, 0x28);
+            *(SPInt*)b = *(SPInt*)e;
+            *(U*)(b + 8) = *(U*)(e + 8);
+            RawField<U>(b, 0x10) = RawField<U>(e, 0x10);
+            RawField<Sfr22bWord12>(b, 0x18) = RawField<Sfr22bWord12>(e, 0x18);
+            *link = blank;
+            RawField<Sfr22bSyncNode>(e, 0x10) = *(const Sfr22bSyncNode*)v;
+            *(SPInt*)e = -1;
+        }
+    }
+    *(U*)(e + 8) = hash;
+}
+
 // HashSet<SyncPoint*, Transform> (stride 0x28): setRawCapacity.
-// MS2-FUNCTIONAL: the exe inlines the add; here it goes through FUN_142742b50.
+// MS2-FUNCTIONAL: the add is inlined (Sfr22bSyncAdd), but the exe hashes the key before the CheckExpand call and keeps
+// the hash multipliers in r9-r11; ours hashes after the call.
 // @0x142747530
 extern "C" void FUN_142747530(U** self, void* heap, U n)
 {
@@ -636,8 +698,7 @@ extern "C" void FUN_142747530(U** self, void* heap, U n)
             char* e = RawEntry(*self, i, 0x28);
             if (*(SPInt*)e == -2)
                 continue;
-            NodeRef node = {RawFieldPtr<const U>(e, 0x10), RawFieldPtr<void* const>(e, 0x18)};
-            FUN_142742b50(&table, heap, &node, RawKey8Hash(RawField<U>(e, 0x10)));
+            Sfr22bSyncAdd(&table, heap, e + 0x10, RawKey8Hash(RawField<U>(e, 0x10)));
             *(SPInt*)e = -2;
         }
         Memory::Free(*self);
