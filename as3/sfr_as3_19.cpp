@@ -1406,20 +1406,27 @@ void Sfr27ExecGetScopeStack(VM* vm, void* frame, UInt32 index)
 }
 
 
-// SDK VM::GetGlobalObject: the innermost call frame's (VM +0x78 frames, 64 per page of 0xa8-byte frames) first
-// scope object, else its this when that is an object.
-static __forceinline Object* ExecGlobalObject(VM* vm)
+// The frame's global object: the bottom scope, else the frame's this object (NULL when this is not an object).
+static __forceinline Object* ExecFrameGlobalObject(UPInt frame)
 {
-    const UPInt count = VmRd(vm, 0x78);
-    if (count == 0)
-        return NULL;
-    const UPInt i = count - 1;
-    const UPInt frame = (i & 0x3f) * 0xa8 + *reinterpret_cast<const UPInt*>(VmRd(vm, 0x90) + (i >> 6) * 8);
     const UPInt* scopes = *reinterpret_cast<const UPInt* const*>(frame + 0x38);
     if (scopes != NULL && scopes[1] != 0)
         return *reinterpret_cast<Object* const*>(scopes[0] + 0x10);
     const Value* self = *reinterpret_cast<Value* const*>(*reinterpret_cast<const UPInt*>(frame + 0x18) + 8);
     return static_cast<UInt32>(self->GetKind()) - 0xc <= 3 ? reinterpret_cast<Object*>(self->GetGASRefCountBase()) : NULL;
+}
+
+// SDK VM::GetGlobalObject: the innermost call frame's (VM +0x78 frames, 64 per page of 0xa8-byte frames) global
+// object; NULL with no call frame.
+static __forceinline Object* ExecGlobalObject(VM* vm)
+{
+    const UPInt count = VmRd(vm, 0x78);
+    if (count != 0)
+    {
+        const UPInt i = count - 1;
+        return ExecFrameGlobalObject((i & 0x3f) * 0xa8 + *reinterpret_cast<const UPInt*>(VmRd(vm, 0x90) + (i >> 6) * 8));
+    }
+    return NULL;
 }
 
 // SDK Slots::GetSlotInfo, inline: a parent's slot through the parent, an own slot from VArray.
@@ -1446,7 +1453,6 @@ static inline const SlotInfo& ExecSlotOf(Object* obj, SPInt slot, bool relativeT
 }
 
 // getglobalslot: pushes undefined, then loads the global object's slot into it.
-// MS2-FUNCTIONAL 0x142539490: same code and callees; cl keeps the NULL global object in a different register (2 bytes longer).
 // @0x142539490
 void Sfr27ExecGetGlobalSlot(VM* vm, UInt32 slot)
 {
@@ -1473,7 +1479,6 @@ void Sfr27ExecGetSlot(VM* vm, SPInt slot)
 }
 
 // setglobalslot: the value on top of the stack is stored into the global object's slot and popped.
-// MS2-FUNCTIONAL 0x14253fc90: same code and callees; register allocation differs (slot copied early, rsi vs rbp).
 // @0x14253fc90
 void Sfr27ExecSetGlobalSlot(VM* vm, UInt32 slot)
 {
