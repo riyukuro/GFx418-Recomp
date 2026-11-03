@@ -2066,7 +2066,7 @@ static inline float FocusPixels(float twips)
 // closest character on that side of the focused one. Only the candidate (CurFocusIdx, CurFocused) is chosen here;
 // FinalizeProcessFocusKey moves the focus.
 // @0x142572050
-// MS2-FUNCTIONAL: scheduling (the -1 step of the search loops stays in a register, two rect loads swap)
+// MS2-FUNCTIONAL: scheduling (in each arrow-key search loop one rect-field load is placed one slot earlier than in the exe)
 void MovieImpl::ProcessFocusKey(Event::EventType event, const InputEventsQueueEntry::KeyEntry& keyEntry,
                                 ProcessFocusKeyInfo* pfocusInfo)
 {
