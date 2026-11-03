@@ -14,21 +14,12 @@
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_bitmapfilter.h"
 #include "../include/gfx/as2/as2_colortransform.h"
+#include "../include/gfx/as2/as2_rectangleobject.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/kernel/sf_std.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-// The mode flag of the filter set or cleared by a boolean.
-static SF_FORCEINLINE void FilterParams_SetModeFlag(Render::BlurFilterParams& p, unsigned flag, bool on)
-{
-    if (on)
-        p.Mode |= flag;
-    else
-        p.Mode &= ~flag;
-}
-
-// MS2-FUNCTIONAL: the exe compares the names with inlined byte loops in a different order
 // @0x142985100
 bool BevelFilterObject::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
 {
@@ -83,8 +74,10 @@ bool BevelFilterObject::SetMember(Environment* penv, const ASString& name, const
     }
     if (strcmp(pname, "knockout") == 0)
     {
-        bool on = val.ToBool(penv);
-        FilterParams_SetModeFlag(writableFilterParams(), Render::BlurFilterParams::Mode_Knockout, on);
+        if (val.ToBool(penv))
+            writableFilterParams().Mode |= Render::BlurFilterParams::Mode_Knockout;
+        else
+            writableFilterParams().Mode &= ~Render::BlurFilterParams::Mode_Knockout;
         return true;
     }
     if (strcmp(pname, "quality") == 0)
@@ -93,23 +86,24 @@ bool BevelFilterObject::SetMember(Environment* penv, const ASString& name, const
         writableFilterParams().Passes = (int)(SInt64)v;
         return true;
     }
+    if (strcmp(pname, "type") == 0)
+    {
+        ASString s = val.ToString(penv);
+        if (strcmp(s.ToCStr(), "inner") == 0)
+            writableFilterParams().Mode |= Render::BlurFilterParams::Mode_Inner;
+        else
+            writableFilterParams().Mode &= ~Render::BlurFilterParams::Mode_Inner;
+        return true;
+    }
     if (strcmp(pname, "strength") == 0)
     {
         double v = val.ToNumber(penv);
         writableFilterParams().Strength = (float)v;
         return true;
     }
-    if (strcmp(pname, "type") == 0)
-    {
-        ASString s = val.ToString(penv);
-        bool inner = strcmp(s.ToCStr(), "inner") == 0;
-        FilterParams_SetModeFlag(writableFilterParams(), Render::BlurFilterParams::Mode_Inner, inner);
-        return true;
-    }
     return Object::SetMember(penv, name, val, flags);
 }
 
-// MS2-FUNCTIONAL: the exe compares the names with inlined byte loops
 // @0x142985570
 bool BlurFilterObject::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
 {
@@ -135,7 +129,6 @@ bool BlurFilterObject::SetMember(Environment* penv, const ASString& name, const 
     return Object::SetMember(penv, name, val, flags);
 }
 
-// MS2-FUNCTIONAL: the exe builds the matrix order table on the stack
 // @0x1429856c0
 bool ColorMatrixFilterObject::SetMember(Environment* penv, const ASString& name, const Value& val,
                                         const PropFlags& flags)
@@ -160,51 +153,72 @@ bool ColorMatrixFilterObject::SetMember(Environment* penv, const ASString& name,
     return true;
 }
 
-// MS2-FUNCTIONAL: the exe compares the names with inlined byte loops and strcmp
 // @0x1429858c0
 bool ColorTransformObject::SetMember(Environment* penv, const ASString& name, const Value& val,
                                      const PropFlags& flags)
 {
     const char* pname = name.ToCStr();
     if (strcmp(pname, "redMultiplier") == 0)
+    {
         mColorTransform.M[0][0] = (float)val.ToNumber(penv);
-    else if (strcmp(pname, "greenMultiplier") == 0)
+        return true;
+    }
+    if (strcmp(pname, "greenMultiplier") == 0)
+    {
         mColorTransform.M[0][1] = (float)val.ToNumber(penv);
-    else if (strcmp(pname, "blueMultiplier") == 0)
+        return true;
+    }
+    if (strcmp(pname, "blueMultiplier") == 0)
+    {
         mColorTransform.M[0][2] = (float)val.ToNumber(penv);
-    else if (strcmp(pname, "alphaMultiplier") == 0)
+        return true;
+    }
+    if (strcmp(pname, "alphaMultiplier") == 0)
+    {
         mColorTransform.M[0][3] = (float)val.ToNumber(penv);
-    else if (strcmp(pname, "redOffset") == 0)
+        return true;
+    }
+    if (strcmp(pname, "redOffset") == 0)
+    {
         mColorTransform.M[1][0] = (float)val.ToNumber(penv);
-    else if (strcmp(pname, "greenOffset") == 0)
+        return true;
+    }
+    if (strcmp(pname, "greenOffset") == 0)
+    {
         mColorTransform.M[1][1] = (float)val.ToNumber(penv);
-    else if (strcmp(pname, "blueOffset") == 0)
+        return true;
+    }
+    if (strcmp(pname, "blueOffset") == 0)
+    {
         mColorTransform.M[1][2] = (float)val.ToNumber(penv);
-    else if (strcmp(pname, "alphaOffset") == 0)
+        return true;
+    }
+    if (strcmp(pname, "alphaOffset") == 0)
+    {
         mColorTransform.M[1][3] = (float)val.ToNumber(penv);
-    else if (strcmp(pname, "rgb") == 0)
+        return true;
+    }
+    if (strcmp(pname, "rgb") == 0)
     {
         mColorTransform.M[0][0] = 0;
         mColorTransform.M[0][1] = 0;
         mColorTransform.M[0][2] = 0;
         UInt32 r = 0, g = 0, b = 0;
-        if (!NumberUtil::IsNaN(val.ToNumber(penv)))
+        if (!NumberUtil_IsNaN(val.ToNumber(penv)))
         {
             UInt32 rgb = (UInt32)val.ToNumber(penv);
-            b = rgb & 0xff;
-            r = (rgb >> 16) & 0xff;
-            g = (rgb >> 8) & 0xff;
+            r          = (rgb >> 16) & 0xff;
+            g          = (rgb >> 8) & 0xff;
+            b          = rgb & 0xff;
         }
         mColorTransform.M[1][0] = (float)r;
         mColorTransform.M[1][1] = (float)g;
         mColorTransform.M[1][2] = (float)b;
+        return true;
     }
-    else
-        return Object::SetMember(penv, name, val, flags);
-    return true;
+    return Object::SetMember(penv, name, val, flags);
 }
 
-// MS2-FUNCTIONAL: the exe compares the names with inlined byte loops in a different order
 // @0x142985b50
 bool DropShadowFilterObject::SetMember(Environment* penv, const ASString& name, const Value& val,
                                        const PropFlags& flags)
@@ -247,20 +261,26 @@ bool DropShadowFilterObject::SetMember(Environment* penv, const ASString& name, 
     }
     if (strcmp(pname, "hideObject") == 0)
     {
-        bool on = val.ToBool(penv);
-        FilterParams_SetModeFlag(writableFilterParams(), Render::BlurFilterParams::Mode_HideObject, on);
+        if (val.ToBool(penv))
+            writableFilterParams().Mode |= Render::BlurFilterParams::Mode_HideObject;
+        else
+            writableFilterParams().Mode &= ~Render::BlurFilterParams::Mode_HideObject;
         return true;
     }
     if (strcmp(pname, "inner") == 0)
     {
-        bool on = val.ToBool(penv);
-        FilterParams_SetModeFlag(writableFilterParams(), Render::BlurFilterParams::Mode_Inner, on);
+        if (val.ToBool(penv))
+            writableFilterParams().Mode |= Render::BlurFilterParams::Mode_Inner;
+        else
+            writableFilterParams().Mode &= ~Render::BlurFilterParams::Mode_Inner;
         return true;
     }
     if (strcmp(pname, "knockout") == 0)
     {
-        bool on = val.ToBool(penv);
-        FilterParams_SetModeFlag(writableFilterParams(), Render::BlurFilterParams::Mode_Knockout, on);
+        if (val.ToBool(penv))
+            writableFilterParams().Mode |= Render::BlurFilterParams::Mode_Knockout;
+        else
+            writableFilterParams().Mode &= ~Render::BlurFilterParams::Mode_Knockout;
         return true;
     }
     if (strcmp(pname, "quality") == 0)
@@ -278,7 +298,6 @@ bool DropShadowFilterObject::SetMember(Environment* penv, const ASString& name, 
     return Object::SetMember(penv, name, val, flags);
 }
 
-// MS2-FUNCTIONAL: the exe compares the names with inlined byte loops in a different order
 // @0x142986170
 bool GlowFilterObject::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
 {
@@ -310,14 +329,18 @@ bool GlowFilterObject::SetMember(Environment* penv, const ASString& name, const 
     }
     if (strcmp(pname, "inner") == 0)
     {
-        bool on = val.ToBool(penv);
-        FilterParams_SetModeFlag(writableFilterParams(), Render::BlurFilterParams::Mode_Inner, on);
+        if (val.ToBool(penv))
+            writableFilterParams().Mode |= Render::BlurFilterParams::Mode_Inner;
+        else
+            writableFilterParams().Mode &= ~Render::BlurFilterParams::Mode_Inner;
         return true;
     }
     if (strcmp(pname, "knockout") == 0)
     {
-        bool on = val.ToBool(penv);
-        FilterParams_SetModeFlag(writableFilterParams(), Render::BlurFilterParams::Mode_Knockout, on);
+        if (val.ToBool(penv))
+            writableFilterParams().Mode |= Render::BlurFilterParams::Mode_Knockout;
+        else
+            writableFilterParams().Mode &= ~Render::BlurFilterParams::Mode_Knockout;
         return true;
     }
     if (strcmp(pname, "quality") == 0)
