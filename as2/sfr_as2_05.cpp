@@ -2263,7 +2263,7 @@ void SelectionCtorFunction::GetFocusBitmask(const FnCall& fn)
             if (focused == ch)
                 mask |= bit;
         }
-        fn.Result->SetNumber((UInt32)(UInt16)mask);
+        fn.Result->SetNumber((Number)(SInt64)(mask & 0xFFFF));   // the exe converts the 16-bit mask as a 64-bit int
     }
 }
 
