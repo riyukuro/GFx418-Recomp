@@ -381,8 +381,7 @@ void StyleSheetProto::Load(const FnCall& fn)
 
 // StyleSheet.prototype.setStyle(name, style): replaces the style with the object's properties as CSS, or removes it
 // when the style is missing or null.
-// MS2-FUNCTIONAL: register allocation differs (zero register r14 vs ours rbp, -1 in rdi vs rsi); the exe also
-// makes one more call (callee count 16 vs 15).
+// MS2-FUNCTIONAL: the exe keeps a separate ASString release in the remove path; ours shares the main path's.
 // @0x1428f9cf0
 void StyleSheetProto::SetStyle(const FnCall& fn)
 {
@@ -398,8 +397,14 @@ void StyleSheetProto::SetStyle(const FnCall& fn)
     if (fn.NArgs < 2 || fn.Arg(1).IsNull()) // the exe tests type NULLTYPE (0x1428f9d60 cmp byte ptr [rax],1)
     {
         ASString name = fn.Arg(0).ToString(fn.Env);
-        if (name.GetSize() != 0)
-            reinterpret_cast<Text::StyleManager*>(pthis->Data68)->ClearStyle(static_cast<Text::StyleManager::KeyType>(name.ToCStr()[0] == '.'), name.ToCStr(), SF_MAX_UPINT);
+        if (name.GetSize() > 0)
+        {
+            const char* pname = name.ToCStr();
+            if (pname[0] == '.')
+                reinterpret_cast<Text::StyleManager*>(pthis->Data68)->ClearStyle(Text::StyleManager::KeyType(1), pname, SF_MAX_UPINT);
+            else
+                reinterpret_cast<Text::StyleManager*>(pthis->Data68)->ClearStyle(Text::StyleManager::KeyType(0), pname, SF_MAX_UPINT);
+        }
         return;
     }
 
@@ -413,7 +418,7 @@ void StyleSheetProto::SetStyle(const FnCall& fn)
         CSSStringBuilder builder(fn.Env, &css);
         pstyle->VisitMembers(fn.Env->GetSC(), &builder, 0, 0);
         css.AppendChar('}');
-        reinterpret_cast<Text::StyleManager*>(pthis->Data68)->ParseCSS(css.ToCStr(), (unsigned)css.GetSize());
+        reinterpret_cast<Text::StyleManager*>(pthis->Data68)->ParseCSS(css.ToCStr(), css.GetSize());
     }
 }
 
