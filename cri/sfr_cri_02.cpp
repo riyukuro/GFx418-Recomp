@@ -2144,7 +2144,7 @@ struct CriMutexLocker
     ~CriMutexLocker() { reinterpret_cast<Scaleform::Mutex*>(pMutex)->Unlock(); }
 };
 
-// MS2-FUNCTIONAL: the reader-thread request loop; only the File::IsValid call (this copied before the null test) differs
+// the reader-thread request loop
 // @0x14002db40
 void* FUN_14002db40(void* thread, void* opaqueConfig)
 {
@@ -2201,7 +2201,8 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
                 if (state->Resource)
                     FUN_14257dcb0(state->Resource);
                 state->Resource = resource;
-                Scaleform::File* file = (Scaleform::File*)state->Resource;
+                // Resource is a Ptr<File> in the exe; its operator-> copies the pointer before the null test
+                Scaleform::Ptr<Scaleform::File>& file = reinterpret_cast<Scaleform::Ptr<Scaleform::File>&>(state->Resource);
                 if (file && file->IsValid())
                 {
                     // the exe takes the length first, then marks the open complete, then stores the size
