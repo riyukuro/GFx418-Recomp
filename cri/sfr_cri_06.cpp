@@ -8468,207 +8468,104 @@ void cft_c_Ycc420plnToRgb888Int2smp(cri_any cri_p0, cri_any cri_p1)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: CRI vendor cri_code (VS2008 build). 27 bytes short; the body is cft_c_Ycc420plnToArgb8888Prg1smp's
+// (sfr_cri_07) with the odd pixel's chroma averaged with the next sample. Left is register choice and the exe's
+// spills of the row strides.
 // @0x140061080
 void cft_c_Ycc420plnToArgb8888Prg(cri_any cri_p0, cri_any cri_p1)
 {
+#define CFT06_ARGB(y, u, v) ((uint)(&DAT_143dc4b00)[(y) * 0x400 + (&DAT_143e44b00)[((u) << 8) + (v)]] | (&DAT_143d74a80)[(y) << 8 | (v)] | (uint)(&DAT_143db4ac0)[(y) << 8 | (u)] | 0xff000000)
   cri_u8 *arg1 = cri_p0;
   longlong *arg2 = cri_p1;
-  byte b_v1;
-  byte b_v2;
-  byte b_v3;
-  int i_v4;
-  ushort u_v5;
-  longlong l_v6;
-  uint u_v7;
-  uint u_v8;
-  uint u_v9;
-  uint *pu_v10;
-  uint *pu_v11;
-  byte *pb_v12;
-  byte *pb_v13;
-  ulonglong u_v14;
-  uint u_v15;
-  longlong l_v16;
-  ulonglong u_v17;
-  longlong l_v18;
-  ulonglong u_v19;
-  byte *pb_v20;
-  byte *pb_v21;
-  uint *pu_v22;
-  uint *pu_v23;
-  byte *pb_v24;
-  byte *pb_v25;
-  byte *pb_v26;
-  int local_res8;
-  ulonglong loc_60;
-  
+  int pitch, row;
+  uint w, odd, cw, n, yskip, dskip, i;
+  longlong cskip;
+  cri_u1 *py0, *py1, *pu, *pv;
+  uint *pd0, *pd1;
+  cri_u8 y, u, v;
+
   CFTCOM_SetCftFunctionName("cft_c_Ycc420plnToArgb8888Prg");
-  i_v4 = (int)arg2[2];
-  pu_v11 = (uint *)*arg2;
-  pb_v12 = (byte *)*arg1;
-  pb_v25 = (byte *)arg1[1];
-  pb_v26 = (byte *)arg1[2];
-  pb_v20 = pb_v12 + *(int *)(arg1 + 3);
-  u_v15 = *(uint *)(arg2 + 1);
-  pu_v23 = pu_v11 + ((int)(i_v4 + (i_v4 >> 0x1f & 3U)) >> 2);
-  u_v8 = u_v15 & 1;
-  u_v9 = *(int *)(arg1 + 3) * 2 - u_v15;
-  u_v7 = u_v8 + u_v15 >> 1;
-  if (1 < *(int *)((longlong)arg2 + 0xc)) {
-    l_v6 = (ulonglong)(*(int *)((longlong)arg1 + 0x1c) - u_v7) + 1;
-    u_v14 = (ulonglong)((i_v4 + u_v15 * -2) * 2) & 0xfffffffffffffffc;
-    local_res8 = 1;
+  pitch = (int)arg2[2];
+  pd0 = (uint *)arg2[0];
+  py0 = (cri_u1 *)arg1[0];
+  pu = (cri_u1 *)arg1[1];
+  pv = (cri_u1 *)arg1[2];
+  py1 = py0 + *(int *)(arg1 + 3);
+  w = *(uint *)(arg2 + 1);
+  pd1 = pd0 + pitch / 4;
+  odd = w & 1;
+  yskip = *(int *)(arg1 + 3) * 2 - w;
+  cw = (odd + w) >> 1;
+  n = cw - 1;
+  if (1 < *(int *)((char *)arg2 + 0xc)) {
+    cskip = (longlong)(*(int *)((char *)arg1 + 0x1c) - cw) + 1;
+    dskip = (pitch - w * 2) * 2;
+    row = 1;
     do {
-      if (u_v7 - 1 != 0) {
-        loc_60 = (ulonglong)(u_v7 - 1);
-        pu_v10 = pu_v11;
-        pb_v13 = pb_v12;
-        pb_v21 = pb_v20;
-        pu_v22 = pu_v23;
-        pb_v24 = pb_v25;
-        do {
-          b_v1 = *pb_v24;
-          b_v2 = *pb_v26;
-          l_v16 = (ulonglong)*pb_v13 * 0x100;
-          pb_v25 = pb_v24 + 1;
-          pb_v12 = pb_v13 + 2;
-          pu_v11 = pu_v10 + 2;
-          pb_v20 = pb_v21 + 2;
-          *pu_v10 = (uint)(ushort)(&DAT_143dc4b00)
-                                   [(ulonglong)*pb_v13 * 0x400 +
-                                    (ulonglong)(ushort)(&DAT_143e44b00)[CONCAT11(b_v1,b_v2)]] |
-                     (&DAT_143d74a80)[(ulonglong)b_v2 + l_v16] |
-                     (uint)(byte)(&DAT_143db4ac0)[(ulonglong)b_v1 + l_v16] | 0xff000000;
-          l_v16 = (ulonglong)*pb_v21 * 0x100;
-          *pu_v22 = (uint)(ushort)(&DAT_143dc4b00)
-                                   [(ulonglong)*pb_v21 * 0x400 +
-                                    (ulonglong)(ushort)(&DAT_143e44b00)[CONCAT11(b_v1,b_v2)]] |
-                     (&DAT_143d74a80)[(ulonglong)b_v2 + l_v16] |
-                     (uint)(byte)(&DAT_143db4ac0)[(ulonglong)b_v1 + l_v16] | 0xff000000;
-          u_v15 = (int)(*pb_v25 + 1 + (uint)*pb_v24) >> 1;
-          l_v16 = (ulonglong)pb_v13[1] * 0x100;
-          u_v17 = (ulonglong)(uint)((int)(*pb_v26 + 1 + (uint)pb_v26[1]) >> 1);
-          l_v18 = (ulonglong)u_v15 * 0x100 + u_v17;
-          pu_v10[1] = (uint)(ushort)(&DAT_143dc4b00)
-                                     [(ulonglong)pb_v13[1] * 0x400 +
-                                      (ulonglong)(ushort)(&DAT_143e44b00)[l_v18]] |
-                       (&DAT_143d74a80)[u_v17 + l_v16] |
-                       (uint)(byte)(&DAT_143db4ac0)[(ulonglong)u_v15 + l_v16] | 0xff000000;
-          l_v16 = (ulonglong)pb_v21[1] * 0x100;
-          pu_v23 = pu_v22 + 2;
-          pb_v26 = pb_v26 + 1;
-          loc_60 = loc_60 - 1;
-          pu_v22[1] = (uint)(ushort)(&DAT_143dc4b00)
-                                     [(ulonglong)pb_v21[1] * 0x400 +
-                                      (ulonglong)(ushort)(&DAT_143e44b00)[l_v18]] |
-                       (&DAT_143d74a80)[u_v17 + l_v16] |
-                       (uint)(byte)(&DAT_143db4ac0)[(ulonglong)u_v15 + l_v16] | 0xff000000;
-          pu_v10 = pu_v11;
-          pb_v13 = pb_v12;
-          pb_v21 = pb_v20;
-          pu_v22 = pu_v23;
-          pb_v24 = pb_v25;
-        } while (loc_60 != 0);
-      }
-      b_v1 = *pb_v25;
-      b_v2 = *pb_v26;
-      l_v16 = (ulonglong)*pb_v12 * 0x100;
-      u_v5 = CONCAT11(b_v1,b_v2);
-      pu_v22 = pu_v23 + 1;
-      pb_v13 = pb_v12 + 1;
-      pu_v10 = pu_v11 + 1;
-      pb_v21 = pb_v20 + 1;
-      *pu_v11 = (uint)(ushort)(&DAT_143dc4b00)
-                               [(ulonglong)*pb_v12 * 0x400 +
-                                (ulonglong)(ushort)(&DAT_143e44b00)[u_v5]] |
-                 (&DAT_143d74a80)[(ulonglong)b_v2 + l_v16] |
-                 (uint)(byte)(&DAT_143db4ac0)[(ulonglong)b_v1 + l_v16] | 0xff000000;
-      l_v16 = (ulonglong)*pb_v20 * 0x100;
-      *pu_v23 = (uint)(ushort)(&DAT_143dc4b00)
-                               [(ulonglong)*pb_v20 * 0x400 +
-                                (ulonglong)(ushort)(&DAT_143e44b00)[u_v5]] |
-                 (&DAT_143d74a80)[(ulonglong)b_v2 + l_v16] |
-                 (uint)(byte)(&DAT_143db4ac0)[(ulonglong)b_v1 + l_v16] | 0xff000000;
-      if (u_v8 == 0) {
-        b_v3 = *pb_v13;
-        pb_v13 = pb_v12 + 2;
-        l_v16 = (ulonglong)b_v3 * 0x100;
-        pu_v10 = pu_v11 + 2;
-        pb_v21 = pb_v20 + 2;
-        pu_v11[1] = (uint)(ushort)(&DAT_143dc4b00)
-                                   [(ulonglong)b_v3 * 0x400 +
-                                    (ulonglong)(ushort)(&DAT_143e44b00)[u_v5]] |
-                     (&DAT_143d74a80)[(ulonglong)b_v2 + l_v16] |
-                     (uint)(byte)(&DAT_143db4ac0)[(ulonglong)b_v1 + l_v16] | 0xff000000;
-        l_v16 = (ulonglong)pb_v20[1] * 0x100;
-        pu_v22 = pu_v23 + 2;
-        pu_v23[1] = (uint)(ushort)(&DAT_143dc4b00)
-                                   [(ulonglong)pb_v20[1] * 0x400 +
-                                    (ulonglong)(ushort)(&DAT_143e44b00)[u_v5]] |
-                     (&DAT_143d74a80)[(ulonglong)b_v2 + l_v16] |
-                     (uint)(byte)(&DAT_143db4ac0)[(ulonglong)b_v1 + l_v16] | 0xff000000;
-      }
-      pb_v12 = pb_v13 + u_v9;
-      pb_v20 = pb_v21 + u_v9;
-      local_res8 = local_res8 + 2;
-      pb_v25 = pb_v25 + l_v6;
-      pb_v26 = pb_v26 + l_v6;
-      pu_v11 = (uint *)((longlong)pu_v10 + u_v14);
-      pu_v23 = (uint *)((longlong)pu_v22 + u_v14);
-    } while (local_res8 < *(int *)((longlong)arg2 + 0xc));
-  }
-  if ((*(byte *)((longlong)arg2 + 0xc) & 1) != 0) {
-    if (u_v7 - 1 != 0) {
-      u_v14 = (ulonglong)(u_v7 - 1);
-      pu_v23 = pu_v11;
-      pb_v20 = pb_v12;
-      pb_v13 = pb_v25;
-      pb_v21 = pb_v26;
-      do {
-        l_v6 = (ulonglong)*pb_v20 * 0x100;
-        pu_v11 = pu_v23 + 2;
-        pb_v12 = pb_v20 + 2;
-        pb_v25 = pb_v13 + 1;
-        pb_v26 = pb_v21 + 1;
-        *pu_v23 = (uint)(ushort)(&DAT_143dc4b00)
-                                 [(ulonglong)(ushort)(&DAT_143e44b00)[CONCAT11(*pb_v13,*pb_v21)] +
-                                  (ulonglong)*pb_v20 * 0x400] |
-                   (&DAT_143d74a80)[(ulonglong)*pb_v21 + l_v6] |
-                   (uint)(byte)(&DAT_143db4ac0)[(ulonglong)*pb_v13 + l_v6] | 0xff000000;
-        u_v19 = (ulonglong)(uint)((int)(*pb_v25 + 1 + (uint)*pb_v13) >> 1);
-        u_v17 = (ulonglong)(uint)((int)(*pb_v21 + 1 + (uint)*pb_v26) >> 1);
-        l_v6 = (ulonglong)pb_v20[1] * 0x100;
-        u_v14 = u_v14 - 1;
-        pu_v23[1] = (uint)(ushort)(&DAT_143dc4b00)
-                                   [(ulonglong)(ushort)(&DAT_143e44b00)[u_v19 * 0x100 + u_v17] +
-                                    (ulonglong)pb_v20[1] * 0x400] |
-                     (&DAT_143d74a80)[u_v17 + l_v6] | (uint)(byte)(&DAT_143db4ac0)[u_v19 + l_v6]
-                     | 0xff000000;
-        pu_v23 = pu_v11;
-        pb_v20 = pb_v12;
-        pb_v13 = pb_v25;
-        pb_v21 = pb_v26;
-      } while (u_v14 != 0);
+    for (i = n; i != 0; i--) {
+      u = *pu;
+      v = *pv;
+      y = py0[0];
+      pd0[0] = CFT06_ARGB(y, u, v);
+      y = py1[0];
+      pd1[0] = CFT06_ARGB(y, u, v);
+      u = (pu[1] + 1 + pu[0]) >> 1;
+      v = (pv[0] + 1 + pv[1]) >> 1;
+      y = py0[1];
+      pd0[1] = CFT06_ARGB(y, u, v);
+      y = py1[1];
+      pd1[1] = CFT06_ARGB(y, u, v);
+      pu++;
+      pv++;
+      py0 += 2;
+      py1 += 2;
+      pd0 += 2;
+      pd1 += 2;
     }
-    b_v1 = *pb_v25;
-    b_v2 = *pb_v26;
-    l_v6 = (ulonglong)*pb_v12 * 0x100;
-    *pu_v11 = (uint)(ushort)(&DAT_143dc4b00)
-                             [(ulonglong)*pb_v12 * 0x400 +
-                              (ulonglong)(ushort)(&DAT_143e44b00)[CONCAT11(b_v1,b_v2)]] |
-               (&DAT_143d74a80)[(ulonglong)b_v2 + l_v6] |
-               (uint)(byte)(&DAT_143db4ac0)[(ulonglong)b_v1 + l_v6] | 0xff000000;
-    if (u_v8 == 0) {
-      l_v6 = (ulonglong)pb_v12[1] * 0x100;
-      pu_v11[1] = (uint)(ushort)(&DAT_143dc4b00)
-                                 [(ulonglong)pb_v12[1] * 0x400 +
-                                  (ulonglong)(ushort)(&DAT_143e44b00)[CONCAT11(b_v1,b_v2)]] |
-                   (&DAT_143d74a80)[(ulonglong)b_v2 + l_v6] |
-                   (uint)(byte)(&DAT_143db4ac0)[(ulonglong)b_v1 + l_v6] | 0xff000000;
+    u = *pu;
+    v = *pv;
+    y = *py0++;
+    *pd0++ = CFT06_ARGB(y, u, v);
+    y = *py1++;
+    *pd1++ = CFT06_ARGB(y, u, v);
+    if (odd == 0) {
+      y = *py0++;
+      *pd0++ = CFT06_ARGB(y, u, v);
+      y = *py1++;
+      *pd1++ = CFT06_ARGB(y, u, v);
+    }
+    py0 += yskip;
+    py1 += yskip;
+    row += 2;
+    pu += cskip;
+    pv += cskip;
+    pd0 += dskip >> 2;
+    pd1 += dskip >> 2;
+    } while (row < *(int *)((char *)arg2 + 0xc));
+  }
+  if (*(cri_u1 *)((char *)arg2 + 0xc) & 1) {
+    for (i = n; i != 0; i--) {
+      y = py0[0];
+      pd0[0] = CFT06_ARGB(y, *pu, *pv);
+      u = (pu[1] + 1 + pu[0]) >> 1;
+      v = (pv[0] + 1 + pv[1]) >> 1;
+      y = py0[1];
+      pd0[1] = CFT06_ARGB(y, u, v);
+      pu++;
+      pv++;
+      py0 += 2;
+      pd0 += 2;
+    }
+    u = *pu;
+    v = *pv;
+    y = *py0;
+    pd0[0] = CFT06_ARGB(y, u, v);
+    if (odd == 0) {
+      y = py0[1];
+      pd0[1] = CFT06_ARGB(y, u, v);
     }
   }
-  return;
+#undef CFT06_ARGB
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
