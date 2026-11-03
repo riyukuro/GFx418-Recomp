@@ -2422,18 +2422,18 @@ namespace Instances { namespace fl
 namespace Classes { namespace fl
 {
     // A new Object with the current settings.
-    // MS2-FUNCTIONAL: written from behaviour
     // @0x1423ff120
     void XML::AS3settings(SPtr<Instances::fl::Object>& result)
     {
         VM& vm = GetVM();
         StringManager& sm = vm.GetStringManager();
-        result = vm.MakeObject();
-        result->AddDynamicSlotValuePair(sm.CreateConstString("ignoreComments"), Value(ignoreComments));
-        result->AddDynamicSlotValuePair(sm.CreateConstString("ignoreProcessingInstructions"), Value(ignoreProcessingInstructions));
-        result->AddDynamicSlotValuePair(sm.CreateConstString("ignoreWhitespace"), Value(ignoreWhitespace));
-        result->AddDynamicSlotValuePair(sm.CreateConstString("prettyPrinting"), Value(prettyPrinting));
-        result->AddDynamicSlotValuePair(sm.CreateConstString("prettyIndent"), Value(prettyIndent));
+        Pickable<Instances::fl::Object> obj = vm.MakeObject();
+        result = obj;
+        obj->AddDynamicSlotValuePair(sm.CreateConstString("ignoreComments"), Value(ignoreComments));
+        obj->AddDynamicSlotValuePair(sm.CreateConstString("ignoreProcessingInstructions"), Value(ignoreProcessingInstructions));
+        obj->AddDynamicSlotValuePair(sm.CreateConstString("ignoreWhitespace"), Value(ignoreWhitespace));
+        obj->AddDynamicSlotValuePair(sm.CreateConstString("prettyPrinting"), Value(prettyPrinting));
+        obj->AddDynamicSlotValuePair(sm.CreateConstString("prettyIndent"), Value(prettyIndent));
     }
 }}
 }}}
