@@ -1709,7 +1709,9 @@ template void ArrayDataBase<GFx::AS2::Value, AllocatorLH<GFx::AS2::Value, GFx::A
                 AllocatorLH<GFx::ASString, GFx::StatMV_ASString_Mem>,                                                \
                 E<HashNode<GFx::ASString, U, GFx::ASStringHashFunctor>,                                              \
                   HashNode<GFx::ASString, U, GFx::ASStringHashFunctor>::NodeHashF> >
-// MS2-FUNCTIONAL cl inlines the Clear / Add the exe calls out of line (paired by the pin below)
+// The exe calls this set's CheckExpand out of line (0x1429339a0).
+template <> void decltype(HashUncached<GFx::AS2::Object*, GFx::AS2::Object*,
+                                       IdentityHash<GFx::AS2::Object*> >::mHash)::BaseType::CheckExpand(void* pheapAddr);
 // @0x142995440
 template void decltype(HashUncached<GFx::AS2::Object*, GFx::AS2::Object*,
                                     IdentityHash<GFx::AS2::Object*> >::mHash)::BaseType::setRawCapacity(void*, UPInt);
