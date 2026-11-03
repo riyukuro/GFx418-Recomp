@@ -362,7 +362,6 @@ XMLFileLoaderImpl::~XMLFileLoaderImpl()
 }
 
 // Builds the <?xml ...?> declaration of pdoc into xmlDecl; nothing is set when the document declares none.
-// MS2-FUNCTIONAL: xmlDecl concatenation scheduling (cmov vs branch, refcount incs)
 // @0x1429a14a0
 void XmlObject::AssignXMLDecl(Environment* penv, XML::Document* pdoc)
 {
@@ -388,14 +387,19 @@ void XmlObject::AssignXMLDecl(Environment* penv, XML::Document* pdoc)
         {
             if (pdoc->XMLVersion.GetSize() > 0 || pdoc->Encoding.GetSize() > 0)
                 decl.AppendString(" ");
-            decl.AppendString(pdoc->Standalone ? "standalone=\"yes\"" : "standalone=\"no\"");
+            if (pdoc->Standalone)
+                decl.AppendString("standalone=\"yes\"");
+            else
+                decl.AppendString("standalone=\"no\"");
         }
         decl.AppendString("?>");
     }
     if (pdoc->XMLVersion.GetSize() > 0 || pdoc->Encoding.GetSize() > 0 || pdoc->Standalone != -1)
     {
         ASString declstr = penv->GetSC()->pContext->GetStringManager()->CreateString(decl.ToCStr(), decl.GetSize());
-        SetMember(penv, XmlConstString(penv, "xmlDecl"), Value(declstr));
+        Value     v(declstr);
+        PropFlags flags;
+        SetMember(penv, XmlConstString(penv, "xmlDecl"), v, flags);
     }
 }
 
