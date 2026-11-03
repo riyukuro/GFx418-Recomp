@@ -75,6 +75,9 @@ template<> SF_NOINLINE void ArrayDataBase<WeakPtr<GFx::DisplayObject>, Allocator
 // Defined in sfr_as3_16 (0x1424e0340) as an explicit specialization; declared here so this unit calls it.
 template<> AutoPtr<ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy> >&
 AutoPtr<ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy> >::operator=(const AutoPtr& p);
+// The weak display-object array destructor is the out-of-line 0x1424dc730 (instantiated in sfr_as3_15).
+template<> SF_NOINLINE ArrayDataBase<WeakPtr<GFx::DisplayObject>, AllocatorLH<WeakPtr<GFx::DisplayObject>, 2>,
+                                     ArrayDefaultPolicy>::~ArrayDataBase();
 }
 
 // The definitions (here and in sfr_as3_19) of exe functions called through FUN_ forwarders, by their real names.
@@ -6468,10 +6471,8 @@ using DisplayObjectWeakHash = HashSetBase<DisplayObjectWeakNode, DisplayObjectWe
                                           DisplayObjectWeakNode::NodeAltHashF, AllocatorLH<int, 2>,
                                           DisplayObjectWeakEntry>;
 template void DisplayObjectWeakHash::CheckExpand(void*);
-// MS2-FUNCTIONAL ?Clear@?$HashSetBase@U?$HashNode@HV?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@V?$IdentityHash@H@2@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@H$01@2@V?$HashsetNodeEntry@U?$HashNode@HV?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@V?$IdentityHash@H@2@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@QEAAXXZ: the exe inlines the AutoPtr<ArrayLH> destructor of each entry; ours calls it.
 // @0x1424ef380
 template void DisplayObjectWeakHash::Clear();
-// MS2-FUNCTIONAL ?Clear@?$HashsetNodeEntry@U?$HashNode@HV?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@V?$IdentityHash@H@2@@Scaleform@@UNodeHashF@12@@Scaleform@@QEAAXXZ: the exe inlines the AutoPtr<ArrayLH> destructor; ours calls it.
 // @0x1424ef970
 template void DisplayObjectWeakEntry::Clear();
 
