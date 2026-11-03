@@ -1171,7 +1171,6 @@ void GAS_GlobalGetInputLanguage(const FnCall& fn)
 void GAS_ASnativeMouseButtonStates(const FnCall& fn);
 
 // @0x1428f7d30
-// MS2-FUNCTIONAL same logic; the exe's argument lookups and reference handling are scheduled differently
 void GAS_GlobalASnative(const FnCall& fn)
 {
     fn.Result->SetUndefined();
@@ -1182,8 +1181,16 @@ void GAS_GlobalASnative(const FnCall& fn)
     if (a != 800 || b != 2)
         return;
     Ptr<CFunctionObject> pfunc =
-        SF_HEAP_NEW(fn.Env->GetHeap()) CFunctionObject(fn.Env->GetSC(), GAS_ASnativeMouseButtonStates);
-    fn.Result->SetAsFunction(FunctionRef(pfunc));
+        *SF_HEAP_NEW(fn.Env->GetHeap()) CFunctionObject(fn.Env->GetSC(), GAS_ASnativeMouseButtonStates);
+    FunctionRef func(pfunc);
+    // Value::SetAsFunction (0x14297fc40), which the exe inlines here.
+    Value*      presult = fn.Result;
+    if (presult->T.Type != Value::FUNCTION || presult->V.FunctionValue.Function != func.Function)
+    {
+        presult->DropRefs();
+        presult->T.Type = Value::FUNCTION;
+        presult->V.FunctionValue.Init(func);
+    }
 }
 
 // ASSetPropFlags's member visitor (namespace scope so the exe's vftable slot can name its Visit).
