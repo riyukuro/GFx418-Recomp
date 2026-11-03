@@ -288,7 +288,7 @@ void UTY_MemsetDword(cri_any,cri_any,cri_any);  // C3: the definition's signatur
 void * FUN_140064eb0(void *dst,const void *src,cri_u64 size);
 void FUN_140065000(Any a0);
 void FUN_140065030(longlong a0);
-cri_u64 FUN_140065450(cri_any,cri_any);  // C3: the definition's signature
+cri_u64 MPVSL_DecPicture(cri_any,cri_any); // C3: the definition's signature
 // sfr_cri_06 defines 0x140062a40 and 0x140065450 with cri_any; 0x140050bd0 keeps only the low 32 bits of their results.
 void MPVUMC_Init();
 void MPVUMC_Finish();
@@ -301,13 +301,13 @@ void DCT_FsriInit();
 void FUN_140066350(Any a0);
 void FUN_140066360(longlong a0);
 void FUN_140066f60(Any a0);
-void FUN_140066f80(__int64);  // C3: the definition's signature
-void FUN_140067210(__int64);  // C3: the definition's signature
+void MPVCDEC_StartFrame(__int64); // C3: the definition's signature
+void MPVBDEC_StartFrame(__int64); // C3: the definition's signature
 void FUN_140067370(Any a0);
-void FUN_140067420(__int64);  // C3: the definition's signature
-void FUN_140067470(__int64);  // C3: the definition's signature
-char * FUN_1400674d0(char *dst,cri_u64 size,const char *src);  // C3: the definition's signature
-char * FUN_140067590(char *dst,cri_u64 size,const char *src);  // C3: the definition's signature
+void MPVCMC_InitMcOiRt(__int64); // C3: the definition's signature
+void MPVCMC_SetCcnt(__int64); // C3: the definition's signature
+char * CRICRW_Strcpy(char *dst,cri_u64 size,const char *src);  // C3: the definition's signature
+char * CRICRW_Strcat(char *dst,cri_u64 size,const char *src);  // C3: the definition's signature
 void FUN_1400674a0(const char *msg);
 void SJCRS_Init();
 void SJCRS_Finish();
@@ -315,24 +315,24 @@ void SJCRS_Lock();
 void SJCRS_Unlock();
 void CRIDLG_Init();
 void CRIDLG_Finish();
-unsigned __int64 FUN_140067890(unsigned __int64, unsigned int);  // C3: the definition's signature
-void FUN_140067a90(unsigned __int64);  // C3: the definition's signature
-unsigned int FUN_140067c90(unsigned __int64, unsigned __int64, unsigned __int64);  // C3: the definition's signature
-void FUN_140067dd0(unsigned __int64, unsigned int);  // C3: the definition's signature
-unsigned int FUN_140067f40(unsigned __int64);  // C3: the definition's signature
-void FUN_140067fc0(unsigned __int64, unsigned int);  // C3: the definition's signature
-void FUN_140068070(unsigned __int64, unsigned int);  // C3: the definition's signature
-unsigned __int64 FUN_1400682e0(__int64, int);  // C3: the definition's signature
-void FUN_140068380(_RTL_CRITICAL_SECTION *);  // C3: the definition's signature
-unsigned int FUN_1400683d0(_RTL_CRITICAL_SECTION *);  // C3: the definition's signature
-unsigned int FUN_140068430(_RTL_CRITICAL_SECTION *);  // C3: the definition's signature
-void FUN_140068990(__int64);  // C3: the definition's signature
-void FUN_140068cc0(__int64, int);  // C3: the definition's signature
-void FUN_140068d50(__int64, int);  // C3: the definition's signature
+unsigned __int64 CRIDLG_Create(unsigned __int64, unsigned int);  // C3: the definition's signature
+void CRIDLG_Destroy(unsigned __int64); // C3: the definition's signature
+unsigned int CRIDLG_TryBeginInvoke(unsigned __int64, unsigned __int64, unsigned __int64); // C3: the definition's signature
+void CRIDLG_EndInvoke(unsigned __int64, unsigned int); // C3: the definition's signature
+unsigned int CRIDLG_GetPriority(unsigned __int64); // C3: the definition's signature
+void CRIDLG_SetPriority(unsigned __int64, unsigned int); // C3: the definition's signature
+void CRIDLG_SetAffinityMask(unsigned __int64, unsigned int); // C3: the definition's signature
+unsigned __int64 CRICRS_Create(__int64, int);  // C3: the definition's signature
+void CRICRS_Destroy(_RTL_CRITICAL_SECTION *); // C3: the definition's signature
+unsigned int CRICRS_Enter(_RTL_CRITICAL_SECTION *);   // C3: the definition's signature
+unsigned int CRICRS_Leave(_RTL_CRITICAL_SECTION *);   // C3: the definition's signature
+void MPVUMCT_Intra(__int64);  // C3: the definition's signature
+void MPVUMCT_PpicSkipped(__int64, int); // C3: the definition's signature
+void MPVUMCT_BpicSkipped(__int64, int); // C3: the definition's signature
 void FUN_140068db0(__int64);  // C3: the definition's signature
 void FUN_140068e70(__int64);  // C3: the definition's signature
-void FUN_140068f30(__int64);  // C3: the definition's signature
-void FUN_140069020(__int64 *, int, __int64 *, __int64 *);  // C3: the definition's signature
+void MPVUMCT_BiDirect(__int64); // C3: the definition's signature
+void SJ_SplitChunk(__int64 *, int, __int64 *, __int64 *);  // C3: the definition's signature
 unsigned __int64 FUN_140069270(__int64, unsigned __int64 *, unsigned __int64);  // C3: the definition's signature
 unsigned __int64 FUN_140069480(__int64, unsigned __int64 *, unsigned __int64 *, unsigned __int64 *);  // C3: the definition's signature
 int criAdxDecCore_Decode(longlong, int, byte *, uint, int *, uint, longlong *, uint);
@@ -449,8 +449,8 @@ void FUN_14004e5a0(void)
 void FUN_14004e5b0(cri_u64 a1,cri_u64 a2)
 {
   char msg[64];
-  FUN_1400674d0(msg,0x40,(const char *)a1);
-  FUN_140067590(msg,0x40,(const char *)a2);
+  CRICRW_Strcpy(msg,0x40,(const char *)a1);
+  CRICRW_Strcat(msg,0x40,(const char *)a2);
   FUN_1400674a0(msg);
 }
 
@@ -903,8 +903,8 @@ void FUN_14004eee0(cri_u64 a1, int a2)
 void FUN_14004ef20(cri_u64 a1,cri_u64 a2)
 {
   char msg[64];
-  FUN_1400674d0(msg,0x40,(const char *)a1);
-  FUN_140067590(msg,0x40,(const char *)a2);
+  CRICRW_Strcpy(msg,0x40,(const char *)a1);
+  CRICRW_Strcat(msg,0x40,(const char *)a2);
   FUN_1400674a0(msg);
 }
 
@@ -1704,12 +1704,12 @@ void mpvmulti_SetDlgPara(void)
       if (v == 0x5a5a5a5a) {
         v = ((Cfg *)&DAT_143badbb8)[i].Value[0];
       }
-      FUN_140068070(h,v);
+      CRIDLG_SetAffinityMask(h,v);
       v = ((Cfg *)&DAT_143badb60)[i].Value[1];
       if (v == 0x5a5a5a5a) {
         v = ((Cfg *)&DAT_143badbb8)[i].Value[1];
       }
-      FUN_140067fc0(h,v);
+      CRIDLG_SetPriority(h,v);
     }
   }
 }
@@ -1717,14 +1717,14 @@ void mpvmulti_SetDlgPara(void)
 // @0x1400501d0
 void mpvmulti_lock(void)
 {
-  FUN_1400683d0((_RTL_CRITICAL_SECTION *)DAT_143c490f8);
+  CRICRS_Enter((_RTL_CRITICAL_SECTION *)DAT_143c490f8);
   return;
 }
 
 // @0x1400501e0
 void mpvmulti_unlock(void)
 {
-  FUN_140068430((_RTL_CRITICAL_SECTION *)DAT_143c490f8);
+  CRICRS_Leave((_RTL_CRITICAL_SECTION *)DAT_143c490f8);
   return;
 }
 
@@ -1906,7 +1906,7 @@ void MPVMULTI_Init(void)
   
   DAT_143c49100 = DAT_143c49100 + 1;
   if ((DAT_143c49100 == 1) && (1 < (int)mpvmulti_GetNumberOfProcessors())) {
-    DAT_143c490f8 = (cri_u64)FUN_1400682e0((__int64)&DAT_143badb88,0x30);
+    DAT_143c490f8 = (cri_u64)CRICRS_Create((__int64)&DAT_143badb88,0x30);
     // the exe rounds both work areas up to 0x80 ((addr + 0x5f) & ~0x7f)
     DAT_143c490f0 = ((cri_u64)&DAT_143badf80 + 0x5f) & ~(cri_u64)0x7f;
     memset((void *)DAT_143c490f0,0,0x9b100);
@@ -1917,14 +1917,14 @@ void MPVMULTI_Init(void)
     DAT_143badb84 = DAT_143badbdc;
     for (i = 0; i < DAT_143badbdc; i++) {
       // per-thread work area at entry + 0x10
-      h = FUN_140067890((unsigned __int64)(((Work *)DAT_143c490e0)[i].Area),0x7c);
+      h = CRIDLG_Create((unsigned __int64)(((Work *)DAT_143c490e0)[i].Area),0x7c);
       ((Work *)DAT_143c490e0)[i].Handle = h;
       if (h == 0) {
         FUN_14004ff50(0,0xff030602);
         return;
       }
       ((Slot *)&DAT_143badbb8)[i].State = 0xffffffff;
-      ((Slot *)&DAT_143badbb8)[i].Id = FUN_140067f40(h);
+      ((Slot *)&DAT_143badbb8)[i].Id = CRIDLG_GetPriority(h);
     }
   }
   return;
@@ -1943,7 +1943,7 @@ void MPVMULTI_Finish(void)
       return;
     }
     if (DAT_143c490f8 != 0) {
-      FUN_140068380((_RTL_CRITICAL_SECTION *)DAT_143c490f8);
+      CRICRS_Destroy((_RTL_CRITICAL_SECTION *)DAT_143c490f8);
       DAT_143c490f8 = 0;
     }
     i = DAT_143badbdc - 1;
@@ -1951,7 +1951,7 @@ void MPVMULTI_Finish(void)
       ch = (Ch *)DAT_143c490e0;
       do {
         if (ch[i].Handle != 0) {
-          FUN_140067a90(ch[i].Handle);
+          CRIDLG_Destroy(ch[i].Handle);
           ch = (Ch *)DAT_143c490e0;
           ch[i].Handle = 0;
         }
@@ -2019,7 +2019,7 @@ void mpvmulti_DecServer(longlong *a1)
 // @0x140050820
 cri_u64 MPVMULTI_DecPicture(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
 {
-  // One decoder thread: its handle, the thread id from FUN_140067c90, and its state.
+  // One decoder thread: its handle, the thread id from CRIDLG_TryBeginInvoke, and its state.
   struct Worker { cri_u64 Handle; int Thread; cri_u32 State; cri_u8 Reserved10[0xf0]; };
   // The argument block handed to each mpvmulti_DecServer: the decoder and its work area.
   struct Arg { longlong Dec; longlong Work; };
@@ -2081,7 +2081,7 @@ cri_u64 MPVMULTI_DecPicture(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
       if (tbl[w].State < 0x20) {
         slot->Dec = a1;
         slot->Work = (*CriAt<code *>(CriAt<longlong>(a1, 0x8), 0x8))(*a4,i);
-        int thread = FUN_140067c90(((Worker *)DAT_143c490e0)[w].Handle,(unsigned __int64)mpvmulti_DecServer,
+        int thread = CRIDLG_TryBeginInvoke(((Worker *)DAT_143c490e0)[w].Handle,(unsigned __int64)mpvmulti_DecServer,
                                    (unsigned __int64)&args[i]);
         tbl = (Worker *)DAT_143c490e0;
         tbl[w].Thread = thread;
@@ -2105,7 +2105,7 @@ cri_u64 MPVMULTI_DecPicture(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
   }
   for (k = 0; k < n; k++) {
     if (((Worker *)DAT_143c490e0)[k].Thread >= 0) {
-      FUN_140067dd0(((Worker *)DAT_143c490e0)[k].Handle,((Worker *)DAT_143c490e0)[k].Thread);
+      CRIDLG_EndInvoke(((Worker *)DAT_143c490e0)[k].Handle,((Worker *)DAT_143c490e0)[k].Thread);
     }
   }
   FUN_140052050((longlong *)a2,1,startPos - (*(TellFn *)(*stream + 0x48))(stream,1));
@@ -2183,11 +2183,11 @@ cri_u32 FUN_140050bd0(longlong a1,cri_u64 a2,void *a3)
     i_v3 = CriAt<int>(a1, 0x1630);
     memcpy((&CriAt<cri_u8>(a1, 0x1638)),a3,0x78);
     MPVUMC_InitOutRfb(a1);
-    FUN_140067420(a1);
-    FUN_140067470(a1);
-    FUN_140066f80(a1);
-    FUN_140067210(a1);
-    u_v7 = ((cri_u32 (*)(longlong,cri_u64))FUN_140065450)(a1,a2);  // the exe uses only the low half of the cri_u64 result
+    MPVCMC_InitMcOiRt(a1);
+    MPVCMC_SetCcnt(a1);
+    MPVCDEC_StartFrame(a1);
+    MPVBDEC_StartFrame(a1);
+    u_v7 = ((cri_u32 (*)(longlong,cri_u64))MPVSL_DecPicture)(a1,a2); // the exe uses only the low half of the cri_u64 result
     ((void (*)(longlong))MPVUMC_EndOfFrame)(a1);  // the exe still passes a1 to the void(void) definition
     memcpy(*(void **)((longlong)a3 + 0x60),(&CriAt<cri_u8>(a1, 0x1598)),0x80);
     if (CriAt<int>(a1, 0x1568) != 0) {
@@ -2321,21 +2321,21 @@ void MPVHDEC_Init(void)
   _DAT_143c492c8 = cri_conv(FUN_142ccca90);
   _DAT_143c493b0 = cri_conv(FUN_142cccb30);
   _DAT_143c49408 = cri_conv(MPVUMC_BiDirect);
-  _DAT_143c49118 = cri_conv(FUN_140068cc0);
-  _DAT_143c49120 = cri_conv(FUN_140068cc0);
-  _DAT_143c49128 = cri_conv(FUN_140068d50);
-  _DAT_143c49448 = cri_conv(FUN_140068990);
-  _DAT_143c49450 = cri_conv(FUN_140068990);
-  _DAT_143c49458 = cri_conv(FUN_140068990);
-  _DAT_143c49460 = cri_conv(FUN_140068990);
-  _DAT_143c49498 = cri_conv(FUN_140068990);
-  _DAT_143c494a0 = cri_conv(FUN_140068990);
-  _DAT_143c494a8 = cri_conv(FUN_140068990);
-  _DAT_143c494b0 = cri_conv(FUN_140068990);
+  _DAT_143c49118 = cri_conv(MPVUMCT_PpicSkipped);
+  _DAT_143c49120 = cri_conv(MPVUMCT_PpicSkipped);
+  _DAT_143c49128 = cri_conv(MPVUMCT_BpicSkipped);
+  _DAT_143c49448 = cri_conv(MPVUMCT_Intra);
+  _DAT_143c49450 = cri_conv(MPVUMCT_Intra);
+  _DAT_143c49458 = cri_conv(MPVUMCT_Intra);
+  _DAT_143c49460 = cri_conv(MPVUMCT_Intra);
+  _DAT_143c49498 = cri_conv(MPVUMCT_Intra);
+  _DAT_143c494a0 = cri_conv(MPVUMCT_Intra);
+  _DAT_143c494a8 = cri_conv(MPVUMCT_Intra);
+  _DAT_143c494b0 = cri_conv(MPVUMCT_Intra);
   _DAT_143c49360 = cri_conv(FUN_140068db0);
   _DAT_143c49368 = cri_conv(FUN_140068db0);
   _DAT_143c49318 = cri_conv(FUN_140068e70);
-  _DAT_143c49178 = cri_conv(FUN_140068f30);
+  _DAT_143c49178 = cri_conv(MPVUMCT_BiDirect);
   return;
 }
 
@@ -2533,7 +2533,7 @@ cri_u64 FUN_140051380(longlong a1,longlong *a2)
   else {
     pos += 1;
   }
-  FUN_140069020(&CriAt<__int64>(a1, 0x1800),(int)(cur + (pos + 7 >> 3) - 8 - CriAt<cri_u8 *>(a1, 0x1800)),
+  SJ_SplitChunk(&CriAt<__int64>(a1, 0x1800),(int)(cur + (pos + 7 >> 3) - 8 - CriAt<cri_u8 *>(a1, 0x1800)),
                 &CriAt<__int64>(a1, 0x1800),(__int64 *)&loc_18);
   (**(code **)(*a2 + 0x40))(a2,0,a1 + 0x1800);
   (**(code **)(*a2 + 0x38))(a2,1,&loc_18);
@@ -2755,7 +2755,7 @@ cri_u64 FUN_1400515c0(longlong a1,longlong *a2)
     pos -= 0x20;
     cur += 4;
   }
-  FUN_140069020(&CriAt<__int64>(a1, 0x1800),(int)(cur + (pos + 7 >> 3) - 8 - CriAt<cri_u8 *>(a1, 0x1800)),
+  SJ_SplitChunk(&CriAt<__int64>(a1, 0x1800),(int)(cur + (pos + 7 >> 3) - 8 - CriAt<cri_u8 *>(a1, 0x1800)),
                 &CriAt<__int64>(a1, 0x1800),(__int64 *)&loc_28);
   (**(code **)(*a2 + 0x40))(a2,0,a1 + 0x1800);
   (**(code **)(*a2 + 0x38))(a2,1,&loc_28);
@@ -2846,13 +2846,13 @@ cri_u32 FUN_140051d90(longlong *a1)
     }
     found = FUN_1400530c0(buf.Ptr,buf.Len,0xffffffff);
     if (found != 0) break;
-    ((void (*)(void *,cri_u64,void *,void *))FUN_140069020)((void *)&buf,(cri_u32)(*(volatile int *)&buf.Len + -3),(void *)&buf,(void *)&info);  // the exe zero-extends the length to 64 bits
+    ((void (*)(void *,cri_u64,void *,void *))SJ_SplitChunk)((void *)&buf,(cri_u32)(*(volatile int *)&buf.Len + -3),(void *)&buf,(void *)&info);  // the exe zero-extends the length to 64 bits
     (**(code **)(*a1 + 0x40))(a1,0,&buf);
     (**(code **)(*a1 + 0x38))(a1,1,&info);
     (**(code **)(*a1 + 0x30))(a1,1,0x7fffffff,&buf);
   }
   result = FUN_140053000(found);
-  FUN_140069020((__int64 *)((void *)&buf),(cri_u32)((int)found - (int)buf.Ptr),(__int64 *)((void *)&buf),(__int64 *)((void *)&info));
+  SJ_SplitChunk((__int64 *)((void *)&buf),(cri_u32)((int)found - (int)buf.Ptr),(__int64 *)((void *)&buf),(__int64 *)((void *)&info));
   (**(code **)(*a1 + 0x40))(a1,0,&buf);
   (**(code **)(*a1 + 0x38))(a1,1,&info);
   return result;
@@ -2878,14 +2878,14 @@ cri_u32 FUN_140051ec0(longlong *a1,uint *a2)
     }
     l_v2 = FUN_1400530c0((longlong)loc_28.Data,loc_28.Size,0xffffffff);
     if (l_v2 != 0) break;
-    FUN_140069020((__int64 *)&loc_28,loc_28.Size + -3,(__int64 *)&loc_28,(__int64 *)&loc_18);
+    SJ_SplitChunk((__int64 *)&loc_28,loc_28.Size + -3,(__int64 *)&loc_28,(__int64 *)&loc_18);
     (**(code **)(*a1 + 0x40))(a1,0,&loc_28);
     (**(code **)(*a1 + 0x38))(a1,1,&loc_18);
     (**(code **)(*a1 + 0x30))(a1,1,0x7fffffff,&loc_28);
   }
   *a2 = CriAt<byte>(l_v2, 0x3) | 0x100;
   u_v1 = FUN_140053000(l_v2);
-  FUN_140069020((__int64 *)&loc_28,(int)l_v2 - (int)(longlong)loc_28.Data,(__int64 *)&loc_28,(__int64 *)&loc_18);
+  SJ_SplitChunk((__int64 *)&loc_28,(int)l_v2 - (int)(longlong)loc_28.Data,(__int64 *)&loc_28,(__int64 *)&loc_18);
   (**(code **)(*a1 + 0x40))(a1,0,&loc_28);
   (**(code **)(*a1 + 0x38))(a1,1,&loc_18);
   return u_v1;
@@ -3178,7 +3178,7 @@ cri_u64 FUN_1400520c0(longlong a1,longlong *a2)
   CriAt<cri_u32>(a1, 0x15e4) = CriAt<cri_u32>(a1, 0x16d8);
   CriAt<cri_u8>(a1, 0x15f1) = CriAt<cri_u8>(a1, 0x16d0);
   CriAt<cri_u8>(a1, 0x15f2) = CriAt<cri_u8>(a1, 0x16dc);
-  FUN_140069020(&CriAt<__int64>(a1, 0x1800),(int)(cur + (pos + 7 >> 3) - 8 - CriAt<cri_u8 *>(a1, 0x1800)),
+  SJ_SplitChunk(&CriAt<__int64>(a1, 0x1800),(int)(cur + (pos + 7 >> 3) - 8 - CriAt<cri_u8 *>(a1, 0x1800)),
                 &CriAt<__int64>(a1, 0x1800),(__int64 *)&loc_38);
   (**(code **)(*a2 + 0x40))(a2,0,a1 + 0x1800);
   (**(code **)(*a2 + 0x38))(a2,1,&loc_38);
@@ -3207,7 +3207,7 @@ cri_u64 FUN_140052720(longlong a1,longlong *a2,cri_u32 a3)
   s->Vt->Read(s,1,0x7fffffff,cur);
   aligned = *(ulonglong *)cur & 0xfffffffffffffffc;
   bits = (*(volatile int *)cur << 3) - ((int)aligned << 3); // the exe reads the low dword again here
-  FUN_140069020((__int64 *)cur,(cri_u32)(((bits + 7) >> 3) - *(int *)cur + 4 + (int)aligned),(__int64 *)cur,(__int64 *)((void *)&info));
+  SJ_SplitChunk((__int64 *)cur,(cri_u32)(((bits + 7) >> 3) - *(int *)cur + 4 + (int)aligned),(__int64 *)cur,(__int64 *)((void *)&info));
   s->Vt->Seek(s,0,cur);
   s->Vt->Write(s,1,&info);
   FUN_140051d90(a2);
@@ -3330,7 +3330,7 @@ cri_u32 FUN_140052a10(longlong a1,longlong *a2,cri_u32 a3)
   aligned = ptr & 0xfffffffffffffffc;
   bits = ((int)*cur << 3) - ((int)aligned << 3);
   result = FUN_1400527c0(a1,(void *)ptr,CriAt<int>(a1, 0x1808));
-  FUN_140069020(cur,(cri_u32)(((bits + 7) >> 3) - *(int *)cur + 4 + (int)aligned),cur,(__int64 *)((void *)&info));
+  SJ_SplitChunk(cur,(cri_u32)(((bits + 7) >> 3) - *(int *)cur + 4 + (int)aligned),cur,(__int64 *)((void *)&info));
   (**(code **)(*a2 + 0x40))(a2,0,cur);
   (**(code **)(*a2 + 0x38))(a2,1,&info);
   FUN_140051d90(a2);
