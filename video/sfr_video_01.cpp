@@ -3824,12 +3824,14 @@ void VideoProviderNetStream::Advance()
     }
 }
 
-// MS2-FUNCTIONAL: other scheduling
+// The exe reads the name through the out-of-line GlobalContext::GetStringManager and passes a default PropFlags,
+// not flags. Every caller passes the default.
 // @0x1400054b0
 bool ObjectInterface::SetConstMemberRaw(ASStringContext* psc, const char* name, const Value& val,
                                         const PropFlags& flags)
 {
-    return SetMemberRaw(psc, psc->CreateConstString(name), val, flags);
+    (void)flags;
+    return SetMemberRaw(psc, psc->pContext->GetStringManager()->CreateConstString(name), val, PropFlags());
 }
 
 // @0x140007af0
