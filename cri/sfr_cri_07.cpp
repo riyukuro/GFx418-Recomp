@@ -451,20 +451,20 @@ void FUN_14006aa60(short *src, short *dst);
 
 void crimvply_clearFrameInfoMembers(void *);  // C3: the definition's signature
 void crimvply_clearAlphaFrameInfoMembers(void *);  // C3: sfr_cri_02c's definition (0x1400351c0)
-void FUN_140035260(void *, void *, void const *, unsigned __int64, unsigned long);  // C3: the definition's signature
+void crimvply_makeFrameInfoMembers(void *, void *, void const *, unsigned __int64, unsigned long);  // C3: the definition's signature
 long crimvply_isUnderGetFrameCondition(void *);  // C3: sfr_cri_02c's definition (0x140035560)
 void FUN_1400356a0(void *, void *, void *, CriMvFrameInfo const *, void const *);  // C3: the definition's signature
-void FUN_140037910(void *, char const *, long);  // C3: the definition's signature
-void FUN_140037950(void *, char const *, long);  // C3: the definition's signature
-void FUN_140038ce4(long, char const *, long, long, void *);  // C3: the definition's signature
+extern "C" void crimvply_occurFatalError(void *, char const *, long);  // C3: the definition (C linkage)
+extern "C" void crimvply_occurUserError(void *, char const *, long);  // C3: the definition (C linkage)
+void criErr_NotifyPrmArray(long, char const *, long, long, void *);  // C3: the definition's signature
 long criAlphaDec_CopyAlphaFrameBuffer(void *, void *, void *);  // C3: the definition (0x140043f70)
 void * criAlphaDec_GetAlphaFramePointer(void *, void *);  // C3: the definition's signature
-void FUN_140044050(unsigned __int64 *, void *);  // C3: the definition's signature
+void criAlphaDec_ReleaseAlphaFramePointer(unsigned __int64 *, void *);  // C3: the definition's signature
 long criVdec_CopyFrameYuvBuffers(void *, void *, void *);  // C3: the definition (0x140044950)
 void * criVdec_GetFramePointer(void *, void *);  // C3: the definition's signature
 void criVdec_ReleaseFramePointer(void *, void *);  // C3: the definition's signature
-void FUN_140050210(__int64, unsigned int);  // C3: the definition's signature
-unsigned __int64 FUN_140050820(__int64, unsigned __int64, unsigned __int64, unsigned __int64 *);  // C3: the definition's signature
+void MPVMULTI_SetProcessorMask(__int64, unsigned int);  // C3: the definition's signature
+unsigned __int64 MPVMULTI_DecPicture(__int64, unsigned __int64, unsigned __int64, unsigned __int64 *);  // C3: the definition's signature
 cri_u4 FUN_140051ec0(longlong *, uint *);
 void M2VIDCT_SetWork(cri_any = cri_any());
 void M2VFRM_ParseSsc(cri_any = cri_any(), cri_any = cri_any());
@@ -2310,17 +2310,17 @@ cri_u8 criMvPly_GetFrameYUVBuffers(longlong arg1, cri_u8 *arg2, cri_u8 arg3)
     if (i_v1 == 0) {
       criVdec_ReleaseFramePointer((void *)(*(cri_u8 *)((char *)arg1 + 0xe08)),loc_168);
       if (*(longlong *)((char *)arg1 + 0xe40) != 0) {
-        FUN_140044050((unsigned __int64 *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_1f8);
+        criAlphaDec_ReleaseAlphaFramePointer((unsigned __int64 *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_1f8);
       }
-      FUN_140037950((void *)arg1,"E10053101M : Cannot copy the video frame buffer to user\x27""s buffer.",0);
+      crimvply_occurUserError((void *)arg1,"E10053101M : Cannot copy the video frame buffer to user\x27""s buffer.",0);
       u_v2 = 0;
     }
     else {
       criVdec_ReleaseFramePointer((void *)(*(cri_u8 *)((char *)arg1 + 0xe08)),loc_168);
       if (*(longlong *)((char *)arg1 + 0xe40) != 0) {
-        FUN_140044050((unsigned __int64 *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_1f8);
+        criAlphaDec_ReleaseAlphaFramePointer((unsigned __int64 *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_1f8);
       }
-      FUN_140035260((void *)arg1,(void *)arg3,loc_168,*arg2,
+      crimvply_makeFrameInfoMembers((void *)arg1,(void *)arg3,loc_168,*arg2,
                     CONCAT44(u_v4,*(cri_u4 *)((longlong)arg2 + 0xc)));
       *(cri_u4 *)((char *)arg1 + 0x5f0) = loc_c0;
       u_v2 = 1;
@@ -2380,21 +2380,21 @@ cri_u8 criMvPly_CopyFrameYUVBuffers(longlong arg1, cri_u8 *arg2, cri_u8 *arg3, c
     loc_1c = *(int *)((char *)arg1 + 0x878);
     loc_18 = *(cri_u4 *)((longlong)arg2 + 0x3c);
     if (*(uint *)(arg2 + 7) < (uint)(loc_20 * loc_1c)) {
-      FUN_140037950((void *)arg1,"E09012804M : Yuv buffers is too small.",0);
+      crimvply_occurUserError((void *)arg1,"E09012804M : Yuv buffers is too small.",0);
       return 0;
     }
   }
   if (((*(uint *)(arg2 + 1) < (uint)(loc_170 * loc_16c)) ||
       (*(uint *)(arg2 + 3) < loc_158 * loc_154)) ||
      (*(uint *)(arg2 + 5) < loc_140 * loc_13c)) {
-    FUN_140037950((void *)arg1,"E09012801M : Yuv buffers is too small.",0);
+    crimvply_occurUserError((void *)arg1,"E09012801M : Yuv buffers is too small.",0);
     u_v4 = 0;
   }
   else {
     loc_d8[0] = *arg3;
     i_v2 = criVdec_CopyFrameYuvBuffers((void *)(*(cri_u8 *)((char *)arg1 + 0xe08)),&loc_178,loc_d8);
     if (i_v2 == 0) {
-      FUN_140037910(0,"E08082101M : Cannot copy the alpha frame buffer to user\x27""s buffer.",0);
+      crimvply_occurFatalError(0,"E08082101M : Cannot copy the alpha frame buffer to user\x27""s buffer.",0);
       u_v4 = 0;
     }
     else {
@@ -2402,15 +2402,15 @@ cri_u8 criMvPly_CopyFrameYUVBuffers(longlong arg1, cri_u8 *arg2, cri_u8 *arg3, c
         if (arg2[6] == 0) {
           l_v3 = (longlong)criAlphaDec_GetAlphaFramePointer((void *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_128);
           if (l_v3 != 0) {
-            FUN_140044050((unsigned __int64 *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_128);
+            criAlphaDec_ReleaseAlphaFramePointer((unsigned __int64 *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_128);
           }
         }
         else {
           loc_128[0] = *arg4;
           i_v2 = criAlphaDec_CopyAlphaFrameBuffer((void *)(*(cri_u8 *)((char *)arg1 + 0xe40)),&loc_28,loc_128);
           if (i_v2 == 0) {
-            FUN_140044050((unsigned __int64 *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_128);
-            FUN_140037910(0,"E08082101M : Cannot copy the alpha frame buffer to user\x27""s buffer.",0);
+            criAlphaDec_ReleaseAlphaFramePointer((unsigned __int64 *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_128);
+            crimvply_occurFatalError(0,"E08082101M : Cannot copy the alpha frame buffer to user\x27""s buffer.",0);
             return 0;
           }
         }
@@ -2703,7 +2703,7 @@ LAB_140069dee:
     *arg5 = u_v39 * b_v6 * 0x12;
   }
   else {
-    FUN_140038ce4(0,"E05122202A",arg6,b_v6,arg1);
+    criErr_NotifyPrmArray(0,"E05122202A",arg6,b_v6,arg1);
     i_v40 = 0;
   }
   return i_v40;
@@ -25413,7 +25413,7 @@ void M2VSL_DecPicture(longlong arg1, cri_u8 arg2)
   int i_v3;
   uint u_v4;
   uint local_res8 [2];
-  // one frame: &loc_38 is the FUN_140050820 context struct (callback table at +8, results at +0x1c..+0x28)
+  // one frame: &loc_38 is the MPVMULTI_DecPicture context struct (callback table at +8, results at +0x1c..+0x28)
   struct Ctx { longlong Owner; cri_u1 **Table; cri_u4 W10; int W14; cri_u4 W18; int W1c; int W20; int W24; cri_u2 H28; } frame_;
   longlong &loc_38 = frame_.Owner;
   cri_u1 **&loc_30 = frame_.Table;
@@ -25427,13 +25427,13 @@ void M2VSL_DecPicture(longlong arg1, cri_u8 arg2)
   
   M2VCONCEAL_StartFrame(arg1);  // the exe passes rcx through
   if (*(longlong *)((char *)arg1 + 0x1c58) != 0) {
-    FUN_140050210(*(longlong *)((char *)arg1 + 0x1c58),*(cri_u4 *)((char *)arg1 + 0x1a84));
+    MPVMULTI_SetProcessorMask(*(longlong *)((char *)arg1 + 0x1c58),*(cri_u4 *)((char *)arg1 + 0x1a84));
     loc_30 = &PTR_FUN_143a4a5a0;
     loc_24 = *(int *)((char *)arg1 + 0x6d0) * *(int *)((char *)arg1 + 0x6cc) + -1;
     loc_28 = 2;
     loc_20 = *(cri_u4 *)((char *)arg1 + 0x6c8);
     loc_38 = arg1;
-    FUN_140050820(*(cri_u8 *)((char *)arg1 + 0x1c58),arg2,arg1 + 0x1b28,(unsigned __int64 *)&loc_38);
+    MPVMULTI_DecPicture(*(cri_u8 *)((char *)arg1 + 0x1c58),arg2,arg1 + 0x1b28,(unsigned __int64 *)&loc_38);
     if (loc_1c != 0) {
       *(int *)((char *)arg1 + 0x1a44) = *(int *)((char *)arg1 + 0x1a44) + loc_18;
       *(int *)((char *)arg1 + 0x1a48) = *(int *)((char *)arg1 + 0x1a48) + loc_14;
