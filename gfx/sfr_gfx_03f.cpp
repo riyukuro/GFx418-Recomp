@@ -861,20 +861,26 @@ void TextField::SetYScale(Double yscale)
 }
 
 // The display info's position (the current one when unset), in pixels relative to the text rectangle.
-// MS2-FUNCTIONAL 0x1425be970: same math; the exe calls the out-parameter TransformByInverse overload
 // @0x1425be970
 Render::PointF TextField::TransformToTextRectSpace(const GFx::Value::DisplayInfo& info) const
 {
     const Matrix&  m = GetMatrix();
-    Render::PointF p;
-    p.x = info.IsFlagSet(GFx::Value::DisplayInfo::V_x) ? float(Render::PixelsToTwips(info.X)) : float(pGeomData->X);
-    p.y = info.IsFlagSet(GFx::Value::DisplayInfo::V_y) ? float(Render::PixelsToTwips(info.Y)) : float(pGeomData->Y);
-    p = m.TransformByInverse(p);
-    const RectF& r = pDocument->GetViewRect();
-    p.x -= r.x1;
-    p.y -= r.y1;
+    Render::PointF p(info.IsFlagSet(GFx::Value::DisplayInfo::V_x) ? float(Render::PixelsToTwips(info.X))
+                                                                   : float(pGeomData->X),
+                     info.IsFlagSet(GFx::Value::DisplayInfo::V_y) ? float(Render::PixelsToTwips(info.Y))
+                                                                   : float(pGeomData->Y));
+    // The out-of-line inverse writes into an uninitialised temporary that is then copied back.
+    float t[2];
+    m.TransformByInverse(reinterpret_cast<Render::PointF*>(t), p);
+    p.x = t[0];
+    p.y = t[1];
+    Render::PointF r = pDocument->GetViewRect().TopLeft();
+    p.x -= r.x;
+    p.y -= r.y;
     p = m.Transform(p);
-    return Render::PointF(Render::TwipsToPixels(p.x), Render::TwipsToPixels(p.y));
+    p.x = Render::TwipsToPixels(p.x);
+    p.y = Render::TwipsToPixels(p.y);
+    return p;
 }
 
 // The geometry data's position is the text rectangle's top-left corner in the parent.
