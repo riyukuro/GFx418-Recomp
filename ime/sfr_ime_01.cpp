@@ -1643,7 +1643,7 @@ void* FUN_1423ce1f0(void* object, unsigned flags)
 }
 
 // @0x1423ca660
-void FUN_1423ca660(void* self, unsigned value)
+__declspec(noinline) void FUN_1423ca660(void* self, unsigned value)
 {
     unsigned char* bytes = static_cast<unsigned char*>(self);
     *reinterpret_cast<unsigned*>(bytes + 0xc0) = value;
@@ -5677,20 +5677,22 @@ void FUN_1423cfd50(long long* manager, unsigned long long wParam, unsigned long 
 }
 
 // MS2-FUNCTIONAL: language-change handler (manager slot 7): updates the mode and locale label, resolves the layout's
-// record text and conversion flags, and refreshes the IME version for flag-4 layouts.
+// record text and conversion flags, and refreshes the IME version for flag-4 layouts. Left: the exe tests the device
+// bits with mov/and eax where cl emits test ebx (1 byte shorter, so the loop alignment shifts), and register picks
+// in the two record loops.
 // @0x1423cbe90
 void FUN_1423cbe90(long long* manager, unsigned language)
 {
     struct LayoutRecord { char* imeFile; char* layoutText; unsigned layoutId; unsigned loaded; };
-    struct ProfileRecord { unsigned char pad[0x10]; String text1; String text2; unsigned mode; unsigned layout; };
+    struct ProfileRecord { unsigned char pad[0x10]; String text1; String text2; unsigned mode; unsigned pad24; unsigned layout; unsigned pad2c; };
     auto* bytes = reinterpret_cast<unsigned char*>(manager);
     if (!manager[0xf]) return;
-    const unsigned mode = reinterpret_cast<unsigned(*)(void*, unsigned short)>((*reinterpret_cast<void***>(manager))[4])(
+    const unsigned mode = reinterpret_cast<unsigned(*)(void*, unsigned)>((*reinterpret_cast<void***>(manager))[4])(
         manager, static_cast<unsigned short>(language));
     *reinterpret_cast<unsigned*>(bytes + 0x84) = mode;
     FUN_1423ca560(reinterpret_cast<GFxIMEManagerWin32*>(manager[0xf]), mode);
     wchar_t locale[0x104];
-    if (!GetLocaleInfoW(MAKELCID(LOWORD(language), SORT_DEFAULT), LOCALE_SLANGUAGE, locale, 0x104)) {
+    if (!GetLocaleInfoW(language & 0xffff, LOCALE_SLANGUAGE, locale, 0x104)) {
         const DWORD error = GetLastError();
         reinterpret_cast<void(*)(void*, DWORD, const char*)>((*reinterpret_cast<void***>(manager))[0x78 / sizeof(void*)])(
             manager, error, "GFxIME Error: Error Initializing Input Language Name ");
