@@ -1148,9 +1148,14 @@ void GAS_GlobalIMECommand(const FnCall& fn)
     }
 }
 
+// The exe's ASString assignment from a String: a node from the target's own manager.
+static inline void GlobalAssignString(ASString& dst, const String& src)
+{
+    dst.AssignNode(dst.GetManager()->CreateStringNode(src.ToCStr(), src.GetSize()));
+}
+
 // Global getInputLanguage(): the IME's input language, "UNKNOWN" without an IME.
 // @0x1428fafd0
-// MS2-FUNCTIONAL same calls; register allocation of the movie/IME temporaries differs
 void GAS_GlobalGetInputLanguage(const FnCall& fn)
 {
     if (!fn.Env)
@@ -1158,7 +1163,7 @@ void GAS_GlobalGetInputLanguage(const FnCall& fn)
     Ptr<IMEManagerBase> pime = fn.Env->GetTarget()->GetMovieImpl()->GetIMEManager();
     ASString            lang = fn.Env->CreateConstString("UNKNOWN");
     if (pime)
-        lang = fn.Env->CreateString(pime->GetInputLanguage());
+        GlobalAssignString(lang, pime->GetInputLanguage());
     fn.Result->SetString(lang);
 }
 
