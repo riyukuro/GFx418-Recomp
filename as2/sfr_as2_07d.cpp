@@ -853,12 +853,11 @@ FunctionRef XmlNodeCtorFunction::Register(GlobalContext* pgc)
 
 // Finds the namespace of elemNode's prefix in the xmlns attributes of the node and its ancestors (empty when none
 // declares it).
-// MS2-FUNCTIONAL: register allocation differs
 // @0x14299ead0
 void ResolveNamespace(Environment* penv, XML::ElementNode* elemNode, XML::RootNode* proot)
 {
     ASStringContext* psc      = penv->GetSC();
-    ASString         pfxquery = psc->CreateString("xmlns", 5);
+    ASString         pfxquery = psc->pContext->GetStringManager()->CreateString("xmlns", 5);
     if (elemNode->Prefix.GetSize() > 0)
     {
         pfxquery += ":";
