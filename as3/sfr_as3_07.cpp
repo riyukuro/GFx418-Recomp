@@ -1389,14 +1389,13 @@ namespace Instances { namespace fl_display
 
 #pragma strict_gs_check(push, on)
     // A new Vector3D (pixels) through the movie VM's Vector3D class.
-    // MS2-FUNCTIONAL: stack slot order differs (exe puts the input point and the result Value below the returned
-    // Point3F temp); same code otherwise
+    // MS2-FUNCTIONAL: stack slot order differs (exe puts the result Value below the returned Point3F temp); same
+    // code otherwise
     // @0x14244dd20
     SF_NOINLINE void DisplayObject::globalToLocal3D(SPtr<Instances::fl_geom::Vector3D>& result, Instances::fl_geom::Point* pt)
     {
-        PointF global((float)Render::PixelsToTwips(pt->x), (float)Render::PixelsToTwips(pt->y));
         Render::Point3F local;
-        local = pDispObj->GlobalToLocal3D(global);
+        local = pDispObj->GlobalToLocal3D(PointF((float)Render::PixelsToTwips(pt->x), (float)Render::PixelsToTwips(pt->y)));
         Value args[] = { Value(Render::TwipsToPixels(local.x)), Value(Render::TwipsToPixels(local.y)), Value(Render::TwipsToPixels(local.z)) };
         Value r;
         static_cast<ASVM&>(GetVM()).Vector3DClass->Construct(r, 3, args, true);
