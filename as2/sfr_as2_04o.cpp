@@ -53,30 +53,57 @@ void SetFocusInvokeCallback::Invoke(Environment* penv, ObjectInterface* pthis, c
     method.Invoke(FnCall(&result, pthis, penv, NArgs, FirstArgBottomIndex));
 }
 
-// MS2-FUNCTIONAL: the pushes are made through Push(), the exe builds each value in place
+// AsBroadcaster::BroadcastMessage (0x142932180), inlined in BroadcastOnSetFocus.
+static SF_FORCEINLINE bool BroadcastMessageLocal(Environment* penv, ObjectInterface* pthis, const ASString& eventName,
+                                                 int nArgs, int firstArgBottomIndex)
+{
+    if (!pthis)
+        return false;
+    SetFocusInvokeCallback callback(nArgs, firstArgBottomIndex);
+    AsBroadcaster::BroadcastMessageWithCallback(penv, pthis, eventName, &callback);
+    return true;
+}
+
+// Environment::Drop as the exe has it (ArrayPaged Pop(n): while (n > 0) { Pop1(); n--; }).
+static SF_FORCEINLINE void DropLocal(Environment* penv, unsigned n)
+{
+    while (n > 0)
+    {
+        penv->Drop1();
+        n--;
+    }
+}
+
 // @0x1429326a0
-void Selection::BroadcastOnSetFocus(Environment* penv, InteractiveObject* pold, InteractiveObject* pnew,
+void Selection::BroadcastOnSetFocus(Environment* penv, InteractiveObject* pOldFocus, InteractiveObject* pNewFocus,
                                     unsigned controllerIdx)
 {
-    Value selection;
-    if (!penv->GetSC()->pContext->pGlobal->GetMemberRaw(penv->GetSC(), penv->GetBuiltin(ASBuiltin_Selection),
-                                                         &selection))
-        return;
-    Object* pobj = selection.ToObject(penv);
-    if (!pobj)
-        return;
-    int nargs = 2;
-    if (penv->CheckExtensions())
+    Value selectionCtorVal;
+    if (penv->GetSC()->pContext->pGlobal->GetMemberRaw(penv->GetSC(), penv->GetBuiltin(ASBuiltin_Selection),
+                                                        &selectionCtorVal))
     {
-        penv->Push(Value((double)controllerIdx));
-        nargs = 3;
+        ObjectInterface* pselectionObj = selectionCtorVal.ToObject(penv);
+        if (pselectionObj)
+        {
+            int nargs = 2;
+            if (penv->CheckExtensions())
+            {
+                penv->Push(Number(controllerIdx));
+                ++nargs;
+            }
+            if (pNewFocus)
+                penv->Push(Value(pNewFocus));
+            else
+                penv->Push(Value::NULLTYPE);
+            if (pOldFocus)
+                penv->Push(Value(pOldFocus));
+            else
+                penv->Push(Value::NULLTYPE);
+            BroadcastMessageLocal(penv, pselectionObj, penv->CreateConstString("onSetFocus"), nargs,
+                                  penv->GetTopIndex());
+            DropLocal(penv, nargs);
+        }
     }
-    penv->Push(pnew ? Value(pnew) : Value(Value::NULLTYPE));
-    penv->Push(pold ? Value(pold) : Value(Value::NULLTYPE));
-    ASString eventName = penv->CreateConstString("onSetFocus");
-    SetFocusInvokeCallback callback(nargs, penv->GetTopIndex());
-    AsBroadcaster::BroadcastMessageWithCallback(penv, pobj, eventName, &callback);
-    penv->Drop(nargs);
 }
 
 // Value::SetAsCharacter (0x14297fba0) with SetAsCharacterHandle, inlined in captureFocus.
