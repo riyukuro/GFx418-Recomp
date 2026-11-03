@@ -4747,8 +4747,7 @@ namespace Instances { namespace fl_display
     }
 
 #pragma strict_gs_check(push, on)
-    // MS2-FUNCTIONAL: the exe tests the arguments one by one (pImage kept in r8); ours loads them up front and
-    // lays the error blocks out after the copy
+    // MS2-FUNCTIONAL: the error temp sits at rsp+0x30 here, rsp+0x38 in the exe (the exe shares that slot with rect)
     // @0x142449220
     void BitmapData::copyChannel(const Value& result, Instances::fl_display::BitmapData* sourceBitmapData,
                                  Instances::fl_geom::Rectangle* sourceRect, Instances::fl_geom::Point* destPoint,
@@ -4759,26 +4758,29 @@ namespace Instances { namespace fl_display
         {
             VM& vm = GetVM();
             vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            return;
         }
-        else if (!sourceBitmapData)
+        if (!sourceBitmapData)
         {
             VM& vm = GetVM();
             vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "sourceBitmapData"));
+            return;
         }
-        else if (!sourceRect)
+        if (!sourceRect)
         {
             VM& vm = GetVM();
             vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "sourceRect"));
+            return;
         }
-        else if (!destPoint)
+        if (!destPoint)
         {
             VM& vm = GetVM();
             vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "destPoint"));
+            return;
         }
-        else
         {
             Render::Point<SInt32> dp((SInt32)destPoint->x, (SInt32)destPoint->y);
-            Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
+            Render::DrawableImage* pimage = this == NULL ? NULL : reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr());
             Render::Rect<SInt32> rect((SInt32)sourceRect->x, (SInt32)sourceRect->y,
                                       (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height));
             pimage->CopyChannel(Render::AsDrawableImage(sourceBitmapData->pImage), rect, dp,
