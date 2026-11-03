@@ -47,6 +47,11 @@ template <>
 void HashSetBase<MS2_07iPrototypeNode, MS2_07iPrototypeNode::NodeHashF, MS2_07iPrototypeNode::NodeAltHashF,
                  AllocatorLH<GFx::AS2::ASBuiltinType, 2>,
                  HashsetNodeEntry<MS2_07iPrototypeNode, MS2_07iPrototypeNode::NodeHashF> >::Clear();
+// The event handler table's lookup (exe 0x142917460, explicit instantiation in sfr_as2_02): the exe calls it out of
+// line from the inlined Get.
+template <> template <> SPInt decltype(HashLH<GFx::EventId, ArrayLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>,
+                                              GFx::EventIdHashFunctor, GFx::AS2::StatMV_ActionScript_Mem>::mHash)::BaseType::
+    findIndexAlt<GFx::EventId>(const GFx::EventId& key) const;
 } // namespace Scaleform
 
 namespace Scaleform { namespace GFx { namespace AS2 {
@@ -89,26 +94,25 @@ struct ChildClipVisitor : public DisplayList::MemberVisitor
 } // namespace
 
 // Adds a handler for exactly one event (key events are kept without their key code).
-// MS2-FUNCTIONAL: hash lookup and insertion codegen differ; same behavior
+// MS2-FUNCTIONAL: the inlined Set copies the EventId field by field (the exe's EventId copy assignment), ours with one movups; same behavior
 // @0x14298a620
 void AvmCharacter::SetSingleClipEventHandler(const EventId& id, const Value& handler)
 {
-    EventId       key = (id.Id == EventId::Event_KeyDown || id.Id == EventId::Event_KeyUp) ? EventId(id.Id) : id;
-    HandlerArray* phandlers = EventHandlers.Get(key);
-    if (phandlers)
-        phandlers->PushBack(handler);
-    else
+    HandlerArray* phandlers = EventHandlers.Get(
+        (id.Id == EventId::Event_KeyDown || id.Id == EventId::Event_KeyUp) ? EventId(id.Id) : EventId(id));
+    if (!phandlers)
     {
         HandlerArray* parr = SF_HEAP_AUTO_NEW(this) HandlerArray();
         parr->PushBack(handler);
         EventHandlers.Set(id, *parr);
         delete parr;
     }
+    else
+        phandlers->PushBack(handler);
 }
 
 // The AS2 half of a movie goes away: its clips with a hit area, its render tree, the callbacks, the global
 // context's classes, the queued actions; then a full collection.
-// MS2-FUNCTIONAL: the context release and the collection are scheduled differently; same behavior
 // @0x14298ee90
 void MovieRoot::Shutdown()
 {
