@@ -2380,10 +2380,75 @@ typedef HashSetBase<MS2_GCRootPtr, FixedSizeHash<MS2_GCRootPtr>, FixedSizeHash<M
                     HashsetCachedEntry<MS2_GCRootPtr, FixedSizeHash<MS2_GCRootPtr> > > MS2_GCRootSet;
 // @0x1424d5020
 template void MS2_GCRootSet::add<MS2_GCRootPtr>(void*, const MS2_GCRootPtr&, UPInt);
-// Adding by raw pointer: the entry is built from a temporary SPtr.
-// MS2-FUNCTIONAL: register allocation differs (the exe saves rdi late and swaps rbx/rdi)
+// Adding by raw pointer: the entry is built from the pointer. The body is the header template's; the exe inlines
+// SPtr::SetPtr where the new key replaces a borrowed slot and calls it out of line for the same-chain head, so that
+// one assignment is written out here.
 // @0x1424d29d0
-template void MS2_GCRootSet::add<GFx::AS3::GASRefCountBase*>(void*, GFx::AS3::GASRefCountBase* const&, UPInt);
+template<> template<>
+void MS2_GCRootSet::add<GFx::AS3::GASRefCountBase*>(void* pheapAddr, GFx::AS3::GASRefCountBase* const& key, UPInt h)
+{
+    typedef HashsetCachedEntry<MS2_GCRootPtr, FixedSizeHash<MS2_GCRootPtr> > Entry;
+    CheckExpand(pheapAddr);
+    h &= pTable->SizeMask;
+    pTable->EntryCount++;
+
+    SPInt  idx  = h;
+    Entry* home = &(E(idx));
+
+    if (home->IsEmpty())
+    {
+        new (home) Entry(key, -1);
+    }
+    else
+    {
+        SPInt freeIdx = idx;
+        do
+        {
+            freeIdx = (freeIdx + 1) & pTable->SizeMask;
+        } while (!E(freeIdx).IsEmpty());
+        Entry* freeSlot = &E(freeIdx);
+
+        if (home->GetCachedHash(pTable->SizeMask) == (UPInt)idx)
+        {
+            new (freeSlot) Entry(*home);
+            home->Value       = key;
+            home->NextInChain = freeIdx;
+        }
+        else
+        {
+            SPInt walk = home->GetCachedHash(pTable->SizeMask);
+            for (;;)
+            {
+                Entry* e = &E(walk);
+                if (e->NextInChain == idx)
+                {
+                    new (freeSlot) Entry(*home);
+                    e->NextInChain = freeIdx;
+                    break;
+                }
+                walk = e->NextInChain;
+            }
+            // home->Value = key (SPtr::SetPtr).
+            GFx::AS3::GASRefCountBase*& obj = home->Value.GetRawRef();
+            GFx::AS3::GASRefCountBase*  p   = key;
+            if (p != obj)
+            {
+                if (obj)
+                {
+                    if ((UPInt)obj & 1)
+                        obj = (GFx::AS3::GASRefCountBase*)((UPInt)obj - 1);
+                    else
+                        obj->Release();
+                }
+                if (p)
+                    p->AddRef();
+                obj = p;
+            }
+            home->NextInChain = -1;
+        }
+    }
+    home->SetCachedHash(h);
+}
 // The VM's set of script global objects (HashSetLH<SPtr<GlobalObjectScript>> by pointer value).
 typedef GFx::AS3::SPtr<GFx::AS3::Instances::fl::GlobalObjectScript> MS2_ScriptPtr;
 typedef HashSetBase<MS2_ScriptPtr, FixedSizeHash<MS2_ScriptPtr>, FixedSizeHash<MS2_ScriptPtr>, AllocatorLH<MS2_ScriptPtr, 2>,
