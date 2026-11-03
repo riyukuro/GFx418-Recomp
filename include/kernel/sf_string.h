@@ -316,6 +316,14 @@ public:
         size = GetSize() < size ? GetSize() : size;
         return StringDataPtr(ToCStr() + size, GetSize() - size);
     }
+    // (appended, ug9) drop the first size bytes from this view.
+    StringDataPtr& TrimLeft(UPInt size)
+    {
+        size = GetSize() < size ? GetSize() : size;
+        pStr += size;
+        Size -= size;
+        return *this;
+    }
 
 protected:
     const char* pStr;

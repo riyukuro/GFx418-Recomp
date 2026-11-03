@@ -1371,9 +1371,43 @@ namespace Instances { namespace fl
         return -1;
     }
 
+    // Inline copies of the Object/XML/XMLText instance ctors (their out-of-line copies are in sfr_as3_01c), for
+    // Sfr02MakeInstanceText below.
+    inline Object::Object(InstanceTraits::Traits& t)
+        : Instance(t)
+    {
+    }
+
+    inline XML::XML(InstanceTraits::Traits& t, const ASString& text, XML* parent)
+        : Object(t), Text(text), Parent(parent)
+    {
+    }
+
+    inline XMLText::XMLText(InstanceTraits::Traits& t, const ASString& text, XML* parent)
+        : XML(t, text, parent)
+    {
+    }
+
+    // InstanceTraits::fl::XML::MakeInstanceText(t, str, NULL) (0x14241b850) as the exe inlines it into
+    // XMLList::AS3Constructor.
+    static SF_FORCEINLINE Pickable<XMLText> Sfr02MakeInstanceText(InstanceTraits::fl::XML& t, const StringDataPtr& str)
+    {
+        VM& vm = t.GetVM();
+        const ASString text = vm.GetStringManager().CreateString(str.ToCStr(), str.GetSize());
+        return Pickable<XMLText>(new(vm.GetMemoryHeap()) XMLText(t, text, NULL));
+    }
+
+    // List.PushBack as the exe inlines it in the RootElements loop below (our inliner runs out of budget there).
+    template<class A, class V>
+    static SF_FORCEINLINE void Sfr02PushBack(A& a, const V& v)
+    {
+        a.PushBack(v);
+    }
+
     // new XMLList(value): an XML value becomes the only item; anything else is converted to a string and parsed as a
     // sequence of text runs and elements (";" separators are skipped).
-    // MS2-FUNCTIONAL: the exe inlines MakeInstanceText, the XMLText constructor and List.PushBack
+    // MS2-FUNCTIONAL: register allocation (the exe keeps this in r13 and vm.XMLSupport in r15) and the frame layout;
+    // the exe also keeps ignoreWhitespace in a stack byte
     // @0x1423f63b0
     void XMLList::AS3Constructor(unsigned argc, const Value* argv)
     {
@@ -1403,7 +1437,7 @@ namespace Instances { namespace fl
             const char first = *ASUtils::SkipWhiteSpace(s.ToCStr(), s.GetSize());
             if (first == ';')
             {
-                s = s.GetTrimLeft(1);
+                s.TrimLeft(1);
                 continue;
             }
 
@@ -1415,16 +1449,16 @@ namespace Instances { namespace fl
                 if (len == -1)
                 {
                     txt = s;
-                    s = s.GetTrimLeft(s.GetSize());
+                    s.TrimLeft(s.GetSize());
                 }
                 else
                 {
                     txt = StringDataPtr(s.ToCStr(), len);
-                    s = s.GetTrimLeft(len);
+                    s.TrimLeft(len);
                 }
                 if (ignoreWhitespace)
                     txt = txt.GetTruncateWhitespace();
-                SPtr<XML> el(itr.MakeInstanceText(itr, txt, NULL));
+                SPtr<XML> el(Sfr02MakeInstanceText(itr, txt));
                 List.PushBack(el);
                 continue;
             }
@@ -1438,8 +1472,8 @@ namespace Instances { namespace fl
                 const char c = s.ToCStr()[pos];
                 if (c == ';')
                 {
-                    s = s.GetTrimLeft(1);
                     vm.HandleException = false;
+                    s.TrimLeft(1);
                 }
                 else if (c == '<')
                 {
@@ -1451,8 +1485,8 @@ namespace Instances { namespace fl
             }
 
             for (UPInt i = 0; i < parser.RootElements.GetSize(); ++i)
-                List.PushBack(parser.RootElements[i]);
-            s = s.GetTrimLeft(pos);
+                Sfr02PushBack(List, parser.RootElements[i]);
+            s.TrimLeft(pos);
         }
     }
 }} // namespace Instances::fl
@@ -2683,4 +2717,7 @@ namespace Classes { namespace fl
 // MS2-PIN: ??_7Array@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431415b0
 // MS2-PIN: ??_7CallBack@XMLList@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431436c0
 // MS2-PIN: ??_7ListGet@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143ae0
+// MS2-PIN: ??_7Object@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x14313f590
+// MS2-PIN: ??_7XML@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431429d0
 // MS2-PIN: ??_7XMLList@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431436d0
+// MS2-PIN: ??_7XMLText@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143168
