@@ -1600,19 +1600,34 @@ MovieRoot::InvokeAliasInfo& FUN_1429266f0(MovieRoot::InvokeAliasInfo* pthis, con
     return *pthis = src;
 }
 
-// MS2-FUNCTIONAL cl inlines ArrayDataBase::ResizeNoConstruct, the exe calls it out of line
+}}} // namespace Scaleform::GFx::AS2
+
+namespace Scaleform {
+// The Value arrays grow out of line (0x14297e710, 0x14297e7c0; explicit instantiations in sfr_as2_07).
+template<> void ArrayDataBase<GFx::AS2::Value, AllocatorGH<GFx::AS2::Value, 2>, ArrayDefaultPolicy>::ResizeNoConstruct(
+    const void* pheapAddr, UPInt newSize);
+template<> void ArrayDataBase<GFx::AS2::Value, AllocatorLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>,
+                              ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
+}
+
+namespace Scaleform { namespace GFx { namespace AS2 {
+
 // @0x142926200
 const Array<Value>& FUN_142926200(Array<Value>* pthis, const Array<Value>& src)
 {
     return *pthis = src;
 }
 
-// MS2-FUNCTIONAL cl inlines ArrayDataBase::ResizeNoConstruct, the exe calls it out of line
+// ArrayBase::operator=, written out: with ResizeNoConstruct out of line, cl calls ArrayLH::operator= here instead of
+// inlining it.
 // @0x1429262a0
 const ArrayLH<Value, StatMV_ActionScript_Mem>& FUN_1429262a0(ArrayLH<Value, StatMV_ActionScript_Mem>* pthis,
                                                              const ArrayLH<Value, StatMV_ActionScript_Mem>& src)
 {
-    return *pthis = src;
+    pthis->Resize(src.GetSize());
+    for (UPInt i = 0; i < pthis->GetSize(); i++)
+        (*pthis)[i] = src[i];
+    return *pthis;
 }
 
 // @0x142926340
