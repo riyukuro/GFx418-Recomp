@@ -2686,7 +2686,7 @@ Scaleform::GFx::AS2::FunctionRef* FUN_1400126f0(
         &PTR_LAB_1431b67d0, 0xa8, 0x22, 0x110, true);
 }
 
-// MS2-FUNCTIONAL: replaces the player event relay and its associated VideoPlayerImpl state object.
+// Replaces the player event relay and its associated VideoPlayerImpl state object.
 // @0x140015c40
 void FUN_140015c40(void* object)
 {
@@ -2697,14 +2697,14 @@ void FUN_140015c40(void* object)
     void** ownerVtable = *reinterpret_cast<void***>(owner);
     void* heap = reinterpret_cast<void*(*)(void*)>(ownerVtable[0x178 / sizeof(void*)])(owner);
     void** heapVtable = *reinterpret_cast<void***>(heap);
-    void* state = 0;
     void* relay = reinterpret_cast<void*(*)(void*, size_t, void*)>(heapVtable[0x50 / sizeof(void*)])(
         heap, 0x18, 0);
+    void* state = 0;
     if (relay)
     {
         *reinterpret_cast<unsigned*>(static_cast<char*>(relay) + 8) = 1;
-        *reinterpret_cast<void**>(static_cast<char*>(relay) + 0x10) = object;
         *reinterpret_cast<void**>(relay) = &PTR_FUN_1431b7858;
+        *reinterpret_cast<void**>(static_cast<char*>(relay) + 0x10) = object;
     }
     else
         relay = state;
@@ -2716,13 +2716,12 @@ void FUN_140015c40(void* object)
     manager = *reinterpret_cast<void**>(static_cast<char*>(vm) + 0x2d8);
     owner = *reinterpret_cast<void**>(static_cast<char*>(manager) + 0x10);
     heap = reinterpret_cast<void*(*)(void*)>((*reinterpret_cast<void***>(owner))[0x178 / sizeof(void*)])(owner);
-    state = reinterpret_cast<void*(*)(void*, size_t, void*)>((*reinterpret_cast<void***>(heap))[0x50 / sizeof(void*)])(
+    void* memory = reinterpret_cast<void*(*)(void*, size_t, void*)>((*reinterpret_cast<void***>(heap))[0x50 / sizeof(void*)])(
         heap, 0x108, 0);
-    if (state)
+    if (memory)
     {
-        static_cast<Scaleform::GFx::AS3::VideoProviderNetStream*>(state)->
-            Scaleform::GFx::AS3::VideoProviderNetStream::VideoProviderNetStream(
-                static_cast<Scaleform::GFx::AS3::NetStreamInterface*>(*oldRelay));
+        state = ::new (memory) Scaleform::GFx::AS3::VideoProviderNetStream(
+            static_cast<Scaleform::GFx::AS3::NetStreamInterface*>(*oldRelay));
     }
     void** oldState = reinterpret_cast<void**>(static_cast<char*>(object) + 0x50);
     if (*oldState)
