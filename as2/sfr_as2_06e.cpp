@@ -91,6 +91,34 @@ SF_FORCEINLINE void LeSetEventAction(MovieRoot::ActionEntry* pe, InteractiveObje
     pe->pActionBuffer.GetRawRef() = 0;
     pe->mEventId = id;
 }
+// The same for an event built from its id alone: EventId(id) is constructed in place after the releases.
+SF_FORCEINLINE void LeSetEventAction(MovieRoot::ActionEntry* pe, InteractiveObject* pch, UInt32 id)
+{
+    pe->Type = MovieRoot::ActionEntry::Entry_Event;
+    if (pch)
+        pch->AddRef();
+    if (pe->pCharacter)
+        pe->pCharacter->Release();
+    pe->pCharacter.GetRawRef() = pch;
+    if (pe->pActionBuffer)
+        pe->pActionBuffer->Release();
+    pe->pActionBuffer.GetRawRef() = 0;
+    EventId& eid = pe->mEventId;
+    eid.Id = id;
+    eid.WcharCode = 0;
+    eid.KeyCode = 0;
+    eid.AsciiCode = 0;
+    eid.RollOverCnt = 0;
+    eid.KeysState = 0;
+    eid.MouseWheelDelta = 0;
+    eid.ControllerIndex = -1;
+}
+
+// DisplayObjectBase::IsJustLoaded, inlined in the exe.
+SF_FORCEINLINE bool LeIsJustLoaded(const DisplayObjectBase* pch)
+{
+    return (pch->Flags & DisplayObjectBase::Mask_JustLoaded) != 0;
+}
 
 // DocView::GetStyledText (pDocument +0x10) and StyledText::MayHaveUrl (RTFlags +0x40 bit 0), inlined in the exe.
 SF_FORCEINLINE void* LeStyledText(Render::Text::DocView* pdoc)
@@ -229,7 +257,8 @@ void AvmSprite::OnEventLoad()
 
 // The clip leaves the hit area array. It may go at once only when mayRemove and it has no unload handler;
 // otherwise its unload event is queued (after a load event, for a clip from attachMovie whose load has not run).
-// MS2-FUNCTIONAL: register allocation differs.
+// MS2-FUNCTIONAL: register allocation (this and the sprite swap rsi/rdi), and the exe reloads the hit area array data
+// on each pass of the search loop.
 // @0x14296d140
 bool AvmSprite::OnUnloading(bool mayRemove)
 {
@@ -242,15 +271,15 @@ bool AvmSprite::OnUnloading(bool mayRemove)
     if (!mayRemove)
     {
         Sprite* psprite = GetSprite();
-        if ((psprite->DisplayObjectBase::Flags & DisplayObjectBase::Mask_JustLoaded) && !psprite->IsAcceptAnimMovesFlagSet())
+        if (LeIsJustLoaded(psprite) && !psprite->IsAcceptAnimMovesFlagSet())
         {
-            MovieRoot::ActionEntry* pe = psprite->GetMovieImpl() ? GetAS2Root()->InsertEmptyAction() : 0;
+            MovieRoot::ActionEntry* pe = GetAS2Root()->InsertEmptyAction();
             if (pe)
-                LeSetEventAction(pe, GetSprite(), EventId(EventId::Event_Load));
+                LeSetEventAction(pe, GetSprite(), EventId::Event_Load);
         }
         MovieRoot::ActionEntry* pe = GetAS2Root()->InsertEmptyAction();
         if (pe)
-            LeSetEventAction(pe, GetSprite(), EventId(EventId::Event_Unload));
+            LeSetEventAction(pe, GetSprite(), EventId::Event_Unload);
     }
     GetSprite()->RemoveFromPlayList();
     return mayRemove;
