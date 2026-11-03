@@ -621,8 +621,24 @@ void* FUN_14261f4a0(char* self)
     return self;
 }
 
+// RawClearPlainSet with the entry address formed as offset + table, as the exe's dtor indexes it.
+static __forceinline void RawClearPlainSetAt(U* self, U stride)
+{
+    if (!*self)
+        return;
+    U n = ((U*)*self)[1];
+    for (U i = 0, off = 0; i <= n; i++, off += stride)
+    {
+        SPInt* e = (SPInt*)(off + *self + 0x10);
+        if (*e != -2)
+            *e = -2;
+    }
+    Memory::Free((void*)*self);
+    *self = 0;
+}
+
 // The AMP server state's destructor body.
-// MS2-FUNCTIONAL 0x14261fa90: same dtor; base and index operand order in the inlined plain-set clear differs (4 bytes)
+// MS2-FUNCTIONAL 0x14261fa90: same dtor; base and index operand order in the first inlined plain-set clear differs (2 bytes)
 // @0x14261fa90
 void FUN_14261fa90(char* self)
 {
@@ -631,7 +647,7 @@ void FUN_14261fa90(char* self)
     (RawFieldPtr<String>(self, 0x110))->~String();
     reinterpret_cast<Lock*>(self + 0xe0)->Lock::~Lock();
     FUN_14261f940(RawFieldPtr<U>(self, 0xd8));
-    RawClearPlainSet(RawFieldPtr<U>(self, 0xd0), 0x28);
+    RawClearPlainSetAt(RawFieldPtr<U>(self, 0xd0), 0x28);
     reinterpret_cast<Mutex*>(self + 0xa8)->Mutex::~Mutex();
     FUN_14261f820(RawFieldPtr<U>(self, 0xa0));
     reinterpret_cast<Lock*>(self + 0x78)->Lock::~Lock();
@@ -646,7 +662,7 @@ void FUN_14261fa90(char* self)
     FUN_14261f7b0(RawFieldPtr<U>(self, 0x30));
     FUN_14261f9e0(RawFieldPtr<U>(self, 0x20));
     FUN_14261f8b0(RawFieldPtr<U>(self, 0x18));
-    RawClearPlainSet(RawFieldPtr<U>(self, 0x10), 0x30);
+    RawClearPlainSetAt(RawFieldPtr<U>(self, 0x10), 0x30);
     *(void**)self = DAT_14318efe8;
     reinterpret_cast<RefCountImplCore*>(self)->RefCountImplCore::~RefCountImplCore();
 }
