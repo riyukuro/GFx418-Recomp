@@ -834,15 +834,22 @@ namespace Instances { namespace fl_events {
     }
 
     // @0x14246a160
-    // MS2-FUNCTIONAL: the exe picks the listener table with a branch, cl with a cmov (ternary and if/else alike)
     bool EventDispatcher::HasEventHandler(const ASString& type, bool useCapture) const
     {
         if (pImpl)
         {
-            ListenersHash& h = useCapture ? pImpl->CaptureListeners : pImpl->Listeners;
-            ArrayLH<Listener>** pa = h.Get(type);
-            if (pa && *pa && (*pa)->GetSize() > 0)
-                return true;
+            if (useCapture)
+            {
+                ArrayLH<Listener>** pa = pImpl->CaptureListeners.Get(type);
+                if (pa && *pa && (*pa)->GetSize() > 0)
+                    return true;
+            }
+            else
+            {
+                ArrayLH<Listener>** pa = pImpl->Listeners.Get(type);
+                if (pa && *pa && (*pa)->GetSize() > 0)
+                    return true;
+            }
         }
         return false;
     }
@@ -1056,7 +1063,6 @@ namespace Instances { namespace fl_events {
 
     // The event chain and the button listener count after the last listener of a type was removed (0x14246c2f0).
     // @0x14246c2f0
-    // MS2-FUNCTIONAL: the traits-type range check is add eax,-0x11 in the exe (sub here); otherwise identical
     static __declspec(noinline) void OnListenerRemoved(EventDispatcher* d, const ASString& type, bool useCapture,
                                                        UPInt remaining)
     {
@@ -1095,8 +1101,12 @@ namespace Instances { namespace fl_events {
             }
             return;
         }
-        if (remaining == 0 && IsDisplayObjectInstance(d->GetTraits()))
-            GetEventChains(vm).RemoveFromChain(code, static_cast<Instances::fl_display::DisplayObject*>(d)->pDispObj);
+        if (remaining == 0)
+        {
+            BuiltinTraitsType tt = d->GetTraits().GetTraitsType();
+            if (tt >= Traits_DisplayObject_Begin && tt <= Traits_DisplayObject_End && d->GetTraits().IsInstanceTraits())
+                GetEventChains(vm).RemoveFromChain(code, static_cast<Instances::fl_display::DisplayObject*>(d)->pDispObj);
+        }
     }
 
     // @0x14246f1c0
@@ -1363,24 +1373,25 @@ namespace Instances { namespace fl_events {
 
     // ---- orientation -------------------------------------------------------------------------------------------------
 
+    // ASString::operator=(const AS3::Value&), the SDK's inline specialization (AS3_Value.h).
+    static SF_INLINE void Sfr09AssignValue(ASString& s, const Value& v)
+    {
+        if (v.IsNull())
+            s.SetNull();
+        else
+            s.AssignNode(v.AsStringNode());
+    }
+
     // @0x14246cf90
-    // MS2-FUNCTIONAL: the exe loads the node before the null test and shares one ReleaseNode epilogue
     void StageOrientationEvent::afterOrientationGet(ASString& result)
     {
-        ASStringNode* node = AfterOrientation.AsStringNode();
-        if (AfterOrientation.IsObject() && node == NULL)
-            node = result.GetManager()->GetNullStringNode();
-        result.AssignNode(node);
+        Sfr09AssignValue(result, AfterOrientation);
     }
 
     // @0x14246d080
-    // MS2-FUNCTIONAL: the exe loads the node before the null test and shares one ReleaseNode epilogue
     void StageOrientationEvent::beforeOrientationGet(ASString& result)
     {
-        ASStringNode* node = BeforeOrientation.AsStringNode();
-        if (BeforeOrientation.IsObject() && node == NULL)
-            node = result.GetManager()->GetNullStringNode();
-        result.AssignNode(node);
+        Sfr09AssignValue(result, BeforeOrientation);
     }
 
     // ---- clone -------------------------------------------------------------------------------------------------------
@@ -3078,11 +3089,27 @@ namespace Instances { namespace fl_events {
         return static_cast<AvmInteractiveObj*>(po->GetAvmObjImpl()->ToAvmInteractiveObjBase());
     }
 
+    // HasEventHandler for WillTrigger; with the out-of-line form's two tests inlined, WillTrigger grows by 25 bytes.
+    static SF_INLINE bool Sfr09HasEventHandler(const EventDispatcher* d, const ASString& type, bool useCapture)
+    {
+        if (d->pImpl)
+        {
+            ArrayLH<EventDispatcher::Listener>** pa;
+            if (useCapture)
+                pa = d->pImpl->CaptureListeners.Get(type);
+            else
+                pa = d->pImpl->Listeners.Get(type);
+            if (pa && *pa && (*pa)->GetSize() > 0)
+                return true;
+        }
+        return false;
+    }
+
     // @0x14246c9a0
     // MS2-FUNCTIONAL: the inlined HasEventHandler picks the listener table with a cmov (the exe branches)
     bool EventDispatcher::WillTrigger(const ASString& type, bool useCapture) const
     {
-        if (HasEventHandler(type, useCapture))
+        if (Sfr09HasEventHandler(this, type, useCapture))
             return true;
         BuiltinTraitsType tt = GetTraits().GetTraitsType();
         if (tt >= Traits_DisplayObject_Begin && tt <= Traits_DisplayObject_End &&
