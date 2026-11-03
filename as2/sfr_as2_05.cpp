@@ -1114,20 +1114,23 @@ void AsBroadcasterCtorFunction::GlobalCtor(const FnCall& fn)
 }
 
 // @0x1429484e0
-// MS2-FUNCTIONAL the exe keeps the object interface in rbx, cl picks rdi (register allocation only)
+// the string context is read before the Value array is built, as in the exe
 SF_NOINLINE void GFxObject_GetPointProperties(Environment* penv, Object* pobj, GASPoint& pt)
 {
+    ASStringContext* psc = penv->GetSC();
     Value params[Point_NumProperties];
-    GFxObject_GetPointProperties(penv, pobj, params);
+    pobj->GetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_x), &params[Point_X]);
+    pobj->GetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_y), &params[Point_Y]);
     pt.SetPoint(params[Point_X].ToNumber(penv), params[Point_Y].ToNumber(penv));
 }
 
 // @0x142954590
-// MS2-FUNCTIONAL the exe keeps the object interface in rbx, cl picks rdi (register allocation only)
+// the string context is read before the Value array is built, as in the exe
 SF_NOINLINE void PointObject::GetProperties(Environment* penv, GASPoint& pt)
 {
+    ASStringContext* psc = penv->GetSC();
     Value params[Point_NumProperties];
-    GetProperties(penv->GetSC(), params);
+    GetProperties(psc, params);
     pt.SetPoint(params[Point_X].ToNumber(penv), params[Point_Y].ToNumber(penv));
 }
 
