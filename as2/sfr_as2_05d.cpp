@@ -11,6 +11,7 @@
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
+#include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_button.h"
 #include "../include/gfx/gfx_interactiveobject.h"
 
@@ -29,11 +30,26 @@ private:
     Button::CharToRec FindCharacterAndRemove(const ButtonRecord& rec);
 };
 
-inline ButtonObject::ButtonObject(GlobalContext* pgc, InteractiveObject* pbutton)
-    : Object(pgc->GetGC()), pButton(pbutton)
+// GlobalContext::GetGC (exe 0x14294afc0) and Object::Set__proto__ (exe 0x140007ba0) as the exe inlines them.
+static inline ASRefCountCollector* Sfr05dGetGC(GlobalContext* pgc)
 {
-    AvmCharacter* pavm = static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pbutton->GetAvmObjImpl()));
-    ButtonObject::Set__proto__(pavm->GetASEnvironment()->GetSC(), pavm->Get__proto__());
+    return pgc->pMovieRoot ? static_cast<MovieRoot*>(pgc->pMovieRoot->pASMovieRoot)->GetASGC() : 0;
+}
+
+static inline void Sfr05dSetProto(ObjectInterface* pobj, ASStringContext* psc, Object* protoObj)
+{
+    if (!pobj->pProto)
+        pobj->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin___proto__), Value(Value::UNSET),
+                           PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+    pobj->pProto = protoObj;
+}
+
+inline ButtonObject::ButtonObject(GlobalContext* pgc, InteractiveObject* pbutton)
+    : Object(Sfr05dGetGC(pgc)), pButton(pbutton)
+{
+    AvmCharacter* pavm = pbutton ? AS2::ToAvmCharacter(pbutton) : 0;
+    ASStringContext* psc = pavm->GetASEnvironment()->GetSC();
+    Sfr05dSetProto(this, psc, pavm->Get__proto__());
 }
 
 // The hand while the button is enabled and its useHandCursor (looked up through the prototype chain) is true.
@@ -55,7 +71,7 @@ unsigned AvmButton::GetCursorType() const
     return 0;
 }
 
-// MS2-FUNCTIONAL: the exe inlines the ButtonObject ctor and the Set__proto__ member creation
+// MS2-FUNCTIONAL: register choice for the GetASEnvironment vtable load (the exe uses rdx, ours rax)
 // @0x142949960
 ButtonObject* AvmButton::GetButtonASObject()
 {
