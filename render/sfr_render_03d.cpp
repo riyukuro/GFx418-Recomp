@@ -1706,8 +1706,8 @@ static const UByte TessFactorTable[4] = { 0x00, 0x7F, 0xFF, 0xFF };   // 0x14318
 
 // The tessellated layer as 16-bit meshes: one fill per tessellator mesh, its vertices coloured from the fill
 // styles on its sides (or the stroke's colour), streamed to the output in blocks of 256.
-// MS2-FUNCTIONAL: the fills array and the stretch matrix swap their stack slots and this stays spilled in the
-// mesh loop
+// MS2-FUNCTIONAL: the fills array and the stretch matrix swap their stack slots (the exe puts m16i above fills);
+// the rest is the SDK body as written
 // @0x14262d9f0
 bool ShapeMeshProvider::acquireTessMeshes(TessBase* tess, const Matrix2F& mtx, VertexOutput* pout, unsigned layer,
                                           unsigned strokeStyle, unsigned meshGenFlags, float morphRatio)
@@ -1719,151 +1719,158 @@ bool ShapeMeshProvider::acquireTessMeshes(TessBase* tess, const Matrix2F& mtx, V
     ArrayStaticBuffPOD<VertexOutput::Fill, 16>   fills(Memory::GetGlobalHeap());
     ArrayStaticBuffPOD<unsigned, 16>             fillIndexByStyle(Memory::GetGlobalHeap());
     TessMesh                                     tessMesh;
-    unsigned                                     i;
 
-    if (tess->GetMeshCount() && tess->GetVertexCount())
+    if (tess->GetMeshCount() == 0 || tess->GetVertexCount() == 0)
+        return createNullMesh(pout, layer, meshGenFlags);
+
+    if (strokeStyle == 0)
     {
-        if (strokeStyle == 0)
+        unsigned i;
+        unsigned numStyles = GetFillStyleCount() + 1;
+        for (i = 0; i < numStyles; ++i)
+            fillIndexByStyle.PushBack(0);
+        unsigned fillCount = GetFillCount(layer, meshGenFlags);
+        for (i = 0; i < fillCount; ++i)
         {
-            unsigned numStyles = GetFillStyleCount() + 1;
-            for (i = 0; i < numStyles; ++i)
-                fillIndexByStyle.PushBack(0);
-            unsigned fillCount = GetFillCount(layer, meshGenFlags);
-            for (i = 0; i < fillCount; ++i)
-                fillIndexByStyle[GetStyleByFillIdx(layer, i)] = i;
+            unsigned fill = GetStyleByFillIdx(layer, i);
+            fillIndexByStyle[fill] = i;
         }
-        else
-            GetStrokeStyle(strokeStyle, &sstyle, morphRatio);
+    }
+    else
+    {
+        GetStrokeStyle(strokeStyle, &sstyle, morphRatio);
+    }
 
-        {
-            Matrix2F inv;
-            inv.SetInverse(mtx);
-            tess->Transform(inv);
-        }
-        {
-            Matrix2F m16i = tess->StretchTo(-32764.0f, -32764.0f, 32764.0f, 32764.0f);
+    tess->Transform(mtx.GetInverse());
 
-            unsigned totalVer = 0;
-            for (i = 0; i < tess->GetMeshCount(); ++i)
+    Matrix2F m16i = tess->StretchTo(-32764.0f, -32764.0f, 32764.0f, 32764.0f);
+
+    unsigned meshIdx;
+    unsigned totalVer = 0;
+    for (meshIdx = 0; meshIdx < tess->GetMeshCount(); ++meshIdx)
+    {
+        VertexOutput::Fill fill;
+
+        tess->GetMesh(meshIdx, &tessMesh);
+
+        fill.VertexCount = tess->GetMeshVertexCount(meshIdx);
+        fill.IndexCount  = tess->GetMeshTriangleCount(meshIdx) * 3;
+        if (fill.VertexCount && fill.IndexCount)
+        {
+            fill.pFormat    = &VertexXY16iCF32::Format;
+            fill.FillIndex0 = 0;
+            fill.FillIndex1 = 0;
+            if (strokeStyle == 0)
             {
-                tess->GetMesh(i, &tessMesh);
-                VertexOutput::Fill fill;
-                fill.VertexCount = tess->GetMeshVertexCount(i);
-                fill.IndexCount  = tess->GetMeshTriangleCount(i) * 3;
-                if (fill.VertexCount && fill.IndexCount)
-                {
-                    fill.pFormat    = &VertexXY16iCF32::Format;
-                    fill.FillIndex0 = 0;
-                    fill.FillIndex1 = 0;
-                    if (strokeStyle == 0)
-                    {
-                        fill.FillIndex0 = fillIndexByStyle[tessMesh.Style1];
-                        fill.FillIndex1 = fillIndexByStyle[tessMesh.Style2];
-                    }
-                    fill.MergeFlags = FillMerge_EAlpha;
-                    if (tessMesh.Flags1 & TessStyleComplex)
-                        fill.MergeFlags = FillMerge_EAlpha_Weight;
-                    fill.MeshIndex  = i;
-                    fills.PushBack(fill);
-                    totalVer += tessMesh.VertexCount;
-                }
+                fill.FillIndex0 = fillIndexByStyle[tessMesh.Style1];
+                fill.FillIndex1 = fillIndexByStyle[tessMesh.Style2];
             }
+            fill.MergeFlags = FillMerge_EAlpha;
+            if (tessMesh.Flags1 & TessStyleComplex)
+                fill.MergeFlags |= FillMerge_Weight;
 
-            if (fills.GetSize())
+            fill.MeshIndex = meshIdx;
+
+            fills.PushBack(fill);
+            totalVer += tessMesh.VertexCount;
+        }
+    }
+
+    if (fills.GetSize() == 0)
+        return createNullMesh(pout, layer, meshGenFlags);
+
+    if (totalVer > 0xFFFF)
+    {
+        Log* log = Log::GetGlobalLog();
+        if (!log)
+            log = Log::GetDefaultLog();
+        if (log)
+            log->LogWarning("Render_ShapeMeshProvider: More than 65535 vertices, the shape cannot be displayed");
+        return createNullMesh(pout, layer, meshGenFlags);
+    }
+
+    if (!pout->BeginOutput(&fills[0], (unsigned)fills.GetSize(), m16i))
+        return false;
+
+    unsigned        fillIdx;
+    unsigned        prevStyle0 = 0, prevStyle1 = 0;
+    FillStyleType   fs0, fs1;
+    for (fillIdx = 0; fillIdx < fills.GetSize(); ++fillIdx)
+    {
+        const VertexOutput::Fill& fill = fills[fillIdx];
+        tess->GetMesh(fill.MeshIndex, &tessMesh);
+
+        unsigned start = 0;
+        unsigned n;
+        while ((n = tess->GetVertices(&tessMesh, tessVer, 256)) > 0)
+        {
+            unsigned j;
+            for (j = 0; j < n; ++j)
             {
-                if (totalVer > 0xFFFF)
+                const TessVertex& v = tessVer[j];
+                VertexXY16iCF32&  o = outVer[j];
+                o.x = (SInt16)floorf((v.x < 0) ? v.x - 0.5f : v.x + 0.5f);
+                o.y = (SInt16)floorf((v.y < 0) ? v.y - 0.5f : v.y + 0.5f);
+                if (strokeStyle)
                 {
-                    Log* log = Log::GetGlobalLog();
-                    if (!log)
-                        log = Log::GetDefaultLog();
-                    if (log)
-                        log->LogWarning("Render_ShapeMeshProvider: More than 65535 vertices, the shape cannot be displayed");
+                    o.Color = sstyle.Color;
                 }
                 else
                 {
-                    if (!pout->BeginOutput(&fills[0], (unsigned)fills.GetSize(), m16i))
-                        return false;
-
-                    unsigned        prevStyle0 = 0, prevStyle1 = 0;
-                    FillStyleType   fs0, fs1;
-
-                    for (i = 0; i < fills.GetSize(); ++i)
+                    o.Color = 0;
+                    if (!TessStyleIsComplex(v.Flags))
                     {
-                        const VertexOutput::Fill& fill = fills[i];
-                        tess->GetMesh(fill.MeshIndex, &tessMesh);
-
-                        unsigned verStart = 0;
-                        unsigned n;
-                        while ((n = tess->GetVertices(&tessMesh, tessVer, 256)) != 0)
+                        if (v.Flags & TessStyleMixColors)
                         {
-                            for (unsigned j = 0; j < n; ++j)
+                            if (prevStyle0 != v.Styles[0])
                             {
-                                const TessVertex& v = tessVer[j];
-                                VertexXY16iCF32&  o = outVer[j];
-                                o.x = (SInt16)floorf((v.x < 0) ? v.x - 0.5f : v.x + 0.5f);
-                                o.y = (SInt16)floorf((v.y < 0) ? v.y - 0.5f : v.y + 0.5f);
-                                if (strokeStyle)
-                                    o.Color = sstyle.Color;
-                                else
-                                {
-                                    o.Color = 0;
-                                    if (!TessStyleIsComplex(v.Flags))
-                                    {
-                                        if (v.Flags & TessStyleMixColors)
-                                        {
-                                            if (prevStyle0 != v.Styles[0])
-                                            {
-                                                GetFillStyle(v.Styles[0], &fs0, morphRatio);
-                                                prevStyle0 = v.Styles[0];
-                                            }
-                                            if (prevStyle1 != v.Styles[1])
-                                            {
-                                                GetFillStyle(v.Styles[1], &fs1, morphRatio);
-                                                prevStyle1 = v.Styles[1];
-                                            }
-                                            o.Color = ((fs0.Color | fs1.Color) >> 1) & 0x7F7F7F7F;
-                                        }
-                                        else
-                                        {
-                                            unsigned side = (v.Flags & TessStyleUseColor2) ? 1 : 0;
-                                            if (prevStyle0 != v.Styles[side])
-                                            {
-                                                GetFillStyle(v.Styles[side], &fs0, morphRatio);
-                                                prevStyle0 = v.Styles[(v.Flags & TessStyleUseColor2) ? 1 : 0];
-                                            }
-                                            o.Color = fs0.Color;
-                                        }
-                                    }
-                                }
-                                o.Factors[0] = TessFactorTable[v.Flags & 3];
-                                o.Factors[1] = TessFactorTable[(v.Flags >> 2) & 3];
+                                GetFillStyle(v.Styles[0], &fs0, morphRatio);
+                                prevStyle0 = v.Styles[0];
                             }
-                            pout->SetVertices(i, verStart, outVer, n);
-                            verStart += n;
+                            if (prevStyle1 != v.Styles[1])
+                            {
+                                GetFillStyle(v.Styles[1], &fs1, morphRatio);
+                                prevStyle1 = v.Styles[1];
+                            }
+                            o.Color = ((fs0.Color | fs1.Color) >> 1) & 0x7F7F7F7F;
                         }
-
-                        unsigned triCount = tess->GetMeshTriangleCount(fill.MeshIndex);
-                        for (unsigned j = 0; j < triCount; )
+                        else
                         {
-                            unsigned num = 256;
-                            if (j + num > triCount)
+                            if (prevStyle0 != v.Styles[(v.Flags & TessStyleUseColor2) ? 1 : 0])
                             {
-                                num = triCount - j;
-                                if (num == 0)
-                                    break;
+                                GetFillStyle(v.Styles[(v.Flags & TessStyleUseColor2) ? 1 : 0], &fs0, morphRatio);
+                                prevStyle0 = v.Styles[(v.Flags & TessStyleUseColor2) ? 1 : 0];
                             }
-                            tess->GetTrianglesI16(fill.MeshIndex, outIdx, j, num);
-                            pout->SetIndices(i, j * 3, outIdx, num * 3);
-                            j += num;
+                            o.Color = fs0.Color;
                         }
                     }
-                    pout->EndOutput();
-                    return true;
                 }
+                o.Factors[0] = TessFactorTable[v.Flags & 3];
+                o.Factors[1] = TessFactorTable[(v.Flags >> 2) & 3];
             }
+            pout->SetVertices(fillIdx, start, outVer, n);
+            start += n;
+        }
+
+        start = 0;
+        unsigned nTri = tess->GetMeshTriangleCount(fill.MeshIndex);
+        while (start < nTri)
+        {
+            unsigned num = 256;
+            if (start + num > nTri)
+            {
+                num = nTri - start;
+                if (num == 0)
+                    break;
+            }
+            tess->GetTrianglesI16(fill.MeshIndex, outIdx, start, num);
+            pout->SetIndices(fillIdx, start * 3, outIdx, num * 3);
+            start += num;
         }
     }
-    return createNullMesh(pout, layer, meshGenFlags);
+
+    pout->EndOutput();
+    return true;
 }
 
 // One stroke style of the layer. Thin strokes without AA edges become hairlines, solid opaque strokes go through the
