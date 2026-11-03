@@ -1045,27 +1045,31 @@ void GAS_GlobalTrace(const FnCall& fn)
 
 // BitmapData.loadBitmap(linkageId): a bitmap holding the image resource exported with the id, null without one.
 // @0x1428f1e70
-// MS2-FUNCTIONAL same calls; register allocation and the resource-release epilogue are scheduled differently
 // The movie def is read again from the environment's target, and a missing one ends the call without a bitmap.
 void BitmapDataCtorFunction::LoadBitmapA(const FnCall& fn)
 {
     fn.Result->SetNull();
     if (fn.NArgs < 1)
         return;
-    ASString           id = fn.Arg(0).ToString(fn.Env);
-    InteractiveObject* ptarget = fn.Env->GetTarget();
-    Ptr<ImageResource> pimg = ptarget->GetMovieImpl()->GetImageResourceByLinkageId(ptarget->GetResourceMovieDef(), id.ToCStr());
-    if (!pimg)
+    ASString        id = fn.Arg(0).ToString(fn.Env);
+    Environment*    penv = fn.Env;
+    Ptr<BitmapData> pbitmap;
     {
-        fn.Env->LogScriptWarning("BitmapData::LoadBitmap: LoadMovieImageCallback failed to load image \"%s\"", id.ToCStr());
-        return;
+        InteractiveObject* ptarget = penv->GetTarget();
+        Ptr<ImageResource> pimg = ptarget->GetMovieImpl()->GetImageResourceByLinkageId(ptarget->GetResourceMovieDef(), id.ToCStr());
+        if (!pimg)
+        {
+            penv->LogScriptWarning("BitmapData::LoadBitmap: LoadMovieImageCallback failed to load image \"%s\"", id.ToCStr());
+            return;
+        }
+        Ptr<MovieDefImpl> pdef = penv->GetTarget()->GetResourceMovieDef();
+        if (!pdef) // the exe returns with a null result here (0x1428f1fa7)
+            return;
+        pbitmap = *SF_HEAP_NEW(penv->GetHeap()) BitmapData(penv);
+        pbitmap->SetImage(penv, pimg, pdef);
     }
-    Ptr<MovieDefImpl> pdef = fn.Env->GetTarget()->GetResourceMovieDef();
-    if (!pdef) // the exe returns with a null result here (0x1428f1fa7)
-        return;
-    Ptr<BitmapData>   pbitmap = *SF_HEAP_NEW(fn.Env->GetHeap()) BitmapData(fn.Env);
-    pbitmap->SetImage(fn.Env, pimg, pdef);
-    fn.Result->SetAsObject(pbitmap);
+    if (pbitmap)
+        fn.Result->SetAsObject(pbitmap);
 }
 
 // Global parseInt(string, radix): the radix is 8 or 16 for a 0 / 0x prefix when not given, NaN for a radix outside 2..36
