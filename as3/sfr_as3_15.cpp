@@ -1707,11 +1707,12 @@ namespace InstanceTraits { namespace fl_media
         SetMemSize(0x70);
     }
 
-    // MS2-FUNCTIONAL: same source; the exe schedules the vftable store of the inlined ID3Info ctor before the first empty-string load
+    // Through Pickable, as in the SDK's MakeInstance: the vftable store of the inlined ctor then comes before the
+    // first empty-string load, as in the exe.
     // @0x1424d15d0
     void ID3Info::MakeObject(Value& result, Traits& t)
     {
-        result.Pick(new(t.Alloc()) InstanceType(t));
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
     }
 
     // @0x1424d1280
@@ -2036,11 +2037,11 @@ namespace InstanceTraits { namespace fl_gfx
         result.Pick(new(t.Alloc()) InstanceType(t));
     }
 
-    // MS2-FUNCTIONAL: inlined ctor; the exe loads the VM chain after the vptr store (scheduling only)
+    // Through Pickable (as ID3Info::MakeObject), so the VM chain is loaded after the vptr store, as in the exe.
     // @0x1424c97e0
     void IMEEventEx::MakeObject(Value& result, Traits& t)
     {
-        result.Pick(new(t.Alloc()) InstanceType(t));
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
     }
 
     // @0x1424c9860
@@ -2049,11 +2050,11 @@ namespace InstanceTraits { namespace fl_gfx
         result.Pick(new(t.Alloc()) InstanceType(t));
     }
 
-    // MS2-FUNCTIONAL: inlined ctor; the exe loads the VM chain after the vptr store (scheduling only)
+    // Through Pickable (as ID3Info::MakeObject), so the VM chain is loaded after the vptr store, as in the exe.
     // @0x1424c98c0
     void MouseCursorEvent::MakeObject(Value& result, Traits& t)
     {
-        result.Pick(new(t.Alloc()) InstanceType(t));
+        result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
     }
 
     // @0x1424c9950
