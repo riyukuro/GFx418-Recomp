@@ -2097,35 +2097,50 @@ void Class::Construct(Value& _this, unsigned argc, const Value* argv, bool extCa
         FUN_14241de40(reinterpret_cast<ValueStack*>(&vm.OpStack), argc);
 }
 
-// MS2-FUNCTIONAL 0x1424f0750: same steps; returns whether a constructor frame was pushed (the call stack at +0x78 grew),
+// VM::GetClassUnsafe, inlined into Construct as in the SCU (the out-of-line copy is Sfr33GetClassValue, 0x142508140).
+static inline bool Sfr17GetClassUnsafe(VM& vm, const StringDataPtr& gname, Value& result)
+{
+    Class* _class = vm.GetClass(gname);
+
+    if (_class)
+    {
+        result.AssignUnsafe(_class);
+        return true;
+    }
+
+    if (vm.IsException())
+        return false;
+
+    Sfr33ThrowReferenceError(vm, VM::Error(VM::eUndefinedVarError, vm, gname.ToCStr()));
+
+    return false;
+}
+
+// Constructs the class named gname; returns whether a constructor frame was pushed (the call stack at +0x78 grew),
 // which CreateObject (0x1424f3acd) and the symbol constructor in sfr_as3_17d read to decide on ExecuteCode(1)
 // @0x1424f0750
 __declspec(noinline) bool VM::Construct(const char* gname, Value& result, unsigned argc, const Value* argv, bool extCall)
 {
-    const UPInt size = Unk070[1];   // call stack size
-    Value _class;
-    const StringDataPtr name(gname);
-    Class* cl = GetClass(name);
-    if (cl != NULL)
+    const UPInt original_stack_size = Unk070[1];   // call stack size
+
+    // Get class.
+    Value value;
+    if (!Sfr17GetClassUnsafe(*this, gname, value))
+        return false;
+
+    if (value.IsNullOrUndefined())
     {
-        _class.AssignUnsafe(cl);
-        if (_class.IsNull())
-        {
-            const Error e(ErrorID(1009), *this);   // eConvertNullToObjectError
-            FUN_14252ecb0(this, &e, &fl::TypeErrorCI);
-            return false;
-        }
-        _class.GetObject()->Construct(result, argc, argv, extCall);
-        if (IsException())
-            return false;
-        return Unk070[1] > size;
+        Sfr33ThrowTypeError(*this, VM::Error(VM::eConvertNullToObjectError, *this));
+        return false;
     }
-    if (!IsException())
-    {
-        const Error e(ErrorID(1065), *this, name.ToCStr());   // eClassNotFoundError
-        FUN_14252ecb0(this, &e, &fl::ReferenceErrorCI);
-    }
-    return false;
+
+    // Create instance.
+    value.GetObject()->Construct(result, argc, argv, extCall);
+
+    if (IsException())
+        return false;
+
+    return Unk070[1] > original_stack_size;
 }
 
 // Throws "not a constructor" in the VM of the file at +0x20.
