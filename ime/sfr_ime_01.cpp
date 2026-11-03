@@ -883,36 +883,42 @@ struct Unk_ImeComRef
     }
 };
 
-// MS2-FUNCTIONAL: follows the executable's three-stage input-context COM query and releases each acquired interface.
-// The exe wraps the query in catch(...) (continuation 0x1423da407 returns the result reached so far); the three
-// interfaces are smart-pointer locals of the try block, released in order first, second, third.
+// MS2-FUNCTIONAL: the three-stage input-context COM query in a catch(...) that releases first, second and third as
+// the exe's funclet does. Same length; the exe tests hr2 before second (it loads second right after the call), ours
+// tests second first. Writing hr2 first moves first/second to the other's slot.
 // @0x1423da320
 unsigned char FUN_1423da320(void* object)
 {
+    using Release = ULONG(*)(void*);
     auto* bytes = static_cast<unsigned char*>(object);
+    void* first = nullptr;
+    void* second = nullptr;
+    void* third = nullptr;
     unsigned char result = 0;
+    if (!*reinterpret_cast<void**>(bytes + 0x28)) return 0;
     try {
-        Unk_ImeComRef third;
-        Unk_ImeComRef second;
-        Unk_ImeComRef first;
         void* initial = *reinterpret_cast<void**>(bytes + 0x28);
-        if (!initial) return 0;
         const int hr1 = reinterpret_cast<int(*)(void*, const void*, void**)>(
-            (*reinterpret_cast<void***>(initial))[0])(initial, &DAT_14313b8a8, &first.p);
+            (*reinterpret_cast<void***>(initial))[0])(initial, &DAT_14313b8a8, &first);
         if (hr1 >= 0) {
             const int hr2 = reinterpret_cast<int(*)(void*, unsigned, void**)>(
-                (*reinterpret_cast<void***>(first.p))[6])(first.p,
-                    *reinterpret_cast<unsigned*>(bytes + 0x64), &second.p);
-            if (hr2 >= 0 && second.p) {
+                (*reinterpret_cast<void***>(first))[6])(first, *reinterpret_cast<unsigned*>(bytes + 0x64), &second);
+            if (second && hr2 >= 0) {
                 const int hr3 = reinterpret_cast<int(*)(void*, const void*, void**)>(
-                    (*reinterpret_cast<void***>(second.p))[0])(second.p, &DAT_14313b8c8, &third.p);
-                if (hr3 >= 0 && third.p) {
-                    reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(third.p))[0x88 / sizeof(void*)])(third.p);
+                    (*reinterpret_cast<void***>(second))[0])(second, &DAT_14313b8c8, &third);
+                if (hr3 >= 0 && third) {
+                    reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(third))[0x88 / sizeof(void*)])(third);
                     result = 1;
                 }
             }
         }
+        if (first) reinterpret_cast<Release>((*reinterpret_cast<void***>(first))[2])(first);
+        if (second) reinterpret_cast<Release>((*reinterpret_cast<void***>(second))[2])(second);
+        if (third) reinterpret_cast<Release>((*reinterpret_cast<void***>(third))[2])(third);
     } catch (...) {
+        if (first) reinterpret_cast<Release>((*reinterpret_cast<void***>(first))[2])(first);
+        if (second) reinterpret_cast<Release>((*reinterpret_cast<void***>(second))[2])(second);
+        if (third) reinterpret_cast<Release>((*reinterpret_cast<void***>(third))[2])(third);
     }
     return result;
 }
