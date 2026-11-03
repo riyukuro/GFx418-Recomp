@@ -781,6 +781,12 @@ void ColorProto::SetTransform(const FnCall& fn)
 
 // ---- LoadVars ----
 
+// Environment::GetAS2Root (0x142949080), which the exe inlines in some callers.
+static SF_FORCEINLINE MovieRoot* Sfr01GetAS2Root(const Environment* penv)
+{
+    return static_cast<MovieRoot*>(penv->Target->GetMovieImpl()->pASMovieRoot);
+}
+
 // SDK FnCall::CheckThisPtr form (if / return false / return true), which the exe inlines as a bool.
 static inline bool Sfr01CheckThisPtr(const FnCall& fn, unsigned type)
 {
@@ -804,18 +810,16 @@ void LoadVarsProto::AddRequestHeader(const FnCall& fn)
 
 // LoadVars.decode(string): unescapes the string and loads its name=value pairs into the object.
 // @0x1428ec130
-// MS2-FUNCTIONAL same calls; cl orders the null-guarded this conversion differently around the string temporaries
 void LoadVarsProto::Decode(const FnCall& fn)
 {
     if (fn.NArgs <= 0)
         return;
     MS2_AS2_CHECK_THIS(fn, LoadVars);
-    Object* pthis = (Object*)fn.ThisPtr;
+    LoadVarsObject* pthis = (LoadVarsObject*)fn.ThisPtr;
     ASString src = fn.Arg(0).ToString(fn.Env);
     String   data;
     ASUtils::Unescape(src.ToCStr(), src.GetLength(), &data);
-    if (pthis)
-        LoadVariables(fn.Env, pthis, data);
+    LoadVariables(fn.Env, pthis, data);
 }
 
 // @0x1428ec290
@@ -844,7 +848,6 @@ void LoadVarsProto::GetBytesTotal(const FnCall& fn)
 
 // LoadVars.load(url): queues the load, false without an url.
 // @0x1428ec3d0
-// MS2-FUNCTIONAL same calls; register allocation of the this conversion and the url string differs
 void LoadVarsProto::Load(const FnCall& fn)
 {
     if (fn.NArgs == 0)
@@ -856,7 +859,7 @@ void LoadVarsProto::Load(const FnCall& fn)
     LoadVarsObject* pthis = (LoadVarsObject*)fn.ThisPtr;
     ASString        url = fn.Arg(0).ToString(fn.Env);
     pthis->BytesLoaded = 0;
-    fn.Env->GetAS2Root()->AddVarLoadQueueEntry(pthis, url.ToCStr(), LoadQueueEntry::LM_None);
+    Sfr01GetAS2Root(fn.Env)->AddVarLoadQueueEntry(pthis, url.ToCStr(), LoadQueueEntry::LM_None);
     fn.Result->SetBool(true);
 }
 
