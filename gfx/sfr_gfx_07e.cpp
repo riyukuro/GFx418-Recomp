@@ -844,9 +844,18 @@ public:
                                 MemoryHeap* pheap) const;
 };
 
+// ResourceHandle::GetResource with the pointer test first, as the exe inlines it here.
+static SF_FORCEINLINE Resource* GetHandleResource(const ResourceHandle& rh, ResourceBinding* pbinding)
+{
+    if (rh.GetHandleType() == ResourceHandle::RH_Pointer)
+        return rh.GetResourcePtr();
+    ResourceBindData rbd;
+    pbinding->GetResourceData_Opaque(&rbd, rh.GetBindIndex());
+    return rbd.pResource;
+}
+
 // The base image comes from the info or, by id, from the binding.
 // @0x142639000
-// MS2-FUNCTIONAL 0x142639000: the inlined frozen-path copy of the ResourceBindData AddRefs the new resource before releasing the old one in the exe (ours releases first)
 bool SubImageResourceCreator::CreateResource(DataHandle hdata, ResourceBindData* pbindData, LoadStates* pls,
                                              MemoryHeap* pheap) const
 {
@@ -856,15 +865,7 @@ bool SubImageResourceCreator::CreateResource(DataHandle hdata, ResourceBindData*
     {
         ResourceHandle rh;
         pbindData->pBinding->GetOwnerDefImpl()->GetDataDef()->GetResourceHandle(&rh, pinfo->ImageId);
-        Resource* pres;
-        if (rh.GetHandleType() == ResourceHandle::RH_Pointer)
-            pres = rh.GetResourcePtr();
-        else
-        {
-            ResourceBindData rbd;
-            pbindData->pBinding->GetResourceData(&rbd, rh.GetBindIndex());
-            pres = rbd.pResource;
-        }
+        Resource* pres = GetHandleResource(rh, pbindData->pBinding);
         if (pres && pres->GetResourceType() == Resource::RT_Image)
             pimageRes = (ImageResource*)pres;
     }

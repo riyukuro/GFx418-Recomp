@@ -841,6 +841,16 @@ public:
         else
             GetResourceData_Locked(pdata, index);
     }
+    // GetResourceData with the locked read called as an unknown function, so cl keeps the release of the old
+    // entry in the frozen copy (SubImageResourceCreator::CreateResource, sfr_gfx_07e).
+    void GetResourceData_Opaque(ResourceBindData* pdata, unsigned index) const
+    {
+        if (Frozen && (index < ResourceCount))
+            *pdata = pResources[index];
+        else
+            FUN_142636720(pdata, index);
+    }
+    void FUN_142636720(ResourceBindData* pdata, unsigned index) const; // GetResourceData_Locked
 
     void SetOwnerDefImpl(MovieDefImpl* powner)
     {
