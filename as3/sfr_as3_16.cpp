@@ -2346,7 +2346,7 @@ void FUN_1424dcce0(void* self)
 
 // HashLH<Ptr<Resource>, UPInt> dtor: releases each text-format font Resource key, then frees the table.
 // @0x1424dcd40
-void FUN_1424dcd40(void* self)
+__declspec(noinline) void FUN_1424dcd40(void* self)
 {
     static_cast<Scaleform::HashLH<Scaleform::Ptr<Scaleform::GFx::Resource>, Scaleform::UPInt> *>(self)->~HashLH();
 }
