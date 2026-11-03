@@ -1379,6 +1379,24 @@ namespace Instances { namespace fl_display
 {
     // ---- DisplayObject ----
 
+    // The VM of an object whose pTraits may carry the collector's mark bit (bit 0); read again at each use.
+    template <class P>
+    static inline VM& Sfr06CollectorVM(const P& traits)
+    {
+        return reinterpret_cast<const Traits*>(reinterpret_cast<UPInt>(traits.GetPtr()) & ~UPInt(1))->GetVM();
+    }
+
+    // Ptr::operator=(C*) written out: cl calls the operator out of line here, the exe has it inline.
+    template <class C>
+    static inline void Sfr06SetPtr(Ptr<C>& dst, C* p)
+    {
+        if (p)
+            p->AddRef();
+        if (dst)
+            dst->Release();
+        dst.GetRawRef() = p;
+    }
+
     // A display object dying inside a collection leaves pDispObj to the collector, which releases it once the
     // collection is over.
     // @0x14243d0b0
@@ -1387,24 +1405,22 @@ namespace Instances { namespace fl_display
         if (pDispObj)
         {
             ToAvmDisplayObj(pDispObj)->ReleaseAS3Obj();
-            // The collector may have set the mark bit of pTraits.
-            VM& vm = reinterpret_cast<const Traits*>(reinterpret_cast<UPInt>(pTraits.GetPtr()) & ~UPInt(1))->GetVM();
-            if (vm.GetGC().Flags & ASRefCountCollector::Flags_InCollect)
+            if (Sfr06CollectorVM(pTraits).GetGC().Flags & ASRefCountCollector::Flags_InCollect)
             {
-                pReleaseProxy->Data = pDispObj.GetPtr();
+                pReleaseProxy->Data = pDispObj;
                 ReleaseProxy* pproxy = pReleaseProxy;
-                Ptr<ReleaseProxy>& head = reinterpret_cast<Ptr<ReleaseProxy>&>(vm.GetGC().HeadDelayedPtrRelease);
+                ASRefCountCollector& gc = Sfr06CollectorVM(pTraits).GetGC();
                 if (pproxy)
                 {
-                    if (!head)
+                    if (!reinterpret_cast<Ptr<ReleaseProxy>&>(gc.HeadDelayedPtrRelease))
                     {
-                        head = pproxy;
+                        Sfr06SetPtr(reinterpret_cast<Ptr<ReleaseProxy>&>(gc.HeadDelayedPtrRelease), pproxy);
                         pproxy->pNext = NULL;
                     }
                     else
                     {
-                        pproxy->pNext = head;
-                        head = pproxy;
+                        pproxy->pNext = reinterpret_cast<Ptr<ReleaseProxy>&>(gc.HeadDelayedPtrRelease);
+                        Sfr06SetPtr(reinterpret_cast<Ptr<ReleaseProxy>&>(gc.HeadDelayedPtrRelease), pproxy);
                     }
                 }
             }
