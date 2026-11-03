@@ -1859,7 +1859,7 @@ void criUsfDmx_GetOutputSjTotalSize(void* stream, CriUint32 lane, CriUint32* fir
     *third = (CriUint32)FUN_1400467b8(entries[lane].Queue, 2);
 }
 
-// MS2-FUNCTIONAL: advance the read or write cursor of a CRI ring-buffer stream joint after a consumed chunk.
+// Advance the read or write cursor of a CRI ring-buffer stream joint after a consumed chunk.
 // @0x14004624c
 void criSjRbf_UngetChunk(void* joint, CriSint32 lane, void* chunkPtr)
 {
@@ -1871,7 +1871,8 @@ void criSjRbf_UngetChunk(void* joint, CriSint32 lane, void* chunkPtr)
     {
         if (rb->Lock)
             criCs_Enter(rb->Lock);
-        CriUint32 position = (rb->Size - chunk->Size + rb->InputPosition) % rb->Size;
+        CriUint32 size = rb->Size;
+        CriUint32 position = (size - chunk->Size + rb->InputPosition) % size;
         if (position == (CriUint32)((chunk->Data - rb->Data) % (CriSint64)rb->Size))
         {
             rb->InputPosition = position;
