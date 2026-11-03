@@ -5393,35 +5393,46 @@ namespace Scaleform { namespace GFx { namespace AS3
         CurrKind = k;
     }
 
-    // MS2-FUNCTIONAL: /O2 order only: pos/start in r14/r15 swapped, and cases 3 and 4 thread doThrow through al where the exe jumps straight to the shared tails
     // @0x14241d6f0
     CheckResult XMLParser::Parse(const StringDataPtr& str, UPInt& pos, bool isList)
     {
-        const UPInt start = pos;
-        bool result = XML_Parse(Parser, str.ToCStr() + start, (int)(str.GetSize() - start), 1) == 1;
-        bool advance = true;
-        if (!result)
+        UPInt startPos = pos;
+
+        bool rc = XML_Parse(Parser, str.ToCStr() + startPos, (int)(str.GetSize() - startPos), 1) == 1;
+        bool shouldAdvancePos = true;
+
+        if (!rc)
         {
-            const int code = XML_GetErrorCode(Parser);
+            const int ecode = XML_GetErrorCode(Parser);
             VM& vm = ITr.GetVM();
-            Kind kind = kNone;
-            VM::ErrorID err = VM::ErrorID(0x442);
+            VM::ErrorID errorID = VM::ErrorID(0x442);
+            Kind k = kNone;
+
             if (KindStack.GetSize())
-                kind = KindStack.Back();
-            bool doThrow = true;
-            switch (code)
+                k = KindStack.Back();
+
+            bool shouldThrow = true;
+            switch (ecode)
             {
             case 0:
                 // a processing instruction left open at the start: skip past its "?>"
-                if (pos == start && CurrElement && CurrElement->GetKind() == Instances::fl::XML::kInstruction)
+                if (pos == startPos && CurrElement)
                 {
-                    const UPInt left = str.GetSize() - start;
-                    for (UPInt i = 0; i < left; ++i)
+                    if (CurrElement->GetKind() == Instances::fl::XML::kInstruction)
                     {
-                        if (str.ToCStr()[i] == '?' && i + 1 < left && str.ToCStr()[i + 1] == '>')
+                        UPInt offset = 0;
+                        UPInt len = str.GetSize() - startPos;
+                        while (offset < len)
                         {
-                            pos += i + 2;
-                            return true;
+                            if (str.ToCStr()[offset] == '?' && ((offset + 1) < len))
+                            {
+                                if (str.ToCStr()[offset + 1] == '>')
+                                {
+                                    pos += offset + 2;
+                                    return true;
+                                }
+                            }
+                            offset++;
                         }
                     }
                 }
@@ -5429,54 +5440,78 @@ namespace Scaleform { namespace GFx { namespace AS3
             case 9:
                 if (isList)
                 {
-                    result = true;
-                    doThrow = false;
+                    shouldThrow = false;
+                    rc = true;
+                }
+                else if (CurrElement.GetPtr() && k == kElement)
+                {
+                    errorID = VM::ErrorID(0x43d);
                 }
                 else
-                    err = VM::ErrorID(CurrElement && kind == kElement ? 0x43d : 0x440);
+                {
+                    errorID = VM::ErrorID(0x440);
+                }
                 break;
             case 1:
-                err = VM::ErrorID(1000);
+                errorID = VM::ErrorID(1000);
                 break;
             case 7:
-                if (kind == kElement)
-                    err = VM::ErrorID(0x43d);
+                if (k == kElement)
+                    errorID = VM::ErrorID(0x43d);
                 break;
             case 3:
-                advance = !isList;
-                if (CurrElement && kind == kElement)
+                if (isList)
                 {
-                    err = VM::ErrorID(0x43d);
-                    doThrow = advance;
+                    shouldAdvancePos = false;
+                    shouldThrow = false;
+                }
+                if (CurrElement && k == kElement)
+                {
+                    errorID = VM::ErrorID(0x43d);
                 }
                 else
-                    doThrow = false;
+                {
+                    shouldThrow = false;
+                }
                 break;
             case 8:
-                err = VM::ErrorID(0x450);
+                errorID = VM::ErrorID(0x450);
                 break;
             case 5:
-                err = VM::ErrorID(0x449);
+                errorID = VM::ErrorID(0x449);
                 break;
             case 0x14:
-                err = VM::ErrorID(0x443);
+                errorID = VM::ErrorID(0x443);
+                break;
+            case 0x23:
+                shouldThrow = false;
+                shouldAdvancePos = false;
+                break;
+            case 2:
                 break;
             case 4:
                 if (!CurrElement)
-                    doThrow = false;
+                {
+                    shouldThrow = false;
+                }
                 break;
-            case 0x23:
-                advance = false;
-                doThrow = false;
+            default:
                 break;
             }
-            if (doThrow)
-                vm.ThrowTypeError(VM::Error(err, vm));
+
+            if (shouldThrow)
+            {
+                vm.ThrowTypeError(VM::Error(errorID, vm));
+            }
         }
-        if (advance)
+
+        if (shouldAdvancePos)
+        {
             pos += XML_GetCurrentByteIndex(Parser);
+        }
+
         SetNodeKind(kNone);
-        return result;
+        return rc;
     }
 
     // InstanceTraits::fl::XML::MakeInstanceProcInstr (0x14241b6e0), inlined here
