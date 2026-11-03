@@ -3929,10 +3929,9 @@ unsigned long long FUN_1423d9ee0(void* raw, void*, int event, void*, const char*
 }
 
 // MS2-FUNCTIONAL: maps a GFxIME_* label from the executable IME table to its loaded record and selects that IME,
-// then releases the by-value name string (inline, as in the exe). Still differs: the exe returns bool (xor al / mov al),
-// the hook signature keeps unsigned long long, the release tests `sub eax,1`, and vtable[8] goes through r8.
+// then releases the by-value name string (inline, as in the exe). Still differs: vtable[8] goes through r8 in the exe.
 // @0x1423d7420
-unsigned long long FUN_1423d7420(unsigned long long* manager, unsigned long long* packedName)
+bool FUN_1423d7420(unsigned long long* manager, unsigned long long* packedName)
 {
     struct LocaleRow { const char* name; unsigned id; unsigned pad; };
     struct Record { unsigned long long pad0[2]; unsigned long long text1; unsigned long long text2; unsigned id; unsigned pad1[3]; };
@@ -3972,7 +3971,7 @@ unsigned long long FUN_1423d7420(unsigned long long* manager, unsigned long long
                         unsigned char* data = reinterpret_cast<unsigned char*>(*packedName & ~3ull);
                         if ((_InterlockedExchangeAdd(reinterpret_cast<volatile long*>(data + sizeof(void*)), -1) - 1) == 0)
                             Memory::Free(data);
-                        return 1;
+                        return true;
                     }
                 }
             }
@@ -3982,7 +3981,7 @@ unsigned long long FUN_1423d7420(unsigned long long* manager, unsigned long long
     unsigned char* data = reinterpret_cast<unsigned char*>(*packedName & ~3ull);
     if ((_InterlockedExchangeAdd(reinterpret_cast<volatile long*>(data + sizeof(void*)), -1) - 1) == 0)
         Memory::Free(data);
-    return 0;
+    return false;
 }
 
 // Initializes the IME command state, callback interface, string members, and both dynamic buffers.
