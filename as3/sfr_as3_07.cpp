@@ -3429,7 +3429,8 @@ struct ValueAssignCopies
 
 namespace Instances { namespace fl_display
 {
-    // MS2-FUNCTIONAL: exe frame carries a /GS cookie around the GetRect temp; logic identical
+#pragma strict_gs_check(push, on)
+    // MS2-FUNCTIONAL: the exe reads the rect through GetRect's returned pointer (rax); ours reads its frame slot
     // @0x142454960
     SF_NOINLINE void BitmapData::widthGet(SInt32& result)
     {
@@ -3437,12 +3438,17 @@ namespace Instances { namespace fl_display
         {
             VM& vm = GetVM();
             vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
-            return;
         }
-        result = pImage->GetRect().Width();
+        else
+        {
+            const Render::ImageRect& r = pImage->GetRect();
+            result = r.Width();
+        }
     }
+#pragma strict_gs_check(pop)
 
-    // MS2-FUNCTIONAL: exe frame carries a /GS cookie around the GetRect temp; logic identical
+#pragma strict_gs_check(push, on)
+    // MS2-FUNCTIONAL: the exe reads the rect through GetRect's returned pointer (rax); ours reads its frame slot
     // @0x14244e480
     SF_NOINLINE void BitmapData::heightGet(SInt32& result)
     {
@@ -3450,10 +3456,14 @@ namespace Instances { namespace fl_display
         {
             VM& vm = GetVM();
             vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
-            return;
         }
-        result = pImage->GetRect().Height();
+        else
+        {
+            const Render::ImageRect& r = pImage->GetRect();
+            result = r.Height();
+        }
     }
+#pragma strict_gs_check(pop)
 
     // @0x142450940
     void DisplayObject::nameGet(ASString& result)
