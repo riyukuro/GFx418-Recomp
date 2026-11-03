@@ -4877,35 +4877,50 @@ bool FUN_142417560(Instances::fl::XMLList* self, const Multiname& prop_name)
     return false;
 }
 
+// The name of a trait's type: its own for a slot or const, its class's for the others (inlined in the exe).
+static inline const AS3::Abc::Multiname& Sfr04TraitTypeName(const AS3::Abc::File& abc, const AS3::Abc::TraitInfo& ti)
+{
+    const AS3::Abc::TraitInfo::Type t = ti.GetType();
+    const AS3::Abc::SInd ind = (t == AS3::Abc::TraitInfo::tSlot || t == AS3::Abc::TraitInfo::tConst)
+        ? ti.Ind : abc.AS3_Classes.Info[ti.Ind]->inst_info.name_ind;
+    return abc.Const_Pool.GetMultiname(ind);
+}
+
 // GlobalObjectScript: the instance traits of the script's classes run in this script
-// MS2-FUNCTIONAL: written from the exe on raw offsets
+// MS2-FUNCTIONAL: a free function in place of the exe's member (self stands for a non-null this); the instance
+// traits' script is read on its offset (protected)
 // @0x1424187f0
 void FUN_1424187f0(Instances::fl::GlobalObjectScript* self)
 {
-    const char* tr = *(const char* const*)((const char*)self + 0x20);
-    const UPInt* inds = *(const UPInt* const*)(tr + 0xf0);   // {data, size}
-    VMAbcFile* file = *(VMAbcFile* const*)(tr + 0xe8);
-    VM* vm = *(VM* const*)(tr + 0x78);
-    const char* abc = *(const char* const*)((const char*)file + 0x28);
-    for (UPInt i = 0; i < inds[1]; ++i)
+    __assume(self != NULL);
+    const InstanceTraits::fl::GlobalObjectScript& tr = self->GetTraits();
+    const AS3::Abc::ScriptInfo& script = tr.GetScript();
+    VMAbcFile& file = tr.GetFile();
+    const AS3::Abc::File& abc = file.GetAbcFile();
+    for (UPInt i = 0; i < script.obj_traits.GetSize(); ++i)
     {
-        const Scaleform::UInt8* ti = (*(const Scaleform::UInt8* const* const*)(abc + 0x128))[((const int*)inds[0])[(unsigned)i]];
-        if ((*ti & 0xf) != 4)   // class traits only
+        const AS3::Abc::TraitInfo& ti = *abc.Traits.TraitInfos[script.obj_traits[(unsigned)i]];
+        if (ti.GetType() != AS3::Abc::TraitInfo::tClass)
             continue;
-        const char* ci = (*(const char* const* const*)(abc + 0x140))[*(const int*)(ti + 0xc)];
-        const int mi = *(const int*)(ci + 0x24);
-        const char* mn = mi == 0 ? abc + 0xe8 : *(const char* const*)(abc + 0xb8) + (SPInt)mi * 0x10;
-        Instances::Namespace& ns = file->GetInternedNamespace(*(const int*)(mn + 4));
-        ASString name = file->GetInternedString(*(const int*)(mn + 8));
+        const AS3::Abc::Multiname& mn = Sfr04TraitTypeName(file.GetAbcFile(), ti);
+        Instances::Namespace& ns = file.GetInternedNamespace(mn.Ind);
+        ASString name = file.GetInternedString(mn.NameIndex);
         if (FUN_142514cd0(ns))
             continue;
-        ClassTraits::Traits** pctr = FUN_142414ac0(&vm->ClassTraitsSet, name, ns);
-        if (!pctr || !*pctr || *(VMAbcFile**)((char*)*pctr + 0xc8) != file)
+        ClassTraits::Traits** pctr = FUN_142414ac0(&self->GetTraits().GetVM().ClassTraitsSet, name, ns);
+        if (!pctr || !*pctr)
             continue;
-        char* itr = *(char**)((char*)*pctr + 0xc0);
-        SPtr<Instances::fl::GlobalObjectScript>& script = *(SPtr<Instances::fl::GlobalObjectScript>*)(itr + 0xd0);
-        if (!script)
-            script = self;
+        ClassTraits::UserDefined& ctr = static_cast<ClassTraits::UserDefined&>(**pctr);
+        if (&ctr.GetFile() != &file)
+            continue;
+        InstanceTraits::Traits& itr = ctr.GetInstanceTraits();
+        Instances::fl::GlobalObjectScript*& owner =
+            *reinterpret_cast<Instances::fl::GlobalObjectScript**>((char*)&itr + 0xd0);
+        if (owner == NULL)
+        {
+            self->AddRef();
+            owner = self;
+        }
     }
 }
 
