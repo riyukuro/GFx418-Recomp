@@ -346,73 +346,84 @@ SF_NOINLINE bool RefCountCollector<Stat>::RootArray::allocatePageSafe(UPInt inde
 // The count is not zero: the object becomes a possible cycle root. Zero: its children are released (through the
 // collector's work list unless a collection or release already owns it), then it is unbuffered, unlinked, finalized
 // and freed. An object in a work list only has its release delayed.
-// MS2-FUNCTIONAL: written from the exe's control flow; the release walk reloads pRCC as the exe does
+// The work-list head is read through a volatile pointer, so it is loaded again after the loop test, as in the exe.
+// RemoveFromRoots is called through a member pointer, so it stays an out-of-line call (0x1425927d0), as in the exe.
+// MS2-FUNCTIONAL: the exe calls pGlobalHeap->Free and returns through the shared epilog; ours tail-jumps to it
 // @0x1425925f0
 template<int Stat>
 void RefCountBaseGC<Stat>::ReleaseInternal()
 {
     UInt32 rc = RefCount;
-    if (rc & Mask_RefCount)
+    if (!(rc & Mask_RefCount))
     {
-        if (((rc >> Shift_State) & Mask_State) == State_Root)
+        if ((UByte)(rc >> 27) & 1)
+        {
+            RefCount = rc | Flag_DelayedRelease;
             return;
-        SetState(State_Root);
+        }
+        if (!((UByte)(pRCC->ListRoot.RefCount >> 27) & 1))
+        {
+            pRCC->pLastPtr       = &pRCC->ListRoot;
+            pRCC->ListRoot.pNext = pRCC->ListRoot.pPrev = &pRCC->ListRoot;
+            pRCC->ListRoot.SetInList();
+            ExecuteForEachChild_GC(pRCC, Operation_Release);
+            Collector* prcc;
+            while (prcc = pRCC, prcc->ListRoot.pNext != &prcc->ListRoot)
+            {
+                RefCountBaseGC* pchild = *(RefCountBaseGC* volatile*)&prcc->ListRoot.pNext;
+                pchild->pPrev->pNext = pchild->pNext;
+                pchild->pNext->pPrev = pchild->pPrev;
+                UInt32 crc = pchild->RefCount & ~(Flag_Buffered | Flag_InList);
+                pchild->RefCount  = crc;
+                pchild->pNext     = 0;
+                pchild->RootIndex = ~0u;
+                pchild->pRCC      = pRCC;
+                pchild->RefCount  = crc & ~Flag_DelayedRelease;
+                pRCC->pLastPtr    = pRCC->ListRoot.pPrev;
+                pchild->ReleaseInternal();
+            }
+            prcc->ListRoot.RefCount &= ~(Flag_Buffered | Flag_InList);
+            prcc->ListRoot.pNext     = 0;
+            prcc->ListRoot.RootIndex = ~0u;
+        }
+        else
+            ExecuteForEachChild_GC(pRCC, Operation_Release);
+
+        UInt32 frc = RefCount & ~(Mask_State << Shift_State);
+        RefCount = frc;
+        bool inlist   = (UByte)(frc >> 27) & 1;
+        bool buffered = (UByte)(frc >> 31) != 0;
+        // Unlinks a listed object and clears its list and buffer bits.
+        auto removeFromList = [](RefCountBaseGC* p)
+        {
+            p->pPrev->pNext = p->pNext;
+            p->pNext->pPrev = p->pPrev;
+            p->RefCount &= ~(Flag_Buffered | Flag_InList);
+            p->RootIndex = ~0u;
+            p->pNext     = 0;
+        };
+        if (!buffered)
+        {
+            if (inlist)
+                removeFromList(this);
+        }
+        else if (!inlist)
+            (pRCC->*(&Collector::RemoveFromRoots))(this);
+        else
+            removeFromList(this);
+        Finalize_GC();
+        Memory::Free(this);
+    }
+    else
+    {
+        if ((rc & (Mask_State << Shift_State)) == ((UInt32)State_Root << Shift_State))
+            return;
+        rc = (rc & ~(Mask_State << Shift_State)) | ((UInt32)State_Root << Shift_State);
+        RefCount = rc;
         if (rc & (Flag_Buffered | Flag_InList))
             return;
         pRCC->AddRoot(this);
-        return;
     }
-    if (rc & Flag_InList)
-    {
-        RefCount = rc | Flag_DelayedRelease;
-        return;
-    }
-
-    if (!pRCC->ListRoot.IsInList())
-    {
-        Collector* prcc = pRCC;
-        prcc->pLastPtr      = &prcc->ListRoot;
-        pRCC->ListRoot.pPrev = &pRCC->ListRoot;
-        pRCC->ListRoot.pNext = &pRCC->ListRoot;
-        pRCC->ListRoot.SetInList();
-        ExecuteForEachChild_GC(pRCC, Operation_Release);
-        while (pRCC->ListRoot.pNext != &pRCC->ListRoot)
-        {
-            RefCountBaseGC* pchild = pRCC->ListRoot.pNext;
-            pchild->pPrev->pNext = pchild->pNext;
-            pchild->pNext->pPrev = pchild->pPrev;
-            UInt32 crc = pchild->RefCount;
-            pchild->pRCC      = pRCC;
-            pchild->RefCount  = crc & ~(Flag_Buffered | Flag_InList | Flag_DelayedRelease);
-            pchild->RootIndex = ~0u;
-            pRCC->pLastPtr    = pRCC->ListRoot.pPrev;
-            pchild->ReleaseInternal();
-        }
-        prcc = pRCC;
-        prcc->ListRoot.RefCount &= ~(Flag_Buffered | Flag_InList);
-        prcc->ListRoot.pRCC      = 0;
-        prcc->ListRoot.RootIndex = ~0u;
-    }
-    else
-        ExecuteForEachChild_GC(pRCC, Operation_Release);
-
-    rc       = RefCount;
-    RefCount = rc & ~(Mask_State << Shift_State);
-    if (!IsInList())
-    {
-        if (rc & Flag_Buffered)
-            pRCC->RemoveFromRoots(this);
-    }
-    else
-    {
-        pPrev->pNext = pNext;
-        pNext->pPrev = pPrev;
-        RefCount &= ~(Flag_Buffered | Flag_InList);
-        pRCC      = 0;
-        RootIndex = ~0u;
-    }
-    Finalize_GC();
-    Memory::Free(this);
 }
 
 template void RefCountCollector<StatMV_ActionScript_Mem>::AddRoot(BaseType* root);
