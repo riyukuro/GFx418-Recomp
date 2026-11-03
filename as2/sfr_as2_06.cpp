@@ -2399,35 +2399,33 @@ bool Value::IsEqual(Environment* penv, const Value& other) const
     return T.Type == other.T.Type;
 }
 
-// MS2-FUNCTIONAL: same flow and calls. The text comes from the definition's DefaultText (pDef +0xd8, +0x70), not
-// from the document. A bound variable that already exists keeps its value: then only UpdateTextFromVariable runs.
+// The text comes from the definition's DefaultText (pDef +0xd8, +0x70), not from the document. A bound variable
+// that already exists keeps its value: then only UpdateTextFromVariable runs.
 // @0x14296ba60
 void AvmTextField::OnEventLoad()
 {
     TextField* textField = reinterpret_cast<TextField*>(pDispObj);
-    const StringLH& defaultText = textField->pDef->DefaultText;
-    if (defaultText.GetLength() == 0)
+    if (textField->pDef->DefaultText.GetLength() != 0)
     {
-        textField->SetTextValue("", (textField->GetFlags418() & 0x2) != 0, false);
-    }
-    else
-    {
-        if (VariableName.GetLength() != 0)
+        bool found = false;
+        if (VariableName.GetSize() != 0)
         {
             textField->Flags |= 0x8000;
             if (Environment* environment = GetASEnvironment())
             {
                 Value value;
-                if (environment->GetVariable(VariableName, &value))
-                {
-                    UpdateTextFromVariable();
-                    return;
-                }
+                found = environment->GetVariable(VariableName, &value);
             }
         }
-        textField->SetTextValue(defaultText.ToCStr(), (textField->GetFlags418() & 0x2) != 0, true);
-        UpdateVariable();
+        if (!found)
+        {
+            textField->SetTextValue(reinterpret_cast<TextField*>(pDispObj)->pDef->DefaultText.ToCStr(),
+                                    (textField->GetFlags418() & 0x2) != 0, true);
+            UpdateVariable();
+        }
     }
+    else
+        textField->SetTextValue("", (textField->GetFlags418() & 0x2) != 0, false);
     UpdateTextFromVariable();
 }
 
