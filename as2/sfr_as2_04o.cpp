@@ -245,46 +245,81 @@ Bool3W Environment::CheckGlobalAndLevels(const GetVarParams& params) const
     return Bool3W();
 }
 
+// The state of one script function call (the layout of sfr_as2_06b's model, 0x58 bytes).
 class InvokeContext
 {
 public:
+    UByte*                 pThis;         // +0x00 AsFunctionObject
+    Environment*           pOurEnv;       // +0x08
+    const FnCall*          pFn;           // +0x10
+    void*                  pLocalFrame;   // +0x18
+    const char*            pMethodName;   // +0x20
+    Ptr<InteractiveObject> TargetCh;      // +0x28
+    Ptr<InteractiveObject> FnEnvCh;       // +0x30
+    Ptr<InteractiveObject> PassedThisCh;  // +0x38
+    Ptr<Object>            PassedThisObj; // +0x40
+    void*                  CurLocalFrame; // +0x48
+    unsigned               LocalStackTop; // +0x50
+
+    // AsFunctionObject::IsFunction2 / Function2Flags / LocalRegisterCount.
+    bool   IsFunction2() const { return pThis[0xca] == 2; }
+    UInt16 Function2Flags() const { return *reinterpret_cast<const UInt16*>(pThis + 0xc8); }
+    UByte  LocalRegisterCount() const { return pThis[0xcb]; }
+
     void Cleanup();
 };
+
+// Environment::SetLocal (out of line in sfr_as2_07), inlined in Cleanup.
+static SF_FORCEINLINE void SetLocalInline(Environment* penv, const ASString& varname, const Value& val)
+{
+    if (penv->LocalFrames.GetSize() == 0)
+        return;
+    if (!penv->LocalFrames[penv->LocalFrames.GetSize() - 1])
+        return;
+    Value* pvalue = const_cast<Value*>(penv->FindLocal(varname));
+    if (!pvalue)
+        penv->AddLocal(varname, val);
+    else
+        *pvalue = val;
+}
+
+// The resizes Cleanup calls out of line (COMDATs where cl inlines them, as in Environment::Reset in sfr_as2_06): the
+// frame array's ResizeNoConstruct (exe 0x14297e450) and the register array's Resize (exe 0x14297e0e0).
+typedef ArrayDataBase<Ptr<LocalFrame>, AllocatorLH<Ptr<LocalFrame>, Stat_Default_Mem>, ArrayDefaultPolicy> LocalFramesData;
+typedef ArrayBase<ArrayData<Value, AllocatorLH<Value, Stat_Default_Mem>, ArrayDefaultPolicy> > LocalRegisterBase;
+
+// Environment::SetLocalFrameTop: LocalFrames.Resize(t).
+static SF_FORCEINLINE void SetLocalFrameTopInline(Environment* penv, unsigned t)
+{
+    LocalFramesData* pdata   = reinterpret_cast<LocalFramesData*>(&penv->LocalFrames);
+    UPInt            oldSize = pdata->Size;
+    (pdata->*&LocalFramesData::ResizeNoConstruct)(&penv->LocalFrames, t);
+    if (t > oldSize)
+        AllocatorLH<Ptr<LocalFrame>, Stat_Default_Mem>::ConstructArray(pdata->Data + oldSize, t - oldSize);
+}
 
 // The invoked function's frame is left: the alternate prototype of a super call is dropped, this and super become
 // undefined again in the caller's frame when the function did not take them, the locals and the call stack are
 // back where they were.
-// MS2-FUNCTIONAL: the context is not modelled, its fields are read by address
 // @0x142933e20
 void InvokeContext::Cleanup()
 {
-    UByte*       pc    = reinterpret_cast<UByte*>(this);
-    UByte*       pfunc = *reinterpret_cast<UByte**>(pc);
-    Environment* penv  = *reinterpret_cast<Environment**>(pc + 8);
-    Object*      pobj  = *reinterpret_cast<Object**>(pc + 0x40);
-    if (pobj && static_cast<ObjectInterface*>(pobj)->IsSuper())
-        static_cast<SuperObject*>(pobj)->ResetAltProto();
+    ObjectInterface* passedThis = PassedThisObj.GetPtr();
+    if (passedThis && passedThis->IsSuper())
+        static_cast<SuperObject*>(passedThis)->ResetAltProto();
 
-    bool isFunc2 = pfunc[0xca] == 2;
-    for (int i = 0; i < 2; ++i)
-    {
-        if (isFunc2 && (pfunc[0xc8] & (i ? 0x20 : 0x02)))
-            continue;
-        Value undef;
-        if (penv->LocalFrames.GetSize() != 0 && penv->LocalFrames.Back())
-        {
-            const ASString& str = penv->GetBuiltin(i ? 62 : ASBuiltin_this);
-            if (penv->FindLocal(str))
-                penv->SetLocal(str, undef);
-            else
-                penv->AddLocal(str, undef);
-        }
-    }
-    penv->LocalFrames.Resize(*reinterpret_cast<unsigned*>(pc + 0x50));
-    if (isFunc2)
-        penv->LocalRegister.Resize(penv->LocalRegister.GetSize() - pfunc[0xcb]);
-    if (penv)
-        penv->CallStack.Pop1();
+    if (!IsFunction2() || !(Function2Flags() & 0x02))
+        SetLocalInline(pOurEnv, pOurEnv->GetBuiltin(ASBuiltin_this), Value());
+    if (!IsFunction2() || !(Function2Flags() & 0x20))
+        SetLocalInline(pOurEnv, pOurEnv->GetBuiltin(ASBuiltin_super), Value());
+
+    SetLocalFrameTopInline(pOurEnv, LocalStackTop);
+
+    if (IsFunction2())
+        (pOurEnv->LocalRegister.*&LocalRegisterBase::Resize)(pOurEnv->LocalRegister.GetSize() - LocalRegisterCount());
+
+    if (pOurEnv)
+        pOurEnv->CallStack.Pop1();
 }
 
 // The button side of a character created from a button record: a class registered for the symbol's export name
