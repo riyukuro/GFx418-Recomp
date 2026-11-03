@@ -2989,24 +2989,39 @@ void VideoProviderNetStream::Seek(float pos, MovieImpl* proot)
     }
 }
 
-// MS2-FUNCTIONAL: other scheduling
+// Moves the main track's sound from the old audio target sprite to ptarget, then makes ptarget the audio target.
 // @0x140005fc0
 void VideoProviderNetStream::SetAudioTarget(Sprite* ptarget)
 {
-    Sprite* pold = pAudioTarget ? GetAudioTargetSprite(pAudioTarget) : NULL;
+    Sprite* pold = NULL;
+    if (pAudioTarget)
+    {
+        DisplayObject* pch = pAudioTarget->pCharacter;
+        if (pch)
+        {
+            if (pch->IsSprite())
+                pold = (Sprite*)pch;
+            else
+            {
+                DisplayObject* pparent = (DisplayObject*)pch->pParent;
+                if (pparent && pparent->IsSprite())
+                    pold = (Sprite*)pparent;
+            }
+        }
+    }
     if (pold == ptarget)
         return;
     if (pold && pVideoPlayer)
     {
-        Sound::SoundChannel* pchan = pVideoPlayer->GetSoundChannel(VideoPlayer::MainTrack);
+        VideoPlayer* pplayer = *reinterpret_cast<VideoPlayer* volatile*>(&pVideoPlayer);
+        Sound::SoundChannel* pchan = pplayer->GetSoundChannel(VideoPlayer::MainTrack);
         if (pchan)
         {
-            Sprite::ActiveSoundItem* pitem = pold->ReleaseActiveSound(pchan);
+            Ptr<Sprite::ActiveSoundItem> pitem = MakePickable(pold->ReleaseActiveSound(pchan));
             if (pitem)
             {
                 pitem->pChannel->SetVolume(ptarget->GetRealSoundVolume());
                 ptarget->AttachActiveSound(pitem);
-                pitem->Release();
             }
             else
             {
@@ -3015,7 +3030,13 @@ void VideoProviderNetStream::SetAudioTarget(Sprite* ptarget)
             }
         }
     }
-    pAudioTarget = ptarget->GetCharacterHandle();
+    CharacterHandle* phandle = ptarget->GetCharacterHandle();
+    if (phandle)
+        phandle->AddRef();
+    CharacterHandle* pprev = pAudioTarget.GetPtr();
+    if (pprev)
+        pprev->Release();
+    *reinterpret_cast<CharacterHandle**>(&pAudioTarget) = phandle;
 }
 
 // The clock of a swfSync video: the target clip's frames played since the video started, at the movie's frame rate.
