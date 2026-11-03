@@ -233,7 +233,6 @@ void XmlNodeProto::CloneNode(const FnCall& fn)
 }
 
 // getNamespaceForPrefix(prefix): the value of the nearest xmlns[:prefix] attribute up the tree, or null.
-// MS2-FUNCTIONAL: register allocation and stack-slot order differ
 // @0x14299ba60
 void XmlNodeProto::GetNamespaceForPrefix(const FnCall& fn)
 {
@@ -251,8 +250,8 @@ void XmlNodeProto::GetNamespaceForPrefix(const FnCall& fn)
     XML::ElementNode* elemNode = static_cast<XML::ElementNode*>(pthis->pRealNode);
     if (fn.NArgs < 1)
         return;
-    ASString str      = NodeArg(fn, 0).ToString(fn.Env);
-    ASString pfxquery = fn.Env->GetSC()->CreateString("xmlns", 5);
+    ASString str      = ArgCopy(&fn, 0)->ToString(fn.Env);
+    ASString pfxquery = fn.Env->GetSC()->pContext->GetStringManager()->CreateString("xmlns", 5);
     if (str.GetSize() > 0)
     {
         pfxquery += ":";
@@ -287,7 +286,6 @@ void XmlNodeProto::GetNamespaceForPrefix(const FnCall& fn)
 }
 
 // getPrefixForNamespace(uri): the prefix of the nearest xmlns attribute up the tree whose value is uri, or null.
-// MS2-FUNCTIONAL: the exe keeps the AddRef/Release pair of the inlined SetString; register allocation differs
 // @0x14299bd20
 void XmlNodeProto::GetPrefixForNamespace(const FnCall& fn)
 {
@@ -306,7 +304,7 @@ void XmlNodeProto::GetPrefixForNamespace(const FnCall& fn)
     XML::ElementNode* elemNode = static_cast<XML::ElementNode*>(pthis->pRealNode);
     if (fn.NArgs < 1)
         return;
-    ASString         str = NodeArg(fn, 0).ToString(fn.Env);
+    ASString         str = ArgCopy(&fn, 0)->ToString(fn.Env);
     Value            qval;
     XMLPrefixQuerier pq(fn.Env, str, qval);
     XMLShadowRef*    pshadow  = static_cast<XMLShadowRef*>(elemNode->pShadow);
@@ -333,9 +331,9 @@ void XmlNodeProto::GetPrefixForNamespace(const FnCall& fn)
         const char* data  = pfx.ToCStr();
         const char* colon = strchr(data, ':');
         if (colon)
-            fn.Result->SetString(psc->CreateString(data + 6, pfx.GetSize() - 6));
+            fn.Result->SetString(psc->pContext->GetStringManager()->CreateString(data + 6, pfx.GetSize() - 6));
         else
-            fn.Result->SetString(psc->CreateString(data + 5, pfx.GetSize() - 5));
+            fn.Result->SetString(psc->pContext->GetStringManager()->CreateString(data + 5, pfx.GetSize() - 5));
     }
     }
     else if (log)
