@@ -1873,46 +1873,45 @@ namespace Instances { namespace fl_display
     // MS2-FUNCTIONAL: written from the exe's control flow
     void BitmapData::AS3Constructor(unsigned argc, const Value* argv)
     {
-        VM& vm = GetVM();
         if (argc < 2)
         {
+            VM& vm = GetVM();
             vm.ThrowArgumentError(VM::Error(VM::eWrongArgumentCountError, vm, "BitmapData::AS3Constructor", 2, 2, argc));
             return;
         }
-        SInt32 w, h;
-        if (!argv[0].Convert2Int32(w))
+        SInt32 v;
+        if (!argv[0].Convert2Int32(v))
             return;
-        Width = w;
-        if (!argv[1].Convert2Int32(h))
+        Width = v;
+        if (!argv[1].Convert2Int32(v))
             return;
-        Height = h;
+        Height = v;
         UInt32 fillColor = 0xffffffff;
-        if (argc > 2)
+        if (argc >= 3)
             Transparent = argv[2].Convert2Boolean();
-        if (argc > 3)
+        if (argc >= 4)
             argv[3].Convert2UInt32(fillColor);
 
         // The render thread's interfaces (DrawableImageContext::pRTCommandQueue, ThreadCommandQueue::GetRenderInterfaces).
-        void* pcontext = FUN_14256f220(GetASRoot(vm)->GetMovieImpl());
+        void* pcontext = FUN_14256f220(GetASRoot(GetVM())->GetMovieImpl());
         void* pqueue = *reinterpret_cast<void**>(reinterpret_cast<UByte*>(pcontext) + 0x40);
-        void* ifs[4] = { NULL, NULL, NULL, NULL };
-        typedef void (*GetRenderInterfacesFn)(void*, void**);
-        (*reinterpret_cast<GetRenderInterfacesFn* const*>(pqueue))[2](pqueue, ifs);
-        void* pmem = SF_ALLOC(0xc8, Stat_Default_Mem);
+        Render::Interfaces ifs;
+        typedef void (*GetRenderInterfacesFn)(void*, Render::Interfaces*);
+        (*reinterpret_cast<GetRenderInterfacesFn* const*>(pqueue))[2](pqueue, &ifs);
         Render::ImageBase* pnew = NULL;
         if (!pImageResource)
         {
-            if (pmem)
+            if (void* pmem = SF_ALLOC(0xc8, Stat_Default_Mem))
             {
                 // TextureManager::GetDrawableImageFormat.
                 typedef UInt32 (*GetFormatFn)(void*);
-                UInt32 format = (*reinterpret_cast<GetFormatFn* const*>(ifs[0]))[12](ifs[0]);
+                UInt32 format = (*reinterpret_cast<GetFormatFn* const*>(ifs.pTextureManager))[12](ifs.pTextureManager);
                 pnew = reinterpret_cast<Render::ImageBase*>(new(pmem) Render::DrawableImage(static_cast<Render::ImageFormat>(format),
                     Render::ImageSize((UInt32)Width, (UInt32)Height), Transparent, Render::Color(fillColor),
                     reinterpret_cast<Render::DrawableImageContext*>(pcontext)));
             }
         }
-        else if (pmem)
+        else if (void* pmem = SF_ALLOC(0xc8, Stat_Default_Mem))
             pnew = reinterpret_cast<Render::ImageBase*>(new(pmem) Render::DrawableImage(true, pImageResource->GetImage(),
                 reinterpret_cast<Render::DrawableImageContext*>(pcontext)));
         pImage = Pickable<Render::ImageBase>(pnew);
