@@ -43,22 +43,6 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 
 using Render::Text::StyleManagerBase;
 
-// The StyleHash table GetStyles returns: entries of 0x28 bytes (a free entry has Next == -2).
-struct StyleHashEntryView
-{
-    SPInt  NextInChain; // +0
-    int    Type;        // +8 StyleKey::Type
-    String Value;       // +0x10 StyleKey::Value
-    UPInt  HashValue;   // +0x18
-    void*  pStyle;      // +0x20
-};
-struct StyleHashTableView
-{
-    UPInt              EntryCount;
-    UPInt              SizeMask;
-    StyleHashEntryView Entries[1];
-};
-
 // Appends each visited member as a CSS declaration ("font-size:12;") to a rule string.
 class CSSStringBuilder : public ObjectInterface::MemberVisitor
 {
@@ -304,8 +288,14 @@ void StyleSheetProto::GetStyle(const FnCall& fn)
     fn.Result->SetAsObject(pobj);
 }
 
+// ArrayObject::PushBack (0x142971ba0), which the exe inlines here.
+static SF_FORCEINLINE void PushElem(ArrayObject* parr, const Value& val)
+{
+    parr->Elements.PushBack(SF_HEAP_AUTO_NEW(parr) Value(val));
+}
+
 // StyleSheet.prototype.getStyleNames(): an array of the style names (class styles with their leading '.').
-// MS2-FUNCTIONAL: walks the style hash through a layout view; the exe inlines the hash iterator.
+// MS2-FUNCTIONAL: the exe schedules the element allocation info store and the Value type test differently.
 // @0x1428f9630
 void StyleSheetProto::GetStyleNames(const FnCall& fn)
 {
@@ -319,21 +309,17 @@ void StyleSheetProto::GetStyleNames(const FnCall& fn)
         return;
 
     Ptr<ArrayObject> parr = *static_cast<ArrayObject*>(fn.Env->OperatorNew(fn.Env->GetBuiltin(ASBuiltin_Array)));
+    ASStringContext* psc = fn.Env->GetSC();
     String           name;
-    const StyleHashTableView* ptable = *(const StyleHashTableView* const*)&reinterpret_cast<const Text::StyleManager*>(pthis->Data68)->GetStyles();
-    if (ptable)
+    const Text::StyleManager* pcss = reinterpret_cast<const Text::StyleManager*>(pthis->Data68);
+    for (Text::StyleHash::ConstIterator it = pcss->GetStyles().Begin(); it != pcss->GetStyles().End(); ++it)
     {
-        for (UPInt i = 0; i <= ptable->SizeMask; ++i)
-        {
-            const StyleHashEntryView& e = ptable->Entries[i];
-            if (e.NextInChain == -2)
-                continue;
-            name.Clear();
-            if (e.Type == StyleManagerBase::CSS_Class)
-                name.AppendChar('.');
-            name += e.Value;
-            parr->PushBack(Value(fn.Env->CreateString(name.ToCStr(), name.GetSize())));
-        }
+        name.Clear();
+        if (it->First.Type == StyleManagerBase::CSS_Class)
+            name.AppendChar('.');
+        name += it->First.Value;
+        ASString str(psc->CreateString(name.ToCStr(), name.GetSize()));
+        PushElem(parr, Value(str));
     }
     fn.Result->SetAsObject(parr);
 }
