@@ -933,3 +933,6 @@ void* DeleteAs2_14292b7a0(void* p, unsigned flags)
 }
 
 }}} // namespace Scaleform::GFx::AS2
+
+// The implicit ~IntervalTimer inlined above stores ASIntervalTimerIntf's table; see sfr_as2_03r.
+// MS2-PIN: ??_7ASIntervalTimerIntf@GFx@Scaleform@@6B@ 0x14317c9f8

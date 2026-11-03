@@ -26,11 +26,7 @@ IntervalTimer::IntervalTimer(InteractiveObject* ptarget, const ASString& method)
 }
 
 // ~ASIntervalTimerIntf stores its table 0x14317c9f8 last, as in the exe, before ~RefCountImplCore (0x14257db40).
-// MS2-FUNCTIONAL: the members go in the exe's order, but cl also stores the vftable on entry (10 bytes the exe does not have)
-// @0x1429259d0
-IntervalTimer::~IntervalTimer()
-{
-}
+// ~IntervalTimer (0x1429259d0) is implicit: an explicit empty body stores the vftable on entry, which the exe does not.
 
 }}} // namespace Scaleform::GFx::AS2
 

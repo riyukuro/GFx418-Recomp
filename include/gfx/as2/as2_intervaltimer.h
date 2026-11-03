@@ -26,7 +26,7 @@ public:
 
     IntervalTimer(const FunctionRefBase& fn, ASStringContext* psc);     // exe 0x14291cf60
     IntervalTimer(InteractiveObject* ptarget, const ASString& method);  // exe 0x14291d030
-    virtual ~IntervalTimer();                                           // exe 0x1429259d0
+    // implicit virtual ~IntervalTimer()                                   // exe 0x1429259d0
 
     virtual void   Start(MovieImpl* proot);
     virtual bool   Invoke(MovieImpl* proot, float frameTime);
