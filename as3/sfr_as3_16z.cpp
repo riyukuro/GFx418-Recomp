@@ -24,6 +24,7 @@
 // MS2-RANGE: 0x1424e8e20-0x1424e8ed0 .text$mn
 // MS2-RANGE: 0x1424eab60-0x1424eaf00 .text$mn
 // MS2-RANGE: 0x1424eaf80-0x1424eb610 .text$mn
+// MS2-RANGE: 0x1424dbf70-0x1424dbfc0 .text$mn
 // The Avm* deleting destructors free only on a global delete, and AvmButton / AvmTextField / AvmStaticText are modeled.
 #define SF_AS3_AVM_INPLACE_DELETE
 #define SF_AS3_AVMBUTTON_MODEL
@@ -1757,3 +1758,21 @@ void DisplayObjectBase::AdvanceFrame(bool, float)
 // MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@6B@ 0x14313f368
 // MS2-PIN: ??_7?$RefCountBase@V?$RefCountCollector@$0BED@@AS3@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x14317c9f8
 // MS2-PIN: ??_7?$RefCountBase@VASIntervalTimerIntf@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x14317c9f8
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+// Defined outside sfr_as3_15: the exe's callers there (GamePadAnalogEvent::toString 0x1424cc0f0) reload the string
+// node after the call, as cl does for a body it cannot see.
+// @0x1424dbf70
+SF_NOINLINE Value::Value(const ASString& v)
+    : Flags(kString)
+    , value(v.GetNode())
+{
+    if (v.GetNode() == v.GetManager()->GetNullStringNode())
+    {
+        SetKind(kObject);
+        value = (Object*)NULL;
+    }
+    else
+        value.VS._1.VStr->AddRef();
+}
+}}} // namespace Scaleform::GFx::AS3

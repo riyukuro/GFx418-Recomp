@@ -4,7 +4,8 @@
 // MS2-UNIT: sfr_as3_15
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1424c9700-0x1424d9220 .text$mn
-// MS2-RANGE: 0x1424d93a0-0x1424dc870 .text$mn
+// MS2-RANGE: 0x1424d93a0-0x1424dbf70 .text$mn
+// MS2-RANGE: 0x1424dbfc0-0x1424dc870 .text$mn
 // MS2-PIN: ??_7Allocator@Text@Render@Scaleform@@6B@ 0x14317c9d0
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x142dc9d48
 // MS2-PIN: ??_7Class@AS3@GFx@Scaleform@@6B@ 0x14317b140
@@ -329,8 +330,6 @@ namespace Instances { namespace fl_gfx
         return result;
     }
 
-    // MS2-FUNCTIONAL: the exe reloads each temporary string node from the stack after the Value ctor, ours keeps it
-    // in rbx. Value(const ASString&) (0x1424dbf70) is defined in this unit, so cl sees that it does not write the temporary.
     // @0x1424cc0f0
     void GamePadAnalogEvent::toString(ASString& result)
     {
@@ -2738,19 +2737,7 @@ Value::Value(const Value& other, StrongRefType)
     }
 }
 
-// @0x1424dbf70
-SF_NOINLINE Value::Value(const ASString& v)
-    : Flags(kString)
-    , value(v.GetNode())
-{
-    if (v.GetNode() == v.GetManager()->GetNullStringNode())
-    {
-        SetKind(kObject);
-        value = (Object*)NULL;
-    }
-    else
-        value.VS._1.VStr->AddRef();
-}
+// Value(const ASString&) (0x1424dbf70) is defined by sfr_as3_16z: the exe's callers here do not see its body.
 
 // @0x1424dbfc0
 Value::Value(ASStringNode* v)
