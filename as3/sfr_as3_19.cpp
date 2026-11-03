@@ -4904,29 +4904,24 @@ bool Sfr31SetArraySize(UPInt root, UPInt path, int size, UInt32 flags)
 
 // ---- batch 40
 // pushwith: the (non-null) top of the operand stack moves onto the scope stack and is marked as a with-scope.
-// MS2-FUNCTIONAL 0x14253f7d0: raw-offset model; codegen differs from the exe
+// The SDK shape: IsNullOrUndefined, a pushed undefined that PickUnsafe fills, then the reloaded top's dtor.
 // @0x14253f7d0
 void Sfr31ExecPushWithScope(UPInt vmAddr)
 {
     VM& vm = *reinterpret_cast<VM*>(vmAddr);
-    UInt32* top = reinterpret_cast<UInt32*>(Sfr31Rd(vmAddr, 0x50));
-    const UInt32 k = (top[0] & 0x1f) - 0xc;
-    const UPInt obj = Sfr31Rd(reinterpret_cast<UPInt>(top), 0x10);
-    if ((top[0] & 0x1f) == 0 || (k < 4 && obj == 0))
+    Value& v = **reinterpret_cast<Value**>(vmAddr + 0x50);
+    if (v.IsNullOrUndefined())
     {
-        const UInt32 id = (k < 4 ? (obj != 0) : 1u) + 0x3f1;
-        VM::Error e(static_cast<VM::ErrorID>(id), vm);
-        vm.ThrowTypeError(e);
+        vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(v.IsNull() ? 1009 : 1010), vm));
         return;
     }
     FUN_14241e430(reinterpret_cast<void*>(vmAddr + 0x160), &Value::GetUndefined());
-    UInt32* dst = reinterpret_cast<UInt32*>(Sfr31Rd(vmAddr, 0x160) + Sfr31Rd(vmAddr, 0x168) * 0x20 - 0x20);
-    for (int i = 0; i < 8; ++i)
-        dst[i] = top[i];
-    top[0] = 0;
-    reinterpret_cast<Value*>(top)->~Value();
-    Sfr31Wr(vmAddr, 0x50, Sfr31Rd(vmAddr, 0x50) - 0x20);
-    dst[0] |= 0x100;
+    Value& back = vm.ScopeStack[vm.ScopeStack.GetSize() - 1];
+    Value*& sp = *reinterpret_cast<Value**>(vmAddr + 0x50);
+    ValueAssignCopies::PickUnsafeCopy(back, v);
+    sp->~Value();
+    --sp;
+    back.SetWith(true);
 }
 
 // Tracer op: pops one operand and pushes the class traits named by the class entry (builtin classes get the plain traits kind).
