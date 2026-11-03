@@ -254,11 +254,11 @@ unsigned FontGlyphPacker::packGlyphRects(Array<GlyphInfo>* glyphs, unsigned star
 unsigned FontGlyphPacker::packGlyphRects(Array<GlyphInfo>* glyphs)
 {
     unsigned numTextures = 0;
-    unsigned start       = 0;
     if (pFontPackParams->GetUseSeparateTextures())
     {
-        // a run of glyphs of one font at a time
-        for (unsigned i = 1; i < glyphs->GetSize(); i++)
+        unsigned i;
+        unsigned start = 0;
+        for (i = 1; i < glyphs->GetSize(); i++)
         {
             if ((*glyphs)[i - 1].pFont != (*glyphs)[i].pFont)
             {
@@ -266,8 +266,13 @@ unsigned FontGlyphPacker::packGlyphRects(Array<GlyphInfo>* glyphs)
                 start       = i;
             }
         }
+        numTextures = packGlyphRects(glyphs, start, (unsigned)glyphs->GetSize(), numTextures);
     }
-    return packGlyphRects(glyphs, start, (unsigned)glyphs->GetSize(), numTextures);
+    else
+    {
+        numTextures = packGlyphRects(glyphs, 0, (unsigned)glyphs->GetSize(), 0);
+    }
+    return numTextures;
 }
 
 // @0x142662d00
