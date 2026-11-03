@@ -359,7 +359,7 @@ char* Sfr27SlotSetValueObj(const SlotInfo* si, char* ret, VM* vm, const Value* v
 char* Sfr27SetPropertyOfValue(char* ret, VM* vm, const Value* obj, const Multiname* mn, const Value* v);
 void  Sfr31TraceNoteJump(UPInt tr, SPInt base, UPInt blk, SInt32 off, SInt32 arg);
 __declspec(noinline) void Sfr31ValueToBool(Value* v);   // the exe calls it out of line
-void  Sfr31StoreSlotValue(UPInt vt, UPInt idx, const Value* v, int kind, const UPInt* name);
+__declspec(noinline) void Sfr31StoreSlotValue(UPInt vt, UPInt idx, const Value* v, int kind, const UPInt* name);
 void  Sfr31ButtonSwitchStateIntl(UPInt self, int state);
 char  Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state);
 void  Sfr31StateTraceOp(UPInt state, unsigned char op, UPInt* pos);
@@ -2351,41 +2351,41 @@ void Sfr31UpdateAutosizeSettings(UPInt self)
     FUN_1425bc060(reinterpret_cast<UPInt>(ptf));
 }
 
-// Tracer::UpdateBlock: moves to the block that starts at pos; false when the merge of the old state fails.
-// MS2-FUNCTIONAL 0x142531040: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
-// @0x142531040
-void Sfr31TracerUpdateBlock(UPInt tracer, char* ok, UPInt pos)
+// TR::Block::GetFrom: the code offset the block starts at (+0x20).
+static SF_INLINE UPInt Sfr31TrBlockFrom(const TR::Block& b) { return *reinterpret_cast<const UPInt*>(reinterpret_cast<const UInt8*>(&b) + 0x20); }
+// Tracer::GetBlock: the last block that does not start after offset.
+static SF_INLINE TR::Block* Sfr31TrGetBlock(TR::Block* block, UPInt offset)
 {
-    UPInt* old = *reinterpret_cast<UPInt**>(tracer + 0x68);
-    UPInt* blk = *reinterpret_cast<UPInt**>(tracer + 0x110);
-    if (blk != NULL)
+    while (block != NULL && offset < Sfr31TrBlockFrom(*block))
+        block = block->pPrev;
+    return block;
+}
+
+// Tracer::UpdateBlock: entering the block that starts at bcp makes it the current one; its entry state is joined
+// from the previous block's (InitializeBlock) or, once initialized, merged with it (false when MergeBlock throws).
+// @0x142531040
+CheckResult Tracer::UpdateBlock(UPInt bcp)
+{
+    const TR::Block& prevBlock = *CurrBlock;
+    TR::Block* nextBlock = Sfr31TrGetBlock(Blocks.pPrev, bcp);
+
+    if (nextBlock && Sfr31TrBlockFrom(*nextBlock) == bcp)
     {
-        while (pos < blk[4])
+        TR::Block* pBlock = nextBlock;
+        CurrBlock = pBlock;
+        if (pBlock->Flags & 1)
         {
-            blk = reinterpret_cast<UPInt*>(*blk);
-            if (blk == NULL)
+            if (pBlock != &prevBlock)
             {
-                *ok = 1;
-                return;
+                if (!MergeBlock(*pBlock, prevBlock))
+                    return false;
             }
         }
-        if (blk[4] == pos)
-        {
-            *reinterpret_cast<UPInt**>(tracer + 0x68) = blk;
-            if ((*reinterpret_cast<UInt8*>(blk + 2) & 1) == 0)
-                FUN_142511b00(tracer, blk, old);
-            else if (blk != old)
-            {
-                char buf[32];
-                if (*FUN_142516c40(tracer, buf, blk, old) == 0)
-                {
-                    *ok = 0;
-                    return;
-                }
-            }
-        }
+        else
+            InitializeBlock(*pBlock, prevBlock);
     }
-    *ok = 1;
+
+    return true;
 }
 
 // Runs the shutdown of every registered entry (+0x2c0 array of +0x2c8 items), then empties the array.
@@ -2402,13 +2402,12 @@ void Sfr31ShutdownRegistered(UPInt self)
 }
 
 // Runs the slot (kind bits 5..9 are not a getter unless the caller asked for one) through the invoke helper.
-// MS2-FUNCTIONAL 0x1425311c0: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
 // @0x1425311c0
 __declspec(noinline) void Sfr31InvokeSlot(UPInt self, const SlotInfo* si, UPInt arg, int argc)
 {
     const UPInt traits = FUN_14250fa80(self);
-    const SInt32 bt = si->BindType;
     const SPInt index = si->ValueInd;
+    const SInt32 bt = si->BindType;
     if (bt != SlotInfo::BT_Code || argc == bt)
     {
         ASString name(si->Name.GetPtr());
