@@ -41,7 +41,7 @@ public:
 
         bool operator==(const SourceFormatHash& o) const
         {
-            return FillType == o.FillType && SourceFormat == o.SourceFormat && FormatFlags == o.FormatFlags;
+            return o.FillType == FillType && o.SourceFormat == SourceFormat && o.FormatFlags == FormatFlags;
         }
     };
 
