@@ -1225,67 +1225,38 @@ void appendUd(longlong arg1, void *arg2, int arg3)
 
 // Big-endian 32-bit word from four stream bytes; the top byte goes through movsx as in the exe.
 #define CRI06_BE32(a, b, c, d) ((((((int)(signed char)(a) << 8) | (b)) << 8 | (c)) << 8) | (d))
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: written as CRI06_GETBITS steps (VS2008 build, our toolset differs). What is left: the exe
+// compares the start-code type field in memory for each test of the 0xc94 check, and register choice (the exe
+// keeps pos in edi, ours in ebx).
 // @0x140055550
 longlong parseEsc(cri_any cri_p0, cri_any cri_p1)
 {
   longlong arg1 = cri_p0;
   ulonglong arg2 = cri_p1;
-  cri_u1 *pu_v1;
-  cri_u1 *pu_v2;
-  cri_u1 u_v3;
-  ulonglong u_v4;
-  byte b_v5;
-  uint u_v6;
-  cri_u1 *pu_v7;
-  cri_u1 *pu_v8;
+  cri_u1 *p;
+  int pos;
+  uint buf;
+  uint nxt;
   int i_v9;
-  int i_v10;
-  uint u_v11;
-  ulonglong u_v12;
-  uint u_v13;
-  uint u_v14;
-  ulonglong u_v15;
-  uint *pu_v16;
-  longlong l_v17;
-  longlong l_v18;
-  
+  uint *pu;
+  longlong l;
+
   *(int *)((char *)arg1 + 0xcb0) = *(int *)((char *)arg1 + 0xcb0) + 1;
-  pu_v7 = (cri_u1 *)(arg2 & 0xfffffffffffffffc);
-  i_v10 = (int)arg2 * 8 + (int)pu_v7 * -8;
-  b_v5 = (byte)i_v10;
-  u_v11 = CRI06_BE32(*pu_v7,pu_v7[1],pu_v7[2],pu_v7[3]) << (b_v5 & 0x1f);
-  u_v13 = CRI06_BE32(pu_v7[4],pu_v7[5],pu_v7[6],pu_v7[7]);
-  if (i_v10 == 0) {
-    *(uint *)((char *)arg1 + 0x234) = u_v11;
+  p = (cri_u1 *)(arg2 & 0xfffffffffffffffc);
+  pos = (int)arg2 * 8 - (int)p * 8;
+  buf = CRI06_BE32(p[0],p[1],p[2],p[3]) << pos;
+  nxt = CRI06_BE32(p[4],p[5],p[6],p[7]);
+  if (pos != 0) {
+    *(uint *)((char *)arg1 + 0x234) = nxt >> (32 - pos) | buf;
+    nxt = nxt << pos;
   }
   else {
-    u_v6 = u_v13 >> (0x20 - b_v5 & 0x1f);
-    u_v13 = u_v13 << (b_v5 & 0x1f);
-    *(uint *)((char *)arg1 + 0x234) = u_v6 | u_v11;
+    *(uint *)((char *)arg1 + 0x234) = buf;
   }
-  pu_v8 = pu_v7 + 0xc;
-  u_v11 = CRI06_BE32(pu_v7[8],pu_v7[9],pu_v7[10],pu_v7[0xb]);
-  u_v12 = (ulonglong)u_v11;
-  if (i_v10 < 0x1c) {
-    i_v10 = i_v10 + 4;
-    u_v15 = (ulonglong)(u_v13 << 4);
-    *(uint *)((char *)arg1 + 0x240) = u_v13 >> 0x1c;
-  }
-  else {
-    i_v10 = i_v10 + -0x1c;
-    if (i_v10 == 0) {
-      *(uint *)((char *)arg1 + 0x240) = u_v13 >> 0x1c;
-      u_v15 = u_v12;
-    }
-    else {
-      *(uint *)((char *)arg1 + 0x240) = (u_v11 >> (4 - (byte)i_v10 & 0x1f) | u_v13) >> 0x1c;
-      u_v15 = (ulonglong)(u_v11 << ((byte)i_v10 & 0x1f));
-    }
-    u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v7[0xd],pu_v7[0xe],pu_v7[0xf]);
-    pu_v8 = pu_v7 + 0x10;
-  }
-  u_v11 = (uint)u_v12;
+  buf = nxt;
+  nxt = CRI06_BE32(p[8],p[9],p[10],p[11]);
+  p = p + 12;
+  CRI06_GETBITS(*(uint *)((char *)arg1 + 0x240), 4)
   if (((*(int *)((char *)arg1 + 0x708) != 0) && (*(int *)((char *)arg1 + 0x708) != 0x10)) ||
      ((*(int *)((char *)arg1 + 0x70c) != 0 && (*(int *)((char *)arg1 + 0x70c) != *(int *)((char *)arg1 + 0x240)))))
   {
@@ -1303,249 +1274,19 @@ longlong parseEsc(cri_any cri_p0, cri_any cri_p1)
       ((i_v9 != 3 && (*(int *)((char *)arg1 + 0x240) == 10)))))) {
     *(int *)((char *)arg1 + 0xd0c) = *(int *)((char *)arg1 + 0xd0c) + 1;
   }
-  u_v13 = (uint)u_v15;
   switch(*(cri_u4 *)((char *)arg1 + 0x240)) {
   case 1:
-    if (i_v10 < 0x18) {
-      i_v10 = i_v10 + 8;
-      u_v13 = u_v13 << 8;
-      *(int *)((char *)arg1 + 0x244) = (int)(u_v15 >> 0x18);
-    }
-    else {
-      i_v10 = i_v10 + -0x18;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x244) = u_v13 >> 0x18;
-      }
-      else {
-        u_v6 = u_v11 >> (8 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x244) = (u_v6 | u_v13) >> 0x18;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v13 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v6 = u_v13 * 2;
-      *(uint *)((char *)arg1 + 0x248) = u_v13 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x248) = u_v13 >> 0x1f;
-      }
-      else {
-        u_v6 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x248) = (u_v6 | u_v13) >> 0x1f;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v6 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1e) {
-      i_v10 = i_v10 + 2;
-      u_v13 = u_v6 << 2;
-      *(uint *)((char *)arg1 + 0x24c) = u_v6 >> 0x1e;
-    }
-    else {
-      i_v10 = i_v10 + -0x1e;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x24c) = u_v6 >> 0x1e;
-      }
-      else {
-        u_v13 = u_v11 >> (2 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x24c) = (u_v13 | u_v6) >> 0x1e;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v13 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1e) {
-      i_v10 = i_v10 + 2;
-      u_v6 = u_v13 << 2;
-      *(uint *)((char *)arg1 + 0x250) = u_v13 >> 0x1e;
-    }
-    else {
-      i_v10 = i_v10 + -0x1e;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x250) = u_v13 >> 0x1e;
-      }
-      else {
-        u_v6 = u_v11 >> (2 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x250) = (u_v6 | u_v13) >> 0x1e;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v6 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1e) {
-      i_v10 = i_v10 + 2;
-      u_v13 = u_v6 << 2;
-      *(uint *)((char *)arg1 + 0x254) = u_v6 >> 0x1e;
-    }
-    else {
-      i_v10 = i_v10 + -0x1e;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x254) = u_v6 >> 0x1e;
-      }
-      else {
-        u_v13 = u_v11 >> (2 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x254) = (u_v13 | u_v6) >> 0x1e;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v13 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x14) {
-      i_v10 = i_v10 + 0xc;
-      u_v6 = u_v13 << 0xc;
-      *(uint *)(arg1 + 600) = u_v13 >> 0x14;
-    }
-    else {
-      i_v10 = i_v10 + -0x14;
-      if (i_v10 == 0) {
-        *(uint *)(arg1 + 600) = u_v13 >> 0x14;
-      }
-      else {
-        u_v6 = u_v11 >> (0xc - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)(arg1 + 600) = (u_v6 | u_v13) >> 0x14;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v6 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v13 = u_v6 * 2;
-      *(uint *)((char *)arg1 + 0x18) = u_v6 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x18) = u_v6 >> 0x1f;
-      }
-      else {
-        u_v13 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x18) = (u_v13 | u_v6) >> 0x1f;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v13 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x18) {
-      i_v10 = i_v10 + 8;
-      u_v6 = u_v13 << 8;
-      *(uint *)((char *)arg1 + 0x25c) = u_v13 >> 0x18;
-    }
-    else {
-      i_v10 = i_v10 + -0x18;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x25c) = u_v13 >> 0x18;
-      }
-      else {
-        u_v6 = u_v11 >> (8 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x25c) = (u_v6 | u_v13) >> 0x18;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v6 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v13 = u_v6 * 2;
-      *(uint *)((char *)arg1 + 0x260) = u_v6 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x260) = u_v6 >> 0x1f;
-      }
-      else {
-        u_v13 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x260) = (u_v13 | u_v6) >> 0x1f;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v13 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1e) {
-      i_v10 = i_v10 + 2;
-      u_v6 = u_v13 << 2;
-      *(uint *)((char *)arg1 + 0x264) = u_v13 >> 0x1e;
-    }
-    else {
-      i_v10 = i_v10 + -0x1e;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x264) = u_v13 >> 0x1e;
-        u_v6 = u_v11;
-      }
-      else {
-        *(uint *)((char *)arg1 + 0x264) = (u_v11 >> (2 - (byte)i_v10 & 0x1f) | u_v13) >> 0x1e;
-        u_v6 = u_v11 << ((byte)i_v10 & 0x1f);
-      }
-      u_v11 = CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
-    if (i_v10 < 0x1b) {
-      i_v10 = i_v10 + 5;
-      *(uint *)((char *)arg1 + 0x268) = u_v6 >> 0x1b;
-    }
-    else {
-      i_v10 = i_v10 + -0x1b;
-      if (i_v10 == 0) {
-        pu_v8 = pu_v8 + 4;
-        *(uint *)((char *)arg1 + 0x268) = u_v6 >> 0x1b;
-      }
-      else {
-        pu_v8 = pu_v8 + 4;
-        *(uint *)((char *)arg1 + 0x268) = (u_v11 >> (5U - (char)i_v10 & 0x1f) | u_v6) >> 0x1b;
-      }
-    }
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x244), 8)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x248), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x24c), 2)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x250), 2)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x254), 2)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x258), 12)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x18), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x25c), 8)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x260), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x264), 2)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x268), 5)
     if (*(int *)((char *)arg1 + 0x24c) != 1) {
       *(int *)((char *)arg1 + 0xd0c) = *(int *)((char *)arg1 + 0xd0c) + 1;
       *(cri_u4 *)((char *)arg1 + 0x24c) = 1;
@@ -1557,879 +1298,92 @@ longlong parseEsc(cri_any cri_p0, cri_any cri_p1)
     *(uint *)((char *)arg1 + 0x6d8) = *(int *)((char *)arg1 + 0x25c) << 10 | *(uint *)((char *)arg1 + 0x1c);
     break;
   case 2:
-    if (i_v10 < 0x1d) {
-      i_v10 = i_v10 + 3;
-      u_v13 = u_v13 << 3;
-      *(int *)((char *)arg1 + 0x26c) = (int)(u_v15 >> 0x1d);
-    }
-    else {
-      i_v10 = i_v10 + -0x1d;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x26c) = u_v13 >> 0x1d;
-      }
-      else {
-        u_v6 = u_v11 >> (3 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x26c) = (u_v6 | u_v13) >> 0x1d;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v13 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v6 = u_v13 * 2;
-      *(uint *)((char *)arg1 + 0x270) = u_v13 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x270) = u_v13 >> 0x1f;
-      }
-      else {
-        u_v6 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x270) = (u_v6 | u_v13) >> 0x1f;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v6 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x26c), 3)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x270), 1)
     if (*(int *)((char *)arg1 + 0x270) != 0) {
-      if (i_v10 < 0x18) {
-        i_v10 = i_v10 + 8;
-        u_v13 = u_v6 << 8;
-        *(uint *)((char *)arg1 + 0x274) = u_v6 >> 0x18;
-      }
-      else {
-        i_v10 = i_v10 + -0x18;
-        if (i_v10 == 0) {
-          *(uint *)((char *)arg1 + 0x274) = u_v6 >> 0x18;
-        }
-        else {
-          u_v13 = u_v11 >> (8 - (byte)i_v10 & 0x1f);
-          u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-          *(uint *)((char *)arg1 + 0x274) = (u_v13 | u_v6) >> 0x18;
-        }
-        pu_v7 = pu_v8 + 1;
-        u_v3 = *pu_v8;
-        pu_v1 = pu_v8 + 2;
-        pu_v2 = pu_v8 + 3;
-        pu_v8 = pu_v8 + 4;
-        u_v13 = u_v11;
-        u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-      }
-      if (i_v10 < 0x18) {
-        i_v10 = i_v10 + 8;
-        u_v14 = u_v13 << 8;
-        *(uint *)((char *)arg1 + 0x278) = u_v13 >> 0x18;
-      }
-      else {
-        i_v10 = i_v10 + -0x18;
-        if (i_v10 == 0) {
-          *(uint *)((char *)arg1 + 0x278) = u_v13 >> 0x18;
-        }
-        else {
-          u_v6 = u_v11 >> (8 - (byte)i_v10 & 0x1f);
-          u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-          *(uint *)((char *)arg1 + 0x278) = (u_v6 | u_v13) >> 0x18;
-        }
-        pu_v7 = pu_v8 + 1;
-        u_v3 = *pu_v8;
-        pu_v1 = pu_v8 + 2;
-        pu_v2 = pu_v8 + 3;
-        pu_v8 = pu_v8 + 4;
-        u_v14 = u_v11;
-        u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-      }
-      if (i_v10 < 0x18) {
-        i_v10 = i_v10 + 8;
-        u_v6 = u_v14 << 8;
-        *(uint *)((char *)arg1 + 0x27c) = u_v14 >> 0x18;
-      }
-      else {
-        i_v10 = i_v10 + -0x18;
-        if (i_v10 == 0) {
-          *(uint *)((char *)arg1 + 0x27c) = u_v14 >> 0x18;
-          u_v6 = u_v11;
-        }
-        else {
-          *(uint *)((char *)arg1 + 0x27c) = (u_v11 >> (8 - (byte)i_v10 & 0x1f) | u_v14) >> 0x18;
-          u_v6 = u_v11 << ((byte)i_v10 & 0x1f);
-        }
-        u_v11 = CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-        pu_v8 = pu_v8 + 4;
-      }
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x274), 8)
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x278), 8)
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x27c), 8)
     }
-    if (i_v10 < 0x12) {
-      i_v10 = i_v10 + 0xe;
-      u_v13 = u_v6 << 0xe;
-      *(uint *)((char *)arg1 + 0x280) = u_v6 >> 0x12;
-    }
-    else {
-      i_v10 = i_v10 + -0x12;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x280) = u_v6 >> 0x12;
-      }
-      else {
-        u_v13 = u_v11 >> (0xe - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x280) = (u_v13 | u_v6) >> 0x12;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v13 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v6 = u_v13 * 2;
-      *(uint *)((char *)arg1 + 0x18) = u_v13 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x18) = u_v13 >> 0x1f;
-      }
-      else {
-        u_v6 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x18) = (u_v6 | u_v13) >> 0x1f;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v6 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x12) {
-      i_v10 = i_v10 + 0xe;
-      *(uint *)((char *)arg1 + 0x284) = u_v6 >> 0x12;
-    }
-    else {
-      i_v10 = i_v10 + -0x12;
-      if (i_v10 == 0) {
-        pu_v8 = pu_v8 + 4;
-        *(uint *)((char *)arg1 + 0x284) = u_v6 >> 0x12;
-      }
-      else {
-        pu_v8 = pu_v8 + 4;
-        *(uint *)((char *)arg1 + 0x284) = (u_v11 >> (0xeU - (char)i_v10 & 0x1f) | u_v6) >> 0x12;
-      }
-    }
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x280), 14)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x18), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x284), 14)
     break;
   case 3:
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v11 = u_v13 * 2;
-      *(int *)((char *)arg1 + 0x24) = (int)(u_v15 >> 0x1f);
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x24) = u_v13 >> 0x1f;
-      }
-      else {
-        u_v6 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x24) = (u_v6 | u_v13) >> 0x1f;
-      }
-      u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
-    l_v18 = 0x40;
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x24), 1)
     if (*(int *)((char *)arg1 + 0x24) != 0) {
-      pu_v16 = (uint *)((char *)arg1 + 0x28);
-      l_v17 = l_v18;
+      pu = (uint *)((char *)arg1 + 0x28);
+      l = 0x40;
       do {
-        if (i_v10 < 0x18) {
-          i_v10 = i_v10 + 8;
-          u_v13 = u_v11 >> 0x18;
-          u_v11 = u_v11 << 8;
-          *pu_v16 = u_v13;
-        }
-        else {
-          i_v10 = i_v10 + -0x18;
-          u_v13 = (uint)u_v12;
-          if (i_v10 == 0) {
-            *pu_v16 = u_v11 >> 0x18;
-            u_v11 = u_v13;
-          }
-          else {
-            *pu_v16 = (u_v13 >> (8 - (byte)i_v10 & 0x1f) | u_v11) >> 0x18;
-            u_v11 = u_v13 << ((byte)i_v10 & 0x1f);
-          }
-          u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-          pu_v8 = pu_v8 + 4;
-        }
-        pu_v16 = pu_v16 + 1;
-        l_v17 = l_v17 + -1;
-      } while (l_v17 != 0);
+        CRI06_GETBITS(*pu, 8)
+        pu = pu + 1;
+        l = l - 1;
+      } while (l != 0);
     }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v13 = u_v11 * 2;
-      *(uint *)((char *)arg1 + 0x128) = u_v11 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      u_v13 = (uint)u_v12;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x128) = u_v11 >> 0x1f;
-      }
-      else {
-        u_v6 = u_v13 >> (1 - (byte)i_v10 & 0x1f);
-        u_v13 = u_v13 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x128) = (u_v6 | u_v11) >> 0x1f;
-      }
-      u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x128), 1)
     if (*(int *)((char *)arg1 + 0x128) != 0) {
-      pu_v16 = (uint *)(arg1 + 300);
-      l_v17 = l_v18;
+      pu = (uint *)((char *)arg1 + 0x12c);
+      l = 0x40;
       do {
-        if (i_v10 < 0x18) {
-          i_v10 = i_v10 + 8;
-          u_v11 = u_v13 >> 0x18;
-          u_v13 = u_v13 << 8;
-          *pu_v16 = u_v11;
-        }
-        else {
-          i_v10 = i_v10 + -0x18;
-          u_v11 = (uint)u_v12;
-          if (i_v10 == 0) {
-            *pu_v16 = u_v13 >> 0x18;
-            u_v13 = u_v11;
-          }
-          else {
-            *pu_v16 = (u_v11 >> (8 - (byte)i_v10 & 0x1f) | u_v13) >> 0x18;
-            u_v13 = u_v11 << ((byte)i_v10 & 0x1f);
-          }
-          u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-          pu_v8 = pu_v8 + 4;
-        }
-        pu_v16 = pu_v16 + 1;
-        l_v17 = l_v17 + -1;
-      } while (l_v17 != 0);
+        CRI06_GETBITS(*pu, 8)
+        pu = pu + 1;
+        l = l - 1;
+      } while (l != 0);
     }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v11 = u_v13 * 2;
-      *(uint *)((char *)arg1 + 0x358) = u_v13 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      u_v11 = (uint)u_v12;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x358) = u_v13 >> 0x1f;
-      }
-      else {
-        u_v6 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x358) = (u_v6 | u_v13) >> 0x1f;
-      }
-      u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x358), 1)
     if (*(int *)((char *)arg1 + 0x358) != 0) {
-      pu_v16 = (uint *)((char *)arg1 + 0x35c);
-      l_v17 = l_v18;
+      pu = (uint *)((char *)arg1 + 0x35c);
+      l = 0x40;
       do {
-        if (i_v10 < 0x18) {
-          i_v10 = i_v10 + 8;
-          u_v13 = u_v11 >> 0x18;
-          u_v11 = u_v11 << 8;
-          *pu_v16 = u_v13;
-        }
-        else {
-          i_v10 = i_v10 + -0x18;
-          u_v13 = (uint)u_v12;
-          if (i_v10 == 0) {
-            *pu_v16 = u_v11 >> 0x18;
-            u_v11 = u_v13;
-          }
-          else {
-            *pu_v16 = (u_v13 >> (8 - (byte)i_v10 & 0x1f) | u_v11) >> 0x18;
-            u_v11 = u_v13 << ((byte)i_v10 & 0x1f);
-          }
-          u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-          pu_v8 = pu_v8 + 4;
-        }
-        pu_v16 = pu_v16 + 1;
-        l_v17 = l_v17 + -1;
-      } while (l_v17 != 0);
+        CRI06_GETBITS(*pu, 8)
+        pu = pu + 1;
+        l = l - 1;
+      } while (l != 0);
     }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v15 = (ulonglong)(u_v11 * 2);
-      *(uint *)((char *)arg1 + 0x45c) = u_v11 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x45c) = u_v11 >> 0x1f;
-        u_v15 = u_v12;
-      }
-      else {
-        *(uint *)((char *)arg1 + 0x45c) = ((uint)u_v12 >> (1 - (byte)i_v10 & 0x1f) | u_v11) >> 0x1f;
-        u_v15 = (ulonglong)((uint)u_v12 << ((byte)i_v10 & 0x1f));
-      }
-      u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x45c), 1)
     if (*(int *)((char *)arg1 + 0x45c) != 0) {
-      pu_v16 = (uint *)((char *)arg1 + 0x460);
+      pu = (uint *)((char *)arg1 + 0x460);
+      l = 0x40;
       do {
-        u_v11 = (uint)u_v15;
-        if (i_v10 < 0x18) {
-          i_v10 = i_v10 + 8;
-          u_v4 = u_v15 >> 0x18;
-          u_v15 = (ulonglong)(u_v11 << 8);
-          *pu_v16 = (uint)u_v4;
-        }
-        else {
-          i_v10 = i_v10 + -0x18;
-          if (i_v10 == 0) {
-            *pu_v16 = u_v11 >> 0x18;
-            u_v15 = u_v12;
-          }
-          else {
-            *pu_v16 = ((uint)u_v12 >> (8 - (byte)i_v10 & 0x1f) | u_v11) >> 0x18;
-            u_v15 = (ulonglong)((uint)u_v12 << ((byte)i_v10 & 0x1f));
-          }
-          u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-          pu_v8 = pu_v8 + 4;
-        }
-        pu_v16 = pu_v16 + 1;
-        l_v18 = l_v18 + -1;
-      } while (l_v18 != 0);
+        CRI06_GETBITS(*pu, 8)
+        pu = pu + 1;
+        l = l - 1;
+      } while (l != 0);
     }
     calcQuantMatrix(arg1);
     break;
   case 4:
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v13 = u_v13 * 2;
-      *(int *)((char *)arg1 + 0x59c) = (int)(u_v15 >> 0x1f);
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x59c) = u_v13 >> 0x1f;
-      }
-      else {
-        u_v6 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x59c) = (u_v6 | u_v13) >> 0x1f;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v13 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x18) {
-      i_v10 = i_v10 + 8;
-      u_v6 = u_v13 << 8;
-      *(uint *)((char *)arg1 + 0x5a0) = u_v13 >> 0x18;
-    }
-    else {
-      i_v10 = i_v10 + -0x18;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x5a0) = u_v13 >> 0x18;
-      }
-      else {
-        u_v6 = u_v11 >> (8 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x5a0) = (u_v6 | u_v13) >> 0x18;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v6 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v13 = u_v6 * 2;
-      *(uint *)((char *)arg1 + 0x5a4) = u_v6 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x5a4) = u_v6 >> 0x1f;
-      }
-      else {
-        u_v13 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x5a4) = (u_v13 | u_v6) >> 0x1f;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v13 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x19) {
-      i_v10 = i_v10 + 7;
-      u_v6 = u_v13 << 7;
-      *(uint *)((char *)arg1 + 0x5a8) = u_v13 >> 0x19;
-    }
-    else {
-      i_v10 = i_v10 + -0x19;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x5a8) = u_v13 >> 0x19;
-      }
-      else {
-        u_v6 = u_v11 >> (7 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x5a8) = (u_v6 | u_v13) >> 0x19;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v6 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v13 = u_v6 * 2;
-      *(uint *)((char *)arg1 + 0x18) = u_v6 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x18) = u_v6 >> 0x1f;
-      }
-      else {
-        u_v13 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x18) = (u_v13 | u_v6) >> 0x1f;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v13 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0xc) {
-      i_v10 = i_v10 + 0x14;
-      u_v6 = u_v13 << 0x14;
-      *(uint *)((char *)arg1 + 0x5ac) = u_v13 >> 0xc;
-    }
-    else {
-      i_v10 = i_v10 + -0xc;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x5ac) = u_v13 >> 0xc;
-      }
-      else {
-        u_v6 = u_v11 >> (0x14 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x5ac) = (u_v6 | u_v13) >> 0xc;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v6 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v13 = u_v6 * 2;
-      *(uint *)((char *)arg1 + 0x18) = u_v6 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x18) = u_v6 >> 0x1f;
-      }
-      else {
-        u_v13 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x18) = (u_v13 | u_v6) >> 0x1f;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v13 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 10) {
-      i_v10 = i_v10 + 0x16;
-      u_v6 = u_v13 << 0x16;
-      *(uint *)((char *)arg1 + 0x5b0) = u_v13 >> 10;
-    }
-    else {
-      i_v10 = i_v10 + -10;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x5b0) = u_v13 >> 10;
-      }
-      else {
-        u_v6 = u_v11 >> (0x16 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x5b0) = (u_v6 | u_v13) >> 10;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v6 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v13 = u_v6 * 2;
-      *(uint *)((char *)arg1 + 0x18) = u_v6 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x18) = u_v6 >> 0x1f;
-      }
-      else {
-        u_v13 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x18) = (u_v13 | u_v6) >> 0x1f;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v13 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 10) {
-      i_v10 = i_v10 + 0x16;
-      *(uint *)((char *)arg1 + 0x5b4) = u_v13 >> 10;
-    }
-    else {
-      i_v10 = i_v10 + -10;
-      if (i_v10 == 0) {
-        pu_v8 = pu_v8 + 4;
-        *(uint *)((char *)arg1 + 0x5b4) = u_v13 >> 10;
-      }
-      else {
-        pu_v8 = pu_v8 + 4;
-        *(uint *)((char *)arg1 + 0x5b4) = (u_v11 >> (0x16U - (char)i_v10 & 0x1f) | u_v13) >> 10;
-      }
-    }
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x59c), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x5a0), 8)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x5a4), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x5a8), 7)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x18), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x5ac), 20)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x18), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x5b0), 22)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x18), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x5b4), 22)
     break;
   case 5:
     *(cri_u4 *)((char *)arg1 + 0x710) = 1;
-    if (i_v10 < 0x1e) {
-      i_v10 = i_v10 + 2;
-      u_v13 = u_v13 << 2;
-      *(int *)((char *)arg1 + 0x288) = (int)(u_v15 >> 0x1e);
-    }
-    else {
-      i_v10 = i_v10 + -0x1e;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x288) = u_v13 >> 0x1e;
-      }
-      else {
-        u_v6 = u_v11 >> (2 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x288) = (u_v6 | u_v13) >> 0x1e;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v13 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1c) {
-      i_v10 = i_v10 + 4;
-      u_v6 = u_v13 << 4;
-      *(uint *)((char *)arg1 + 0x28c) = u_v13 >> 0x1c;
-    }
-    else {
-      i_v10 = i_v10 + -0x1c;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x28c) = u_v13 >> 0x1c;
-      }
-      else {
-        u_v6 = u_v11 >> (4 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x28c) = (u_v6 | u_v13) >> 0x1c;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v6 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x288), 2)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x28c), 4)
     if (*(int *)((char *)arg1 + 0x288) == 1) {
-      if (i_v10 < 0x12) {
-        i_v10 = i_v10 + 0xe;
-        u_v13 = u_v6 << 0xe;
-        *(uint *)((char *)arg1 + 0x290) = u_v6 >> 0x12;
-      }
-      else {
-        i_v10 = i_v10 + -0x12;
-        if (i_v10 == 0) {
-          *(uint *)((char *)arg1 + 0x290) = u_v6 >> 0x12;
-        }
-        else {
-          u_v13 = u_v11 >> (0xe - (byte)i_v10 & 0x1f);
-          u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-          *(uint *)((char *)arg1 + 0x290) = (u_v13 | u_v6) >> 0x12;
-        }
-        pu_v7 = pu_v8 + 1;
-        u_v3 = *pu_v8;
-        pu_v1 = pu_v8 + 2;
-        pu_v2 = pu_v8 + 3;
-        pu_v8 = pu_v8 + 4;
-        u_v13 = u_v11;
-        u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-      }
-      if (i_v10 < 0x1f) {
-        i_v10 = i_v10 + 1;
-        u_v6 = u_v13 * 2;
-        *(uint *)((char *)arg1 + 0x18) = u_v13 >> 0x1f;
-      }
-      else {
-        i_v10 = i_v10 + -0x1f;
-        if (i_v10 == 0) {
-          *(uint *)((char *)arg1 + 0x18) = u_v13 >> 0x1f;
-        }
-        else {
-          u_v6 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-          u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-          *(uint *)((char *)arg1 + 0x18) = (u_v6 | u_v13) >> 0x1f;
-        }
-        pu_v7 = pu_v8 + 1;
-        u_v3 = *pu_v8;
-        pu_v1 = pu_v8 + 2;
-        pu_v2 = pu_v8 + 3;
-        pu_v8 = pu_v8 + 4;
-        u_v6 = u_v11;
-        u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-      }
-      if (i_v10 < 0x12) {
-        i_v10 = i_v10 + 0xe;
-        u_v13 = u_v6 << 0xe;
-        *(uint *)((char *)arg1 + 0x294) = u_v6 >> 0x12;
-      }
-      else {
-        i_v10 = i_v10 + -0x12;
-        if (i_v10 == 0) {
-          *(uint *)((char *)arg1 + 0x294) = u_v6 >> 0x12;
-        }
-        else {
-          u_v13 = u_v11 >> (0xe - (byte)i_v10 & 0x1f);
-          u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-          *(uint *)((char *)arg1 + 0x294) = (u_v13 | u_v6) >> 0x12;
-        }
-        pu_v7 = pu_v8 + 1;
-        u_v3 = *pu_v8;
-        pu_v1 = pu_v8 + 2;
-        pu_v2 = pu_v8 + 3;
-        pu_v8 = pu_v8 + 4;
-        u_v13 = u_v11;
-        u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-      }
-      if (i_v10 < 0x1b) {
-        i_v10 = i_v10 + 5;
-        u_v6 = u_v13 << 5;
-        *(uint *)((char *)arg1 + 0x298) = u_v13 >> 0x1b;
-      }
-      else {
-        i_v10 = i_v10 + -0x1b;
-        if (i_v10 == 0) {
-          *(uint *)((char *)arg1 + 0x298) = u_v13 >> 0x1b;
-        }
-        else {
-          u_v6 = u_v11 >> (5 - (byte)i_v10 & 0x1f);
-          u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-          *(uint *)((char *)arg1 + 0x298) = (u_v6 | u_v13) >> 0x1b;
-        }
-        pu_v7 = pu_v8 + 1;
-        u_v3 = *pu_v8;
-        pu_v1 = pu_v8 + 2;
-        pu_v2 = pu_v8 + 3;
-        pu_v8 = pu_v8 + 4;
-        u_v6 = u_v11;
-        u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-      }
-      if (i_v10 < 0x1b) {
-        i_v10 = i_v10 + 5;
-        u_v13 = u_v6 << 5;
-        *(uint *)((char *)arg1 + 0x29c) = u_v6 >> 0x1b;
-      }
-      else {
-        i_v10 = i_v10 + -0x1b;
-        if (i_v10 == 0) {
-          *(uint *)((char *)arg1 + 0x29c) = u_v6 >> 0x1b;
-        }
-        else {
-          u_v13 = u_v11 >> (5 - (byte)i_v10 & 0x1f);
-          u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-          *(uint *)((char *)arg1 + 0x29c) = (u_v13 | u_v6) >> 0x1b;
-        }
-        pu_v7 = pu_v8 + 1;
-        u_v3 = *pu_v8;
-        pu_v1 = pu_v8 + 2;
-        pu_v2 = pu_v8 + 3;
-        pu_v8 = pu_v8 + 4;
-        u_v13 = u_v11;
-        u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-      }
-      if (i_v10 < 0x1b) {
-        i_v10 = i_v10 + 5;
-        u_v6 = u_v13 << 5;
-        *(uint *)((char *)arg1 + 0x2a0) = u_v13 >> 0x1b;
-      }
-      else {
-        i_v10 = i_v10 + -0x1b;
-        if (i_v10 == 0) {
-          *(uint *)((char *)arg1 + 0x2a0) = u_v13 >> 0x1b;
-        }
-        else {
-          u_v6 = u_v11 >> (5 - (byte)i_v10 & 0x1f);
-          u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-          *(uint *)((char *)arg1 + 0x2a0) = (u_v6 | u_v13) >> 0x1b;
-        }
-        pu_v7 = pu_v8 + 1;
-        u_v3 = *pu_v8;
-        pu_v1 = pu_v8 + 2;
-        pu_v2 = pu_v8 + 3;
-        pu_v8 = pu_v8 + 4;
-        u_v6 = u_v11;
-        u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-      }
-      if (i_v10 < 0x1b) {
-        i_v10 = i_v10 + 5;
-        *(uint *)((char *)arg1 + 0x2a4) = u_v6 >> 0x1b;
-      }
-      else {
-        i_v10 = i_v10 + -0x1b;
-        if (i_v10 == 0) {
-          pu_v8 = pu_v8 + 4;
-          *(uint *)((char *)arg1 + 0x2a4) = u_v6 >> 0x1b;
-        }
-        else {
-          pu_v8 = pu_v8 + 4;
-          *(uint *)((char *)arg1 + 0x2a4) = (u_v11 >> (5U - (char)i_v10 & 0x1f) | u_v6) >> 0x1b;
-        }
-      }
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x290), 14)
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x18), 1)
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x294), 14)
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x298), 5)
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x29c), 5)
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x2a0), 5)
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x2a4), 5)
     }
     else if (*(int *)((char *)arg1 + 0x288) == 3) {
-      if (i_v10 < 0x1f) {
-        i_v10 = i_v10 + 1;
-        u_v13 = u_v6 * 2;
-        *(uint *)((char *)arg1 + 0x2a8) = u_v6 >> 0x1f;
-      }
-      else {
-        i_v10 = i_v10 + -0x1f;
-        if (i_v10 == 0) {
-          *(uint *)((char *)arg1 + 0x2a8) = u_v6 >> 0x1f;
-        }
-        else {
-          u_v13 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-          u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-          *(uint *)((char *)arg1 + 0x2a8) = (u_v13 | u_v6) >> 0x1f;
-        }
-        pu_v7 = pu_v8 + 1;
-        u_v3 = *pu_v8;
-        pu_v1 = pu_v8 + 2;
-        pu_v2 = pu_v8 + 3;
-        pu_v8 = pu_v8 + 4;
-        u_v13 = u_v11;
-        u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-      }
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x2a8), 1)
       if (*(int *)((char *)arg1 + 0x2a8) != 0) {
-        if (i_v10 < 0x1f) {
-          i_v10 = i_v10 + 1;
-          u_v6 = u_v13 >> 0x1f;
-          u_v13 = u_v13 * 2;
-          *(uint *)((char *)arg1 + 0x2ac) = u_v6;
-        }
-        else {
-          i_v10 = i_v10 + -0x1f;
-          if (i_v10 == 0) {
-            *(uint *)((char *)arg1 + 0x2ac) = u_v13 >> 0x1f;
-            u_v13 = u_v11;
-          }
-          else {
-            *(uint *)((char *)arg1 + 0x2ac) = (u_v11 >> (1 - (byte)i_v10 & 0x1f) | u_v13) >> 0x1f;
-            u_v13 = u_v11 << ((byte)i_v10 & 0x1f);
-          }
-          u_v11 = CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-          pu_v8 = pu_v8 + 4;
-        }
+        CRI06_GETBITS(*(uint *)((char *)arg1 + 0x2ac), 1)
       }
-      if (i_v10 < 0x1d) {
-        i_v10 = i_v10 + 3;
-        u_v6 = u_v13 << 3;
-        *(uint *)((char *)arg1 + 0x2b0) = u_v13 >> 0x1d;
-      }
-      else {
-        i_v10 = i_v10 + -0x1d;
-        if (i_v10 == 0) {
-          *(uint *)((char *)arg1 + 0x2b0) = u_v13 >> 0x1d;
-        }
-        else {
-          u_v6 = u_v11 >> (3 - (byte)i_v10 & 0x1f);
-          u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-          *(uint *)((char *)arg1 + 0x2b0) = (u_v6 | u_v13) >> 0x1d;
-        }
-        pu_v7 = pu_v8 + 1;
-        u_v3 = *pu_v8;
-        pu_v1 = pu_v8 + 2;
-        pu_v2 = pu_v8 + 3;
-        pu_v8 = pu_v8 + 4;
-        u_v6 = u_v11;
-        u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-      }
-      if (i_v10 < 0x1d) {
-        i_v10 = i_v10 + 3;
-        *(uint *)((char *)arg1 + 0x2b4) = u_v6 >> 0x1d;
-      }
-      else {
-        i_v10 = i_v10 + -0x1d;
-        if (i_v10 == 0) {
-          pu_v8 = pu_v8 + 4;
-          *(uint *)((char *)arg1 + 0x2b4) = u_v6 >> 0x1d;
-        }
-        else {
-          pu_v8 = pu_v8 + 4;
-          *(uint *)((char *)arg1 + 0x2b4) = (u_v11 >> (3U - (char)i_v10 & 0x1f) | u_v6) >> 0x1d;
-        }
-      }
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x2b0), 3)
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x2b4), 3)
     }
     break;
   default:
@@ -2439,774 +1393,70 @@ longlong parseEsc(cri_any cri_p0, cri_any cri_p1)
     calcNumberOfFrameCentreOffsets(arg1);
     i_v9 = 0;
     if (0 < *(int *)((char *)arg1 + 0x238)) {
-      pu_v16 = (uint *)((char *)arg1 + 0x56c);
+      pu = (uint *)((char *)arg1 + 0x56c);
       do {
-        u_v11 = (uint)u_v15;
-        if (i_v10 < 0x10) {
-          i_v10 = i_v10 + 0x10;
-          u_v13 = u_v11 << 0x10;
-          pu_v16[-3] = (uint)(u_v15 >> 0x10) & 0xffff;
-        }
-        else {
-          i_v10 = i_v10 + -0x10;
-          u_v13 = (uint)u_v12;
-          if (i_v10 == 0) {
-            pu_v16[-3] = u_v11 >> 0x10;
-          }
-          else {
-            u_v6 = u_v13 >> (0x10 - (byte)i_v10 & 0x1f);
-            u_v13 = u_v13 << ((byte)i_v10 & 0x1f);
-            pu_v16[-3] = (u_v6 | u_v11) >> 0x10;
-          }
-          u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-          pu_v8 = pu_v8 + 4;
-        }
-        if (i_v10 < 0x1f) {
-          i_v10 = i_v10 + 1;
-          u_v11 = u_v13 * 2;
-          *(uint *)((char *)arg1 + 0x18) = u_v13 >> 0x1f;
-        }
-        else {
-          i_v10 = i_v10 + -0x1f;
-          u_v11 = (uint)u_v12;
-          if (i_v10 == 0) {
-            *(uint *)((char *)arg1 + 0x18) = u_v13 >> 0x1f;
-          }
-          else {
-            u_v6 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-            u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-            *(uint *)((char *)arg1 + 0x18) = (u_v6 | u_v13) >> 0x1f;
-          }
-          u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-          pu_v8 = pu_v8 + 4;
-        }
-        if (i_v10 < 0x10) {
-          i_v10 = i_v10 + 0x10;
-          u_v13 = u_v11 << 0x10;
-          *pu_v16 = u_v11 >> 0x10;
-        }
-        else {
-          i_v10 = i_v10 + -0x10;
-          u_v13 = (uint)u_v12;
-          if (i_v10 == 0) {
-            *pu_v16 = u_v11 >> 0x10;
-          }
-          else {
-            u_v6 = u_v13 >> (0x10 - (byte)i_v10 & 0x1f);
-            u_v13 = u_v13 << ((byte)i_v10 & 0x1f);
-            *pu_v16 = (u_v6 | u_v11) >> 0x10;
-          }
-          u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-          pu_v8 = pu_v8 + 4;
-        }
-        if (i_v10 < 0x1f) {
-          i_v10 = i_v10 + 1;
-          u_v15 = (ulonglong)(u_v13 * 2);
-          *(uint *)((char *)arg1 + 0x18) = u_v13 >> 0x1f;
-        }
-        else {
-          i_v10 = i_v10 + -0x1f;
-          if (i_v10 == 0) {
-            *(uint *)((char *)arg1 + 0x18) = u_v13 >> 0x1f;
-            u_v15 = u_v12 & 0xffffffff;
-          }
-          else {
-            u_v15 = (ulonglong)((uint)u_v12 << ((byte)i_v10 & 0x1f));
-            *(uint *)((char *)arg1 + 0x18) = ((uint)u_v12 >> (1 - (byte)i_v10 & 0x1f) | u_v13) >> 0x1f
-            ;
-          }
-          u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-          pu_v8 = pu_v8 + 4;
-        }
+        CRI06_GETBITS(pu[-3], 16)
+        CRI06_GETBITS(*(uint *)((char *)arg1 + 0x18), 1)
+        CRI06_GETBITS(*pu, 16)
+        CRI06_GETBITS(*(uint *)((char *)arg1 + 0x18), 1)
         i_v9 = i_v9 + 1;
-        pu_v16 = pu_v16 + 1;
+        pu = pu + 1;
       } while (i_v9 < *(int *)((char *)arg1 + 0x238));
     }
     break;
   case 8:
-    if (i_v10 < 0x1c) {
-      i_v10 = i_v10 + 4;
-      u_v11 = u_v13 << 4;
-      *(int *)((char *)arg1 + 0x304) = (int)(u_v15 >> 0x1c);
-    }
-    else {
-      i_v10 = i_v10 + -0x1c;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x304) = u_v13 >> 0x1c;
-      }
-      else {
-        u_v6 = u_v11 >> (4 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x304) = (u_v6 | u_v13) >> 0x1c;
-      }
-      u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
-    if (i_v10 < 0x1c) {
-      i_v10 = i_v10 + 4;
-      u_v13 = u_v11 << 4;
-      *(uint *)((char *)arg1 + 0x308) = u_v11 >> 0x1c;
-    }
-    else {
-      i_v10 = i_v10 + -0x1c;
-      u_v13 = (uint)u_v12;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x308) = u_v11 >> 0x1c;
-      }
-      else {
-        u_v6 = u_v13 >> (4 - (byte)i_v10 & 0x1f);
-        u_v13 = u_v13 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x308) = (u_v6 | u_v11) >> 0x1c;
-      }
-      u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
-    if (i_v10 < 0x1c) {
-      i_v10 = i_v10 + 4;
-      u_v11 = u_v13 << 4;
-      *(uint *)((char *)arg1 + 0x30c) = u_v13 >> 0x1c;
-    }
-    else {
-      i_v10 = i_v10 + -0x1c;
-      u_v11 = (uint)u_v12;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x30c) = u_v13 >> 0x1c;
-      }
-      else {
-        u_v6 = u_v11 >> (4 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x30c) = (u_v6 | u_v13) >> 0x1c;
-      }
-      u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
-    if (i_v10 < 0x1c) {
-      i_v10 = i_v10 + 4;
-      u_v13 = u_v11 << 4;
-      *(uint *)((char *)arg1 + 0x310) = u_v11 >> 0x1c;
-    }
-    else {
-      i_v10 = i_v10 + -0x1c;
-      u_v13 = (uint)u_v12;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x310) = u_v11 >> 0x1c;
-      }
-      else {
-        u_v6 = u_v13 >> (4 - (byte)i_v10 & 0x1f);
-        u_v13 = u_v13 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x310) = (u_v6 | u_v11) >> 0x1c;
-      }
-      u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
-    if (i_v10 < 0x1e) {
-      i_v10 = i_v10 + 2;
-      u_v11 = u_v13 << 2;
-      *(uint *)((char *)arg1 + 0x314) = u_v13 >> 0x1e;
-    }
-    else {
-      i_v10 = i_v10 + -0x1e;
-      u_v11 = (uint)u_v12;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x314) = u_v13 >> 0x1e;
-      }
-      else {
-        u_v6 = u_v11 >> (2 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x314) = (u_v6 | u_v13) >> 0x1e;
-      }
-      u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
-    if (i_v10 < 0x1e) {
-      i_v10 = i_v10 + 2;
-      u_v13 = u_v11 << 2;
-      *(uint *)((char *)arg1 + 0x318) = u_v11 >> 0x1e;
-    }
-    else {
-      i_v10 = i_v10 + -0x1e;
-      u_v13 = (uint)u_v12;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x318) = u_v11 >> 0x1e;
-      }
-      else {
-        u_v6 = u_v13 >> (2 - (byte)i_v10 & 0x1f);
-        u_v13 = u_v13 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x318) = (u_v6 | u_v11) >> 0x1e;
-      }
-      u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v11 = u_v13 * 2;
-      *(uint *)((char *)arg1 + 0x31c) = u_v13 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      u_v11 = (uint)u_v12;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x31c) = u_v13 >> 0x1f;
-      }
-      else {
-        u_v6 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x31c) = (u_v6 | u_v13) >> 0x1f;
-      }
-      u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v13 = u_v11 * 2;
-      *(uint *)(arg1 + 800) = u_v11 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      u_v13 = (uint)u_v12;
-      if (i_v10 == 0) {
-        *(uint *)(arg1 + 800) = u_v11 >> 0x1f;
-      }
-      else {
-        u_v6 = u_v13 >> (1 - (byte)i_v10 & 0x1f);
-        u_v13 = u_v13 << ((byte)i_v10 & 0x1f);
-        *(uint *)(arg1 + 800) = (u_v6 | u_v11) >> 0x1f;
-      }
-      u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v11 = u_v13 * 2;
-      *(uint *)((char *)arg1 + 0x324) = u_v13 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      u_v11 = (uint)u_v12;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x324) = u_v13 >> 0x1f;
-      }
-      else {
-        u_v6 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x324) = (u_v6 | u_v13) >> 0x1f;
-      }
-      u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v13 = u_v11 * 2;
-      *(uint *)((char *)arg1 + 0x328) = u_v11 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      u_v13 = (uint)u_v12;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x328) = u_v11 >> 0x1f;
-      }
-      else {
-        u_v6 = u_v13 >> (1 - (byte)i_v10 & 0x1f);
-        u_v13 = u_v13 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x328) = (u_v6 | u_v11) >> 0x1f;
-      }
-      u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v11 = u_v13 * 2;
-      *(uint *)((char *)arg1 + 0x32c) = u_v13 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      u_v11 = (uint)u_v12;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x32c) = u_v13 >> 0x1f;
-      }
-      else {
-        u_v6 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x32c) = (u_v6 | u_v13) >> 0x1f;
-      }
-      u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v13 = u_v11 * 2;
-      *(uint *)((char *)arg1 + 0x330) = u_v11 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      u_v13 = (uint)u_v12;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x330) = u_v11 >> 0x1f;
-      }
-      else {
-        u_v6 = u_v13 >> (1 - (byte)i_v10 & 0x1f);
-        u_v13 = u_v13 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x330) = (u_v6 | u_v11) >> 0x1f;
-      }
-      u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v11 = u_v13 * 2;
-      *(uint *)((char *)arg1 + 0x334) = u_v13 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      u_v11 = (uint)u_v12;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x334) = u_v13 >> 0x1f;
-      }
-      else {
-        u_v6 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x334) = (u_v6 | u_v13) >> 0x1f;
-      }
-      u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v13 = u_v11 * 2;
-      *(uint *)((char *)arg1 + 0x338) = u_v11 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      u_v13 = (uint)u_v12;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x338) = u_v11 >> 0x1f;
-      }
-      else {
-        u_v6 = u_v13 >> (1 - (byte)i_v10 & 0x1f);
-        u_v13 = u_v13 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x338) = (u_v6 | u_v11) >> 0x1f;
-      }
-      u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v11 = u_v13 * 2;
-      *(uint *)((char *)arg1 + 0x33c) = u_v13 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      u_v11 = (uint)u_v12;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x33c) = u_v13 >> 0x1f;
-      }
-      else {
-        u_v6 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x33c) = (u_v6 | u_v13) >> 0x1f;
-      }
-      u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
-    u_v13 = (uint)u_v12;
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v12 = (ulonglong)(u_v11 * 2);
-      *(uint *)((char *)arg1 + 0x340) = u_v11 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x340) = u_v11 >> 0x1f;
-      }
-      else {
-        u_v12 = (ulonglong)(u_v13 << ((byte)i_v10 & 0x1f));
-        *(uint *)((char *)arg1 + 0x340) = (u_v13 >> (1 - (byte)i_v10 & 0x1f) | u_v11) >> 0x1f;
-      }
-      u_v13 = CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x304), 4)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x308), 4)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x30c), 4)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x310), 4)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x314), 2)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x318), 2)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x31c), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x320), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x324), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x328), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x32c), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x330), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x334), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x338), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x33c), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x340), 1)
     if (*(int *)((char *)arg1 + 0x340) != 0) {
-      u_v11 = (uint)u_v12;
-      if (i_v10 < 0x1f) {
-        i_v10 = i_v10 + 1;
-        u_v11 = u_v11 * 2;
-        *(int *)((char *)arg1 + 0x344) = (int)(u_v12 >> 0x1f);
-      }
-      else {
-        i_v10 = i_v10 + -0x1f;
-        if (i_v10 == 0) {
-          *(uint *)((char *)arg1 + 0x344) = u_v11 >> 0x1f;
-        }
-        else {
-          u_v6 = u_v13 >> (1 - (byte)i_v10 & 0x1f);
-          u_v13 = u_v13 << ((byte)i_v10 & 0x1f);
-          *(uint *)((char *)arg1 + 0x344) = (u_v6 | u_v11) >> 0x1f;
-        }
-        pu_v7 = pu_v8 + 1;
-        u_v3 = *pu_v8;
-        pu_v1 = pu_v8 + 2;
-        pu_v2 = pu_v8 + 3;
-        pu_v8 = pu_v8 + 4;
-        u_v11 = u_v13;
-        u_v13 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-      }
-      if (i_v10 < 0x1d) {
-        i_v10 = i_v10 + 3;
-        u_v6 = u_v11 << 3;
-        *(uint *)((char *)arg1 + 0x348) = u_v11 >> 0x1d;
-      }
-      else {
-        i_v10 = i_v10 + -0x1d;
-        if (i_v10 == 0) {
-          *(uint *)((char *)arg1 + 0x348) = u_v11 >> 0x1d;
-        }
-        else {
-          u_v6 = u_v13 >> (3 - (byte)i_v10 & 0x1f);
-          u_v13 = u_v13 << ((byte)i_v10 & 0x1f);
-          *(uint *)((char *)arg1 + 0x348) = (u_v6 | u_v11) >> 0x1d;
-        }
-        pu_v7 = pu_v8 + 1;
-        u_v3 = *pu_v8;
-        pu_v1 = pu_v8 + 2;
-        pu_v2 = pu_v8 + 3;
-        pu_v8 = pu_v8 + 4;
-        u_v6 = u_v13;
-        u_v13 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-      }
-      if (i_v10 < 0x1f) {
-        i_v10 = i_v10 + 1;
-        u_v11 = u_v6 * 2;
-        *(uint *)((char *)arg1 + 0x34c) = u_v6 >> 0x1f;
-      }
-      else {
-        i_v10 = i_v10 + -0x1f;
-        if (i_v10 == 0) {
-          *(uint *)((char *)arg1 + 0x34c) = u_v6 >> 0x1f;
-        }
-        else {
-          u_v11 = u_v13 >> (1 - (byte)i_v10 & 0x1f);
-          u_v13 = u_v13 << ((byte)i_v10 & 0x1f);
-          *(uint *)((char *)arg1 + 0x34c) = (u_v11 | u_v6) >> 0x1f;
-        }
-        pu_v7 = pu_v8 + 1;
-        u_v3 = *pu_v8;
-        pu_v1 = pu_v8 + 2;
-        pu_v2 = pu_v8 + 3;
-        pu_v8 = pu_v8 + 4;
-        u_v11 = u_v13;
-        u_v13 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-      }
-      if (i_v10 < 0x19) {
-        i_v10 = i_v10 + 7;
-        u_v6 = u_v11 << 7;
-        *(uint *)((char *)arg1 + 0x350) = u_v11 >> 0x19;
-      }
-      else {
-        i_v10 = i_v10 + -0x19;
-        if (i_v10 == 0) {
-          *(uint *)((char *)arg1 + 0x350) = u_v11 >> 0x19;
-          u_v6 = u_v13;
-        }
-        else {
-          *(uint *)((char *)arg1 + 0x350) = (u_v13 >> (7 - (byte)i_v10 & 0x1f) | u_v11) >> 0x19;
-          u_v6 = u_v13 << ((byte)i_v10 & 0x1f);
-        }
-        u_v13 = CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-        pu_v8 = pu_v8 + 4;
-      }
-      if (i_v10 < 0x18) {
-        i_v10 = i_v10 + 8;
-        *(uint *)((char *)arg1 + 0x354) = u_v6 >> 0x18;
-      }
-      else {
-        i_v10 = i_v10 + -0x18;
-        if (i_v10 == 0) {
-          pu_v8 = pu_v8 + 4;
-          *(uint *)((char *)arg1 + 0x354) = u_v6 >> 0x18;
-        }
-        else {
-          pu_v8 = pu_v8 + 4;
-          *(uint *)((char *)arg1 + 0x354) = (u_v13 >> (8U - (char)i_v10 & 0x1f) | u_v6) >> 0x18;
-        }
-      }
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x344), 1)
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x348), 3)
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x34c), 1)
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x350), 7)
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x354), 8)
     }
     calcHvSize(arg1);
-    calcPictureCodingExt(arg1);  // calcHvSize keeps rcx
+    calcPictureCodingExt(arg1);
     if (*(int *)((char *)arg1 + 0xc0c) == 0) {
       *(cri_u4 *)((char *)arg1 + 0x1c54) = 0;
     }
     break;
   case 9:
     *(cri_u4 *)((char *)arg1 + 0x714) = 1;
-    if (i_v10 < 0x16) {
-      i_v10 = i_v10 + 10;
-      u_v13 = u_v13 << 10;
-      *(int *)((char *)arg1 + 0x584) = (int)(u_v15 >> 0x16);
-    }
-    else {
-      i_v10 = i_v10 + -0x16;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x584) = u_v13 >> 0x16;
-      }
-      else {
-        u_v6 = u_v11 >> (10 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x584) = (u_v6 | u_v13) >> 0x16;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v13 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v6 = u_v13 * 2;
-      *(uint *)((char *)arg1 + 0x18) = u_v13 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x18) = u_v13 >> 0x1f;
-      }
-      else {
-        u_v6 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x18) = (u_v6 | u_v13) >> 0x1f;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v6 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x11) {
-      i_v10 = i_v10 + 0xf;
-      u_v13 = u_v6 << 0xf;
-      *(uint *)((char *)arg1 + 0x588) = u_v6 >> 0x11;
-    }
-    else {
-      i_v10 = i_v10 + -0x11;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x588) = u_v6 >> 0x11;
-      }
-      else {
-        u_v13 = u_v11 >> (0xf - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x588) = (u_v13 | u_v6) >> 0x11;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v13 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v6 = u_v13 * 2;
-      *(uint *)((char *)arg1 + 0x18) = u_v13 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x18) = u_v13 >> 0x1f;
-      }
-      else {
-        u_v6 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x18) = (u_v6 | u_v13) >> 0x1f;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v6 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x11) {
-      i_v10 = i_v10 + 0xf;
-      u_v13 = u_v6 << 0xf;
-      *(uint *)((char *)arg1 + 0x58c) = u_v6 >> 0x11;
-    }
-    else {
-      i_v10 = i_v10 + -0x11;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x58c) = u_v6 >> 0x11;
-      }
-      else {
-        u_v13 = u_v11 >> (0xf - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x58c) = (u_v13 | u_v6) >> 0x11;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v13 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1e) {
-      i_v10 = i_v10 + 2;
-      u_v6 = u_v13 << 2;
-      *(uint *)((char *)arg1 + 0x590) = u_v13 >> 0x1e;
-    }
-    else {
-      i_v10 = i_v10 + -0x1e;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x590) = u_v13 >> 0x1e;
-      }
-      else {
-        u_v6 = u_v11 >> (2 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x590) = (u_v6 | u_v13) >> 0x1e;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v6 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v13 = u_v6 * 2;
-      *(uint *)((char *)arg1 + 0x594) = u_v6 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x594) = u_v6 >> 0x1f;
-      }
-      else {
-        u_v13 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x594) = (u_v13 | u_v6) >> 0x1f;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v13 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      *(uint *)((char *)arg1 + 0x598) = u_v13 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      if (i_v10 == 0) {
-        pu_v8 = pu_v8 + 4;
-        *(uint *)((char *)arg1 + 0x598) = u_v13 >> 0x1f;
-      }
-      else {
-        pu_v8 = pu_v8 + 4;
-        *(uint *)((char *)arg1 + 0x598) = (u_v11 >> (1U - (char)i_v10 & 0x1f) | u_v13) >> 0x1f;
-      }
-    }
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x584), 10)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x18), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x588), 15)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x18), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x58c), 15)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x590), 2)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x594), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x598), 1)
     break;
   case 10:
-    if (i_v10 < 0x1e) {
-      i_v10 = i_v10 + 2;
-      u_v13 = u_v13 << 2;
-      *(int *)((char *)arg1 + 0x578) = (int)(u_v15 >> 0x1e);
-    }
-    else {
-      i_v10 = i_v10 + -0x1e;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x578) = u_v13 >> 0x1e;
-      }
-      else {
-        u_v6 = u_v11 >> (2 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x578) = (u_v6 | u_v13) >> 0x1e;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v13 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x16) {
-      i_v10 = i_v10 + 10;
-      u_v6 = u_v13 << 10;
-      *(uint *)((char *)arg1 + 0x57c) = u_v13 >> 0x16;
-    }
-    else {
-      i_v10 = i_v10 + -0x16;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x57c) = u_v13 >> 0x16;
-      }
-      else {
-        u_v6 = u_v11 >> (10 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x57c) = (u_v6 | u_v13) >> 0x16;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v6 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x1f) {
-      i_v10 = i_v10 + 1;
-      u_v13 = u_v6 * 2;
-      *(uint *)((char *)arg1 + 0x18) = u_v6 >> 0x1f;
-    }
-    else {
-      i_v10 = i_v10 + -0x1f;
-      if (i_v10 == 0) {
-        *(uint *)((char *)arg1 + 0x18) = u_v6 >> 0x1f;
-      }
-      else {
-        u_v13 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-        u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-        *(uint *)((char *)arg1 + 0x18) = (u_v13 | u_v6) >> 0x1f;
-      }
-      pu_v7 = pu_v8 + 1;
-      u_v3 = *pu_v8;
-      pu_v1 = pu_v8 + 2;
-      pu_v2 = pu_v8 + 3;
-      pu_v8 = pu_v8 + 4;
-      u_v13 = u_v11;
-      u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-    }
-    if (i_v10 < 0x16) {
-      i_v10 = i_v10 + 10;
-      *(uint *)((char *)arg1 + 0x580) = u_v13 >> 0x16;
-    }
-    else {
-      i_v10 = i_v10 + -0x16;
-      if (i_v10 == 0) {
-        pu_v8 = pu_v8 + 4;
-        *(uint *)((char *)arg1 + 0x580) = u_v13 >> 0x16;
-      }
-      else {
-        pu_v8 = pu_v8 + 4;
-        *(uint *)((char *)arg1 + 0x580) = (u_v11 >> (10U - (char)i_v10 & 0x1f) | u_v13) >> 0x16;
-      }
-    }
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x578), 2)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x57c), 10)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x18), 1)
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x580), 10)
   }
-  i_v10 = i_v10 + -0x39 + ((int)pu_v8 - (int)arg2) * 8;
+  pos = pos + ((int)p - (int)arg2) * 8 - 0x39;
   *(cri_u4 *)((char *)arg1 + 0x708) = 0;
   *(cri_u4 *)((char *)arg1 + 0x70c) = 0;
-  return (longlong)((int)(i_v10 + (i_v10 >> 0x1f & 7U)) >> 3) + arg2;
+  return (longlong)(pos / 8) + arg2;
 }
+
 
 // MS2-FUNCTIONAL: written as CRI06_GETBITS steps (VS2008 build, our toolset differs). What is left is register
 // choice: the exe keeps p in r10 and arg1 in rbx, ours p in rbx and arg1 in r11.
