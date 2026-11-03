@@ -1696,12 +1696,12 @@ void* FUN_140010d70(void* destination, const void* source)
     return destination;
 }
 
-// MS2-FUNCTIONAL: assigns the bag only when either side contains state data. Only the or's operand order differs (the
-// exe loads source and ors destination); cl picks destination first for every source order tried.
+// Assigns the bag only when either side contains state data. The exe loads source and ors destination; the volatile
+// read keeps source in the load (cl folds the volatile-free operand into the or).
 // @0x140010da0
 void FUN_140010da0(void* destination, const void* source)
 {
-    if ((*static_cast<const unsigned __int64*>(source) | *static_cast<const unsigned __int64*>(destination)) != 0)
+    if ((*static_cast<const volatile unsigned __int64*>(source) | *static_cast<const unsigned __int64*>(destination)) != 0)
         static_cast<Scaleform::Render::Video02StateDataAccess*>(destination)->assignBag(*static_cast<const Scaleform::Render::StateData*>(source));
 }
 
