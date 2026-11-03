@@ -2107,8 +2107,9 @@ void CSSFileLoaderAndParserImpl::Load(const String& fileName, FileOpener* opener
 }
 
 // MS2-FUNCTIONAL: records the completion status, pushes the result, and broadcasts onLoad to listeners.
+// noinline: CSSFileLoaderAndParserImpl::Init tail-calls it.
 // @0x142969aa0
-void StyleSheetObject::NotifyOnLoad(Environment* penv, bool success)
+__declspec(noinline) void StyleSheetObject::NotifyOnLoad(Environment* penv, bool success)
 {
     *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(this) + 0x90) = success ? 2u : 3u;
     penv->Push(success);
@@ -2217,10 +2218,13 @@ void TextFormatCtorFunction::GlobalCtor(const FnCall& fn)
 // @0x14295e080
 void CSSFileLoaderAndParserImpl::Init(Environment* penv, Object* sheet)
 {
-    bool success = false;
-    if (Buffer)
+    bool success;
+    if (!Buffer)
+        success = false;
+    else
     {
-        wchar_t* data = Buffer;
+        wchar_t* buffer = Buffer;
+        wchar_t* data = buffer;
         int length = BufferLen;
         if (data[0] == 0xfeff)
         {
@@ -2233,8 +2237,8 @@ void CSSFileLoaderAndParserImpl::Init(Environment* penv, Object* sheet)
             *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(this) + 0x10) = 1;
             data++;
             length = length / 2 - 1;
-            for (int i = 0; i < length; ++i)
-                data[i] = wchar_t((unsigned(data[i]) << 8) | (unsigned(data[i]) >> 8));
+            for (SPInt i = 0; i < length; ++i)
+                buffer[i + 1] = wchar_t((unsigned(buffer[i + 1]) << 8) | (unsigned(buffer[i + 1]) >> 8));
         }
         else if (length > 2 && UByte(data[0]) == 0xef && UByte(data[0] >> 8) == 0xbb &&
                  UByte(data[1]) == 0xbf)
@@ -2244,9 +2248,9 @@ void CSSFileLoaderAndParserImpl::Init(Environment* penv, Object* sheet)
         }
 
         void* styles = reinterpret_cast<UByte*>(sheet) + 0x68;
-        success = *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(this) + 0x10) == 1
-                      ? static_cast<Text::StyleManager*>(styles)->ParseCSS(data, UPInt(length))
-                      : static_cast<Text::StyleManager*>(styles)->ParseCSS(reinterpret_cast<const char*>(data), UPInt(length));
+        success = *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(this) + 0x10) != 1
+                      ? static_cast<Text::StyleManager*>(styles)->ParseCSS(reinterpret_cast<const char*>(data), UPInt(length))
+                      : static_cast<Text::StyleManager*>(styles)->ParseCSS(data, UPInt(length));
         Memory::GetGlobalHeap()->Free(Buffer);
         Buffer = 0;
     }
