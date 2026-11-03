@@ -198,37 +198,35 @@ AppendableSoundData::AppendableSoundData(unsigned format, unsigned rate)
     Format |= Sample_Stream;
 }
 
-// MS2-FUNCTIONAL: appends room for length samples (dsize bytes) to the chunk list and returns the write position; the
-// chunk lock stays held until UnlockData.
+// Appends room for length samples (dsize bytes) to the chunk list and returns the write position; the chunk lock
+// stays held until UnlockData.
 // The chunks come from the global heap's Alloc (DataChunk has no heap operator new: SF_HEAP_NEW on it was the
 // placement new at the heap object itself).
 // @0x142748230
 UByte* AppendableSoundData::LockDataForAppend(unsigned length, unsigned dsize)
 {
     ChunkLock.DoLock();
-    DataChunk* pchunk;
     if (!pFirstChunk)
     {
         void* pmem = Memory::pGlobalHeap->Alloc(sizeof(DataChunk));
-        pchunk     = pmem ? new (pmem) DataChunk(0x4000) : 0;
-        pFirstChunk = pchunk;
-        pFillChunk  = pchunk;
-        pReadChunk  = pchunk;
+        pFirstChunk = pmem ? new (pmem) DataChunk(0x4000) : 0;
+        pFillChunk  = pFirstChunk;
+        pReadChunk  = pFillChunk;
     }
+    UByte* pbuffer = 0;
     if (dsize > 0x4000u - pFillChunk->Used)
     {
         void* pmem = Memory::pGlobalHeap->Alloc(sizeof(DataChunk));
-        pchunk     = pmem ? new (pmem) DataChunk(0x4000) : 0;
-        pFillChunk->pNext = pchunk;
+        pFillChunk->pNext = pmem ? new (pmem) DataChunk(0x4000) : 0;
         pFillChunk->pNext->Reserved14 = pFillChunk->Samples + pFillChunk->Reserved14;
         pFillChunk = pFillChunk->pNext;
     }
-    UByte* pdata = pFillChunk->pData + pFillChunk->Used;
+    pbuffer = pFillChunk->pData + pFillChunk->Used;
     pFillChunk->Used += dsize;
     pFillChunk->Samples += length;
     DataSize += dsize;
     Length += length;
-    return pdata;
+    return pbuffer;
 }
 
 // MS2-FUNCTIONAL: frees the chunk's sample block (the exe's out of line chunk destructor).
