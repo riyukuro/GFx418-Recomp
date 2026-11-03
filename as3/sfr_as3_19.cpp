@@ -3414,40 +3414,25 @@ void Sfr31ShapeObjectSetRatio(UPInt self, float ratio)
     }
 }
 
-// An object value whose traits are of builtin type ty and not a user subclass (flag bit 5 clear).
-static inline bool Sfr31IsObjectOfTraitsType(UPInt v, int ty)
+// SDK IsXMLObject / IsXMLListObject (Object*), inline here: a builtin object of type ty, not a user subclass.
+static inline bool Sfr31IsObjectOfTraitsType(Object* obj, BuiltinTraitsType ty)
 {
-    if ((*reinterpret_cast<const UInt32*>(v) & 0x1f) - 0xc <= 3)
-    {
-        const UPInt o = Sfr31Rd(v, 0x10);
-        if (o != 0)
-        {
-            const UPInt tr = Sfr31Rd(o, 0x20);
-            if (*reinterpret_cast<const int*>(tr + 0x70) == ty
-                && (static_cast<UInt8>(~static_cast<UInt8>(*reinterpret_cast<const UInt8*>(tr + 0x68) >> 5)) & 1) != 0)
-                return true;
-        }
-    }
-    return false;
+    return obj != NULL && obj->GetTraits().GetTraitsType() == ty && obj->GetTraits().IsInstanceTraits();
 }
 
-// checkfilter: the top of the operand stack must be an XML or XMLList instance, else TypeError 1123.
-// MS2-FUNCTIONAL 0x142536ab0: behavior-equivalent recovery; codegen differs from exe
+// checkfilter: the top of the operand stack must be an XML or XMLList instance, else TypeError 1123
+// (VM::ThrowTypeError inlined, the message names the value's traits).
 // @0x142536ab0
 void Sfr31ExecCheckFilter(UPInt vm)
 {
     const UPInt top = Sfr31Rd(vm, 0x50);
-    if (Sfr31IsObjectOfTraitsType(top, 0xd) || Sfr31IsObjectOfTraitsType(top, 0xe))   // IsXMLObject || IsXMLListObject
+    const Value& tv = *reinterpret_cast<const Value*>(top);
+    if ((tv.IsObject() && Sfr31IsObjectOfTraitsType(tv.GetObject(), Traits_XML))
+        || (tv.IsObject() && Sfr31IsObjectOfTraitsType(tv.GetObject(), Traits_XMLList)))   // IsXMLObject || IsXMLListObject
         return;
-    const UPInt tr = reinterpret_cast<UPInt>(&reinterpret_cast<VM*>(vm)->GetValueTraits(*reinterpret_cast<const Value*>(top)));
-    UPInt name = 0;
-    typedef UPInt* (*GetName)(UPInt, UPInt*);
-    UPInt* p = reinterpret_cast<GetName>(Sfr31Rd(Sfr31Rd(tr, 0), 0x38))(tr, &name);
-    UPInt err[2];
-    FUN_1424d7850(err, 0x463, reinterpret_cast<void*>(vm), *reinterpret_cast<const char* const*>(*p));
-    FUN_14252ecb0(reinterpret_cast<void*>(vm), err, &fl::TypeErrorCI);
-    Sfr31ReleaseStr(err[1]);
-    Sfr31ReleaseStr(name);
+    VM& v = *reinterpret_cast<VM*>(vm);
+    v.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x463), v,   // eFilterError (1123)
+        v.GetValueTraits(*reinterpret_cast<const Value*>(top)).GetName().ToCStr()));
 }
 
 // Push the elements [start, start + count) of the array storage (clamped to its length) into an interface object.
