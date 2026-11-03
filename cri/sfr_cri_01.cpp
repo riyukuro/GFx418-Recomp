@@ -2105,14 +2105,14 @@ void FUN_140029de0(void* object)
     }
 }
 
-// MS2-FUNCTIONAL: initialize the CRI system-timer callback object and retain its source.
+// initialize the CRI system-timer callback object and retain its source.
 // @0x140029e40
 void* FUN_140029e40(void* object, void* source)
 {
     *(CriUint32*)((CriUint8*)object + 8) = 1;
     *(const void***)object = (const void**)DAT_1431b8fc8;
     *(const void***)((CriUint8*)object + 0x10) = (const void**)DAT_1431b8fa0;
-    *(void**)((CriUint8*)object + 0x18) = NULL;
+    *(void* volatile*)((CriUint8*)object + 0x18) = NULL;   // volatile: keeps the exe's store order
     if (source)
         ++*(CriUint32*)((CriUint8*)source + 8);
     if (*(void**)((CriUint8*)object + 0x18))
