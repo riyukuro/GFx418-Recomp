@@ -2014,7 +2014,7 @@ namespace TR {
 // @0x14250cf20
 __declspec(safebuffers) CheckResult State::GetPropertyType(const Traits* obj_traits, const SlotInfo& si, Value& type) const
 {
-    if (si.BindType > SlotInfo::BT_ConstChar && si.ValueInd >= 0)
+    if (si.BindType >= SlotInfo::BT_Code && si.ValueInd >= 0)
     {
         if (si.BindType == SlotInfo::BT_Code)
         {
