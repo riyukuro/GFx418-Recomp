@@ -4066,44 +4066,53 @@ void* CreateBufferedAudioRequest(void* manager, void* backing, unsigned channels
     return object;
 }
 
-// MS2-FUNCTIONAL: fills every destination pixel with seeded grayscale or masked-channel noise from a seeded
-// Alg::Random::Generator, column by column as the exe does.
+// Fills every destination pixel with seeded grayscale or masked-channel noise, column by column (the SDK body
+// without the swizzler context).
+// MS2-FUNCTIONAL: register allocation (the 255.0f constant and the gray value swap xmm6/xmm7)
 // @0x142677260
-void Scaleform::Render::DICommand_Noise::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& imageDataRef, Scaleform::Render::ImageData**) const
+void Scaleform::Render::DICommand_Noise::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData**) const
 {
-    void* command = const_cast<Scaleform::Render::DICommand_Noise*>(this);
-    void* imageData = &imageDataRef;
-    auto* settings = static_cast<unsigned char*>(command);
-    Scaleform::Alg::Random::Generator random;
-    random.SeedRandom(*reinterpret_cast<unsigned*>(settings + 0x10));
-    auto* planes = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(imageData) + 0x10);
-    const unsigned width = *reinterpret_cast<unsigned*>(planes);
-    const unsigned height = *reinterpret_cast<unsigned*>(planes + 4);
-    const std::int64_t pitch = *reinterpret_cast<std::int64_t*>(planes + 8);
-    const std::int64_t pixels = *reinterpret_cast<std::int64_t*>(planes + 0x18);
-    const unsigned mask = *reinterpret_cast<unsigned*>(settings + 0x1c);
-    const bool gray = *reinterpret_cast<unsigned char*>(settings + 0x20) != 0;
-    auto* image = *reinterpret_cast<unsigned char**>(settings + 8);
-    const bool opaque = image && *reinterpret_cast<unsigned char*>(image + 0x48) == 0;
-    for (unsigned x = 0; x < width; ++x) {
-        for (unsigned y = 0; y < height; ++y) {
-            unsigned pixel = 0;
-            unsigned alpha = 255;
-            if (gray) {
-                const float value = random.GetUnitFloat();
-                const float alphaValue = (mask & 8) != 0 ? random.GetUnitFloat() : 1.0f;
-                const unsigned level = static_cast<unsigned char>(static_cast<int>(value * 255.0f));
-                pixel = level | (level << 8) | (level << 16);
-                alpha = static_cast<unsigned char>(static_cast<int>(alphaValue * 255.0f));
-            } else {
-                if (mask & 1) pixel |= unsigned(static_cast<unsigned char>(static_cast<int>(random.GetUnitFloat() * 255.0f))) << 16;
-                if (mask & 2) pixel |= unsigned(static_cast<unsigned char>(static_cast<int>(random.GetUnitFloat() * 255.0f))) << 8;
-                if (mask & 4) pixel |= static_cast<unsigned char>(static_cast<int>(random.GetUnitFloat() * 255.0f));
-                if (mask & 8) alpha = static_cast<unsigned char>(static_cast<int>(random.GetUnitFloat() * 255.0f));
+    auto* settings = reinterpret_cast<const unsigned char*>(this);
+    const unsigned& randomSeed = *reinterpret_cast<const unsigned*>(settings + 0x10);
+    const unsigned& channelMask = *reinterpret_cast<const unsigned*>(settings + 0x1c);
+    const bool& grayScale = *reinterpret_cast<const bool*>(settings + 0x20);
+    const unsigned char* const& pImage = *reinterpret_cast<const unsigned char* const*>(settings + 8);
+    Scaleform::Alg::Random::Generator rng;
+    rng.SeedRandom(randomSeed);
+
+    for (unsigned x = 0; x < dest.GetSize().Width; ++x)
+    {
+        for (unsigned y = 0; y < dest.GetSize().Height; ++y)
+        {
+            UByte* scanline = dest.GetScanline(y);
+
+            Color c(0);
+            if (grayScale)
+            {
+                float val = rng.GetUnitFloat();
+                float alpha = channelMask & 8 ? rng.GetUnitFloat() : 1.0f;
+                c.SetRGBFloat(val, val, val);
+                c.SetAlpha(UByte(alpha * 255));
             }
-            if (opaque) alpha = 255;
-            pixel |= alpha << 24;
-            FUN_14257d390(imageData, pitch * y + pixels, x, pixel);
+            else
+            {
+                if (channelMask & 1)
+                    c.SetRed((UByte)(rng.GetUnitFloat() * 255));
+                if (channelMask & 2)
+                    c.SetGreen((UByte)(rng.GetUnitFloat() * 255));
+                if (channelMask & 4)
+                    c.SetBlue((UByte)(rng.GetUnitFloat() * 255));
+                if (channelMask & 8)
+                    c.SetAlpha((UByte)(rng.GetUnitFloat() * 255));
+                else
+                    c.SetAlpha(255);
+            }
+
+            // pImage->IsTransparent() is the image's transparent flag at +0x48.
+            if (!pImage[0x48])
+                c.SetAlpha(255);
+
+            dest.SetPixelInScanline(scanline, x, c.ToColor32());
         }
     }
 }
