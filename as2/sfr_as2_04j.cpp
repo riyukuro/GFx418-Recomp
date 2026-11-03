@@ -486,35 +486,34 @@ void MovieRoot::AddMovieLoadQueueEntry(LoadQueueEntry* pentry)
 }
 
 // Rebuilds a value of the shared object and puts it in the object or array on top of the stack.
-// MS2-FUNCTIONAL: the value is built with the AS2 value setters
 // @0x142930480
 void GASSharedObjectLoader::AddProperty(const String& name, const String& value, GFx::Value::ValueType type)
 {
-    Object* ptop = ObjectStack[ObjectStack.GetSize() - 1];
+    Object* ptop = ObjectStack.Back();
     Value   v;
     switch (type)
     {
-    case GFx::Value::VT_Undefined:
-        break;
-    case GFx::Value::VT_Null:
-        v.SetNull();
-        break;
-    case GFx::Value::VT_Boolean:
-        v.SetBool(strncmp(value.ToCStr(), "true", 4) == 0);
-        break;
     case GFx::Value::VT_Number:
         v.SetNumber(atof(value.ToCStr()));
         break;
     case GFx::Value::VT_String:
-        v.SetString(pEnv->CreateString(value.ToCStr(), value.GetSize()));
+        v.SetString(pEnv->CreateString(value));
         break;
-    default:
+    case GFx::Value::VT_Boolean:
+        v.SetBool(!strncmp(value.ToCStr(), "true", 4));
         break;
+    case GFx::Value::VT_Undefined:
+        v.SetUndefined();
+        break;
+    case GFx::Value::VT_Null:
+        v.SetNull();
+        break;
+    default:;
     }
-    if (!bArrayIsTop)
-        ptop->SetMember(pEnv, pEnv->CreateString(name.ToCStr(), name.GetSize()), v);
-    else
+    if (bArrayIsTop)
         static_cast<ArrayObject*>(ptop)->PushBack(v);
+    else
+        ptop->SetMember(pEnv, pEnv->CreateString(name), v);
 }
 
 // Creates the objects of a dotted package path under pparent and returns the last one.
