@@ -108,7 +108,8 @@ void PrimitivePrepareBuffer::StartPrimitive(void* item, Primitive* p, PrimitiveE
 // Walks the batches in two steps that may interleave: the converted ones up to pPrepareTail are brought into the
 // cache (a batch whose meshes some item already holds just links to it) and moved to the in-flight list; the next
 // virtual batch is then converted. Running out of cache space returns QIP_NeedCache, keeping the position.
-// MS2-FUNCTIONAL: register allocation only: the exe keeps the 32-bit instance-adjusted mesh count in r14d across the hash lookup, ours spills it to the StrideArray and reloads it
+// MS2-FUNCTIONAL: 13 bytes left: the exe keeps the 32-bit instance-adjusted mesh count in r14d across the hash lookup,
+// ours spills it to the StrideArray and reloads it. The SDK's GetHashPrimitive brought it from 30 bytes
 // @0x1426d96b0
 PrimitivePrepareBuffer::QIPrepareResult PrimitivePrepareBuffer::ProcessPrimitive(bool waitForCache)
 {
@@ -124,11 +125,9 @@ PrimitivePrepareBuffer::QIPrepareResult PrimitivePrepareBuffer::ProcessPrimitive
 
                 if (pPrepare->Type != PrimitiveBatch::DP_Failed)
                 {
-                    MeshCacheItem* pitem;
-                    if ((State == PS_Loop) && pCache->BatchCacheItemHash.GetAlt(mc, &pitem))
+                    if ((State == PS_Loop) && pCache->GetHashPrimitive(pPrepare, mc))
                     {
                         // an item holds these meshes already
-                        pPrepare->MeshNode.SetMeshItem(pitem);
                     }
                     else if (!pCache->PreparePrimitive(pPrepare, mc, waitForCache))
                     {

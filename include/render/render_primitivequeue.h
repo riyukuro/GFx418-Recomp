@@ -201,6 +201,7 @@ public:
     // (appended for sfr_render_07p) the batch's meshes (one for an instanced batch), in render_meshcache.h
     inline StrideArray<MeshBase*> GetMeshes_InstanceAdjusted();
     MeshCacheItem* GetCacheItem() const { return MeshNode.pMeshItem; }
+    void           SetCacheItem(MeshCacheItem* p) { MeshNode.SetMeshItem(p); }
 };
 
 // Mask areas, one matrix each.

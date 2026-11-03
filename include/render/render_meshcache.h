@@ -375,6 +375,18 @@ public:
 
     void MoveToCacheListFront(MeshCacheListType list, MeshCacheItem* p); // 0x1426dbd90
 
+    // (sfr_render_07p) a batch whose mesh combination some item already holds just links to it
+    bool GetHashPrimitive(PrimitiveBatch* pbatch, MeshCacheItem::MeshContent& mc)
+    {
+        MeshCacheItem* pmesh;
+        if (BatchCacheItemHash.GetAlt(mc, &pmesh))
+        {
+            pbatch->SetCacheItem(pmesh);
+            return true;
+        }
+        return false;
+    }
+
     // frees the item's space (into allocator when given); returns the size of the free block it ended up in
     virtual UPInt Evict(MeshCacheItem* p, AllocAddr* allocator = 0, MeshBase* skipMesh = 0) = 0;
     virtual bool  PreparePrimitive(PrimitiveBatch* batch, MeshCacheItem::MeshContent& mc, bool waitForCache) = 0;
