@@ -491,22 +491,33 @@ namespace {
 
 void FUN_140017320(uint64_t* table, const uint64_t* key);
 
-// MS2-FUNCTIONAL: cl15 shape (add [m],-1 on the payload count, inlined lookup).
-// drops the recorded atom-table payload (freed through the global heap at zero) and removes its key from the receiver cache.
+// Clears the atom's recorded flag (bit 26), then drops the recorded atom-table payload (freed through the global heap at zero) and removes its key from the receiver cache.
 // @0x140017880
 void FUN_140017880(void* receiver, uint64_t* atom)
 {
     uint32_t flags = *reinterpret_cast<uint32_t*>(atom + 2);
-    if ((flags & 0x04000000) == 0) return;
-    flags &= 0xfbffffff;
+    if (!(static_cast<uint8_t>(flags >> 26) & 1)) return;
+    *reinterpret_cast<uint32_t*>(atom + 2) = flags & 0xfbffffff;
     uint64_t* holder = reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(receiver) + 0x70);
-    if (*holder == 0) return;
     uint64_t key = reinterpret_cast<uintptr_t>(atom);
-    unsigned char* entry = static_cast<unsigned char*>(FUN_140017440(holder, &key));
+    unsigned char* table = *reinterpret_cast<unsigned char**>(holder);
+    if (!table) return;
+    // the inlined FUN_140016f40 lookup (SDBM over the key's 8 bytes, last byte first)
+    const unsigned char* bytes = reinterpret_cast<const unsigned char*>(&key);
+    size_t size = 8;
+    uint64_t hash = 0x1505;
+    while (size > 0) {
+        size--;
+        hash = (hash << 16) + (hash << 6) - hash + static_cast<size_t>(bytes[size]);
+    }
+    int64_t index = VideoFindIndexCore(table, &key, hash & *reinterpret_cast<uint64_t*>(table + 8));
+    if (index < 0) return;
+    unsigned char* entry = table + (index + 1) * 0x20;
     if (!entry) return;
     uint32_t* value = *reinterpret_cast<uint32_t**>(entry + 8);
     if (!value) return;
     *reinterpret_cast<uint64_t*>(value + 2) = 0;
+    _ReadWriteBarrier();   // the exe clears the payload before it drops the count
     if (--value[0] == 0) {
         void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
         reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, value);
