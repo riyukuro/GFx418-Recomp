@@ -174,7 +174,8 @@ static inline bool isFreeRotation(const Matrix2F& m)
     return float(fabs(p10.x)) > 1e-6f && float(fabs(p10.y)) > 1e-6f;
 }
 
-// MS2-FUNCTIONAL: register allocation in the pixel-snap block (exe holds the translation x in xmm1, the y axis term in xmm2)
+// MS2-FUNCTIONAL: 16 bytes left, the lea of &TMProvider for UpdateMaskClearBounds is scheduled after the viewMat copy in
+// the exe; the layer loop in the SDK form (if/else, no continue) gives the exe length and pixel-snap registers
 // @0x1426d6600
 void TreeCacheText::UpdateTransform(const TreeNode::NodeData* nodeData, const TransformArgs& t, TransformFlags flags)
 {
@@ -191,10 +192,10 @@ void TreeCacheText::UpdateTransform(const TreeNode::NodeData* nodeData, const Tr
         if ((layout->GetParam().TextParam.Flags & GlyphParam::OptRead) &&
             !(M.Has3D() || isFreeRotation(M.GetMatrix2D())))
         {
-            Matrix2F m2(M.GetMatrix2D());
+            Matrix2F m2 = M.GetMatrix2D();
             // rounds half away from zero
-            m2.Tx() = floorf(m2.Tx() + (m2.Tx() < 0 ? -0.5f : 0.5f));
-            m2.Ty() = floorf(m2.Ty() + (m2.Ty() < 0 ? -0.5f : 0.5f));
+            m2.Tx() = floorf(m2.Tx() + ((m2.Tx() < 0) ? -0.5f : +0.5f));
+            m2.Ty() = floorf(m2.Ty() + ((m2.Ty() < 0) ? -0.5f : +0.5f));
             M.SetMatrix2D(m2);
         }
 
@@ -219,28 +220,38 @@ void TreeCacheText::UpdateTransform(const TreeNode::NodeData* nodeData, const Tr
 
     if (TMProvider.HasVectorGlyphs())
     {
+        unsigned i;
         unsigned meshGenFlags = calcMeshGenFlags();
-        for (unsigned i = 0; i < TMProvider.GetLayerCount(); i++)
+        for (i = 0; i < TMProvider.GetLayerCount(); ++i)
         {
             TextMeshLayer& layer = TMProvider.GetLayer(i);
-            if (layer.Type != TextLayer_Shapes && layer.Type != TextLayer_Shapes_Masked)
-                continue;
+            if (layer.Type == TextLayer_Shapes || layer.Type == TextLayer_Shapes_Masked)
+            {
+                const TextMeshEntry& ent = TMProvider.GetEntry(layer, 0);
 
-            const TextMeshEntry& ent = TMProvider.GetEntry(layer, 0);
-            Matrix2F scaling         = Matrix2F::Scaling(TMProvider.GetHeightRatio() * layer.SizeScale);
-            float    keyData[MeshKey::MaxKeySize];
-            unsigned keyFlags = TextMeshProvider::CalcVectorParams(layer, ent, scaling, layer.SizeScale, M,
-                                                                   pRenderer2D, meshGenFlags, keyData);
-            MeshKeyManager*        keyManager = pRenderer2D->GetMeshKeyManager();
-            const ToleranceParams& cfg        = pRenderer2D->GetToleranceParams();
-            if (layer.pMeshKey && layer.pMeshKey->Match(0, flags, keyData, cfg))
-                continue;
+                Matrix2F scaling = Matrix2F::Scaling(TMProvider.GetHeightRatio() * layer.SizeScale);
+                float    keyData[MeshKey::MaxKeySize];
+                unsigned keyFlags = TextMeshProvider::CalcVectorParams(layer, ent, scaling, layer.SizeScale, M,
+                                                                       pRenderer2D, meshGenFlags, keyData);
 
-            layer.pMeshKey = *keyManager->CreateMatchingKey(layer.pShape, 0, keyFlags, keyData, cfg);
-            if (!layer.pMeshKey->pMesh)
-                layer.pMeshKey->pMesh = *SF_HEAP_AUTO_NEW(this)
-                    Mesh(pRenderer2D, layer.pMeshKey->GetKeySet(), scaling, 0, 0, meshGenFlags);
-            layer.pMesh = (Mesh*)layer.pMeshKey->pMesh.GetPtr();
+                MeshKeyManager*        man = pRenderer2D->GetMeshKeyManager();
+                const ToleranceParams& cfg = pRenderer2D->GetToleranceParams();
+
+                if (layer.pMeshKey && layer.pMeshKey->Match(0, flags, keyData, cfg))
+                {
+                }
+                else
+                {
+                    layer.pMeshKey = *man->CreateMatchingKey(layer.pShape, 0, keyFlags, keyData, cfg);
+
+                    if (!layer.pMeshKey->pMesh)
+                    {
+                        layer.pMeshKey->pMesh = *SF_HEAP_AUTO_NEW(this)
+                            Mesh(pRenderer2D, layer.pMeshKey->GetKeySet(), scaling, 0, 0, meshGenFlags);
+                    }
+                    layer.pMesh = (Mesh*)layer.pMeshKey->pMesh.GetPtr();
+                }
+            }
         }
     }
 
