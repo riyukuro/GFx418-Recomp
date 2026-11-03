@@ -70,11 +70,20 @@ void* FUN_142620240(void* self, unsigned flags)
     return self;
 }
 
+// ArrayDefaultPolicy: shrinks, no minimum capacity. The SDK Reserve tests both first; that test is what puts the
+// AllocInfo in the fourth home slot.
+static inline bool RawNeverShrinking() { return false; }
+static inline U    RawMinCapacity() { return 0; }
+
 // Array::Reserve for POD-like elements: capacity rounded up to four, freed at zero. The exe keeps one full copy per
 // instance.
 #define RAW_RESERVE(name, Elem)                                                              \
     void name(U* array, void* heapOwner, U n)                                                \
     {                                                                                        \
+        if (RawNeverShrinking() && n < array[2])                                             \
+            return;                                                                          \
+        if (n < RawMinCapacity())                                                            \
+            n = RawMinCapacity();                                                            \
         if (n == 0)                                                                          \
         {                                                                                    \
             if (array[0])                                                                    \
@@ -96,12 +105,6 @@ void* FUN_142620240(void* self, unsigned flags)
         }                                                                                    \
     }
 
-// MS2-FUNCTIONAL 0x142623d00: one stack slot: the exe builds the AllocInfo in the fourth home slot, ours in the third
-// (the SDK ArrayDataBase::Reserve instantiated as is lands there too); same code otherwise.
-// MS2-FUNCTIONAL 0x142623da0: as 0x142623d00 (AllocInfo slot).
-// MS2-FUNCTIONAL 0x142623e40: as 0x142623d00 (AllocInfo slot).
-// MS2-FUNCTIONAL 0x142623ee0: as 0x142623d00 (AllocInfo slot).
-// MS2-FUNCTIONAL 0x142623f80: as 0x142623d00 (AllocInfo slot).
 // @0x142623d00
 RAW_RESERVE(FUN_142623d00, 0x18)
 // @0x142623da0
