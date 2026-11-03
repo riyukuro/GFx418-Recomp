@@ -501,6 +501,7 @@ ShapePathType AddStrokeToSorter(const ShapeDataInterface& shape, ShapePosInfo* p
                                 const Transformer& trans, StrokeGenerator* gen)
 {
     ShapePathType pathType;
+    ShapePosInfo  prevPos(0u); // as the SDK default ctor, which ours lacks
     float         coord[Edge_MaxCoord];
     unsigned      styles[3];
     bool          first = true;
@@ -508,11 +509,16 @@ ShapePathType AddStrokeToSorter(const ShapeDataInterface& shape, ShapePosInfo* p
     gen->mStrokeSorter.Clear();
     for (;;)
     {
-        ShapePosInfo last = *pos;
-        pathType          = shape.ReadPathInfo(pos, coord, styles);
-        if (pathType == Shape_EndShape || (pathType == Shape_NewLayer && !first))
+        prevPos  = *pos;
+        pathType = shape.ReadPathInfo(pos, coord, styles);
+        if (pathType == Shape_EndShape)
         {
-            *pos = last;
+            *pos = prevPos;
+            break;
+        }
+        if (pathType == Shape_NewLayer && !first)
+        {
+            *pos = prevPos;
             break;
         }
         if (styles[2] == strokeStyle)
