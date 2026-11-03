@@ -22,6 +22,30 @@ struct Unk_M2vCtx;
 #endif
 // A big-endian stream word as the CRI bit reader loads it: the first byte sign-extended, 32-bit shifts.
 #define CRI06_BE32(a, b, c, d) ((((((int)(signed char)(a) << 8) | (b)) << 8 | (c)) << 8) | (d))
+
+// A bit-reader step of the CRI header parsers: n bits off the top of buf into dst, pulling the next big-endian
+// word into nxt when buf runs out. The caller's locals hold the state: pos (bits used of the word in buf), buf,
+// nxt and the read pointer p.
+#define CRI06_GETBITS(dst, n) \
+  if (pos >= 32 - (n)) { \
+    pos = pos - (32 - (n)); \
+    if (pos != 0) { \
+      dst = (nxt >> ((n) - pos) | buf) >> (32 - (n)); \
+      buf = nxt << pos; \
+    } \
+    else { \
+      dst = buf >> (32 - (n)); \
+      buf = nxt; \
+    } \
+    nxt = CRI06_BE32(p[0],p[1],p[2],p[3]); \
+    p = p + 4; \
+  } \
+  else { \
+    dst = buf >> (32 - (n)); \
+    pos = pos + (n); \
+    buf = buf << (n); \
+  }
+
 // A byte-stream chunk as FUN_140069020 splits it: data pointer and a 32-bit size, 16 bytes on the stack.
 // Typed by its fields rather than as a byte array, which the exe would not guard with a /GS cookie.
 struct cri06_chunk { cri_u1* data; int size; };
@@ -1069,28 +1093,18 @@ void calcQuantMatrix(cri_any cri_p0)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: written as CRI06_GETBITS steps (VS2008 build, our toolset differs). What is left is register
+// choice (the exe keeps pos in edi and p in rbx, ours pos in ebx and p in rdi) and a loop-alignment nop of ours.
 // @0x140054cf0
 longlong parseShc(cri_any cri_p0, cri_any cri_p1)
 {
   uint *arg1 = cri_p0;
   ulonglong arg2 = cri_p1;
-  cri_u1 *pu_v1;
-  cri_u1 *pu_v2;
-  cri_u1 u_v3;
-  ulonglong u_v4;
-  byte b_v5;
-  uint u_v6;
-  cri_u1 *pu_v7;
-  cri_u1 *pu_v8;
-  longlong l_v9;
-  int i_v10;
-  uint u_v11;
-  ulonglong u_v12;
-  uint u_v13;
-  ulonglong u_v14;
-  uint *pu_v15;
-  longlong l_v16;
+  cri_u1 *p;
+  int pos;
+  uint buf;
+  uint nxt;
+  int i;
   
   arg1[0x329] = arg1[0x329] + 1;
   arg1[0x347] = 0;
@@ -1101,299 +1115,39 @@ longlong parseShc(cri_any cri_p0, cri_any cri_p1)
     arg1[0x343] = arg1[0x343] + 1;
   }
   resetQuantiserMatrix(arg1);  // the exe passes rcx through
-  pu_v7 = (cri_u1 *)(arg2 & 0xfffffffffffffffc);
-  i_v10 = (int)arg2 * 8 + (int)pu_v7 * -8;
-  b_v5 = (byte)i_v10;
-  u_v11 = CRI06_BE32(*pu_v7,pu_v7[1],pu_v7[2],pu_v7[3]) << (b_v5 & 0x1f);
-  u_v13 = CRI06_BE32(pu_v7[4],pu_v7[5],pu_v7[6],pu_v7[7]);
-  if (i_v10 == 0) {
-    *arg1 = u_v11;
+  p = (cri_u1 *)(arg2 & 0xfffffffffffffffc);
+  pos = (int)arg2 * 8 - (int)p * 8;
+  buf = CRI06_BE32(p[0],p[1],p[2],p[3]) << pos;
+  nxt = CRI06_BE32(p[4],p[5],p[6],p[7]);
+  if (pos != 0) {
+    arg1[0] = nxt >> (32 - pos) | buf;
+    nxt = nxt << pos;
   }
   else {
-    u_v6 = u_v13 >> (0x20 - b_v5 & 0x1f);
-    u_v13 = u_v13 << (b_v5 & 0x1f);
-    *arg1 = u_v6 | u_v11;
+    arg1[0] = buf;
   }
-  pu_v8 = pu_v7 + 0xc;
-  u_v11 = CRI06_BE32(pu_v7[8],pu_v7[9],pu_v7[10],pu_v7[0xb]);
-  if (i_v10 < 0x14) {
-    i_v10 = i_v10 + 0xc;
-    u_v6 = u_v13 << 0xc;
-    arg1[1] = u_v13 >> 0x14;
-  }
-  else {
-    i_v10 = i_v10 + -0x14;
-    if (i_v10 == 0) {
-      arg1[1] = u_v13 >> 0x14;
-    }
-    else {
-      u_v6 = u_v11 >> (0xc - (byte)i_v10 & 0x1f);
-      u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-      arg1[1] = (u_v6 | u_v13) >> 0x14;
-    }
-    u_v3 = *pu_v8;
-    pu_v8 = pu_v7 + 0x10;
-    u_v6 = u_v11;
-    u_v11 = CRI06_BE32(u_v3,pu_v7[0xd],pu_v7[0xe],pu_v7[0xf]);
-  }
-  if (i_v10 < 0x14) {
-    i_v10 = i_v10 + 0xc;
-    u_v13 = u_v6 << 0xc;
-    arg1[2] = u_v6 >> 0x14;
-  }
-  else {
-    i_v10 = i_v10 + -0x14;
-    if (i_v10 == 0) {
-      arg1[2] = u_v6 >> 0x14;
-    }
-    else {
-      u_v13 = u_v11 >> (0xc - (byte)i_v10 & 0x1f);
-      u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-      arg1[2] = (u_v13 | u_v6) >> 0x14;
-    }
-    pu_v7 = pu_v8 + 1;
-    u_v3 = *pu_v8;
-    pu_v1 = pu_v8 + 2;
-    pu_v2 = pu_v8 + 3;
-    pu_v8 = pu_v8 + 4;
-    u_v13 = u_v11;
-    u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-  }
-  if (i_v10 < 0x1c) {
-    i_v10 = i_v10 + 4;
-    u_v6 = u_v13 << 4;
-    arg1[3] = u_v13 >> 0x1c;
-  }
-  else {
-    i_v10 = i_v10 + -0x1c;
-    if (i_v10 == 0) {
-      arg1[3] = u_v13 >> 0x1c;
-    }
-    else {
-      u_v6 = u_v11 >> (4 - (byte)i_v10 & 0x1f);
-      u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-      arg1[3] = (u_v6 | u_v13) >> 0x1c;
-    }
-    pu_v7 = pu_v8 + 1;
-    u_v3 = *pu_v8;
-    pu_v1 = pu_v8 + 2;
-    pu_v2 = pu_v8 + 3;
-    pu_v8 = pu_v8 + 4;
-    u_v6 = u_v11;
-    u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-  }
-  if (i_v10 < 0x1c) {
-    i_v10 = i_v10 + 4;
-    u_v13 = u_v6 << 4;
-    arg1[4] = u_v6 >> 0x1c;
-  }
-  else {
-    i_v10 = i_v10 + -0x1c;
-    if (i_v10 == 0) {
-      arg1[4] = u_v6 >> 0x1c;
-    }
-    else {
-      u_v13 = u_v11 >> (4 - (byte)i_v10 & 0x1f);
-      u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-      arg1[4] = (u_v13 | u_v6) >> 0x1c;
-    }
-    pu_v7 = pu_v8 + 1;
-    u_v3 = *pu_v8;
-    pu_v1 = pu_v8 + 2;
-    pu_v2 = pu_v8 + 3;
-    pu_v8 = pu_v8 + 4;
-    u_v13 = u_v11;
-    u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-  }
-  if (i_v10 < 0xe) {
-    i_v10 = i_v10 + 0x12;
-    u_v6 = u_v13 << 0x12;
-    arg1[5] = u_v13 >> 0xe;
-  }
-  else {
-    i_v10 = i_v10 + -0xe;
-    if (i_v10 == 0) {
-      arg1[5] = u_v13 >> 0xe;
-    }
-    else {
-      u_v6 = u_v11 >> (0x12 - (byte)i_v10 & 0x1f);
-      u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-      arg1[5] = (u_v6 | u_v13) >> 0xe;
-    }
-    pu_v7 = pu_v8 + 1;
-    u_v3 = *pu_v8;
-    pu_v1 = pu_v8 + 2;
-    pu_v2 = pu_v8 + 3;
-    pu_v8 = pu_v8 + 4;
-    u_v6 = u_v11;
-    u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-  }
-  if (i_v10 < 0x1f) {
-    i_v10 = i_v10 + 1;
-    u_v13 = u_v6 * 2;
-    arg1[6] = u_v6 >> 0x1f;
-  }
-  else {
-    i_v10 = i_v10 + -0x1f;
-    if (i_v10 == 0) {
-      arg1[6] = u_v6 >> 0x1f;
-    }
-    else {
-      u_v13 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-      u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-      arg1[6] = (u_v13 | u_v6) >> 0x1f;
-    }
-    pu_v7 = pu_v8 + 1;
-    u_v3 = *pu_v8;
-    pu_v1 = pu_v8 + 2;
-    pu_v2 = pu_v8 + 3;
-    pu_v8 = pu_v8 + 4;
-    u_v13 = u_v11;
-    u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-  }
-  if (i_v10 < 0x16) {
-    i_v10 = i_v10 + 10;
-    u_v6 = u_v13 << 10;
-    arg1[7] = u_v13 >> 0x16;
-  }
-  else {
-    i_v10 = i_v10 + -0x16;
-    if (i_v10 == 0) {
-      arg1[7] = u_v13 >> 0x16;
-    }
-    else {
-      u_v6 = u_v11 >> (10 - (byte)i_v10 & 0x1f);
-      u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-      arg1[7] = (u_v6 | u_v13) >> 0x16;
-    }
-    pu_v7 = pu_v8 + 1;
-    u_v3 = *pu_v8;
-    pu_v1 = pu_v8 + 2;
-    pu_v2 = pu_v8 + 3;
-    pu_v8 = pu_v8 + 4;
-    u_v6 = u_v11;
-    u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-  }
-  if (i_v10 < 0x1f) {
-    i_v10 = i_v10 + 1;
-    u_v13 = u_v6 * 2;
-    arg1[8] = u_v6 >> 0x1f;
-  }
-  else {
-    i_v10 = i_v10 + -0x1f;
-    if (i_v10 == 0) {
-      arg1[8] = u_v6 >> 0x1f;
-    }
-    else {
-      u_v13 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-      u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-      arg1[8] = (u_v13 | u_v6) >> 0x1f;
-    }
-    pu_v7 = pu_v8 + 1;
-    u_v3 = *pu_v8;
-    pu_v1 = pu_v8 + 2;
-    pu_v2 = pu_v8 + 3;
-    pu_v8 = pu_v8 + 4;
-    u_v13 = u_v11;
-    u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-  }
-  if (i_v10 < 0x1f) {
-    i_v10 = i_v10 + 1;
-    u_v6 = u_v13 * 2;
-    arg1[9] = u_v13 >> 0x1f;
-  }
-  else {
-    i_v10 = i_v10 + -0x1f;
-    if (i_v10 == 0) {
-      arg1[9] = u_v13 >> 0x1f;
-    }
-    else {
-      u_v6 = u_v11 >> (1 - (byte)i_v10 & 0x1f);
-      u_v11 = u_v11 << ((byte)i_v10 & 0x1f);
-      arg1[9] = (u_v6 | u_v13) >> 0x1f;
-    }
-    pu_v7 = pu_v8 + 1;
-    u_v3 = *pu_v8;
-    pu_v1 = pu_v8 + 2;
-    pu_v2 = pu_v8 + 3;
-    pu_v8 = pu_v8 + 4;
-    u_v6 = u_v11;
-    u_v11 = CRI06_BE32(u_v3,*pu_v7,*pu_v1,*pu_v2);
-  }
-  u_v12 = (ulonglong)u_v11;
-  l_v9 = 0x40;
+  buf = nxt;
+  nxt = CRI06_BE32(p[8],p[9],p[10],p[11]);
+  p = p + 12;
+  CRI06_GETBITS(arg1[1], 12);
+  CRI06_GETBITS(arg1[2], 12);
+  CRI06_GETBITS(arg1[3], 4);
+  CRI06_GETBITS(arg1[4], 4);
+  CRI06_GETBITS(arg1[5], 18);
+  CRI06_GETBITS(arg1[6], 1);
+  CRI06_GETBITS(arg1[7], 10);
+  CRI06_GETBITS(arg1[8], 1);
+  CRI06_GETBITS(arg1[9], 1);
   if (arg1[9] != 0) {
-    pu_v15 = arg1 + 10;
-    l_v16 = 0x40;
-    do {
-      if (i_v10 < 0x18) {
-        i_v10 = i_v10 + 8;
-        u_v11 = u_v6 >> 0x18;
-        u_v6 = u_v6 << 8;
-        *pu_v15 = u_v11;
-      }
-      else {
-        i_v10 = i_v10 + -0x18;
-        u_v11 = (uint)u_v12;
-        if (i_v10 == 0) {
-          *pu_v15 = u_v6 >> 0x18;
-          u_v6 = u_v11;
-        }
-        else {
-          *pu_v15 = (u_v11 >> (8 - (byte)i_v10 & 0x1f) | u_v6) >> 0x18;
-          u_v6 = u_v11 << ((byte)i_v10 & 0x1f);
-        }
-        u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-        pu_v8 = pu_v8 + 4;
-      }
-      pu_v15 = pu_v15 + 1;
-      l_v16 = l_v16 + -1;
-    } while (l_v16 != 0);
-  }
-  if (i_v10 < 0x1f) {
-    i_v10 = i_v10 + 1;
-    u_v14 = (ulonglong)(u_v6 * 2);
-    arg1[0x4a] = u_v6 >> 0x1f;
-  }
-  else {
-    i_v10 = i_v10 + -0x1f;
-    if (i_v10 == 0) {
-      arg1[0x4a] = u_v6 >> 0x1f;
-      u_v14 = u_v12;
+    for (i = 0; i < 0x40; i++) {
+      CRI06_GETBITS(arg1[10 + i], 8);
     }
-    else {
-      arg1[0x4a] = ((uint)u_v12 >> (1 - (byte)i_v10 & 0x1f) | u_v6) >> 0x1f;
-      u_v14 = (ulonglong)((uint)u_v12 << ((byte)i_v10 & 0x1f));
-    }
-    u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-    pu_v8 = pu_v8 + 4;
   }
+  CRI06_GETBITS(arg1[0x4a], 1);
   if (arg1[0x4a] != 0) {
-    pu_v15 = arg1 + 0x4b;
-    do {
-      u_v11 = (uint)u_v14;
-      if (i_v10 < 0x18) {
-        i_v10 = i_v10 + 8;
-        u_v4 = u_v14 >> 0x18;
-        u_v14 = (ulonglong)(u_v11 << 8);
-        *pu_v15 = (uint)u_v4;
-      }
-      else {
-        i_v10 = i_v10 + -0x18;
-        if (i_v10 == 0) {
-          *pu_v15 = u_v11 >> 0x18;
-          u_v14 = u_v12;
-        }
-        else {
-          *pu_v15 = ((uint)u_v12 >> (8 - (byte)i_v10 & 0x1f) | u_v11) >> 0x18;
-          u_v14 = (ulonglong)((uint)u_v12 << ((byte)i_v10 & 0x1f));
-        }
-        u_v12 = (ulonglong)CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-        pu_v8 = pu_v8 + 4;
-      }
-      pu_v15 = pu_v15 + 1;
-      l_v9 = l_v9 + -1;
-    } while (l_v9 != 0);
+    for (i = 0; i < 0x40; i++) {
+      CRI06_GETBITS(arg1[0x4b + i], 8);
+    }
   }
   calcHvSize(arg1);
   calcQuantMatrix(arg1);  // calcHvSize keeps rcx
@@ -1403,17 +1157,18 @@ longlong parseShc(cri_any cri_p0, cri_any cri_p1)
   if (arg1[0x1b2] == 0) {
     arg1[0x343] = arg1[0x343] + 1;
   }
-  if ((arg1[3] == 0) || (4 < arg1[3])) {
+  if ((arg1[3] == 0) || (arg1[3] >= 5)) {
     arg1[0x343] = arg1[0x343] + 1;
   }
-  if ((arg1[4] == 0) || (8 < arg1[4])) {
+  if ((arg1[4] == 0) || (arg1[4] >= 9)) {
     arg1[0x343] = arg1[0x343] + 1;
   }
   arg1[0x1c2] = 0x10;
-  i_v10 = i_v10 + -0x39 + ((int)pu_v8 - (int)arg2) * 8;
   arg1[0x1c3] = 1;
-  return (longlong)((int)(i_v10 + (i_v10 >> 0x1f & 7U)) >> 3) + arg2;
+  pos = pos + ((int)p - (int)arg2) * 8 - 0x39;
+  return (longlong)(pos / 8) + arg2;
 }
+
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140055410
@@ -3452,29 +3207,6 @@ longlong parseEsc(cri_any cri_p0, cri_any cri_p1)
   *(cri_u4 *)((char *)arg1 + 0x70c) = 0;
   return (longlong)((int)(i_v10 + (i_v10 >> 0x1f & 7U)) >> 3) + arg2;
 }
-
-// A bit-reader step of the CRI header parsers: n bits off the top of buf into dst, pulling the next big-endian
-// word into nxt when buf runs out. The caller's locals hold the state: pos (bits used of the word in buf), buf,
-// nxt and the read pointer p.
-#define CRI06_GETBITS(dst, n) \
-  if (pos >= 32 - (n)) { \
-    pos = pos - (32 - (n)); \
-    if (pos != 0) { \
-      dst = (nxt >> ((n) - pos) | buf) >> (32 - (n)); \
-      buf = nxt << pos; \
-    } \
-    else { \
-      dst = buf >> (32 - (n)); \
-      buf = nxt; \
-    } \
-    nxt = CRI06_BE32(p[0],p[1],p[2],p[3]); \
-    p = p + 4; \
-  } \
-  else { \
-    dst = buf >> (32 - (n)); \
-    pos = pos + (n); \
-    buf = buf << (n); \
-  }
 
 // MS2-FUNCTIONAL: written as CRI06_GETBITS steps (VS2008 build, our toolset differs). What is left is register
 // choice: the exe keeps p in r10 and arg1 in rbx, ours p in rbx and arg1 in r11.
