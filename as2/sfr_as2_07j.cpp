@@ -245,7 +245,6 @@ ASString Value::ToStringImpl(Environment* penv, int precision, bool debug) const
 
 // A host value as a script value: managed strings keep their node, the others are made in the movie's string
 // manager; objects and arrays are the AS objects they were made from, display objects their character handles.
-// MS2-FUNCTIONAL: the setter tail calls are laid out differently; same behavior
 // @0x142992ee0
 void MovieRoot::Value2ASValue(const GFx::Value& gfxVal, Value* pdestVal)
 {
@@ -271,19 +270,21 @@ void MovieRoot::Value2ASValue(const GFx::Value& gfxVal, Value* pdestVal)
         break;
     case GFx::Value::VT_String:
     {
-        ASStringNode* pnode = gfxVal.IsManagedValue()
-                                  ? reinterpret_cast<ASStringNode*>(const_cast<char**>(gfxVal.mValue.pStringManaged))
-                                  : GetStringManager()->pStringManager->CreateStringNode(gfxVal.mValue.pString);
-        pdestVal->SetString(ASString(pnode));
+        if (gfxVal.IsManagedValue())
+            pdestVal->SetString(
+                ASString(reinterpret_cast<ASStringNode*>(const_cast<char**>(gfxVal.mValue.pStringManaged))));
+        else
+            pdestVal->SetString(ASString(GetStringManager()->pStringManager->CreateStringNode(gfxVal.mValue.pString)));
         break;
     }
     case GFx::Value::VT_StringW:
     {
-        ASStringNode* pnode =
-            gfxVal.IsManagedValue()
-                ? *reinterpret_cast<ASStringNode* const*>(reinterpret_cast<const UByte*>(gfxVal.mValue.pStringW) - 8)
-                : GetStringManager()->pStringManager->CreateStringNode(gfxVal.mValue.pStringW, -1);
-        pdestVal->SetString(ASString(pnode));
+        if (gfxVal.IsManagedValue())
+            pdestVal->SetString(ASString(
+                *reinterpret_cast<ASStringNode* const*>(reinterpret_cast<const UByte*>(gfxVal.mValue.pStringW) - 8)));
+        else
+            pdestVal->SetString(
+                ASString(GetStringManager()->pStringManager->CreateStringNode(gfxVal.mValue.pStringW, -1)));
         break;
     }
     case GFx::Value::VT_Object:
