@@ -442,27 +442,24 @@ XmlNodeObject::XmlNodeObject(Environment* penv) : Object(penv), pRealNode(0)
 
 // The prototype holds the methods and an undefined placeholder for every node member (only attributes, nodeName
 // and nodeValue are writable).
-// MS2-FUNCTIONAL: register allocation of the inlined member-table setup differs
 // @0x14299c920
 XmlNodeProto::XmlNodeProto(ASStringContext* psc, Object* prototype, const FunctionRef& constructor)
     : Prototype<XmlNodeObject>(psc, prototype, constructor)
 {
-    const PropFlags readOnly(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete);
-    const PropFlags writable(PropFlags::PropFlag_DontDelete);
-    InitFunctionMembers(this, psc, FunctionTable, readOnly);
-    Object::SetMemberRaw(psc, psc->CreateConstString("attributes"), Value(), writable);
-    Object::SetMemberRaw(psc, psc->CreateConstString("childNodes"), Value(), readOnly);
-    Object::SetMemberRaw(psc, psc->CreateConstString("firstChild"), Value(), readOnly);
-    Object::SetMemberRaw(psc, psc->CreateConstString("lastChild"), Value(), readOnly);
-    Object::SetMemberRaw(psc, psc->CreateConstString("localName"), Value(), readOnly);
-    Object::SetMemberRaw(psc, psc->CreateConstString("namespaceURI"), Value(), readOnly);
-    Object::SetMemberRaw(psc, psc->CreateConstString("nextSibling"), Value(), readOnly);
-    Object::SetMemberRaw(psc, psc->CreateConstString("nodeName"), Value(), writable);
-    Object::SetMemberRaw(psc, psc->CreateConstString("nodeType"), Value(), readOnly);
-    Object::SetMemberRaw(psc, psc->CreateConstString("nodeValue"), Value(), writable);
-    Object::SetMemberRaw(psc, psc->CreateConstString("parentNode"), Value(), readOnly);
-    Object::SetMemberRaw(psc, psc->CreateConstString("prefix"), Value(), readOnly);
-    Object::SetMemberRaw(psc, psc->CreateConstString("previousSibling"), Value(), readOnly);
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
+    Object::SetMemberRaw(psc, psc->pContext->GetStringManager()->pStringManager->CreateConstString("attributes", 10), Value(), PropFlags(PropFlags::PropFlag_DontDelete));
+    Object::SetMemberRaw(psc, psc->pContext->GetStringManager()->pStringManager->CreateConstString("childNodes", 10), Value(), PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
+    Object::SetMemberRaw(psc, psc->pContext->GetStringManager()->pStringManager->CreateConstString("firstChild", 10), Value(), PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
+    Object::SetMemberRaw(psc, psc->pContext->GetStringManager()->pStringManager->CreateConstString("lastChild", 9), Value(), PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
+    Object::SetMemberRaw(psc, psc->pContext->GetStringManager()->pStringManager->CreateConstString("localName", 9), Value(), PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
+    Object::SetMemberRaw(psc, psc->pContext->GetStringManager()->pStringManager->CreateConstString("namespaceURI", 12), Value(), PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
+    Object::SetMemberRaw(psc, psc->pContext->GetStringManager()->pStringManager->CreateConstString("nextSibling", 11), Value(), PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
+    Object::SetMemberRaw(psc, psc->pContext->GetStringManager()->pStringManager->CreateConstString("nodeName", 8), Value(), PropFlags(PropFlags::PropFlag_DontDelete));
+    Object::SetMemberRaw(psc, psc->pContext->GetStringManager()->pStringManager->CreateConstString("nodeType", 8), Value(), PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
+    Object::SetMemberRaw(psc, psc->pContext->GetStringManager()->pStringManager->CreateConstString("nodeValue", 9), Value(), PropFlags(PropFlags::PropFlag_DontDelete));
+    Object::SetMemberRaw(psc, psc->pContext->GetStringManager()->pStringManager->CreateConstString("parentNode", 10), Value(), PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
+    Object::SetMemberRaw(psc, psc->pContext->GetStringManager()->pStringManager->CreateConstString("prefix", 6), Value(), PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
+    Object::SetMemberRaw(psc, psc->pContext->GetStringManager()->pStringManager->CreateConstString("previousSibling", 15), Value(), PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
 }
 
 // @0x14299d010
