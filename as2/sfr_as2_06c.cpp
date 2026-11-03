@@ -98,7 +98,6 @@ bool GFxAS2LoadQueueEntryMT_LoadCSS::LoadFinished()
 }
 
 // Splits "name=value&name=value" into members of pobj (a CR counts as a LF). False for empty data.
-// MS2-FUNCTIONAL: the flags argument is stored before the value string is made in the obj (scheduling only).
 // @0x1429670e0
 bool LoadVarsProto::LoadVariables(Environment* penv, ObjectInterface* pobj, const String& data)
 {
@@ -115,8 +114,12 @@ bool LoadVarsProto::LoadVariables(Environment* penv, ObjectInterface* pobj, cons
             c = '\n';
         if (c == '&')
         {
-            pobj->SetMember(penv, penv->CreateString(name.ToCStr(), name.GetSize()),
-                            Value(penv->CreateString(value.ToCStr(), value.GetSize())));
+            {
+                ASString  str = penv->CreateString(value.ToCStr(), value.GetSize());
+                Value     v(str);
+                PropFlags flags;
+                pobj->SetMember(penv, penv->CreateString(name.ToCStr(), name.GetSize()), v, flags);
+            }
             name.Clear();
             value.Clear();
             inName = true;
@@ -133,8 +136,10 @@ bool LoadVarsProto::LoadVariables(Environment* penv, ObjectInterface* pobj, cons
     }
     if (name.GetLength())
     {
-        pobj->SetMember(penv, penv->CreateString(name.ToCStr(), name.GetSize()),
-                        Value(penv->CreateString(value.ToCStr(), value.GetSize())));
+        ASString  str = penv->CreateString(value.ToCStr(), value.GetSize());
+        Value     v(str);
+        PropFlags flags;
+        pobj->SetMember(penv, penv->CreateString(name.ToCStr(), name.GetSize()), v, flags);
     }
     return true;
 }
