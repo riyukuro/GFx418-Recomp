@@ -426,10 +426,9 @@ public:
     // Enter/Space press a focused clip that is not a button (alwaysEnableKeyboardPress extension property).
     bool IsAlwaysEnableKeyboardPress() const
     {
-        int v = (Flags >> Shift_AlwaysEnableKeyboardPress) & 3;
-        if (v == 3)
-            v = -1;
-        return v == 1;
+        // G_Is3WayFlagTrue (GFx_Types.h)
+        UInt32 v = ((Flags >> Shift_AlwaysEnableKeyboardPress) & 3);
+        return ((v == 3) ? -1 : int(v)) == 1;
     }
     // Defined where InteractiveObject is complete (sfr_gfx_05b).
     inline bool IsFocused(const InteractiveObject* ch, unsigned controllerIdx) const;

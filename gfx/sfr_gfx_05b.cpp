@@ -1378,9 +1378,14 @@ Sprite::TopMostResult Sprite::GetTopMostMouseEntity(const PointF& pt, TopMostDes
     return res;
 }
 
+// MovieImpl::IsKeyboardFocused, inline in the SDK (GFx_PlayerImpl.h) and inlined in the exe.
+static inline bool IsKeyboardFocusedInline(const MovieImpl* proot, const InteractiveObject* ch, unsigned controllerIdx)
+{
+    return proot->IsFocused(ch, controllerIdx) && proot->IsFocusRectShown(controllerIdx);
+}
+
 // Key down also fires the on(keyPress) handlers, once per key (pkeyMask bit 0x10000); Enter or Space on the
 // keyboard-focused clip (focus rect shown and enabled) presses and releases it like a mouse click.
-// MS2-FUNCTIONAL: the exe releases the focus Ptr before the compare and keeps the AVM calls in its own order
 // @0x1425dbf20
 bool Sprite::OnKeyEvent(const EventId& id, int* pkeyMask)
 {
@@ -1397,14 +1402,16 @@ bool Sprite::OnKeyEvent(const EventId& id, int* pkeyMask)
         }
 
         MovieImpl* proot = GetMovieImpl();
-        if (proot->IsFocused(this, id.ControllerIndex) && proot->IsFocusRectShown(id.ControllerIndex) &&
-            (id.KeyCode == 13 || id.KeyCode == 32) && (IsFocusRectEnabled() || proot->IsAlwaysEnableKeyboardPress()))
+        if (IsKeyboardFocusedInline(proot, this, id.ControllerIndex) && (id.KeyCode == 13 || id.KeyCode == 32))
         {
-            EventId evt(id);
-            evt.Id = EventId::Event_Press;
-            GetAvmSprite()->OnEvent(evt);
-            evt.Id = EventId::Event_Release;
-            GetAvmSprite()->OnEvent(evt);
+            if (IsFocusRectEnabled() || proot->IsAlwaysEnableKeyboardPress())
+            {
+                EventId evt(id);
+                evt.Id = EventId::Event_Press;
+                GetAvmSprite()->OnEvent(evt);
+                evt.Id = EventId::Event_Release;
+                GetAvmSprite()->OnEvent(evt);
+            }
         }
         return handled;
     }
