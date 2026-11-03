@@ -3464,36 +3464,29 @@ void FUN_1423cefe0(void* object)
     }
 }
 
-// MS2-FUNCTIONAL: resets the IME manager's four predefined mode records, preserving the executable's growing 16-byte array.
+// Resets the IME manager's four predefined mode records (conversion mode, language) with the SDK array Clear and
+// PushBack (Reserve FUN_1423cc720). The record's padding word is copied as is, as in the exe.
+// MS2-FUNCTIONAL: cl keeps the capacity in a register across the Clear; the exe reloads it at the first PushBack
 // @0x1423cb760
 void FUN_1423cb760(void* object)
 {
-    auto* bytes = static_cast<unsigned char*>(object);
-    auto* array = reinterpret_cast<unsigned long long*>(bytes + 0x170);
-    unsigned long long length = array[1];
-    unsigned long long capacity = array[2];
-    if (length && (capacity & ~1ull)) {
-        Scaleform::Memory::Free(reinterpret_cast<void*>(array[0]));
-        array[0] = 0;
-        array[2] = 0;
-    } else if (!length && !capacity) {
-        cx18_ReserveGH(array, 0, 0x10);
-    }
-    array[1] = 0;
-    if (array[2] < 2) cx18_ReserveGH(array, 1, 0x10);
-    auto append = [array](unsigned a, unsigned b) {
-        unsigned long long next = ++array[1];
-        if (next >= array[2]) cx18_ReserveGH(array, (next >> 2) + next, 0x10);
-        auto* record = reinterpret_cast<unsigned*>(array[0]) + (next - 1) * 4;
-        record[0] = a;
-        record[1] = 0;
-        record[2] = b;
-        record[3] = 0;
-    };
-    append(0x2000, 0x412);
-    append(0x210000, 0x804);
-    append(0x400, 0x411);
-    append(9, 0x404);
+    struct ModeRecord { unsigned conversion; unsigned long long language; };
+    typedef ArrayData<Ime01Pod<0x10>, AllocatorGH_POD<Ime01Pod<0x10>>, ArrayDefaultPolicy> RecordArray;
+    auto& records = *reinterpret_cast<RecordArray*>(static_cast<unsigned char*>(object) + 0x170);
+    records.Resize(0);
+    ModeRecord record;
+    record.conversion = 0x2000;
+    record.language = 0x412;
+    records.PushBack(*reinterpret_cast<const Ime01Pod<0x10>*>(&record));
+    record.conversion = 0x210000;
+    record.language = 0x804;
+    records.PushBack(*reinterpret_cast<const Ime01Pod<0x10>*>(&record));
+    record.conversion = 0x400;
+    record.language = 0x411;
+    records.PushBack(*reinterpret_cast<const Ime01Pod<0x10>*>(&record));
+    record.conversion = 0x9;
+    record.language = 0x404;
+    records.PushBack(*reinterpret_cast<const Ime01Pod<0x10>*>(&record));
 }
 
 // Initializes the shared IME manager state, interns its embedded node, and installs the default conversion records.
