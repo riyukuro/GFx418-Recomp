@@ -558,9 +558,10 @@ LRESULT FUN_1423d41f0(unsigned long long* self, unsigned reason, unsigned long l
     return handled;
 }
 
-// MS2-FUNCTIONAL: destroys the XML node chain after unlinking each DOM string node from its hash table.
+// MS2-FUNCTIONAL: destroys the XML node chain after unlinking each DOM string node from its hash table. noinline:
+// FUN_1423c8bb0 calls it out of line, as the exe does.
 // @0x1423cb0f0
-void FUN_1423cb0f0(void* self)
+__declspec(noinline) void FUN_1423cb0f0(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
     ::operator delete[](*reinterpret_cast<void**>(bytes + 0x190));
@@ -1429,8 +1430,8 @@ void FUN_1423ca410(void* self, void* movie)
                                                                          Scaleform::GFx::Movie::SV_Sticky);
 }
 
-// MS2-FUNCTIONAL: stores the manager vftable, destroys the XML node chain, then releases the arrays, the packed string, the
-// four member arrays and the hash table (entries marked empty, then freed) in executable order.
+// stores the manager vftable, destroys the XML node chain, then releases the arrays, the packed string, the four member
+// arrays and the hash table (the SDK HashSetBase::Clear: entries marked empty, then freed) in executable order.
 // @0x1423c8bb0
 void FUN_1423c8bb0(unsigned long long* object)
 {
@@ -1446,16 +1447,25 @@ void FUN_1423c8bb0(unsigned long long* object)
     FUN_1422fbf60(object + 8);
     FUN_1422fbf60(object + 5);
     FUN_1422fbf60(object + 2);
-    if (object[1]) {
-        auto* table = reinterpret_cast<unsigned long long*>(object[1]);
-        for (unsigned long long i = 0, n = table[1] + 1; i < n; ++i) {
-            unsigned long long* entry = reinterpret_cast<unsigned long long*>(object[1]) + 2 + i * 2;
-            if (entry[0] != 0xfffffffffffffffeull)
-                entry[0] = 0xfffffffffffffffeull;
+    struct TableHdr { unsigned long long EntryCount, SizeMask; };
+    struct TableEntry { long long NextInChain; unsigned long long Value; bool IsEmpty() const { return NextInChain == -2; } void Clear() { NextInChain = -2; } };
+    struct Table {
+        TableHdr* pTable;
+        TableEntry& E(unsigned long long index) { return *(((TableEntry*)(pTable + 1)) + index); }
+        void Clear()
+        {
+            if (pTable) {
+                for (unsigned long long i = 0, n = pTable->SizeMask; i <= n; i++) {
+                    TableEntry* e = &E(i);
+                    if (!e->IsEmpty())
+                        e->Clear();
+                }
+                Memory::Free(pTable);
+                pTable = 0;
+            }
         }
-        Memory::Free(reinterpret_cast<void*>(object[1]));
-        object[1] = 0;
-    }
+    };
+    reinterpret_cast<Table*>(object + 1)->Clear();
 }
 
 // runs the recovered IME manager teardown and the executable's scalar or sized delete path.
