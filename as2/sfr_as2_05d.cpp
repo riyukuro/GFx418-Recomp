@@ -37,21 +37,18 @@ inline ButtonObject::ButtonObject(GlobalContext* pgc, InteractiveObject* pbutton
 }
 
 // The hand while the button is enabled and its useHandCursor (looked up through the prototype chain) is true.
-// MS2-FUNCTIONAL: same lookups, the exe keeps the value object in the frame differently
 // @0x14294a370
 unsigned AvmButton::GetCursorType() const
 {
     const Environment* penv = GetASEnvironment();
     Value              val;
-    if (penv && (pDispObj->Flags & InteractiveObject::Mask_Enabled))
+    if (penv && ((UByte)(pDispObj->Flags >> 4) & 1))
     {
-        ObjectInterface* pobj = 0;
         if (ASButtonObj)
-            pobj = const_cast<AvmButton*>(this);
+            const_cast<AvmButton*>(this)->GetMemberRaw(const_cast<Environment*>(penv)->GetSC(),
+                                                       penv->GetBuiltin(ASBuiltin_useHandCursor), &val);
         else if (pProto)
-            pobj = pProto;
-        if (pobj)
-            pobj->GetMemberRaw(const_cast<Environment*>(penv)->GetSC(), penv->GetBuiltin(ASBuiltin_useHandCursor), &val);
+            pProto->GetMemberRaw(const_cast<Environment*>(penv)->GetSC(), penv->GetBuiltin(ASBuiltin_useHandCursor), &val);
         if (val.ToBool(penv))
             return 1;
     }
