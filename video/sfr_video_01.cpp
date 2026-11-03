@@ -83,6 +83,7 @@ struct Video01HandleAccess : Scaleform::GFx::DisplayObject
 struct NetStreamPrototypeInitAccess : Scaleform::GFx::AS2::GASPrototypeBase
 {
     using GASPrototypeBase::InitFunctionMembers;
+    using GASPrototypeBase::Init;
 };
 
 static void ReleaseAs2GCObject(void* object)
@@ -4055,17 +4056,22 @@ void VideoCtorFunction::GlobalCtor(const FnCall& fn)
         fn.Result->SetAsObject(SF_HEAP_NEW(fn.Env->GetHeap()) VideoObject(fn.Env));
 }
 
-// MS2-FUNCTIONAL: constructs the NetStream prototype base and initializes its constructor links.
+// constructs the NetStream prototype base and initializes its constructor links.
 // @0x140009e20
 __declspec(noinline) Object* FUN_140009e20(Object* object, ASStringContext* context, Object* prototype,
                       const FunctionRef& constructor)
 {
-    ::new (static_cast<void*>(object)) Prototype<NetStream>(context, prototype, constructor);
+    // the inlined Prototype<NetStream> ctor: the NetStream part, then GASPrototypeBase() at +0xd8 and Init
+    static_cast<NetStream*>(object)->NetStream::NetStream(context, prototype);
     unsigned char* bytes = reinterpret_cast<unsigned char*>(object);
+    unsigned char* base = bytes + 0xd8;
+    reinterpret_cast<FunctionRef*>(base + 0x08)->FunctionRef::FunctionRef();
+    reinterpret_cast<FunctionRef*>(base + 0x20)->FunctionRef::FunctionRef();
+    *reinterpret_cast<void**>(base + 0x38) = 0;
     *reinterpret_cast<void***>(bytes) = &NetStreamPrototypeVtable;
     *reinterpret_cast<void***>(bytes + 0x20) = &NetStreamPrototypeInterfaceVtable;
-    *reinterpret_cast<void***>(bytes + 0xd8) = &NetStreamPrototypeBaseVtable;
-    *reinterpret_cast<unsigned*>(bytes + 0x118) = 0;
+    *reinterpret_cast<void***>(base) = &NetStreamPrototypeBaseVtable;
+    reinterpret_cast<NetStreamPrototypeInitAccess*>(base)->Init(object, context, constructor);
     return object;
 }
 
