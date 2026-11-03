@@ -428,6 +428,7 @@ public:
                        ASYNC_STATUS_ENUM_BE_SINT32 = 0x7FFFFFFF };
     enum SeekOrigin  { SEEK_FROM_BEGIN, SEEK_FROM_CURRENT, SEEK_FROM_END, SEEK_ENUM_BE_SINT32 = 0x7FFFFFFF };
 
+    CriMvFileReaderInterface() {}  // user-provided: the /Od CriMvEasyFileReaderMem ctor calls it (0x14002d220)
     virtual void        Open(CriChar8* fname) = 0;                                          // 0
     virtual void        Close(void) = 0;                                                    // 1
     virtual void        Read(CriUint8* buffer, CriSint64 req_size) = 0;                     // 2
