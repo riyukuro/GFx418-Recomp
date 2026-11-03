@@ -12,7 +12,7 @@
 // MS2-FUNCTIONAL 0x142624f80: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
 // MS2-FUNCTIONAL 0x1426251d0: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
 // MS2-FUNCTIONAL 0x1426255e0: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
-// MS2-FUNCTIONAL 0x142624300: same HashSetBase::Set (one FixedSizeHash, findIndexCore, assign or add); the exe keeps the self and value pointers in rbx/rdi and tail-jumps the found assign (12-14 bytes longer)
+// MS2-FUNCTIONAL 0x142624300: same HashSetBase::Set; the exe stores the NodeRef at entry, ours only on the add path (one nop of alignment too)
 
 #define MS2_RAW_INLINE __forceinline
 #include "sfr_gfx_07raw.h"
@@ -182,20 +182,22 @@ void FUN_142624190(U** self, const U* key, void* const* value)
 // @0x142624300
 void FUN_142624300(U** self, const U* key, const String* value)
 {
-    KeyStringOps::Ref ref = { key, value };
-    UPInt hashValue = FixedSizeHash<U>()(*ref.Key);
+    UPInt hashValue = FixedSizeHash<U>()(*key);
     SPInt index = (SPInt)-1;
 
     if (*self != NULL)
-        index = RawFindIndexCore8(*self, ref.Key, hashValue & (*self)[1], 0x20);
+        index = RawFindIndexCore8(*self, key, hashValue & (*self)[1], 0x20);
 
     if (index >= 0)
     {
-        RawField<AmpStringNode>(RawEntry(*self, (U)index, 0x20), 0x10) = ref;
+        AmpStringNode& node = RawField<AmpStringNode>(RawEntry(*self, (U)index, 0x20), 0x10);
+        node.First  = *key;
+        node.Second = *value;
     }
     else
     {
         // Entry under key doesn't exist.
+        KeyStringOps::Ref ref = { key, value };
         FUN_14261f070(self, self, &ref, hashValue);
     }
 }
