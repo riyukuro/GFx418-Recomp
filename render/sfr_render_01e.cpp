@@ -11,6 +11,7 @@
 // MS2-RANGE: 0x14259d950-0x14259d960 .text$mn
 // MS2-FUNCTIONAL: raw-layout transcriptions of the exe's template instances; the algorithms and effects match.
 
+#define MS2_AS2_VALUE_DTOR_CALL // the exe calls Value::~Value (0x1429260b0) out of line in this TU
 #include "../gfx/sfr_gfx_07raw.h"
 #include "ms2/scaleform/include/gfx/gfx_fontlib.h"
 #include "ms2/scaleform/include/gfx/as2/as2_action.h"
@@ -232,55 +233,36 @@ void FUN_142591a00(U** self, void* ctx, const void* ref, U hash)
 }
 
 // The builtin class registry entry of "Sound": registered on first use, then the class is published as a member.
-// MS2-FUNCTIONAL: register allocation and frame (the exe saves rbx/rsi in home slots and needs no r12); the lookup,
-// the registration and the member publish are the same calls in the same order.
+// MS2-FUNCTIONAL: SDK registry lookup and SetMemberRaw; left: Value type store order around GetStringManager and
+// the early vtable load (r10) for the SetMemberRaw call.
 // @0x1425916c0
 void FUN_1425916c0(void* self, void* psc, void* object)
 {
-    char* sm = reinterpret_cast<char*>(reinterpret_cast<AS2::GlobalContext*>(self)->GetStringManager());
-    U* table = RawField<U*>(self, 0x20);
-    void* key = RawField<void*>(sm, 0x40);
-    char* found = 0;
-    if (table)
+    AS2::GlobalContext* pgc = reinterpret_cast<AS2::GlobalContext*>(self);
+    const ASString& name = *reinterpret_cast<const ASString*>((char*)pgc->GetStringManager() + 0x40);
+    if (!pgc->BuiltinClassesRegistry.Get(name))
     {
-        U hash = NodeHash(key);
-        U mask = table[1];
-        U idx = hash & mask;
-        char* e = ClassEntry(table, idx);
-        if (*(SPInt*)e != -2 && (NodeHash(RawField<void*>(e, 8)) & mask) == idx)
         {
-            U at = idx;
-            while ((NodeHash(RawField<void*>(e, 8)) & mask) != idx || RawField<void*>(e, 8) != key)
-            {
-                at = *(U*)e;
-                if (at == (U)-1)
-                    goto notFound;
-                e = ClassEntry(table, at);
-            }
-            if ((SPInt)at >= 0)
-                found = (char*)table + 0x18 + at * 0x20;
+            struct { void* Key; U* Value; } ref;
+            U entry[2];
+            entry[0] = (U)&AS2::SoundCtorFunction::Register;
+            entry[1] = 0;
+            ref.Key = &RawField<void*>(reinterpret_cast<AS2::GlobalContext*>(self)->GetStringManager(), 0x40);
+            ref.Value = entry;
+            FUN_142591a00(RawFieldPtr<U*>(self, 0x20), RawFieldPtr<void>(self, 0x20), &ref, NodeHash(*(void**)ref.Key));
+            GCRelease((void*)entry[1]);
         }
-    }
-notFound:
-    if ((found ? found + 8 : 0) == 0)
-    {
-        struct { void* Key; U* Value; } ref;
-        U entry[2];
-        entry[0] = (U)&AS2::SoundCtorFunction::Register;
-        entry[1] = 0;
-        ref.Key = &RawField<void*>(reinterpret_cast<AS2::GlobalContext*>(self)->GetStringManager(), 0x40);
-        ref.Value = entry;
-        FUN_142591a00(RawFieldPtr<U*>(self, 0x20), RawFieldPtr<void>(self, 0x20), &ref, NodeHash(*(void**)ref.Key));
-        GCRelease((void*)entry[1]);
 
         char flags = 0;
-        sm = reinterpret_cast<char*>(reinterpret_cast<AS2::GlobalContext*>(self)->GetStringManager());
-        U value[2];
-        value[0] = 0xb;
-        value[1] = RawField<U>(sm, 0x40);
-        StringAddRef((void*)value[1]);
-        RawFieldPtr<RawObjectInterface>(object, 0x20)->SetMember(psc, sm + 0x40, value, &flags);
-        reinterpret_cast<AS2::Value*>(value)->~Value();
+        {
+            AS2::Value value;
+            value.T.Type = AS2::Value::FUNCTIONNAME;
+            value.V.pStringNode = RawField<ASStringNode*>(pgc->GetStringManager(), 0x40);
+            value.V.pStringNode->AddRef();
+            const ASString& key = *reinterpret_cast<const ASString*>((char*)pgc->GetStringManager() + 0x40);
+            reinterpret_cast<AS2::Object*>(object)->SetMemberRaw(reinterpret_cast<AS2::ASStringContext*>(psc), key,
+                                                                 value, reinterpret_cast<AS2::PropFlags&>(flags));
+        }
     }
 }
 
