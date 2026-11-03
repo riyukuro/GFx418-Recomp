@@ -1908,20 +1908,18 @@ static __forceinline void FUN_1423cc680(unsigned long long* array, void* heapAdd
 static __forceinline void FUN_1423cc720(unsigned long long* array, void* heapAddr, unsigned long long requested)
 { reinterpret_cast<Ime01ArrayGH<0x10>*>(array)->Reserve(heapAddr, requested); }
 
-// MS2-FUNCTIONAL: trims retained array items, grows through the executable's reserve helper, and stores the new length.
+// Releases the trimmed items, grows through the reserve helper, and stores the new length.
 // @0x1423d9690
 extern "C" __declspec(noinline) void FUN_1423d9690(void* rawArray, void* allocator, unsigned long long length)
 {
     auto* array = static_cast<unsigned long long*>(rawArray);
     unsigned long long oldLength = array[1];
     if (length < oldLength) {
+        void** item = reinterpret_cast<void**>(array[0]) + length;
         unsigned long long count = oldLength - length;
-        if (count) {
-            void** item = reinterpret_cast<void**>(array[0]) + (oldLength - 1);
-            do {
-                if (*item) FUN_14257dcd0(*item);
-                --item;
-            } while (--count);
+        item += count - 1;
+        for (unsigned long long i = 0; i < count; ++i, --item) {
+            if (*item) FUN_14257dcd0(*item);
         }
         if (length < (array[2] >> 1))
             FUN_1423d95f0(array, allocator, length);
