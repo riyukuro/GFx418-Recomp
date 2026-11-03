@@ -565,29 +565,40 @@ static SF_INLINE bool isNaN(Double v)
     return (u.I & 0x7FF0000000000000ULL) == 0x7FF0000000000000ULL && (u.I & 0x000FFFFFFFFFFFFFULL) != 0;
 }
 
-// InstanceTraits::fl::String::Compare (out of line in sfr_as3_03), inlined into String.localeCompare.
+// InstanceTraits::fl::String::Compare (out of line in sfr_as3_03, same SDK body), inlined into String.localeCompare.
 static SF_INLINE SInt32 stringCompare(ASString& l, ASString& r)
 {
-    SInt32 diff = 0;
+    SInt32 result = 0;
+
     if (l == r)
         return 0;
 
-    const char* lp = l.ToCStr();
-    const char* rp = r.ToCStr();
-    UInt32 lc, rc;
-    do
+    const char* l_str = l.ToCStr();
+    const char* r_str = r.ToCStr();
+
+    UInt32 l_char = UTF8Util::DecodeNextChar(&l_str);
+    UInt32 r_char = UTF8Util::DecodeNextChar(&r_str);
+
+    while (!result && l_char && r_char)
     {
-        lc = UTF8Util::DecodeNextChar(&lp);
-        rc = UTF8Util::DecodeNextChar(&rp);
-        if (lc == 0 || rc == 0)
-            goto tail;
-        diff = rc - lc;
-    } while (diff == 0);
-    return diff;
-tail:
-    if (lc != rc)
-        diff = rc == 0 ? -1 : 1;
-    return diff;
+        result = r_char - l_char;
+
+        if (!result)
+        {
+            l_char = UTF8Util::DecodeNextChar(&l_str);
+            r_char = UTF8Util::DecodeNextChar(&r_str);
+        }
+    }
+
+    if (!result && l_char != r_char)
+    {
+        if (r_char == 0)
+            result = -1;
+        else
+            result = 1;
+    }
+
+    return result;
 }
 
 namespace InstanceTraits { namespace fl
@@ -714,7 +725,6 @@ namespace InstanceTraits { namespace fl
         result.SetSInt32(found);
     }
 
-    // MS2-FUNCTIONAL: stack slot order differs (the two strings sit above the shared temporaries in the exe)
     // @0x1423fb960
     void String::AS3localeCompare(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
