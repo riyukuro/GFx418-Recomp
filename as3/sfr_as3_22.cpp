@@ -69,6 +69,8 @@ extern "C" char DAT_1431bcbb0[];   // the sound objects' outermost base
 struct Sd_1431bec40;
 extern Sd_1431bec40 DAT_1431bec40;
 #define AS3AudioListNodeVtable (*reinterpret_cast<void**>(&DAT_1431bec40))
+extern unsigned char DAT_142dc9d48[];
+#define Sfr22RefCountImplCoreVtable (static_cast<void*>(DAT_142dc9d48))
 struct Sd_1431bed18;
 extern Sd_1431bed18 DAT_1431bed18;
 #define AS3SoundRequestVtable (*reinterpret_cast<void**>(&DAT_1431bed18))
@@ -484,66 +486,94 @@ float QuerySoundDuration(void* soundSource)
     return 0.0f;
 }
 
-// MS2-FUNCTIONAL: reads one PCM block, applies the executable's six-sample endian shuffle, writes both FMOD lock regions, and advances the ring offsets.
+// SoundSampleFMODImplAux's fields, from pSound at +0x30.
+struct Sfr22AuxSample
+{
+    void* m_pad[6];
+    FMOD::Sound* pSound;
+    void* m_pad38;
+    void* pStreamer;  // AuxStreamer: GetPCMData is slot 1
+    UInt32 Channels;
+    UInt32 SampleRate;
+    unsigned Bits;
+    UByte* pBlockBuffer;
+    unsigned BlockSize;
+    unsigned SoundLength;
+    int Format;
+    unsigned FillPosition;
+    unsigned TotatBytesRead;
+};
+
+// SoundSampleFMODImplAux::ReadAndFillSound: reads one PCM block, reorders 5.1 channels for FMOD, writes both lock
+// regions, and advances the ring offsets.
 // @0x142745f50
 unsigned FUN_142745f50(void* player)
 {
-    auto* bytes = static_cast<unsigned char*>(player);
-    auto* reader = *reinterpret_cast<void**>(bytes + 0x40);
-    const unsigned requested = *reinterpret_cast<unsigned*>(bytes + 0x60);
-    auto** readerVtable = *reinterpret_cast<void***>(reader);
-    const auto read = reinterpret_cast<unsigned (*)(void*, void*, unsigned)>(readerVtable[1]);
-    unsigned readCount = read(reader, *reinterpret_cast<void**>(bytes + 0x58), requested);
-    auto* buffer = static_cast<unsigned char*>(*reinterpret_cast<void**>(bytes + 0x58));
-    if (readCount < requested)
-        std::memset(buffer + readCount, 0, requested - readCount);
+    Sfr22AuxSample* self = static_cast<Sfr22AuxSample*>(player);
+    void* ptr1, *ptr2;
+    unsigned len1, len2;
+    unsigned got_bytes = reinterpret_cast<unsigned (*)(void*, UByte*, unsigned)>((*reinterpret_cast<void***>(self->pStreamer))[1])(
+        self->pStreamer, self->pBlockBuffer, self->BlockSize);
 
-    if (*reinterpret_cast<int*>(bytes + 0x48) == 6) {
-        if (*reinterpret_cast<int*>(bytes + 0x68) == 5) {
-            for (unsigned pos = 0; pos < readCount; pos += 24) {
-                auto* words = reinterpret_cast<std::uint32_t*>(buffer + pos + 8);
-                std::swap(words[0], words[2]);
-                std::swap(words[1], words[3]);
+    if (got_bytes < self->BlockSize)
+        std::memset(&self->pBlockBuffer[got_bytes], 0, self->BlockSize - got_bytes);
+
+    if (self->Channels == 6)
+    {
+        // CRI:  L,R,Ls,Rs,C,LFE
+        // FMOD: L,R,C,LFE,Ls,Rs
+        if (self->Format == 5)  // FMOD_SOUND_FORMAT_PCMFLOAT
+        {
+            float tmp;
+            float* psample = (float*)self->pBlockBuffer;
+            for (UPInt i = 0; i < got_bytes / 4; i += 6)
+            {
+                tmp = psample[i + 2]; psample[i + 2] = psample[i + 4]; psample[i + 4] = tmp;
+                tmp = psample[i + 3]; psample[i + 3] = psample[i + 5]; psample[i + 5] = tmp;
             }
-        } else {
-            for (unsigned pos = 0; pos < readCount; pos += 12) {
-                auto* words = reinterpret_cast<std::uint16_t*>(buffer + pos + 4);
-                std::swap(words[0], words[2]);
-                std::swap(words[1], words[3]);
+        }
+        else
+        {
+            UInt16 tmp;
+            UInt16* psample = (UInt16*)self->pBlockBuffer;
+            for (UPInt i = 0; i < got_bytes / 2; i += 6)
+            {
+                tmp = psample[i + 2]; psample[i + 2] = psample[i + 4]; psample[i + 4] = tmp;
+                tmp = psample[i + 3]; psample[i + 3] = psample[i + 5]; psample[i + 5] = tmp;
             }
         }
     }
 
-    auto* sound = *reinterpret_cast<void**>(bytes + 0x30);
-    void* first = nullptr;
-    void* second = nullptr;
-    unsigned firstLength = 0, secondLength = 0;
-    if (sound && FUN_1428d8ea8(sound, *reinterpret_cast<unsigned*>(bytes + 0x6c), requested,
-                               &first, &second, &firstLength, &secondLength) == 0) {
-        if (firstLength < requested) {
-            std::memcpy(first, buffer, firstLength);
-            const unsigned remaining = requested - firstLength;
-            const unsigned secondCopy = (remaining < secondLength) ? remaining : secondLength;
-            if (secondCopy)
-                std::memcpy(second, buffer + firstLength, secondCopy);
-            if (secondLength > secondCopy)
-                std::memset(static_cast<unsigned char*>(second) + secondCopy, 0, secondLength - secondCopy);
-        } else {
-            if (requested)
-                std::memcpy(first, buffer, requested);
-            if (firstLength > requested)
-                std::memset(static_cast<unsigned char*>(first) + requested, 0, firstLength - requested);
-            if (secondLength)
-                std::memset(second, 0, secondLength);
+    if (FUN_1428d8ea8(self->pSound, self->FillPosition, self->BlockSize, &ptr1, &ptr2, &len1, &len2) == 0)  // lock
+    {
+        if (self->BlockSize > len1)
+        {
+            std::memcpy(ptr1, self->pBlockBuffer, len1);
+            if (self->BlockSize - len1 > len2)
+            {
+                std::memcpy(ptr2, self->pBlockBuffer + len1, len2);
+            }
+            else
+            {
+                std::memcpy(ptr2, self->pBlockBuffer + len1, self->BlockSize - len1);
+                std::memset(((UByte*)ptr2) + (self->BlockSize - len1), 0, len2 - (self->BlockSize - len1));
+            }
         }
-        if (FUN_1428d8eae(sound, first, second, firstLength, secondLength) != 0)
+        else
+        {
+            std::memcpy(ptr1, self->pBlockBuffer, self->BlockSize);
+            std::memset(((UByte*)ptr1) + self->BlockSize, 0, len1 - self->BlockSize);
+            std::memset(ptr2, 0, len2);
+        }
+        if (FUN_1428d8eae(self->pSound, ptr1, ptr2, len1, len2) != 0)  // unlock
             return 0;
     }
-    *reinterpret_cast<unsigned*>(bytes + 0x6c) += readCount;
-    *reinterpret_cast<unsigned*>(bytes + 0x70) += readCount;
-    if (*reinterpret_cast<unsigned*>(bytes + 0x64) <= *reinterpret_cast<unsigned*>(bytes + 0x6c))
-        *reinterpret_cast<unsigned*>(bytes + 0x6c) -= *reinterpret_cast<unsigned*>(bytes + 0x64);
-    return readCount;
+
+    self->TotatBytesRead += got_bytes;
+    self->FillPosition += got_bytes;
+    if (self->FillPosition >= self->SoundLength)
+        self->FillPosition -= self->SoundLength;
+    return got_bytes;
 }
 
 // MS2-FUNCTIONAL: null-checks the channel and returns the isPlaying flag without checking the FMOD result, like the executable.
@@ -2146,31 +2176,25 @@ void ClearSoundBuffer(void* player)
 
 
 namespace Scaleform {
-// MS2-FUNCTIONAL: prepares the image viewport transform and dispatches the fill and blend operations through the render context.
-// @0x142675790
-void Scaleform::Render::DICommand_Scroll::ExecuteHWCopyAction(Scaleform::Render::DICommandContext& contextOwnerRef, Scaleform::Render::Texture** imageRef, const Scaleform::Render::Matrix2F* stateRef) const
+static __forceinline const Scaleform::Render::Matrix2F Sfr22MulInline(const Scaleform::Render::Matrix2F& m1, const Scaleform::Render::Matrix2F& m2)
 {
-    void* command = const_cast<Scaleform::Render::DICommand_Scroll*>(this);
-    void* contextOwner = &contextOwnerRef;
-    void** image = reinterpret_cast<void**>(imageRef);
-    void* state = const_cast<Scaleform::Render::Matrix2F*>(stateRef);
-    auto* owner = static_cast<unsigned char*>(contextOwner);
-    void* context = *reinterpret_cast<void**>(owner + 8);
-    auto** vtable = *reinterpret_cast<void***>(context);
-    const float measured = reinterpret_cast<float (*)(void*)>(vtable[0x1e0 / sizeof(void*)])(context);
-    const float scaled = measured * ImageViewportBias;
-    struct DrawPayload { std::uint32_t color[4]; float transform[4]; } payload{};
-    std::memcpy(payload.color, ImageViewportColor, sizeof(payload.color));
-    payload.transform[0] = 0.0f;
-    payload.transform[1] = scaled;
-    payload.transform[2] = 0.0f;
-    payload.transform[3] = ImageViewportOrigin - scaled * ImageViewportScale;
-    reinterpret_cast<void (*)(void*, void*, const DrawPayload*, void*)>(vtable[0x188 / sizeof(void*)])(
-        context, *image, &payload, static_cast<unsigned char*>(state) + 0x20);
-    // applyBlendModeImpl(mode, sourceAc = true, forceAc = true)
-    reinterpret_cast<void (*)(void*, unsigned, bool, bool)>(vtable[0x118 / sizeof(void*)])(
-        context, static_cast<unsigned>(*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(
-            *reinterpret_cast<void**>(static_cast<unsigned char*>(command) + 8)) + 0x48) != 0) + 0x0f, true, true);
+    return Scaleform::Render::Matrix2F(m1).Prepend(m2);
+}
+
+// DICommand_Scroll::ExecuteHWCopyAction: copies the scrolled texture back through the HAL, then sets the blend mode.
+// @0x142675790
+void Scaleform::Render::DICommand_Scroll::ExecuteHWCopyAction(Scaleform::Render::DICommandContext& context, Scaleform::Render::Texture** tex, const Scaleform::Render::Matrix2F* texgen) const
+{
+    void* const& pHAL = reinterpret_cast<void* const*>(&context)[1];  // pHAL
+    // HAL virtuals: +0x1e0 GetViewportScaling, +0x188 DrawableCopyback, +0x118 applyBlendMode
+    Matrix2F mvp = Sfr22MulInline(Matrix2F::Scaling(2, reinterpret_cast<float (*)(void*)>((*reinterpret_cast<void***>(pHAL))[0x1e0 / sizeof(void*)])(pHAL) * 2),
+                                  Matrix2F::Translation(-0.5f, -0.5f));
+    reinterpret_cast<void (*)(void*, Texture*, const Matrix2F&, const Matrix2F&)>((*reinterpret_cast<void***>(pHAL))[0x188 / sizeof(void*)])(
+        pHAL, tex[0], mvp, texgen[1]);
+    // applyBlendModeImpl(pImage->IsTransparent() ? Blend_OverwriteAll : Blend_Overwrite, sourceAc = true, forceAc = true)
+    reinterpret_cast<void (*)(void*, unsigned, bool, bool)>((*reinterpret_cast<void***>(pHAL))[0x118 / sizeof(void*)])(
+        pHAL, static_cast<unsigned>(*reinterpret_cast<const unsigned char*>(reinterpret_cast<const unsigned char*>(
+            *reinterpret_cast<void* const*>(reinterpret_cast<const unsigned char*>(this) + 8)) + 0x48) != 0) + 0x0f, true, true);
 }
 
 // DICommand_FillRect::ExecuteSW: clips ApplyRect to the image and fills it, opaque unless the image is transparent.
@@ -2519,7 +2543,18 @@ float QueryAudioElapsedSeconds(void* player)
     return elapsedSeconds;
 }
 
-// MS2-FUNCTIONAL: applies loop bounds in milliseconds and schedules the channel's loop delay from the DSP clock.
+// The sample's sound data (SoundDataBase): the sample count at +0x18 and the seek sample at +0x1c, read through the
+// SDK's inline getters.
+struct Sfr22SoundData
+{
+    void* m_pad[3];
+    unsigned Length;
+    unsigned SeekSample;
+    unsigned GetSampleCount() const { return Length; }
+    unsigned GetSeekSample() const { return SeekSample; }
+};
+
+// SoundChannelFMODImpl::Loop: applies the loop bounds in samples and schedules the channel's loop delay from the DSP clock.
 // @0x142745c80
 void ConfigureAudioLoop(void* player, int loopCount, float startSeconds, float endSeconds)
 {
@@ -2533,9 +2568,9 @@ void ConfigureAudioLoop(void* player, int loopCount, float startSeconds, float e
     }
 
     auto*& request = *reinterpret_cast<unsigned char**>(bytes + 0x30);
-    auto* metadata = *reinterpret_cast<unsigned char**>(request + 0x38);
-    const unsigned loopStart = metadata ? *reinterpret_cast<unsigned*>(metadata + 0x1c) : 0;
-    unsigned loopLength = metadata ? *reinterpret_cast<unsigned*>(metadata + 0x18) : 0;
+    const Scaleform::Ptr<Sfr22SoundData>& metadata = *reinterpret_cast<Scaleform::Ptr<Sfr22SoundData>*>(request + 0x38);
+    const unsigned loopStart = metadata ? metadata->GetSeekSample() : 0;
+    unsigned loopLength = metadata ? metadata->GetSampleCount() : 0;
     unsigned length = 0;
     (*reinterpret_cast<FMOD::Sound**>(request + 0x30))->getLength(&length, 2);
     float frequency;
@@ -2543,8 +2578,9 @@ void ConfigureAudioLoop(void* player, int loopCount, float startSeconds, float e
     const unsigned start = startSeconds > 0.0f ? static_cast<unsigned>(static_cast<long long>(frequency * startSeconds)) : loopStart;
     unsigned end = static_cast<unsigned>(static_cast<long long>(frequency * endSeconds));
     if (end == 0 || end > length - 1) {
-        end = start + loopLength;
-        if (loopLength == 0)
+        if (loopLength > 0)
+            end = start + loopLength;
+        else
             end = length - 1;
     }
     FUN_1428d8ef6(channel, start, 2);
@@ -3747,23 +3783,25 @@ void* CreateAudioEventManager()
     // The exe allocates it with no AllocInfo (r8 = 0), so it lands in the default memory stat.
     auto* object = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, std::size_t, const void*)>(heapVtable[10])(
         DAT_143b15f60, 0xf8, nullptr));
-    if (!object)
-        return nullptr;
-    *reinterpret_cast<void***>(object) = &AS3AudioEventVtable;
-    *reinterpret_cast<unsigned*>(object + 8) = 1;
-    *reinterpret_cast<unsigned long long*>(object + 0x10) = 0;
-    *reinterpret_cast<unsigned long long*>(object + 0x18) = 0;
-    ::new (static_cast<void*>(object + 0x20)) Scaleform::Event(false, false);
-    ::new (static_cast<void*>(object + 0x80)) Scaleform::Lock(0);
-    *reinterpret_cast<unsigned long long*>(object + 0xa8) = 0;
-    auto* sentinel = object + 0xb0;
-    *reinterpret_cast<void***>(sentinel) = &AS3AudioListNodeVtable;
-    *reinterpret_cast<void**>(object + 0xb8) = sentinel;
-    *reinterpret_cast<void**>(object + 0xc0) = sentinel;
-    ::new (static_cast<void*>(object + 0xc8)) Scaleform::Lock(0);
-    object[0x78] = 0;
-    object[0xf0] = 0;
-    *reinterpret_cast<unsigned*>(object + 0xf4) = 0;
+    if (object) {
+        // RefCountImplCore(): its vftable, then RefCount = 1
+        *reinterpret_cast<void**>(object) = Sfr22RefCountImplCoreVtable;
+        *reinterpret_cast<unsigned*>(object + 8) = 1;
+        *reinterpret_cast<void***>(object) = &AS3AudioEventVtable;
+        *reinterpret_cast<unsigned long long*>(object + 0x10) = 0;
+        *reinterpret_cast<unsigned long long*>(object + 0x18) = 0;
+        ::new (static_cast<void*>(object + 0x20)) Scaleform::Event(false, false);
+        ::new (static_cast<void*>(object + 0x80)) Scaleform::Lock(0);
+        *reinterpret_cast<unsigned long long*>(object + 0xa8) = 0;
+        auto* sentinel = object + 0xb0;
+        *reinterpret_cast<void***>(sentinel) = &AS3AudioListNodeVtable;
+        *reinterpret_cast<void**>(sentinel + 8) = sentinel;
+        *reinterpret_cast<void**>(sentinel + 0x10) = sentinel;
+        ::new (static_cast<void*>(object + 0xc8)) Scaleform::Lock(0);
+        object[0xf0] = 0;
+        *reinterpret_cast<unsigned*>(object + 0xf4) = 0;
+        object[0x78] = 0;
+    }
     return object;
 }
 
@@ -4070,91 +4108,92 @@ void Scaleform::Render::DICommand_Noise::ExecuteSW(Scaleform::Render::DICommandC
     }
 }
 
-// MS2-FUNCTIONAL: rebuilds the threshold draw transform and forwards the operation, threshold, color, mask, and copy-source flag to the renderer.
-// @0x142675870
-void Scaleform::Render::DICommand_Threshold::ExecuteHWCopyAction(Scaleform::Render::DICommandContext& contextRef, Scaleform::Render::Texture** texturesRef, const Scaleform::Render::Matrix2F* texgenRef) const
+// The destination image as DrawableImage's vftable sees it: GetSize is slot 5.
+struct Sfr22ImageView
 {
-    void* command = const_cast<Scaleform::Render::DICommand_Threshold*>(this);
-    void* context = &contextRef;
-    void* textures = reinterpret_cast<void*>(texturesRef);
-    const void* texgen = texgenRef;
-    auto* bytes = static_cast<unsigned char*>(command);
-    float transform[8] = { ThresholdTransformX[0], ThresholdTransformX[1], ThresholdTransformX[2], ThresholdTransformX[3],
-                           ThresholdTransformY[0], ThresholdTransformY[1], ThresholdTransformY[2], ThresholdTransformY[3] };
-    auto** commandVtable = *reinterpret_cast<void***>(command);
-    const bool requiresSource = reinterpret_cast<bool (*)(void*)>(commandVtable[11])(command);
-    if (!requiresSource) {
-        auto* image = *reinterpret_cast<void**>(bytes + 8);
-        auto** imageVtable = *reinterpret_cast<void***>(image);
-        unsigned size[2] = {};
-        reinterpret_cast<void* (*)(void*, unsigned*)>(imageVtable[5])(image, size);
-        const float scaleX = static_cast<float>(*reinterpret_cast<int*>(bytes + 0x20) - *reinterpret_cast<int*>(bytes + 0x18)) / size[0];
-        const float scaleY = static_cast<float>(*reinterpret_cast<int*>(bytes + 0x24) - *reinterpret_cast<int*>(bytes + 0x1c)) / size[1];
-        for (unsigned i = 0; i < 3; ++i) {
-            transform[i] *= scaleX * 2.0f;
-            transform[i + 4] *= scaleY * DrawableImageScale2;
-        }
-        unsigned origin[2] = {};
-        reinterpret_cast<void* (*)(void*, unsigned*)>(imageVtable[5])(image, origin);
-        transform[3] = ((static_cast<float>(*reinterpret_cast<int*>(bytes + 0x28)) - origin[0] * ImageViewportScale) /
-                        size[0] + transform[3] * scaleX) * 2.0f;
-        transform[7] = ((static_cast<float>(*reinterpret_cast<int*>(bytes + 0x2c)) - origin[1] * ImageViewportScale) /
-                        size[1] + transform[7] * scaleY) * DrawableImageScale2;
-    } else {
-        transform[0] = ImageViewportBias;
-        transform[3] = ImageViewportClampBias;
-        transform[5] = DrawableImageScale2;
-        transform[7] = FloatOne;
-    }
-    auto* renderer = *reinterpret_cast<void**>(static_cast<unsigned char*>(context) + 8);
-    auto** rendererVtable = *reinterpret_cast<void***>(renderer);
-    reinterpret_cast<void (*)(void*, void*, const void*, const float*, unsigned, unsigned, unsigned, unsigned, bool)>(rendererVtable[48])(
-        renderer, textures, texgen, transform, *reinterpret_cast<unsigned*>(bytes + 0x40),
-        *reinterpret_cast<unsigned*>(bytes + 0x44), *reinterpret_cast<unsigned*>(bytes + 0x48),
-        *reinterpret_cast<unsigned*>(bytes + 0x4c), *reinterpret_cast<bool*>(bytes + 0x50));
+    virtual void Slot0() = 0;
+    virtual void Slot1() = 0;
+    virtual void Slot2() = 0;
+    virtual void Slot3() = 0;
+    virtual void Slot4() = 0;
+    virtual Scaleform::Render::ImageSize GetSize() const = 0;
+};
+
+// The SDK's header-inline Size operators (Size / Size, Size - Size, Size / scalar).
+static inline const Scaleform::Render::Size<float> Sfr22SizeDiv(const Scaleform::Render::Size<float>& s1, const Scaleform::Render::Size<float>& s2)
+{
+    return Scaleform::Render::Size<float>(s1.Width / s2.Width, s1.Height / s2.Height);
+}
+static inline const Scaleform::Render::Size<float> Sfr22SizeSub(const Scaleform::Render::Size<float>& s1, const Scaleform::Render::Size<float>& s2)
+{
+    return Scaleform::Render::Size<float>(s1.Width - s2.Width, s1.Height - s2.Height);
+}
+static inline const Scaleform::Render::Size<float> Sfr22SizeDiv(const Scaleform::Render::Size<float>& s, float v)
+{
+    return Scaleform::Render::Size<float>(s.Width / v, s.Height / v);
 }
 
-// MS2-FUNCTIONAL: scales the palette-map texture transform for the destination image and submits its channel table and mask to the HAL.
-// @0x142675560
-void Scaleform::Render::DICommand_PaletteMap::ExecuteHWCopyAction(Scaleform::Render::DICommandContext& contextRef, Scaleform::Render::Texture** texturesRef, const Scaleform::Render::Matrix2F* texgenRef) const
+// DICommand_Threshold::ExecuteHWCopyAction (not implemented in the SDK): builds the transform as PaletteMap does, then
+// submits the operation, threshold, color, mask, and copy-source flag to the HAL.
+// @0x142675870
+void Scaleform::Render::DICommand_Threshold::ExecuteHWCopyAction(Scaleform::Render::DICommandContext& context, Scaleform::Render::Texture** tex, const Scaleform::Render::Matrix2F* texgen) const
 {
-    void* command = const_cast<Scaleform::Render::DICommand_PaletteMap*>(this);
-    void* context = &contextRef;
-    void* textures = reinterpret_cast<void*>(texturesRef);
-    const void* texgen = texgenRef;
-    auto* bytes = static_cast<unsigned char*>(command);
-    float transform[8] = { ThresholdTransformX[0], ThresholdTransformX[1], ThresholdTransformX[2], ThresholdTransformX[3],
-                           ThresholdTransformY[0], ThresholdTransformY[1], ThresholdTransformY[2], ThresholdTransformY[3] };
-    auto** commandVtable = *reinterpret_cast<void***>(command);
-    const bool requiresSource = reinterpret_cast<bool (*)(void*)>(commandVtable[11])(command);
-    if (!requiresSource) {
-        auto* image = *reinterpret_cast<void**>(bytes + 8);
-        auto** imageVtable = *reinterpret_cast<void***>(image);
-        unsigned size[2] = {};
-        reinterpret_cast<void* (*)(void*, unsigned*)>(imageVtable[5])(image, size);
-        const float scaleX = static_cast<float>(*reinterpret_cast<int*>(bytes + 0x24) - *reinterpret_cast<int*>(bytes + 0x1c)) / size[1];
-        const float scaleY = static_cast<float>(*reinterpret_cast<int*>(bytes + 0x20) - *reinterpret_cast<int*>(bytes + 0x18)) / size[0];
-        for (unsigned i = 0; i < 3; ++i) {
-            transform[i] *= scaleY * 2.0f;
-            transform[i + 4] *= scaleX * DrawableImageScale2;
-        }
-        unsigned origin[2] = {};
-        reinterpret_cast<void* (*)(void*, unsigned*)>(imageVtable[5])(image, origin);
-        transform[3] = ((static_cast<float>(*reinterpret_cast<int*>(bytes + 0x28)) - origin[0] * ImageViewportScale) /
-                        size[0] + transform[3] * scaleY) * 2.0f;
-        transform[7] = ((static_cast<float>(*reinterpret_cast<int*>(bytes + 0x2c)) - origin[1] * ImageViewportScale) /
-                        size[1] + transform[7] * scaleX) * DrawableImageScale2;
-    } else {
-        transform[0] = ImageViewportBias;
-        transform[3] = ImageViewportClampBias;
-        transform[5] = DrawableImageScale2;
-        transform[7] = FloatOne;
+    auto* bytes = reinterpret_cast<const unsigned char*>(this);
+    const Rect<SInt32>& sourceRect = *reinterpret_cast<const Rect<SInt32>*>(bytes + 0x18);
+    const Point<SInt32>& destPoint = *reinterpret_cast<const Point<SInt32>*>(bytes + 0x28);
+    const Sfr22ImageView* const& pImage = *reinterpret_cast<const Sfr22ImageView* const*>(bytes + 8);
+    Matrix2F mvp;
+
+    if (reinterpret_cast<bool (*)(const void*)>((*reinterpret_cast<void* const* const*>(this))[11])(this))  // GetRequireSourceRead
+    {
+        mvp = Sfr22MulInline(Matrix2F::Scaling(2, -2), Matrix2F::Translation(-0.5f, -0.5f));
     }
-    auto* renderer = *reinterpret_cast<void**>(static_cast<unsigned char*>(context) + 8);
-    auto** rendererVtable = *reinterpret_cast<void***>(renderer);
-    reinterpret_cast<void (*)(void*, void*, const void*, const float*, unsigned, const unsigned*)>(rendererVtable[47])(
-        renderer, textures, texgen, transform, *reinterpret_cast<unsigned*>(bytes + 0x48),
-        *reinterpret_cast<const unsigned**>(bytes + 0x40));
+    else
+    {
+        mvp.AppendScaling(Sfr22SizeDiv((Size<float>)sourceRect.GetSize(), pImage->GetSize()));
+        Size<float> copyOffset = Sfr22SizeDiv(Sfr22SizeSub(Size<float>((float)destPoint.x, (float)destPoint.y),
+                                                           Sfr22SizeDiv((Size<float>)pImage->GetSize(), 2.0f)), pImage->GetSize());
+        mvp.AppendTranslation(copyOffset.Width, copyOffset.Height);
+        mvp.AppendScaling(2.0f, -2.0f);
+    }
+
+    // pHAL->DrawableThreshold(tex, texgen, mvp, Operation, Threshold, Color, Mask, CopySource)
+    void* hal = reinterpret_cast<void* const*>(&context)[1];
+    reinterpret_cast<void (*)(void*, Texture**, const Matrix2F*, const Matrix2F&, unsigned, unsigned, unsigned, unsigned, bool)>((*reinterpret_cast<void***>(hal))[48])(
+        hal, tex, texgen, mvp, *reinterpret_cast<const unsigned*>(bytes + 0x40), *reinterpret_cast<const unsigned*>(bytes + 0x44),
+        *reinterpret_cast<const unsigned*>(bytes + 0x48), *reinterpret_cast<const unsigned*>(bytes + 0x4c), *reinterpret_cast<const bool*>(bytes + 0x50));
+}
+
+// DICommand_PaletteMap::ExecuteHWCopyAction: maps the whole target when the source is read, otherwise positions the
+// output at DestPoint in the destination image, then submits the channel table and mask to the HAL.
+// @0x142675560
+void Scaleform::Render::DICommand_PaletteMap::ExecuteHWCopyAction(Scaleform::Render::DICommandContext& context, Scaleform::Render::Texture** tex, const Scaleform::Render::Matrix2F* texgen) const
+{
+    auto* bytes = reinterpret_cast<const unsigned char*>(this);
+    const Rect<SInt32>& sourceRect = *reinterpret_cast<const Rect<SInt32>*>(bytes + 0x18);
+    const Point<SInt32>& destPoint = *reinterpret_cast<const Point<SInt32>*>(bytes + 0x28);
+    const Sfr22ImageView* const& pImage = *reinterpret_cast<const Sfr22ImageView* const*>(bytes + 8);
+    Matrix2F mvp;
+
+    // If we are rendering to a render target, then we simply render to the whole target. Otherwise, we
+    // need to position the output in the destination image properly.
+    if (reinterpret_cast<bool (*)(const void*)>((*reinterpret_cast<void* const* const*>(this))[11])(this))  // GetRequireSourceRead
+    {
+        mvp = Sfr22MulInline(Matrix2F::Scaling(2, -2), Matrix2F::Translation(-0.5f, -0.5f));
+    }
+    else
+    {
+        mvp.AppendScaling(Sfr22SizeDiv((Size<float>)sourceRect.GetSize(), pImage->GetSize()));
+        Size<float> copyOffset = Sfr22SizeDiv(Sfr22SizeSub(Size<float>((float)destPoint.x, (float)destPoint.y),
+                                                           Sfr22SizeDiv((Size<float>)pImage->GetSize(), 2.0f)), pImage->GetSize());
+        mvp.AppendTranslation(copyOffset.Width, copyOffset.Height);
+        mvp.AppendScaling(2.0f, -2.0f);
+    }
+
+    // pHAL->DrawablePaletteMap(tex, texgen, mvp, ChannelMask, Channels)
+    void* hal = reinterpret_cast<void* const*>(&context)[1];
+    reinterpret_cast<void (*)(void*, Texture**, const Matrix2F*, const Matrix2F&, unsigned, const UInt32*)>((*reinterpret_cast<void***>(hal))[47])(
+        hal, tex, texgen, mvp, *reinterpret_cast<const unsigned*>(bytes + 0x48), *reinterpret_cast<const UInt32* const*>(bytes + 0x40));
 }
 
 namespace GFx { namespace AMP {
