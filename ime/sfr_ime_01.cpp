@@ -4912,27 +4912,29 @@ void FUN_1423ce730(void* raw, unsigned* outputLength)
     Scaleform::Memory::Free(text);
 }
 
-// MS2-FUNCTIONAL: removes the old input window, then shows the composition string (a UTF-8 copy of the String at +0xb0)
-// at the cursor rect IMEManagerBase::GetMetrics reports for the composition end (offset -[+0x64]).
+// Removes the old input window, then shows the composition string (a UTF-8 copy of the String at +0xb0) at the
+// cursor rect IMEManagerBase::GetMetrics reports for the composition end (offset -[+0x64]). The arguments go through
+// the inlined Value array (Ime01ArgArray).
 // @0x1423ceb30
 void FUN_1423ceb30(void* raw)
 {
+    typedef void (*InvokeFn)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned);
     auto* self = static_cast<unsigned char*>(raw);
-    void* movie = *reinterpret_cast<void**>(self + 0xa8);
+    Scaleform::GFx::Value unused;
     {
         Scaleform::GFx::Value result;
-        if (void* bridge = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18))
-            reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
-                (*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
-                    bridge, "RemoveInputWindow", &result, nullptr, 0);
+        if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
+            reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+                bridge, "RemoveInputWindow", &result, nullptr, 0);
     }
     auto* composition = reinterpret_cast<Scaleform::String*>(self + 0xb0);
     const unsigned length = *reinterpret_cast<unsigned*>(
         *reinterpret_cast<UPInt*>(composition) & ~static_cast<UPInt>(3));
     if (!length) return;
-    char* text = static_cast<char*>(Scaleform::Memory::Alloc(static_cast<int>(length + 1)));
-    memset(text, 0, length + 1);
-    memcpy(text, composition->ToCStr(), length + 1);
+    const SPInt size = static_cast<int>(length + 1);
+    char* text = static_cast<char*>(Scaleform::Memory::Alloc(size));
+    memset(text, 0, size);
+    memcpy(text, composition->ToCStr(), size);
     if (!text) {
         **reinterpret_cast<wchar_t**>(self + 0x40) = 0;
         return;
@@ -4942,17 +4944,16 @@ void FUN_1423ceb30(void* raw)
         reinterpret_cast<Scaleform::GFx::StateBag*>(static_cast<unsigned char*>(owner) + 0x10)->GetIMEManager();
     Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
     ime->GetMetrics(&viewRect, &cursorRect, -*reinterpret_cast<int*>(self + 0x64));
-    Scaleform::GFx::Value args[4];
-    args[0] = Scaleform::GFx::Value(static_cast<const char*>(text));
-    args[1] = Scaleform::GFx::Value(static_cast<double>(cursorRect.x1));
-    args[2] = Scaleform::GFx::Value(static_cast<double>(cursorRect.y2));
-    args[3] = Scaleform::GFx::Value(0.0);
     {
+        Ime01ArgArray args;
         Scaleform::GFx::Value result;
-        if (void* bridge = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18))
-            reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned)>(
-                (*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
-                    bridge, "DisplayInputWindow", &result, args, 4);
+        Ime01PushArg(args, Scaleform::GFx::Value(static_cast<const char*>(text)));
+        Ime01PushArg(args, Scaleform::GFx::Value(static_cast<double>(cursorRect.x1)));
+        Ime01PushArg(args, Scaleform::GFx::Value(static_cast<double>(cursorRect.y2)));
+        Ime01PushArg(args, Scaleform::GFx::Value(0.0));
+        if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
+            reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+                bridge, "DisplayInputWindow", &result, args.data(), 4);
     }
     Scaleform::Memory::Free(text);
 }
