@@ -9589,7 +9589,6 @@ extern template void MS2_GCRootSet::add<MS2_GCRootPtr>(void*, const MS2_GCRootPt
 extern template void MS2_GCRootSet::Clear();
 extern template MS2_FunctionTraitsSet::~HashSetBase();
 extern template MS2_ActivationTraitsSet::~HashSetBase();
-extern template MS2_DynAttrsSet::~HashSetBase();
 extern template MS2_AbcNsSet::~HashSetBase();
 extern template MS2_GCRootSet::~HashSetBase();
 extern template UPInt FixedSizeHash<MS2_AbcNsKey>::operator()(const MS2_AbcNsKey&) const;
