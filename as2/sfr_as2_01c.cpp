@@ -81,7 +81,8 @@ struct IMEEventView
     int           Flag;     // +0x28
 };
 
-// MS2-FUNCTIONAL: XML character-data handler; register allocation and the inlined name-table strcmp differ.
+// MS2-FUNCTIONAL: XML character-data handler; the exe keeps a 64-bit counter beside the int index in the name
+// table loop and shares the String release of all three cases
 // The text of <imeName>, <displayName> or <Lang> fills the last record (0x30 bytes: +0x10 name, +0x18 display
 // name, +0x20 language id looked up in the IME name table).
 // @0x1423c9140
@@ -94,24 +95,28 @@ void FUN_1423c9140(void* self, const char* text, int len)
     if (count > 0)
         record = At<unsigned char*>(self, 0xb8) + (UPInt)(count - 1) * 0x30;
 
-    int mode = At<int>(self, 0xb0);
-    if (mode == 0)
-        *reinterpret_cast<String*>(record + 0x10) = String(text, (UPInt)len);
-    else if (mode == 1)
-        *reinterpret_cast<String*>(record + 0x18) = String(text, (UPInt)len);
-    else if (mode == 2)
+    switch (At<int>(self, 0xb0))
     {
+    case 0:
+        *reinterpret_cast<String*>(record + 0x10) = String(text, (UPInt)len);
+        break;
+    case 1:
+        *reinterpret_cast<String*>(record + 0x18) = String(text, (UPInt)len);
+        break;
+    case 2:
+    {
+        SPInt  entries = DAT_143a2a6b0;
         String value(text, (UPInt)len);
-        SPInt entries = DAT_143a2a6b0;
-        for (SPInt i = 0; i < entries; ++i)
+        for (int i = 0; i < entries; ++i)
         {
-            const unsigned char* entry = DAT_143a2a3e0 + i * 16;
-            if (strcmp(value.ToCStr(), *reinterpret_cast<const char* const*>(entry)) == 0)
+            if (strcmp(value.ToCStr(), *reinterpret_cast<const char* const*>(DAT_143a2a3e0 + (SPInt)i * 16)) == 0)
             {
-                *reinterpret_cast<int*>(record + 0x20) = *reinterpret_cast<const int*>(entry + 8);
+                *reinterpret_cast<int*>(record + 0x20) = *reinterpret_cast<const int*>(DAT_143a2a3e0 + (SPInt)i * 16 + 8);
                 break;
             }
         }
+        break;
+    }
     }
 }
 
