@@ -64,6 +64,7 @@ SF_FORCEINLINE RectF RectangleToGridTwips(Object* pobj, Environment* penv)
 
 // The button's watched properties go through the watchpoints of its AS object first; then the common setters,
 // scale9Grid (SWF 8) and the hitTestDisable extension.
+// MS2-FUNCTIONAL: the exe computes the member table index before the watch value's ctor; same behavior
 // @0x14298a880
 bool AvmButton::SetStandardMember(StandardMember index, const Value& origVal, bool opcodeFlag)
 {
@@ -73,7 +74,11 @@ bool AvmButton::SetStandardMember(StandardMember index, const Value& origVal, bo
     {
         ButtonObject* pobj = GetButtonASObject();
         if (pobj && ASButtonObj->pWatchpoints)
-            InvokeMemberWatchpoint(ASButtonObj, penv, index, val);
+        {
+            Value newVal;
+            if (ASButtonObj->InvokeWatchpoint(penv, penv->CreateConstString(MemberTable[index].pName), val, &newVal))
+                val = newVal;
+        }
     }
 
     if (AvmCharacter::SetStandardMember(index, val, opcodeFlag))
