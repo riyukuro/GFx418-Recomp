@@ -26563,263 +26563,86 @@ int FUN_14008c830(longlong arg1)
   return i_v2;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: CRI vendor cri_code (VS2008 build). Same length as the exe; left is a register tie (the exe loads
+// the luma base into r8 and the sign-extended x into r9, ours swaps them).
 // @0x14008c890
 void FUN_14008c890(longlong arg1, uint arg2)
 {
-  cri_u1 u_v1;
-  uint u_v2;
-  cri_u4 u_v3;
-  cri_u4 *pu_v4;
-  longlong l_v5;
-  cri_u4 *pu_v6;
-  int i_v7;
-  cri_u4 *pu_v8;
-  ulonglong u_v9;
-  cri_u4 *pu_v10;
-  ulonglong u_v11;
-  cri_u4 *pu_v12;
-  longlong l_v13;
-  int i_v14;
-  int i_v15;
-  cri_u4 *pu_v16;
-  int i_v17;
-  int i_v18;
-  
+  uint n;
+  int cs, ys, y, x, i, j;
+  cri_u4 *py, *pya, *pu, *pua, *pv, *pva, c, b;
+
   if (*(int *)((char *)arg1 + 0xd44) == 0) {
-    u_v2 = *(uint *)((char *)arg1 + 0x6f0);
-    i_v7 = *(int *)((char *)arg1 + 0xc64);
-    i_v18 = *(int *)((char *)arg1 + 0xc60);
+    n = *(uint *)((char *)arg1 + 0x6f0);
+    ys = *(int *)((char *)arg1 + 0xc60);
+    cs = *(int *)((char *)arg1 + 0xc64);
     if (*(int *)((char *)arg1 + 0x318) != 3) {
-      i_v18 = i_v18 * 2;
-      i_v7 = i_v7 * 2;
+      ys = ys * 2;
+      cs = cs * 2;
     }
-    if (arg2 < u_v2) {
-      u_v9 = (longlong)i_v18 & 0xfffffffffffffffc;
-      u_v11 = (longlong)i_v7 & 0xfffffffffffffffc;
-      do {
-        i_v14 = (arg2 / *(uint *)((char *)arg1 + 0x6cc)) * 0x10;
-        i_v17 = arg2 % *(uint *)((char *)arg1 + 0x6cc) << 4;
-        i_v15 = i_v14 >> 1;
-        pu_v16 = (cri_u4 *)
-                  ((longlong)(i_v14 * i_v18) + *(longlong *)((char *)arg1 + 0xc48) + (longlong)i_v17);
-        pu_v10 = (cri_u4 *)
-                  ((longlong)((i_v14 + -1) * i_v18) + *(longlong *)((char *)arg1 + 0xc48) +
-                  (longlong)i_v17);
-        l_v13 = (longlong)(i_v17 >> 1);
-        pu_v8 = (cri_u4 *)
-                 (*(longlong *)((char *)arg1 + 0xc50) + (longlong)(i_v15 * i_v7) + l_v13);
-        l_v5 = (longlong)((i_v15 + -1) * i_v7);
-        pu_v12 = (cri_u4 *)
-                  ((longlong)(i_v15 * i_v7) + *(longlong *)((char *)arg1 + 0xc58) + l_v13);
-        pu_v6 = (cri_u4 *)(l_v5 + *(longlong *)((char *)arg1 + 0xc58) + l_v13);
-        pu_v4 = (cri_u4 *)(*(longlong *)((char *)arg1 + 0xc50) + l_v5 + l_v13);
-        if (i_v15 == 0) {
-          if (i_v17 >> 1 == 0) {
-            l_v5 = 0x10;
-            do {
-              *pu_v16 = 0x10101010;
-              pu_v16[1] = 0x10101010;
-              pu_v16[2] = 0x10101010;
-              pu_v16[3] = 0x10101010;
-              pu_v16 = (cri_u4 *)((longlong)pu_v16 + u_v9);
-              l_v5 = l_v5 + -1;
-            } while (l_v5 != 0);
-            *pu_v8 = 0x80808080;
-            pu_v8[1] = 0x80808080;
-            pu_v8 = (cri_u4 *)((longlong)pu_v8 + u_v11);
-            *pu_v8 = 0x80808080;
-            pu_v8[1] = 0x80808080;
-            pu_v8 = (cri_u4 *)((longlong)pu_v8 + u_v11);
-            *pu_v8 = 0x80808080;
-            pu_v8[1] = 0x80808080;
-            pu_v8 = (cri_u4 *)((longlong)pu_v8 + u_v11);
-            *pu_v8 = 0x80808080;
-            pu_v8[1] = 0x80808080;
-            pu_v8 = (cri_u4 *)((longlong)pu_v8 + u_v11);
-            *pu_v8 = 0x80808080;
-            pu_v8[1] = 0x80808080;
-            pu_v8 = (cri_u4 *)((longlong)pu_v8 + u_v11);
-            *pu_v8 = 0x80808080;
-            pu_v8[1] = 0x80808080;
-            pu_v8 = (cri_u4 *)((longlong)pu_v8 + u_v11);
-            *pu_v8 = 0x80808080;
-            pu_v8[1] = 0x80808080;
-            *(cri_u4 *)((longlong)pu_v8 + u_v11) = 0x80808080;
-            *(cri_u4 *)((longlong)pu_v8 + u_v11 + 4) = 0x80808080;
-            *pu_v12 = 0x80808080;
-            pu_v12[1] = 0x80808080;
-            pu_v12 = (cri_u4 *)((longlong)pu_v12 + u_v11);
-            *pu_v12 = 0x80808080;
-            pu_v12[1] = 0x80808080;
-            pu_v12 = (cri_u4 *)((longlong)pu_v12 + u_v11);
-            *pu_v12 = 0x80808080;
-            pu_v12[1] = 0x80808080;
-            pu_v12 = (cri_u4 *)((longlong)pu_v12 + u_v11);
-            *pu_v12 = 0x80808080;
-            pu_v12[1] = 0x80808080;
-            pu_v12 = (cri_u4 *)((longlong)pu_v12 + u_v11);
-            *pu_v12 = 0x80808080;
-            pu_v12[1] = 0x80808080;
-            pu_v12 = (cri_u4 *)((longlong)pu_v12 + u_v11);
-            *pu_v12 = 0x80808080;
-            pu_v12[1] = 0x80808080;
-            pu_v12 = (cri_u4 *)((longlong)pu_v12 + u_v11);
-            *pu_v12 = 0x80808080;
-            pu_v12[1] = 0x80808080;
-            *(cri_u4 *)((longlong)pu_v12 + u_v11) = 0x80808080;
-            *(cri_u4 *)((longlong)pu_v12 + u_v11 + 4) = 0x80808080;
+    for (; arg2 < n; arg2++) {
+      y = (arg2 / *(uint *)((char *)arg1 + 0x6cc)) * 16;
+      x = arg2 % *(uint *)((char *)arg1 + 0x6cc) << 4;
+      py = (cri_u4 *)(*(char **)((char *)arg1 + 0xc48) + y * ys + x);
+      pya = (cri_u4 *)(*(char **)((char *)arg1 + 0xc48) + (y - 1) * ys + x);
+      y >>= 1;
+      x >>= 1;
+      pu = (cri_u4 *)(*(char **)((char *)arg1 + 0xc50) + y * cs + x);
+      pua = (cri_u4 *)(*(char **)((char *)arg1 + 0xc50) + (y - 1) * cs + x);
+      pv = (cri_u4 *)(*(char **)((char *)arg1 + 0xc58) + y * cs + x);
+      pva = (cri_u4 *)(*(char **)((char *)arg1 + 0xc58) + (y - 1) * cs + x);
+      if (y == 0) {
+        if (x == 0) {
+          for (i = 0; i < 16; i++) {
+            py[0] = 0x10101010; py[1] = 0x10101010; py[2] = 0x10101010; py[3] = 0x10101010;
+            py += ys >> 2;
           }
-          else {
-            l_v5 = 0x10;
-            do {
-              u_v1 = *(cri_u1 *)((longlong)pu_v16 + -1);
-              u_v3 = CONCAT31(CONCAT21(CONCAT11(u_v1,u_v1),u_v1),u_v1);
-              *pu_v16 = u_v3;
-              pu_v16[1] = u_v3;
-              pu_v16[2] = u_v3;
-              pu_v16[3] = u_v3;
-              pu_v16 = (cri_u4 *)((longlong)pu_v16 + u_v9);
-              l_v5 = l_v5 + -1;
-            } while (l_v5 != 0);
-            u_v1 = *(cri_u1 *)((longlong)pu_v8 + -1);
-            u_v3 = CONCAT31(CONCAT21(CONCAT11(u_v1,u_v1),u_v1),u_v1);
-            *pu_v8 = u_v3;
-            pu_v8[1] = u_v3;
-            pu_v8 = (cri_u4 *)((longlong)pu_v8 + u_v11);
-            u_v1 = *(cri_u1 *)((longlong)pu_v8 + -1);
-            u_v3 = CONCAT31(CONCAT21(CONCAT11(u_v1,u_v1),u_v1),u_v1);
-            *pu_v8 = u_v3;
-            pu_v8[1] = u_v3;
-            pu_v8 = (cri_u4 *)((longlong)pu_v8 + u_v11);
-            u_v1 = *(cri_u1 *)((longlong)pu_v8 + -1);
-            u_v3 = CONCAT31(CONCAT21(CONCAT11(u_v1,u_v1),u_v1),u_v1);
-            *pu_v8 = u_v3;
-            pu_v8[1] = u_v3;
-            pu_v8 = (cri_u4 *)((longlong)pu_v8 + u_v11);
-            u_v1 = *(cri_u1 *)((longlong)pu_v8 + -1);
-            u_v3 = CONCAT31(CONCAT21(CONCAT11(u_v1,u_v1),u_v1),u_v1);
-            *pu_v8 = u_v3;
-            pu_v8[1] = u_v3;
-            pu_v8 = (cri_u4 *)((longlong)pu_v8 + u_v11);
-            u_v1 = *(cri_u1 *)((longlong)pu_v8 + -1);
-            u_v3 = CONCAT31(CONCAT21(CONCAT11(u_v1,u_v1),u_v1),u_v1);
-            *pu_v8 = u_v3;
-            pu_v8[1] = u_v3;
-            pu_v8 = (cri_u4 *)((longlong)pu_v8 + u_v11);
-            u_v1 = *(cri_u1 *)((longlong)pu_v8 + -1);
-            u_v3 = CONCAT31(CONCAT21(CONCAT11(u_v1,u_v1),u_v1),u_v1);
-            *pu_v8 = u_v3;
-            pu_v8[1] = u_v3;
-            pu_v8 = (cri_u4 *)((longlong)pu_v8 + u_v11);
-            u_v1 = *(cri_u1 *)((longlong)pu_v8 + -1);
-            u_v3 = CONCAT31(CONCAT21(CONCAT11(u_v1,u_v1),u_v1),u_v1);
-            *pu_v8 = u_v3;
-            pu_v8[1] = u_v3;
-            u_v1 = *(cri_u1 *)((longlong)pu_v8 + (u_v11 - 1));
-            u_v3 = CONCAT31(CONCAT21(CONCAT11(u_v1,u_v1),u_v1),u_v1);
-            *(cri_u4 *)((longlong)pu_v8 + u_v11) = u_v3;
-            *(cri_u4 *)((longlong)pu_v8 + u_v11 + 4) = u_v3;
-            u_v1 = *(cri_u1 *)((longlong)pu_v12 + -1);
-            u_v3 = CONCAT31(CONCAT21(CONCAT11(u_v1,u_v1),u_v1),u_v1);
-            *pu_v12 = u_v3;
-            pu_v12[1] = u_v3;
-            pu_v12 = (cri_u4 *)((longlong)pu_v12 + u_v11);
-            u_v1 = *(cri_u1 *)((longlong)pu_v12 + -1);
-            u_v3 = CONCAT31(CONCAT21(CONCAT11(u_v1,u_v1),u_v1),u_v1);
-            *pu_v12 = u_v3;
-            pu_v12[1] = u_v3;
-            pu_v12 = (cri_u4 *)((longlong)pu_v12 + u_v11);
-            u_v1 = *(cri_u1 *)((longlong)pu_v12 + -1);
-            u_v3 = CONCAT31(CONCAT21(CONCAT11(u_v1,u_v1),u_v1),u_v1);
-            *pu_v12 = u_v3;
-            pu_v12[1] = u_v3;
-            pu_v12 = (cri_u4 *)((longlong)pu_v12 + u_v11);
-            u_v1 = *(cri_u1 *)((longlong)pu_v12 + -1);
-            u_v3 = CONCAT31(CONCAT21(CONCAT11(u_v1,u_v1),u_v1),u_v1);
-            *pu_v12 = u_v3;
-            pu_v12[1] = u_v3;
-            pu_v12 = (cri_u4 *)((longlong)pu_v12 + u_v11);
-            u_v1 = *(cri_u1 *)((longlong)pu_v12 + -1);
-            u_v3 = CONCAT31(CONCAT21(CONCAT11(u_v1,u_v1),u_v1),u_v1);
-            *pu_v12 = u_v3;
-            pu_v12[1] = u_v3;
-            pu_v12 = (cri_u4 *)((longlong)pu_v12 + u_v11);
-            u_v1 = *(cri_u1 *)((longlong)pu_v12 + -1);
-            u_v3 = CONCAT31(CONCAT21(CONCAT11(u_v1,u_v1),u_v1),u_v1);
-            *pu_v12 = u_v3;
-            pu_v12[1] = u_v3;
-            pu_v12 = (cri_u4 *)((longlong)pu_v12 + u_v11);
-            u_v1 = *(cri_u1 *)((longlong)pu_v12 + -1);
-            u_v3 = CONCAT31(CONCAT21(CONCAT11(u_v1,u_v1),u_v1),u_v1);
-            *pu_v12 = u_v3;
-            pu_v12[1] = u_v3;
-            u_v1 = *(cri_u1 *)((longlong)pu_v12 + (u_v11 - 1));
-            u_v3 = CONCAT31(CONCAT21(CONCAT11(u_v1,u_v1),u_v1),u_v1);
-            *(cri_u4 *)((longlong)pu_v12 + u_v11) = u_v3;
-            *(cri_u4 *)((longlong)pu_v12 + u_v11 + 4) = u_v3;
+          for (i = 0; i < 8; i++) {
+            pu[0] = 0x80808080; pu[1] = 0x80808080;
+            pu += cs >> 2;
+          }
+          for (i = 0; i < 8; i++) {
+            pv[0] = 0x80808080; pv[1] = 0x80808080;
+            pv += cs >> 2;
           }
         }
         else {
-          l_v5 = 0x10;
-          do {
-            *pu_v16 = *pu_v10;
-            pu_v16[1] = pu_v10[1];
-            pu_v16[2] = pu_v10[2];
-            pu_v16[3] = pu_v10[3];
-            pu_v16 = (cri_u4 *)((longlong)pu_v16 + u_v9);
-            l_v5 = l_v5 + -1;
-          } while (l_v5 != 0);
-          *pu_v8 = *pu_v4;
-          pu_v8[1] = pu_v4[1];
-          pu_v8 = (cri_u4 *)((longlong)pu_v8 + u_v11);
-          *pu_v8 = *pu_v4;
-          pu_v8[1] = pu_v4[1];
-          pu_v8 = (cri_u4 *)((longlong)pu_v8 + u_v11);
-          *pu_v8 = *pu_v4;
-          pu_v8[1] = pu_v4[1];
-          pu_v8 = (cri_u4 *)((longlong)pu_v8 + u_v11);
-          *pu_v8 = *pu_v4;
-          pu_v8[1] = pu_v4[1];
-          pu_v8 = (cri_u4 *)((longlong)pu_v8 + u_v11);
-          *pu_v8 = *pu_v4;
-          pu_v8[1] = pu_v4[1];
-          pu_v8 = (cri_u4 *)((longlong)pu_v8 + u_v11);
-          *pu_v8 = *pu_v4;
-          pu_v8[1] = pu_v4[1];
-          pu_v8 = (cri_u4 *)((longlong)pu_v8 + u_v11);
-          *pu_v8 = *pu_v4;
-          pu_v8[1] = pu_v4[1];
-          *(cri_u4 *)((longlong)pu_v8 + u_v11) = *pu_v4;
-          *(cri_u4 *)((longlong)pu_v8 + u_v11 + 4) = pu_v4[1];
-          *pu_v12 = *pu_v6;
-          pu_v12[1] = pu_v6[1];
-          pu_v12 = (cri_u4 *)((longlong)pu_v12 + u_v11);
-          *pu_v12 = *pu_v6;
-          pu_v12[1] = pu_v6[1];
-          pu_v12 = (cri_u4 *)((longlong)pu_v12 + u_v11);
-          *pu_v12 = *pu_v6;
-          pu_v12[1] = pu_v6[1];
-          pu_v12 = (cri_u4 *)((longlong)pu_v12 + u_v11);
-          *pu_v12 = *pu_v6;
-          pu_v12[1] = pu_v6[1];
-          pu_v12 = (cri_u4 *)((longlong)pu_v12 + u_v11);
-          *pu_v12 = *pu_v6;
-          pu_v12[1] = pu_v6[1];
-          pu_v12 = (cri_u4 *)((longlong)pu_v12 + u_v11);
-          *pu_v12 = *pu_v6;
-          pu_v12[1] = pu_v6[1];
-          pu_v12 = (cri_u4 *)((longlong)pu_v12 + u_v11);
-          *pu_v12 = *pu_v6;
-          pu_v12[1] = pu_v6[1];
-          *(cri_u4 *)((longlong)pu_v12 + u_v11) = *pu_v6;
-          *(cri_u4 *)((longlong)pu_v12 + u_v11 + 4) = pu_v6[1];
+          for (i = 0; i < 16; i++) {
+            b = ((cri_u1 *)py)[-1];
+            c = b << 24 | b << 16 | b << 8 | b;
+            for (j = 0; j < 4; j++) py[j] = c;
+            py += ys >> 2;
+          }
+          for (i = 0; i < 8; i++) {
+            b = ((cri_u1 *)pu)[-1];
+            c = b << 24 | b << 16 | b << 8 | b;
+            pu[0] = c; pu[1] = c;
+            pu += cs >> 2;
+          }
+          for (i = 0; i < 8; i++) {
+            b = ((cri_u1 *)pv)[-1];
+            c = b << 24 | b << 16 | b << 8 | b;
+            pv[0] = c; pv[1] = c;
+            pv += cs >> 2;
+          }
         }
-        arg2 = arg2 + 1;
-      } while (arg2 < u_v2);
+      }
+      else {
+        for (i = 0; i < 16; i++) {
+          py[0] = pya[0]; py[1] = pya[1]; py[2] = pya[2]; py[3] = pya[3];
+          py += ys >> 2;
+        }
+        for (i = 0; i < 8; i++) {
+          pu[0] = pua[0]; pu[1] = pua[1];
+          pu += cs >> 2;
+        }
+        for (i = 0; i < 8; i++) {
+          pv[0] = pva[0]; pv[1] = pva[1];
+          pv += cs >> 2;
+        }
+      }
     }
   }
-  return;
 }
 
 // @0x14008ce50
