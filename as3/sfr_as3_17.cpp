@@ -2331,8 +2331,8 @@ const SlotInfo* FindFixedSlot(VM& vm, const Traits& tr, const Multiname& mn, UPI
 
 // Tracer: emits the push of the object constant v (pop: drop the last pushed value first) and keeps the object in
 // the ABC file's set of referenced constants (+0x38). The argument carries the value kind in the pointer's low bits.
-// MS2-FUNCTIONAL 0x1424f86d0: written on raw offsets (tracer +0x20 state, +0x28 file); the exe keeps the key in rbx
-// across the inlined Set (ours reloads it from its slot) and does not align the chain loop
+// MS2-FUNCTIONAL 0x1424f86d0: written on raw offsets (tracer +0x20 state, +0x28 file); the exe keeps the object in
+// rbx (ours r10, spilled across the inlined Set) and its SPtr AddRef loads, increments, masks and stores the count
 // @0x1424f86d0
 bool FUN_1424f86d0(void* tr, const Scaleform::GFx::AS3::Value& v, bool pop)
 {
@@ -2362,8 +2362,7 @@ bool FUN_1424f86d0(void* tr, const Scaleform::GFx::AS3::Value& v, bool pop)
     if (obj == *reinterpret_cast<const UPInt*>(*reinterpret_cast<UByte**>(file + 0x20) + 0x298))
         return true;
     Sfr33GCRootSet* set = reinterpret_cast<Sfr33GCRootSet*>(file + 0x38);
-    GASRefCountBase* const key = reinterpret_cast<GASRefCountBase*>(obj);
-    set->Set(set, key);
+    set->Set(set, reinterpret_cast<GASRefCountBase*>(v.GetObject()));
     return true;
 }
 
