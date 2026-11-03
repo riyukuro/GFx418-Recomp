@@ -115,6 +115,14 @@ struct SoundTransform
     float Position, Left, Right;
 };
 
+// FixedSizeHash of an eight-byte key, read byte by byte from the entry (SDBM_Hash).
+static inline U Sfr22bKey8Hash(const unsigned char* k)
+{
+    return (((U)k[3] * 0x1003f + (U)k[2]) * 0x1003f + (U)k[1]) * 0x1003f + (U)k[4] * 0xfc5d1543ec5f01ULL +
+           (U)k[5] * (U)-0x64cfd3d7e9d39ec1LL + (U)k[7] * (U)-0x283c1b695cee4e41LL +
+           (U)k[6] * 0x5d02f409d62aee81ULL + (U)-0x514d9afbc3e934fbLL + (U)k[0];
+}
+
 // AuxStreamer: skip the source to a time, dropping what was queued.
 // @0x142746480
 bool FUN_142746480(void* self, float seconds)
@@ -206,55 +214,54 @@ bool FUN_142746640(void* self, float seconds)
 // @0x1427466c0
 void FUN_1427466c0(void*, const void*) {}
 
+// transforms[i] of an Array<Transform> (data pointer at +0, read on every use).
+static inline const SoundTransform& Sfr22bAt(const U* transforms, unsigned i) { return ((const SoundTransform*)transforms[0])[i]; }
+
 // Channel: SetTransforms. Installs the sync-point callback and adds one sync point per 0.1 s step of every segment
 // of the envelope, each carrying the interpolated left/right levels.
-// MS2-FUNCTIONAL: written from the exe's control flow.
+// MS2-FUNCTIONAL: register tie-break only: the hash multipliers for key bytes 4 and 5 sit in r13/r14 swapped.
 // @0x1427466d0
 void FUN_1427466d0(void* self, const U* transforms)
 {
-    const SoundTransform* t = (const SoundTransform*)transforms[0];
     U size = transforms[1];
-    void* sample = RawField<void*>(self, 0x30);
-    if (!size || !sample || !RawField<void*>(sample, 0x30))
+    if (size == 0)
         return;
-    void* channel = RawField<void*>(self, 0x38);
-    reinterpret_cast<FMOD::Channel*>(channel)->setCallback(reinterpret_cast<FMOD_CHANNEL_CALLBACK>((void*)&FUN_1427443c0));
-    for (U i = 0; i < size; i++)
+    if (!RawField<void*>(self, 0x30) || !RawField<void*>(RawField<void*>(self, 0x30), 0x30))
+        return;
+    reinterpret_cast<FMOD::Channel*>(RawField<void*>(self, 0x38))->setCallback(reinterpret_cast<FMOD_CHANNEL_CALLBACK>((void*)&FUN_1427443c0));
+    for (unsigned i = 0; i < size; ++i)
     {
         if (i == 0)
         {
-            FUN_1427474d0(channel, &t[0]);
+            FUN_1427474d0(RawField<void*>(self, 0x38), &Sfr22bAt(transforms, 0));
             continue;
         }
-        const SoundTransform& a = t[i - 1];
-        const SoundTransform& b = t[i];
-        float span = a.Position - b.Position;
-        float rightSlope = (a.Right - b.Right) / span;
-        float leftSlope = (a.Left - b.Left) / span;
-        float rightBase = a.Right - a.Position * rightSlope;
-        float leftBase = a.Left - a.Position * leftSlope;
-        bool last = false;
-        for (unsigned step = 1; !last; step++)
+        float ar = (Sfr22bAt(transforms, i - 1).Right - Sfr22bAt(transforms, i).Right) / (Sfr22bAt(transforms, i - 1).Position - Sfr22bAt(transforms, i).Position);
+        float al = (Sfr22bAt(transforms, i - 1).Left - Sfr22bAt(transforms, i).Left) / (Sfr22bAt(transforms, i - 1).Position - Sfr22bAt(transforms, i).Position);
+        float br = Sfr22bAt(transforms, i - 1).Right - ar * Sfr22bAt(transforms, i - 1).Position;
+        float bl = Sfr22bAt(transforms, i - 1).Left - al * Sfr22bAt(transforms, i - 1).Position;
+
+        bool done = false;
+        for (unsigned j = 1; !done; j++)
         {
-            float pos = (float)step * 0.1f + t[i - 1].Position;
-            SoundTransform point;
-            if (pos > t[i].Position)
+            SoundTransform tr;
+            if (Sfr22bAt(transforms, i).Position < Sfr22bAt(transforms, i - 1).Position + 0.1f * j)
             {
-                point = t[i];
-                last = true;
+                tr = Sfr22bAt(transforms, i);
+                done = true;
             }
             else
             {
-                point.Position = pos;
-                point.Left = pos * leftSlope + leftBase;
-                point.Right = pos * rightSlope + rightBase;
+                tr.Position = Sfr22bAt(transforms, i - 1).Position + 0.1f * j;
+                tr.Right = ar * tr.Position + br;
+                tr.Left = al * tr.Position + bl;
             }
-            void* sync = 0;
-            if (reinterpret_cast<FMOD::Sound*>(RawField<void*>(sample, 0x30))->addSyncPoint((unsigned)(long long)(point.Position * 1000.0f), 1, "", reinterpret_cast<FMOD_SYNCPOINT**>(&sync)) == 0)
+            void* psync;
+            int r = reinterpret_cast<FMOD::Sound*>(RawField<void*>(RawField<void*>(self, 0x30), 0x30))->addSyncPoint(unsigned(tr.Position * 1000.0f), 1, "", reinterpret_cast<FMOD_SYNCPOINT**>(&psync));
+            if (r == 0)
             {
-                U key = (U)sync;
-                NodeRef node = {&key, (void* const*)&point};
-                FUN_142742b50(RawFieldPtr<U*>(self, 0x40), RawFieldPtr<U*>(self, 0x40), &node, RawKey8Hash(key));
+                NodeRef node = {(const U*)&psync, (void* const*)&tr};
+                FUN_142742b50(RawFieldPtr<U*>(self, 0x40), RawFieldPtr<U*>(self, 0x40), &node, Sfr22bKey8Hash((const unsigned char*)&psync));
             }
         }
     }
@@ -269,17 +276,26 @@ void FUN_142746a30(void* self, float volume)
         reinterpret_cast<FMOD::Channel*>(channel)->setVolume(volume);
 }
 
+// Sound data view for Start: Length at +0x18, SeekSample at +0x1c (Sound_Sound.h).
+struct Sfr22bSoundData
+{
+    void* m_pad[3];
+    unsigned Length;
+    unsigned SeekSample;
+    unsigned GetSampleCount() const { return Length; }
+    unsigned GetSeekSample() const { return SeekSample; }
+};
+
 // Sample: Start. Plays the sound paused, delays it past the player's latency on the DSP clock, applies the seek,
 // then wraps the channel.
-// MS2-FUNCTIONAL: cl fuses the two pSoundData tests that the exe keeps apart, and the hi/lo DSP clock slots and
-// the scount float sequence differ.
 // @0x142746a40
 void* FUN_142746a40(void* self, bool paused)
 {
     if (RawField<void*>(self, 0x30))
     {
-        unsigned latency = RawField<void*>(self, 0x38) ? RawField<unsigned>(RawField<void*>(self, 0x38), 0x1c) : 0;
-        unsigned scount = RawField<void*>(self, 0x38) ? RawField<unsigned>(RawField<void*>(self, 0x38), 0x18) : 0;
+        const Scaleform::Ptr<Sfr22bSoundData>& pSoundData = *reinterpret_cast<Scaleform::Ptr<Sfr22bSoundData>*>((char*)self + 0x38);
+        unsigned latency = pSoundData ? pSoundData->GetSeekSample() : 0;
+        unsigned scount = pSoundData ? pSoundData->GetSampleCount() : 0;
         if (scount == 0)
             reinterpret_cast<FMOD::Sound*>(RawField<void*>(self, 0x30))->getLength(&scount, 2);
 
@@ -295,8 +311,8 @@ void* FUN_142746a40(void* self, bool paused)
             unsigned lo = 0;
             r = reinterpret_cast<FMOD::System*>(RawField<void*>(RawField<char*>(self, 0x28), 0x10))->getDSPClock(&hi, &lo);
             scount = unsigned(scount * RawField<float>(RawField<char*>(self, 0x28), 0xf4) / sample_rate);
-            lo += scount; // FMOD_64BIT_ADD
-            hi += 0 + (lo < scount);
+            hi += 0 + ((lo + scount) < lo); // FMOD_64BIT_ADD
+            lo += scount;
             r = reinterpret_cast<FMOD::Channel*>(pchan)->setDelay(static_cast<FMOD_DELAYTYPE>(2), hi, lo);
             if (latency > 0)
             {
@@ -579,7 +595,7 @@ int FUN_142747310(void* thread, void* h)
 
 // Channel callback: a sync point was reached; apply its left/right levels as volume and pan.
 // @0x1427474d0
-void FUN_1427474d0(void* channel, const void* transform)
+__declspec(noinline) void FUN_1427474d0(void* channel, const void* transform)
 {
     const SoundTransform* t = (const SoundTransform*)transform;
     // The sum is built in place: (Left + Right) / 2 has cl load Right first.
@@ -630,7 +646,8 @@ extern "C" void FUN_142747530(U** self, void* heap, U n)
 }
 
 // HashSet<Streamer*, ArrayPOD<Channel*>> (stride 0x30): setRawCapacity.
-// MS2-FUNCTIONAL: the exe inlines the add; here it goes through FUN_1427429d0 (which copies the array).
+// MS2-FUNCTIONAL: the exe stores the new table slot as null before the alloc and guards the -2 fill loop with a
+// size test; ours drops the store and the test, which shifts the register assignment.
 // @0x1427478c0
 extern "C" void FUN_1427478c0(U** self, void* heap, U n)
 {
@@ -648,7 +665,8 @@ extern "C" void FUN_1427478c0(U** self, void* heap, U n)
                 Memory::Free(RawField<void*>(e, 0x18));
             *(SPInt*)e = -2;
         }
-        Memory::Free(*self);
+        if (*self)
+            Memory::Free(*self);
         *self = 0;
         return;
     }
@@ -666,18 +684,18 @@ extern "C" void FUN_1427478c0(U** self, void* heap, U n)
             char* e = RawEntry(*self, i, 0x30);
             if (*(SPInt*)e == -2)
                 continue;
-            FUN_1427429d0(&table, heap, RawFieldPtr<const U>(e, 0x10), RawKey8Hash(RawField<U>(e, 0x10)));
+            FUN_1427429d0(&table, heap, RawFieldPtr<const U>(e, 0x10), Sfr22bKey8Hash(RawFieldPtr<const unsigned char>(e, 0x10)));
             if (RawField<void*>(e, 0x18))
                 Memory::Free(RawField<void*>(e, 0x18));
             *(SPInt*)e = -2;
         }
-        Memory::Free(*self);
+        if (*self)
+            Memory::Free(*self);
     }
     *self = table;
 }
 
 // SoundRenderer: finalize. Stops the update thread, then lets every live channel unlink itself from the list.
-// MS2-FUNCTIONAL: Lock::Locker spelled as Enter/LeaveCriticalSection.
 // @0x142747b30
 extern "C" void FUN_142747b30(void* self)
 {
@@ -688,11 +706,12 @@ extern "C" void FUN_142747b30(void* self)
         reinterpret_cast<Scaleform::Event*>(r + 0x20)->PulseEvent();
         reinterpret_cast<Scaleform::Waitable*>(RawField<void*>(r, 0x18))->Wait(0xffffffff);
     }
-    EnterCriticalSection(RawLock(r, 0xc8));
-    while (RawField<char*>(r, 0xc0) != r + 0xb0)
     {
-        char* first = RawField<char*>(r, 0xc0);
-        (*(void (**)(void*))(RawField<char*>(first, 0) + 8))(first);
+        ChannelLocker guard(RawLock(r, 0xc8));
+        while (RawField<char*>(r, 0xc0) != r + 0xb0)
+        {
+            char* first = RawField<char*>(r, 0xc0);
+            (*(void (**)(void*))(RawField<char*>(first, 0) + 8))(first);
+        }
     }
-    LeaveCriticalSection(RawLock(r, 0xc8));
 }
