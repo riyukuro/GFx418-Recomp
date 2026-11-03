@@ -2779,15 +2779,16 @@ namespace InstanceTraits
     // The public namespace for an empty package name, else the interned public namespace of the package.
     static Pickable<Instances::Namespace> MakeInternedNamespace(VM& vm, Abc::NamespaceKind kind, const ASString& uri)
     {
-        if (kind == Abc::NS_Public && uri.IsEmpty())
-            return Pickable<Instances::Namespace>(vm.PublicNamespace.GetPtr(), PickValue);
+        if (uri.IsEmpty() && kind == Abc::NS_Public)
+            return Pickable<Instances::Namespace>(&vm.GetPublicNamespace(), PickValue);
         return static_cast<fl::Namespace&>(vm.GetClassTraitsNamespace().GetInstanceTraits())
             .MakeInternedInstance(kind, uri, Value::GetUndefined());
     }
 
     static Pickable<Instances::Namespace> MakeInternedNamespace(VM& vm, Abc::NamespaceKind kind, const char* name)
     {
-        return MakeInternedNamespace(vm, kind, vm.GetStringManager().CreateString(name ? name : ""));
+        if (!name) name = "";
+        return MakeInternedNamespace(vm, kind, vm.GetStringManager().CreateString(name));
     }
 
     static const Traits* GetParentInstanceTraits(VM& vm, const ClassInfo& ci)
@@ -2799,8 +2800,8 @@ namespace InstanceTraits
         return itr;
     }
 
-    // MS2-FUNCTIONAL: same code; the exe does the package name select before loading the string manager and keeps
-    // the uri node in rcx (register allocation)
+    // MS2-FUNCTIONAL: same code; the exe keeps the uri node in rcx and the public namespace in rdx (register
+    // allocation). The package name select comes first because the helper follows the SDK (if (!name) name = "").
     // @0x1424d6750
     CTraits::CTraits(VM& vm, const ClassInfo& ci)
         : Traits(MakeInternedNamespace(vm, Abc::NS_Public, ci.GetPkgName()), vm, GetParentInstanceTraits(vm, ci),
@@ -2917,8 +2918,9 @@ Multiname::Multiname(VM& vm)
         Obj.SetPtr(vm.PublicNamespace.GetPtr());
 }
 
-// "pkg.Name" or "pkg::Name" as a public QName; a name without a package is in the public namespace.
-// MS2-FUNCTIONAL: same code; the exe branches on the colon flag before decrementing pos (we select it), and allocates registers differently
+// "pkg.Name" or "pkg::Name" as a public QName; a name without a package is in the public namespace. The body
+// follows the SDK (AS3_Object.cpp): the trim uses Alg::PMin, the "::" length is a Max(0, pos - 1) select, and the
+// name goes through the visible FUN_1424e0d40 (Value::operator=(const ASString&)), so the node stays in rbx.
 // @0x1424d9040
 Multiname::Multiname(VM& vm, const StringDataPtr& qname)
     : Kind(static_cast<Abc::MultinameKind>(0))
@@ -2930,18 +2932,17 @@ Multiname::Multiname(VM& vm, const StringDataPtr& qname)
         colonColon = false;
         pos = qname.FindLastChar('.');
     }
-    const StringDataPtr name = qname.GetTrimLeft(pos + 1);
+    // StringDataPtr::GetTrimLeft as the SDK writes it (Alg::PMin).
+    UPInt trim = Alg::PMin(qname.GetSize(), (UPInt)(pos + 1));
+    const StringDataPtr name(qname.ToCStr() + trim, qname.GetSize() - trim);
 
     if (pos > 0)
-    {
-        if (colonColon)
-            --pos;
-        Obj = MakePublicNamespace(vm, vm.GetStringManager().CreateString(qname.ToCStr(), pos));
-    }
+        Obj = MakePublicNamespace(vm, vm.GetStringManager().CreateString(qname.ToCStr(),
+            (colonColon ? Alg::Max(SPInt(0), (SPInt)pos - 1) : (SPInt)pos)));
     else
         Obj = vm.PublicNamespace.GetPtr();
 
-    Name = vm.GetStringManager().CreateString(name.ToCStr(), name.GetSize());
+    FUN_1424e0d40(Name, vm.GetStringManager().CreateString(name.ToCStr(), name.GetSize()));
     PostProcessName(false);
 }
 
@@ -3748,38 +3749,54 @@ UPInt* FUN_1424d9ca0(UPInt* self, UPInt arg)
     return self;
 }
 
-// Three heap-owned arrays and a bit set sized from the abc file's table (Tracer state).
-// MS2-FUNCTIONAL: raw words; the layout of the three arrays is {Data, Size, Policy, Heap}
+// CallFrame::GetMethodBodyInfo: GetFile().GetMethodBody().Get(GetMethodBodyInd()), as raw words.
+static inline UPInt Sfr15MethodBodyGet(int ind, UPInt table)
+{
+    return (*reinterpret_cast<UPInt**>(table + 0x170))[ind];
+}
+
+// FixedBitSetBase(pheapAddr, bitsCount) over {pData, BitsCount}.
+static inline void Sfr15BitSetInit(UPInt* bs, UPInt heap, unsigned bitsCount)
+{
+    *reinterpret_cast<unsigned*>(bs + 1) = bitsCount;
+    unsigned dataLen = (bitsCount + 7) / 8;
+    void* p = Scaleform::AllocatorBaseDH<StatMV_VM_Tracer_Mem>::Alloc(reinterpret_cast<const void*>(heap), dataLen,
+                                                                      __FILE__, __LINE__);
+    bs[0] = reinterpret_cast<UPInt>(p);
+    memset(p, 0, dataLen);
+}
+
+// Three heap-owned arrays and a bit set sized from the abc file's table (Tracer state, SDK TR::State::State).
+// MS2-FUNCTIONAL: raw words; the layout of the three arrays is {Data, Size, Policy, Heap}. The exe reads the call
+// frame before the heap and keeps the method-body index in r8 (ours rdx), so its lea of the AllocInfo stays late.
 // @0x1424d9be0
 UPInt* FUN_1424d9be0(UPInt* self, UPInt owner, UPInt arg)
 {
     self[0] = owner;
     self[1] = arg;
     self[2] = arg;
-    UPInt heapOwner = *reinterpret_cast<UPInt*>(owner + 0x18);
     for (unsigned i = 0; i < 3; ++i)
     {
+        // Each array takes the heap as a ctor argument, read again after the previous array's stores.
+        UPInt heapOwner = *reinterpret_cast<UPInt*>(owner + 0x18);
         UPInt* a = self + 3 + i * 4;
         a[0] = 0;
         a[1] = 0;
         a[2] = 0;
         a[3] = heapOwner;
     }
-    UPInt file = *reinterpret_cast<UPInt*>(owner + 0x20);
-    UPInt table = *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(file + 0x28) + 0x28);
-    UPInt entry = (*reinterpret_cast<UPInt**>(table + 0x170))[*reinterpret_cast<int*>(file + 0x30)];
-    unsigned count = *reinterpret_cast<unsigned*>(entry + 0x20);
-    *reinterpret_cast<unsigned*>(self + 16) = count;
-    UPInt bytes = (count + 7) >> 3;
-    AllocInfo info(StatMV_VM_Tracer_Mem, 0, 0);
-    void* bits = reinterpret_cast<MemoryHeap*>(heapOwner)->Alloc(bytes, &info);
-    self[15] = reinterpret_cast<UPInt>(bits);
-    memset(bits, 0, bytes);
+    // RegistersAlive(tr.GetHeap(), tr.GetMethodBodyInfo().GetMaxLocalRegisterIndex()).
+    UPInt heap = *reinterpret_cast<UPInt*>(owner + 0x18);
+    UPInt frame = *reinterpret_cast<UPInt*>(owner + 0x20);
+    Sfr15BitSetInit(self + 15, heap,
+                    *reinterpret_cast<unsigned*>(Sfr15MethodBodyGet(*reinterpret_cast<int*>(frame + 0x30),
+                        *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(frame + 0x28) + 0x28)) + 0x20));
     return self;
 }
 
-// A one-word owner header, three empty words, and an empty-string reference (Tracer scratch state).
-// MS2-FUNCTIONAL: raw words over the VM's string manager chain
+// A one-word owner header, three empty words, and an empty-string reference (Tracer scratch state). The string
+// manager is reached by raw words; the exe's inc, then load/store/test and ReleaseNode, is a temporary ASString
+// from CreateEmptyString copied into the last word and then destroyed.
 // @0x1424dbd10
 UPInt* FUN_1424dbd10(UPInt* self, UPInt vm)
 {
@@ -3787,12 +3804,14 @@ UPInt* FUN_1424dbd10(UPInt* self, UPInt vm)
     self[1] = 0;
     self[2] = 0;
     self[3] = 0;
-    UPInt mgr = *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(vm + 0x78) + 0x10) + 0x1e8);
-    ++*reinterpret_cast<int*>(mgr + 0x58);
+    ASStringManager* mgr = *reinterpret_cast<ASStringManager**>(
+        *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(vm + 0x78) + 0x10) + 0x1e8);
+    // The empty string is a temporary: copied into the last word, then released.
+    ASString empty = mgr->CreateEmptyString();
     self[4] = 0;
     self[5] = 0;
     self[6] = 0;
-    self[7] = mgr + 0x40;
+    ::new (self + 7) ASString(empty);
     return self;
 }
 
