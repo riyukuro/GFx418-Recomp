@@ -5240,36 +5240,59 @@ struct cx18_CommandEntry
     unsigned long long value1;
 };
 
-// MS2-FUNCTIONAL: performs the executable's case-insensitive supported-IME hash lookup and returns its language code.
+// The SDK's case-insensitive StringHash lookup: the key copies the name with its hash and length, the table walk is
+// HashSetBase::findIndexCore, and the found value is read without a null check (as in the exe, an unknown name
+// dereferences address 0).
 // @0x1423cb400
 unsigned FUN_1423cb400(void* raw, const char* name)
 {
-    if (!name) return 0x01000000;
-    const unsigned long long length = std::strlen(name);
-    const unsigned hash = HashFunction(name, length) & 0xffffff;
-    auto* manager = static_cast<unsigned char*>(raw);
-    auto* map = *reinterpret_cast<unsigned char**>(manager + 8);
-    unsigned char* value = nullptr;
-    if (map) {
-        const unsigned long long mask = *reinterpret_cast<unsigned long long*>(map + 8);
-        const unsigned long long home = hash & mask;
-        auto* bucket = reinterpret_cast<unsigned long long*>(map + (home + 1) * 0x10);
-        if (bucket[0] != ~1ull) {
+    struct Node { const char* name; unsigned long long p8; unsigned code; unsigned p14; unsigned long long p18;
+        unsigned hash; unsigned length; };
+    struct Key {
+        String str; unsigned long long hash, length;
+        Key() {}
+        Key(const char* s, unsigned long long h, unsigned long long l) : str(s), hash(h & 0xffffff), length(l) {}
+    };
+    struct Entry { long long NextInChain; Node* Value; };
+    struct TableHdr { unsigned long long EntryCount, SizeMask; };
+    struct Set {
+        TableHdr* pTable;
+        Entry& E(unsigned long long index) { return *(((Entry*)(pTable + 1)) + index); }
+        long long findIndexCore(const Key& key, unsigned long long hashValue)
+        {
+            unsigned long long index = hashValue;
+            Entry* e = &E(index);
+            if (e->NextInChain == -2 || (e->Value->hash & pTable->SizeMask) != index) return -1;
             for (;;) {
-                auto* node = reinterpret_cast<unsigned char*>(bucket[1]);
-                if (node && ((*reinterpret_cast<unsigned*>(node + 0x20) & mask) == home) &&
-                    *reinterpret_cast<unsigned*>(node + 0x24) == length &&
-                    _stricmp(*reinterpret_cast<const char**>(node), name) == 0) {
-                    value = reinterpret_cast<unsigned char*>(bucket[1]);
-                    break;
-                }
-                const unsigned long long index = bucket[0];
-                if (index == ~0ull || index == ~1ull) break;
-                bucket = reinterpret_cast<unsigned long long*>(map + (index + 1) * 0x10);
+                if ((e->Value->hash & pTable->SizeMask) == hashValue && e->Value->length == key.length &&
+                    SFstricmp(e->Value->name, key.str.ToCStr()) == 0)
+                    return index;
+                index = e->NextInChain;
+                if (index == ~0ull) break;
+                e = &E(index);
             }
+            return -1;
         }
-    }
-    return value ? *reinterpret_cast<unsigned*>(value + 0x10) : 0x01000000;
+        long long findIndex(const Key& key)
+        {
+            if (!pTable) return -1;
+            return findIndexCore(key, key.hash & pTable->SizeMask);
+        }
+        Node** Get(const Key& key)
+        {
+            long long index = findIndex(key);
+            if (index >= 0) return &E(index).Value;
+            return 0;
+        }
+    };
+    Key key;
+    const unsigned long long length = std::strlen(name);
+    key = Key(name, String::BernsteinHashFunctionCIS(name, length, 0x1505), length);
+    Node** found = reinterpret_cast<Set*>(static_cast<unsigned char*>(raw) + 8)->Get(key);
+    unsigned code;
+    if (*found) code = (*found)->code;
+    else code = 0x01000000;
+    return code;
 }
 
 // MS2-FUNCTIONAL: HashSetBase::setRawCapacity on the command table (clear on 0, round up with UpperBit, rehash each
