@@ -111,7 +111,7 @@ static SF_INLINE VM& Sfr18TracerVM(const void* tracer)
 }
 
 // @0x14250a1b0
-InstanceTraits::Traits& TR::State::GetFunctType(const Value& value) const
+__declspec(noinline) InstanceTraits::Traits& TR::State::GetFunctType(const Value& value) const
 {
     switch (value.GetKind())
     {
@@ -1971,6 +1971,9 @@ SF_FORCEINLINE bool TrIsClassTypeSlot(const SlotInfo& si)
     return tn.ToCStr() && strncmp(tn.ToCStr(), "Class", 5) == 0 && (static_cast<UInt32>(ns.Kind) & ~4u) == 0 &&
            ns.NameURI.GetSize() == 0;
 }
+
+// VM::ThrowVerifyError: ThrowErrorInternal with the VerifyError class.
+SF_FORCEINLINE void TrThrowVerifyError(VM& vm, const VM::Error& e) { FUN_14252ecb0(&vm, &e, &fl::VerifyErrorCI); }
 }
 
 namespace TR {
@@ -1979,11 +1982,12 @@ namespace TR {
 // slot, the return type of a getter, else the slot's declared type (its class for a Class-typed or class-bound slot).
 // An unknown declared type raises VerifyError 1014 (false).
 // MS2-FUNCTIONAL 0x14250cf20: raw-offset model of the ABC type multiname ("Class" in the public namespace) test
+// (left: the exe keeps the error value's cleared fields after its weak release, the method-slot GetVT call per
+// branch, register allocation)
 // @0x14250cf20
 __declspec(safebuffers) CheckResult State::GetPropertyType(const Traits* obj_traits, const SlotInfo& si, Value& type) const
 {
-    VM& vm = static_cast<const Tracer*>(pTracer)->GetVM();
-    if (si.BindType >= SlotInfo::BT_Code && si.ValueInd >= 0)
+    if (si.BindType > SlotInfo::BT_ConstChar && si.ValueInd >= 0)
     {
         if (si.BindType == SlotInfo::BT_Code)
         {
@@ -1995,11 +1999,13 @@ __declspec(safebuffers) CheckResult State::GetPropertyType(const Traits* obj_tra
         {
             // Retrieve function return type.
             InstanceTraits::Traits& tr =
-                FUN_14250a060(vm, obj_traits->GetVT().VTMethods[static_cast<UInt32>(si.ValueInd)]);
+                FUN_14250a060(static_cast<const Tracer*>(pTracer)->GetVM(), obj_traits->GetVT().VTMethods[static_cast<UInt32>(si.ValueInd)]);
             type = Value(tr, CanBeNull(tr));
         }
         return true;
     }
+
+    VM& vm = static_cast<const Tracer*>(pTracer)->GetVM();
 
     ClassTraits::Traits* ctr = FUN_1425085b0(&si, &vm);
     if (ctr == NULL)
@@ -2007,11 +2013,7 @@ __declspec(safebuffers) CheckResult State::GetPropertyType(const Traits* obj_tra
         struct { UPInt node; } nb;   // raw storage: GetDataTypeName constructs the name in it
         ASString& name = *reinterpret_cast<ASString*>(&nb);
         FUN_142508720(&si, &name, &vm);
-        {
-            const Value tv(name);
-            const VM::Error e(VM::ErrorID(1014) /* eClassNotFoundError */, vm, tv);
-            FUN_14252ecb0(&vm, &e, &fl::VerifyErrorCI);
-        }
+        TrThrowVerifyError(vm, VM::Error(VM::ErrorID(1014) /* eClassNotFoundError */, vm, Value(name, Value::InlineStr)));
         name.~ASString();
         return false;
     }
