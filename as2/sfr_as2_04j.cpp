@@ -394,7 +394,7 @@ void MovieRoot::AddVarLoadQueueEntry(LoadVarsObject* ploadVars, const char* purl
 }
 
 // Queues a load of purl into the clip or level named ptargetName.
-// MS2-FUNCTIONAL: register allocation (the exe calls CreateString in each arm of the penv test, ours hoists it)
+// MS2-FUNCTIONAL: register allocation (the exe gives the penv arm's name string the first slot and keeps it in rbx)
 // @0x14292f960
 void MovieRoot::AddLoadQueueEntry(const char* ptargetName, const char* purl, Environment* penv,
                                   LoadQueueEntry::LoadMethod method, MovieClipLoader* pmovieClipLoader)
@@ -462,8 +462,9 @@ void MovieRoot::AddVarLoadQueueEntry(const char* ptargetName, const char* purl, 
 
 // A movie load goes to the image decoder at once when its url is a synchronous protocol image, to the loader
 // thread when the movie has a task manager, else into the queue of the movie.
+// The exe calls this out of line from AddLoadQueueEntry.
 // @0x142930090
-void MovieRoot::AddMovieLoadQueueEntry(LoadQueueEntry* pentry)
+SF_NOINLINE void MovieRoot::AddMovieLoadQueueEntry(LoadQueueEntry* pentry)
 {
     if (!pentry)
         return;
