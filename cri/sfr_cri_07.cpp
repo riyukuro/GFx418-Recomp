@@ -26133,258 +26133,203 @@ void FUN_14008b6b0(longlong arg1, longlong arg2, int arg3, cri_u4 arg4, uint arg
        (longlong)(arg3 * arg8) + x + arg2,arg3,arg4,arg6);
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: left is the tail merging of the return blocks (the exe and our cl share different stores) and the prologue address schedule (VS2008 build, our toolset differs).
 // @0x14008b780
 void form_component_prediction_thumbnail(longlong arg1, longlong arg2, int arg3, cri_u4 arg4, int arg5, int arg6, int arg7, int arg8, uint arg9, uint arg10, int arg11)
 {
-  byte b_v1;
-  int i_v2;
-  byte *pb_v3;
-  longlong l_v4;
-  byte *pb_v5;
+  longlong st;
+  byte *s;
+  byte *d;
+  uint hx;
+  uint hy;
   
-  l_v4 = (longlong)arg3;
-  pb_v5 = (byte *)(((longlong)(int)arg9 >> 1) +
-                    (longlong)((((int)arg10 >> 1) + arg8) * arg3) + (longlong)arg7 +
-                   arg1);
-  pb_v3 = (byte *)((longlong)(arg3 * arg8) + (longlong)arg7 + arg2);
-  if ((arg9 & 1) == 0) {
-    if ((arg10 & 1) == 0) {
-      if (arg11 == 0) {
+  st = (longlong)arg3;
+  s = (byte *)(((longlong)(int)arg9 >> 1) +
+               (longlong)((((int)arg10 >> 1) + arg8) * arg3) + (longlong)arg7 + arg1);
+  d = (byte *)((longlong)(arg3 * arg8) + (longlong)arg7 + arg2);
+  hy = arg10 & 1;
+  hx = arg9 & 1;
+  if (hx == 0) {
+    if (hy == 0) {
+      if (arg11 != 0) {
         if (arg5 == 1) {
           if (arg6 == 1) {
-            *pb_v3 = *pb_v5;
+            d[0] = (byte)((d[0] + 1 + s[0]) >> 1);
             return;
           }
           if (arg6 == 2) {
-            *pb_v3 = *pb_v5;
-            pb_v3[l_v4] = pb_v5[l_v4];
+            d[0] = (byte)((d[0] + 1 + s[0]) >> 1);
+            d[st] = (byte)((s[st] + 1 + d[st]) >> 1);
             return;
           }
         }
-        else if ((arg5 == 2) && (arg6 == 1)) {
-          *pb_v3 = *pb_v5;
-          pb_v3[1] = pb_v5[1];
+        else if (arg5 == 2 && arg6 == 1) {
+          d[0] = (byte)((d[0] + 1 + s[0]) >> 1);
+          d[1] = (byte)((s[1] + 1 + d[1]) >> 1);
           return;
         }
-        *pb_v3 = *pb_v5;
-        pb_v3[1] = pb_v5[1];
-        pb_v3[l_v4] = pb_v5[l_v4];
-        pb_v3[l_v4 + 1] = pb_v5[l_v4 + 1];
+        d[0] = (byte)((d[0] + 1 + s[0]) >> 1);
+        d[1] = (byte)((s[1] + 1 + d[1]) >> 1);
+        d[st] = (byte)((d[st] + 1 + s[st]) >> 1);
+        d[st + 1] = (byte)((s[st + 1] + 1 + d[st + 1]) >> 1);
         return;
       }
       if (arg5 == 1) {
         if (arg6 == 1) {
-          *pb_v3 = (byte)((int)(*pb_v3 + 1 + (uint)*pb_v5) >> 1);
+          d[0] = s[0];
           return;
         }
         if (arg6 == 2) {
-          *pb_v3 = (byte)((int)(*pb_v3 + 1 + (uint)*pb_v5) >> 1);
-          pb_v3[l_v4] = (byte)((int)(pb_v5[l_v4] + 1 + (uint)pb_v3[l_v4]) >> 1);
+          d[0] = s[0];
+          d[st] = s[st];
           return;
         }
       }
-      else if ((arg5 == 2) && (arg6 == 1)) {
-        *pb_v3 = (byte)((int)(*pb_v3 + 1 + (uint)*pb_v5) >> 1);
-        pb_v3[1] = (byte)((int)(pb_v5[1] + 1 + (uint)pb_v3[1]) >> 1);
+      else if (arg5 == 2 && arg6 == 1) {
+        d[0] = s[0];
+        d[1] = s[1];
         return;
       }
-      *pb_v3 = (byte)((int)(*pb_v3 + 1 + (uint)*pb_v5) >> 1);
-      pb_v3[1] = (byte)((int)(pb_v5[1] + 1 + (uint)pb_v3[1]) >> 1);
-      pb_v3[l_v4] = (byte)((int)(pb_v3[l_v4] + 1 + (uint)pb_v5[l_v4]) >> 1);
-      pb_v3[l_v4 + 1] = (byte)((int)(pb_v5[l_v4 + 1] + 1 + (uint)pb_v3[l_v4 + 1]) >> 1);
+      d[0] = s[0];
+      d[1] = s[1];
+      d[st] = s[st];
+      d[st + 1] = s[st + 1];
       return;
     }
-    if (arg11 == 0) {
+    if (arg11 != 0) {
       if (arg5 == 1) {
         if (arg6 == 1) {
-          *pb_v3 = (byte)((int)(pb_v5[l_v4] + 1 + (uint)*pb_v5) >> 1);
+          d[0] = (byte)((((s[st] + 1 + s[0]) >> 1) + 1 + d[0]) >> 1);
           return;
         }
         if (arg6 == 2) {
-          *pb_v3 = (byte)((int)(pb_v5[l_v4] + 1 + (uint)*pb_v5) >> 1);
-          pb_v3[l_v4] = (byte)((int)(pb_v5[l_v4 * 2] + 1 + (uint)pb_v5[l_v4]) >> 1);
+          d[0] = (byte)((((s[st] + 1 + s[0]) >> 1) + 1 + d[0]) >> 1);
+          d[st] = (byte)((((s[st * 2] + 1 + s[st]) >> 1) + 1 + d[st]) >> 1);
           return;
         }
       }
-      else if ((arg5 == 2) && (arg6 == 1)) {
-        *pb_v3 = (byte)((int)(pb_v5[l_v4] + 1 + (uint)*pb_v5) >> 1);
-        pb_v3[1] = (byte)((int)(pb_v5[l_v4 + 1] + 1 + (uint)pb_v5[1]) >> 1);
+      else if (arg5 == 2 && arg6 == 1) {
+        d[0] = (byte)((((s[st] + 1 + s[0]) >> 1) + 1 + d[0]) >> 1);
+        d[1] = (byte)((((s[st + 1] + 1 + s[1]) >> 1) + 1 + d[1]) >> 1);
         return;
       }
-      *pb_v3 = (byte)((int)(pb_v5[l_v4] + 1 + (uint)*pb_v5) >> 1);
-      pb_v3[1] = (byte)((int)(pb_v5[1] + 1 + (uint)pb_v5[l_v4 + 1]) >> 1);
-      pb_v3[l_v4] = (byte)((int)(pb_v5[l_v4 * 2] + 1 + (uint)pb_v5[l_v4]) >> 1);
-      b_v1 = pb_v5[l_v4 * 2 + 1];
-LAB_14008bdb3:
-      pb_v3[l_v4 + 1] = (byte)((int)(b_v1 + 1 + (uint)pb_v5[l_v4 + 1]) >> 1);
+      d[0] = (byte)((((s[st] + 1 + s[0]) >> 1) + 1 + d[0]) >> 1);
+      d[1] = (byte)((((s[1] + 1 + s[st + 1]) >> 1) + 1 + d[1]) >> 1);
+      d[st] = (byte)((((s[st * 2] + 1 + s[st]) >> 1) + 1 + d[st]) >> 1);
+      d[st + 1] = (byte)((((s[st * 2 + 1] + 1 + s[st + 1]) >> 1) + 1 + d[st + 1]) >> 1);
       return;
     }
     if (arg5 == 1) {
       if (arg6 == 1) {
-        b_v1 = pb_v5[l_v4];
-LAB_14008b9ad:
-        *pb_v3 = (byte)((int)(((int)(b_v1 + 1 + (uint)*pb_v5) >> 1) + 1 + (uint)*pb_v3) >> 1);
+        d[0] = (byte)((s[st] + 1 + s[0]) >> 1);
         return;
       }
       if (arg6 == 2) {
-        *pb_v3 = (byte)((int)(((int)(pb_v5[l_v4] + 1 + (uint)*pb_v5) >> 1) + 1 + (uint)*pb_v3)
-                        >> 1);
-        b_v1 = pb_v5[l_v4 * 2];
-LAB_14008b9fa:
-        i_v2 = ((int)(b_v1 + 1 + (uint)pb_v5[l_v4]) >> 1) + 1 + (uint)pb_v3[l_v4];
-LAB_14008ba0d:
-        pb_v3[l_v4] = (byte)(i_v2 >> 1);
+        d[0] = (byte)((s[st] + 1 + s[0]) >> 1);
+        d[st] = (byte)((s[st * 2] + 1 + s[st]) >> 1);
         return;
       }
     }
-    else if ((arg5 == 2) && (arg6 == 1)) {
-      *pb_v3 = (byte)((int)(((int)(pb_v5[l_v4] + 1 + (uint)*pb_v5) >> 1) + 1 + (uint)*pb_v3) >>
-                      1);
-      b_v1 = pb_v5[l_v4 + 1];
-LAB_14008ba4e:
-      i_v2 = ((int)(b_v1 + 1 + (uint)pb_v5[1]) >> 1) + 1 + (uint)pb_v3[1];
-LAB_14008ba61:
-      pb_v3[1] = (byte)(i_v2 >> 1);
+    else if (arg5 == 2 && arg6 == 1) {
+      d[0] = (byte)((s[st] + 1 + s[0]) >> 1);
+      d[1] = (byte)((s[st + 1] + 1 + s[1]) >> 1);
       return;
     }
-    *pb_v3 = (byte)((int)(((int)(pb_v5[l_v4] + 1 + (uint)*pb_v5) >> 1) + 1 + (uint)*pb_v3) >> 1
-                    );
-    pb_v3[1] = (byte)((int)(((int)(pb_v5[1] + 1 + (uint)pb_v5[l_v4 + 1]) >> 1) + 1 +
-                            (uint)pb_v3[1]) >> 1);
-    pb_v3[l_v4] =
-         (byte)((int)(((int)(pb_v5[l_v4 * 2] + 1 + (uint)pb_v5[l_v4]) >> 1) + 1 +
-                     (uint)pb_v3[l_v4]) >> 1);
-    b_v1 = pb_v5[l_v4 * 2 + 1];
+    d[0] = (byte)((s[st] + 1 + s[0]) >> 1);
+    d[1] = (byte)((s[1] + 1 + s[st + 1]) >> 1);
+    d[st] = (byte)((s[st * 2] + 1 + s[st]) >> 1);
+    d[st + 1] = (byte)((s[st * 2 + 1] + 1 + s[st + 1]) >> 1);
+    return;
   }
-  else {
-    if ((arg10 & 1) != 0) {
-      if (arg11 == 0) {
-        if (arg5 == 1) {
-          if (arg6 == 1) {
-            *pb_v3 = (byte)((int)((uint)pb_v5[l_v4 + 1] + (uint)pb_v5[1] + (uint)pb_v5[l_v4] +
-                                   2 + (uint)*pb_v5) >> 2);
-            return;
-          }
-          if (arg6 == 2) {
-            *pb_v3 = (byte)((int)((uint)pb_v5[1] + (uint)pb_v5[l_v4 + 1] + (uint)pb_v5[l_v4] +
-                                   2 + (uint)*pb_v5) >> 2);
-            pb_v3[l_v4] =
-                 (byte)((int)((uint)pb_v5[l_v4 * 2 + 1] + (uint)pb_v5[l_v4 + 1] +
-                              (uint)pb_v5[l_v4 * 2] + 2 + (uint)pb_v5[l_v4]) >> 2);
-            return;
-          }
-        }
-        else if ((arg5 == 2) && (arg6 == 1)) {
-          *pb_v3 = (byte)((int)((uint)pb_v5[l_v4 + 1] + (uint)pb_v5[1] + (uint)pb_v5[l_v4] + 2
-                                + (uint)*pb_v5) >> 2);
-          pb_v3[1] = (byte)((int)((uint)pb_v5[l_v4 + 2] + (uint)pb_v5[2] +
-                                   (uint)pb_v5[l_v4 + 1] + 2 + (uint)pb_v5[1]) >> 2);
-          return;
-        }
-        *pb_v3 = (byte)((int)((uint)pb_v5[l_v4 + 1] + (uint)pb_v5[1] + (uint)pb_v5[l_v4] + 2 +
-                              (uint)*pb_v5) >> 2);
-        pb_v3[1] = (byte)((int)((uint)pb_v5[2] + (uint)pb_v5[l_v4 + 1] + (uint)pb_v5[1] + 2 +
-                                (uint)pb_v5[l_v4 + 2]) >> 2);
-        pb_v3[l_v4] =
-             (byte)((int)((uint)pb_v5[l_v4 * 2 + 1] + (uint)pb_v5[l_v4 + 1] +
-                          (uint)pb_v5[l_v4 * 2] + 2 + (uint)pb_v5[l_v4]) >> 2);
-        pb_v3[l_v4 + 1] =
-             (byte)((int)((uint)pb_v5[l_v4 * 2 + 2] + (uint)pb_v5[l_v4 * 2 + 1] +
-                          (uint)pb_v5[l_v4 + 1] + 2 + (uint)pb_v5[l_v4 + 2]) >> 2);
-        return;
-      }
+  if (hy == 0) {
+    if (arg11 != 0) {
       if (arg5 == 1) {
         if (arg6 == 1) {
-          *pb_v3 = (byte)((int)(((int)((uint)pb_v5[l_v4 + 1] + (uint)pb_v5[1] +
-                                        (uint)pb_v5[l_v4] + 2 + (uint)*pb_v5) >> 2) + 1 +
-                                (uint)*pb_v3) >> 1);
+          d[0] = (byte)((((s[1] + 1 + s[0]) >> 1) + 1 + d[0]) >> 1);
           return;
         }
         if (arg6 == 2) {
-          *pb_v3 = (byte)((int)(((int)((uint)pb_v5[1] + (uint)pb_v5[l_v4 + 1] +
-                                        (uint)pb_v5[l_v4] + 2 + (uint)*pb_v5) >> 2) + 1 +
-                                (uint)*pb_v3) >> 1);
-          i_v2 = ((int)((uint)pb_v5[l_v4 * 2 + 1] + (uint)pb_v5[l_v4 + 1] +
-                         (uint)pb_v5[l_v4 * 2] + 2 + (uint)pb_v5[l_v4]) >> 2) + 1 +
-                  (uint)pb_v3[l_v4];
-          goto LAB_14008ba0d;
-        }
-      }
-      else if ((arg5 == 2) && (arg6 == 1)) {
-        *pb_v3 = (byte)((int)(((int)((uint)pb_v5[l_v4 + 1] + (uint)pb_v5[1] +
-                                      (uint)pb_v5[l_v4] + 2 + (uint)*pb_v5) >> 2) + 1 +
-                              (uint)*pb_v3) >> 1);
-        i_v2 = ((int)((uint)pb_v5[l_v4 + 2] + (uint)pb_v5[2] + (uint)pb_v5[l_v4 + 1] + 2 +
-                      (uint)pb_v5[1]) >> 2) + 1 + (uint)pb_v3[1];
-        goto LAB_14008ba61;
-      }
-      *pb_v3 = (byte)((int)(((int)((uint)pb_v5[l_v4 + 1] + (uint)pb_v5[1] + (uint)pb_v5[l_v4]
-                                    + 2 + (uint)*pb_v5) >> 2) + 1 + (uint)*pb_v3) >> 1);
-      pb_v3[1] = (byte)((int)(((int)((uint)pb_v5[2] + (uint)pb_v5[l_v4 + 1] + (uint)pb_v5[1] +
-                                      2 + (uint)pb_v5[l_v4 + 2]) >> 2) + 1 + (uint)pb_v3[1]) >> 1
-                        );
-      pb_v3[l_v4] =
-           (byte)((int)(((int)((uint)pb_v5[l_v4 * 2 + 1] + (uint)pb_v5[l_v4 + 1] +
-                               (uint)pb_v5[l_v4 * 2] + 2 + (uint)pb_v5[l_v4]) >> 2) + 1 +
-                       (uint)pb_v3[l_v4]) >> 1);
-      i_v2 = ((int)((uint)pb_v5[l_v4 * 2 + 2] + (uint)pb_v5[l_v4 * 2 + 1] +
-                     (uint)pb_v5[l_v4 + 1] + 2 + (uint)pb_v5[l_v4 + 2]) >> 2) + 1 +
-              (uint)pb_v3[l_v4 + 1];
-      goto LAB_14008bae6;
-    }
-    if (arg11 == 0) {
-      if (arg5 == 1) {
-        if (arg6 == 1) {
-          *pb_v3 = (byte)((int)(pb_v5[1] + 1 + (uint)*pb_v5) >> 1);
-          return;
-        }
-        if (arg6 == 2) {
-          *pb_v3 = (byte)((int)(pb_v5[1] + 1 + (uint)*pb_v5) >> 1);
-          pb_v3[l_v4] = (byte)((int)(pb_v5[l_v4 + 1] + 1 + (uint)pb_v5[l_v4]) >> 1);
+          d[0] = (byte)((((s[1] + 1 + s[0]) >> 1) + 1 + d[0]) >> 1);
+          d[st] = (byte)((((s[st + 1] + 1 + s[st]) >> 1) + 1 + d[st]) >> 1);
           return;
         }
       }
-      else if ((arg5 == 2) && (arg6 == 1)) {
-        *pb_v3 = (byte)((int)(pb_v5[1] + 1 + (uint)*pb_v5) >> 1);
-        pb_v3[1] = (byte)((int)(pb_v5[2] + 1 + (uint)pb_v5[1]) >> 1);
+      else if (arg5 == 2 && arg6 == 1) {
+        d[0] = (byte)((((s[1] + 1 + s[0]) >> 1) + 1 + d[0]) >> 1);
+        d[1] = (byte)((((s[2] + 1 + s[1]) >> 1) + 1 + d[1]) >> 1);
         return;
       }
-      *pb_v3 = (byte)((int)(pb_v5[1] + 1 + (uint)*pb_v5) >> 1);
-      pb_v3[1] = (byte)((int)(pb_v5[2] + 1 + (uint)pb_v5[1]) >> 1);
-      pb_v3[l_v4] = (byte)((int)(pb_v5[l_v4 + 1] + 1 + (uint)pb_v5[l_v4]) >> 1);
-      b_v1 = pb_v5[l_v4 + 2];
-      goto LAB_14008bdb3;
+      d[0] = (byte)((((s[1] + 1 + s[0]) >> 1) + 1 + d[0]) >> 1);
+      d[1] = (byte)((((s[2] + 1 + s[1]) >> 1) + 1 + d[1]) >> 1);
+      d[st] = (byte)((((s[st + 1] + 1 + s[st]) >> 1) + 1 + d[st]) >> 1);
+      d[st + 1] = (byte)((((s[st + 2] + 1 + s[st + 1]) >> 1) + 1 + d[st + 1]) >> 1);
+      return;
     }
     if (arg5 == 1) {
       if (arg6 == 1) {
-        b_v1 = pb_v5[1];
-        goto LAB_14008b9ad;
+        d[0] = (byte)((s[1] + 1 + s[0]) >> 1);
+        return;
       }
       if (arg6 == 2) {
-        *pb_v3 = (byte)((int)(((int)(pb_v5[1] + 1 + (uint)*pb_v5) >> 1) + 1 + (uint)*pb_v3) >> 1
-                        );
-        b_v1 = pb_v5[l_v4 + 1];
-        goto LAB_14008b9fa;
+        d[0] = (byte)((s[1] + 1 + s[0]) >> 1);
+        d[st] = (byte)((s[st + 1] + 1 + s[st]) >> 1);
+        return;
       }
     }
-    else if ((arg5 == 2) && (arg6 == 1)) {
-      *pb_v3 = (byte)((int)(((int)(pb_v5[1] + 1 + (uint)*pb_v5) >> 1) + 1 + (uint)*pb_v3) >> 1);
-      b_v1 = pb_v5[2];
-      goto LAB_14008ba4e;
+    else if (arg5 == 2 && arg6 == 1) {
+      d[0] = (byte)((s[1] + 1 + s[0]) >> 1);
+      d[1] = (byte)((s[2] + 1 + s[1]) >> 1);
+      return;
     }
-    *pb_v3 = (byte)((int)(((int)(pb_v5[1] + 1 + (uint)*pb_v5) >> 1) + 1 + (uint)*pb_v3) >> 1);
-    pb_v3[1] = (byte)((int)(((int)(pb_v5[2] + 1 + (uint)pb_v5[1]) >> 1) + 1 + (uint)pb_v3[1]) >>
-                      1);
-    pb_v3[l_v4] =
-         (byte)((int)(((int)(pb_v5[l_v4 + 1] + 1 + (uint)pb_v5[l_v4]) >> 1) + 1 +
-                     (uint)pb_v3[l_v4]) >> 1);
-    b_v1 = pb_v5[l_v4 + 2];
+    d[0] = (byte)((s[1] + 1 + s[0]) >> 1);
+    d[1] = (byte)((s[2] + 1 + s[1]) >> 1);
+    d[st] = (byte)((s[st + 1] + 1 + s[st]) >> 1);
+    d[st + 1] = (byte)((s[st + 2] + 1 + s[st + 1]) >> 1);
+    return;
   }
-  i_v2 = ((int)(b_v1 + 1 + (uint)pb_v5[l_v4 + 1]) >> 1) + 1 + (uint)pb_v3[l_v4 + 1];
-LAB_14008bae6:
-  pb_v3[l_v4 + 1] = (byte)(i_v2 >> 1);
-  return;
+  if (arg11 != 0) {
+    if (arg5 == 1) {
+      if (arg6 == 1) {
+        d[0] = (byte)((((s[st + 1] + s[1] + s[st] + 2 + s[0]) >> 2) + 1 + d[0]) >> 1);
+        return;
+      }
+      if (arg6 == 2) {
+        d[0] = (byte)((((s[1] + s[st + 1] + s[st] + 2 + s[0]) >> 2) + 1 + d[0]) >> 1);
+        d[st] = (byte)((((s[st * 2 + 1] + s[st + 1] + s[st * 2] + 2 + s[st]) >> 2) + 1 + d[st]) >> 1);
+        return;
+      }
+    }
+    else if (arg5 == 2 && arg6 == 1) {
+      d[0] = (byte)((((s[st + 1] + s[1] + s[st] + 2 + s[0]) >> 2) + 1 + d[0]) >> 1);
+      d[1] = (byte)((((s[st + 2] + s[2] + s[st + 1] + 2 + s[1]) >> 2) + 1 + d[1]) >> 1);
+      return;
+    }
+    d[0] = (byte)((((s[st + 1] + s[1] + s[st] + 2 + s[0]) >> 2) + 1 + d[0]) >> 1);
+    d[1] = (byte)((((s[2] + s[st + 1] + s[1] + 2 + s[st + 2]) >> 2) + 1 + d[1]) >> 1);
+    d[st] = (byte)((((s[st * 2 + 1] + s[st + 1] + s[st * 2] + 2 + s[st]) >> 2) + 1 + d[st]) >> 1);
+    d[st + 1] = (byte)((((s[st * 2 + 2] + s[st * 2 + 1] + s[st + 1] + 2 + s[st + 2]) >> 2) + 1 + d[st + 1]) >> 1);
+    return;
+  }
+  if (arg5 == 1) {
+    if (arg6 == 1) {
+      d[0] = (byte)((s[st + 1] + s[1] + s[st] + 2 + s[0]) >> 2);
+      return;
+    }
+    if (arg6 == 2) {
+      d[0] = (byte)((s[1] + s[st + 1] + s[st] + 2 + s[0]) >> 2);
+      d[st] = (byte)((s[st * 2 + 1] + s[st + 1] + s[st * 2] + 2 + s[st]) >> 2);
+      return;
+    }
+  }
+  else if (arg5 == 2 && arg6 == 1) {
+    d[0] = (byte)((s[st + 1] + s[1] + s[st] + 2 + s[0]) >> 2);
+    d[1] = (byte)((s[st + 2] + s[2] + s[st + 1] + 2 + s[1]) >> 2);
+    return;
+  }
+  d[0] = (byte)((s[st + 1] + s[1] + s[st] + 2 + s[0]) >> 2);
+  d[1] = (byte)((s[2] + s[st + 1] + s[1] + 2 + s[st + 2]) >> 2);
+  d[st] = (byte)((s[st * 2 + 1] + s[st + 1] + s[st * 2] + 2 + s[st]) >> 2);
+  d[st + 1] = (byte)((s[st * 2 + 2] + s[st * 2 + 1] + s[st + 1] + 2 + s[st + 2]) >> 2);
 }
 
 // MS2-FUNCTIONAL: arg12 and arg13 take esi and ebp the other way round (VS2008 build, our toolset differs).
