@@ -34372,221 +34372,87 @@ void CFT_Ycc420plnToRgb565(longlong arg1, longlong arg2)
 #undef CFT07_P
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: CRI vendor cri_code (VS2008 build). 24 bytes short; the body is CFT_Ycc420plnToRgb555WithDither's
+// on the 565 tables, under the table-ready check. Left is the pixel index order and the exe's register homes for the
+// source words, as there.
 // @0x1400946b0
 void CFT_Ycc420plnToRgb565WithDither(longlong arg1, longlong arg2)
 {
-  int i_v1;
-  int i_v2;
-  int i_v3;
-  uint u_v4;
-  uint u_v5;
-  uint u_v6;
-  int i_v7;
-  int i_v8;
-  int i_v9;
-  uint u_v10;
-  uint u_v11;
-  uint u_v12;
-  uint u_v13;
-  ulonglong u_v14;
-  uint *pu_v15;
-  uint u_v16;
-  uint u_v17;
-  int i_v18;
-  uint *pu_v19;
-  uint *pu_v20;
-  uint *pu_v21;
-  ushort *pu_v22;
-  ushort *pu_v23;
-  uint *pu_v24;
-  uint *pu_v25;
-  ushort *pu_v26;
-  ushort *pu_v27;
-  ulonglong local_res20;
-  
+#define CFT07_P(t, o) (*(ushort *)(&(t) + (longlong)(o) * 4))
+#define CFT07_RGB(i, tg, tr, tb) (yv = (&DAT_143d65f50)[i], \
+  CFT07_P(tg, (uint)(yv - g) >> 20) | CFT07_P(tr, (uint)(yv + r) >> 20) | CFT07_P(tb, (uint)(yv + b) >> 20))
+#define CFT07_UV(s) \
+  r = (&DAT_143d5fb50)[cu >> (s) & 0xff]; \
+  g = (&DAT_143d5c750)[cu >> (s) & 0xff] + (&DAT_143d5c350)[cv >> (s) & 0xff]; \
+  b = (&DAT_143d66350)[cv >> (s) & 0xff]
+  int w, r, g, b, yv;
+  uint yskip, dp, dskip, nx, ny, vskip, uskip, i, j, cu, cv, a0, a1;
+  uint *py0, *py1, *pu, *pv;
+  ushort *pd0, *pd1;
+
   if (DAT_143d67f50 == 1) {
-    CFTCOM_SetCftFunctionName("CFT_Ycc420plnToRgb565WithDither");
-    i_v1 = *(int *)((char *)arg2 + 0x10);
-    pu_v25 = *(uint **)(arg1 + 8);
-    pu_v23 = *(ushort **)(arg2 + 8);
-    pu_v21 = *(uint **)((char *)arg1 + 0x20);
-    pu_v15 = *(uint **)((char *)arg1 + 0x38);
-    pu_v19 = pu_v25 + (*(uint *)((char *)arg1 + 0x18) >> 2);
-    u_v16 = *(uint *)((char *)arg1 + 0x18) * 2 - i_v1 >> 2;
-    u_v10 = *(uint *)((char *)arg2 + 0x18) >> 1;
-    pu_v27 = pu_v23 + u_v10;
-    u_v17 = u_v10 * 2 - *(int *)((char *)arg2 + 0x10);
-    u_v10 = (int)(i_v1 + (i_v1 >> 0x1f & 7U)) >> 3;
-    u_v11 = *(int *)((char *)arg2 + 0x14) / 2;
-    u_v14 = (ulonglong)u_v11;
-    i_v2 = *(int *)((char *)arg1 + 0x30);
-    i_v3 = *(int *)((char *)arg1 + 0x48);
-    if (u_v11 != 0) {
-      do {
-        if (u_v10 != 0) {
-          local_res20 = (ulonglong)u_v10;
-          pu_v22 = pu_v23;
-          pu_v24 = pu_v25;
-          pu_v26 = pu_v27;
-          do {
-            u_v11 = *pu_v19;
-            u_v4 = *pu_v15;
-            u_v5 = *pu_v21;
-            u_v6 = *pu_v24;
-            pu_v20 = pu_v19 + 1;
-            pu_v15 = pu_v15 + 1;
-            pu_v21 = pu_v21 + 1;
-            i_v18 = (&DAT_143d5c750)[u_v5 & 0xff] + (&DAT_143d5c350)[u_v4 & 0xff];
-            i_v7 = (&DAT_143d66350)[u_v4 & 0xff];
-            i_v8 = (&DAT_143d5fb50)[u_v5 & 0xff];
-            i_v9 = (&DAT_143d65f50)[(ulonglong)u_v6 & 0xff];
-            *pu_v22 = *(ushort *)(&DAT_143d5cb50 + (ulonglong)((uint)(i_v9 - i_v18) >> 0x14) * 4)
-                       | *(ushort *)
-                          (&DAT_143d5ff50 + (ulonglong)((uint)(i_v9 + i_v8) >> 0x14) * 4) |
-                       *(ushort *)(&DAT_143d62f50 + (ulonglong)((uint)(i_v9 + i_v7) >> 0x14) * 4);
-            i_v9 = (&DAT_143d65f50)[(byte)(u_v6 >> 8)];
-            pu_v22[1] = *(ushort *)
-                          (&DAT_143d5d750 + (ulonglong)((uint)(i_v9 - i_v18) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d60b50 + (ulonglong)((uint)(i_v9 + i_v8) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d63b50 + (ulonglong)((uint)(i_v9 + i_v7) >> 0x14) * 4);
-            i_v9 = (&DAT_143d65f50)[(ulonglong)u_v11 & 0xff];
-            *pu_v26 = *(ushort *)(&DAT_143d5e350 + (ulonglong)((uint)(i_v9 - i_v18) >> 0x14) * 4)
-                       | *(ushort *)
-                          (&DAT_143d61750 + (ulonglong)((uint)(i_v9 + i_v8) >> 0x14) * 4) |
-                       *(ushort *)(&DAT_143d64750 + (ulonglong)((uint)(i_v9 + i_v7) >> 0x14) * 4);
-            i_v9 = (&DAT_143d65f50)[(byte)(u_v11 >> 8)];
-            u_v13 = u_v5 >> 8 & 0xff;
-            pu_v26[1] = *(ushort *)
-                          (&DAT_143d5ef50 + (ulonglong)((uint)(i_v9 - i_v18) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d62350 + (ulonglong)((uint)(i_v9 + i_v8) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d65350 + (ulonglong)((uint)(i_v9 + i_v7) >> 0x14) * 4);
-            i_v7 = (&DAT_143d5fb50)[u_v13];
-            u_v12 = u_v4 >> 8 & 0xff;
-            i_v18 = (&DAT_143d5c750)[u_v13] + (&DAT_143d5c350)[u_v12];
-            i_v8 = (&DAT_143d66350)[u_v12];
-            pu_v25 = pu_v24 + 2;
-            i_v9 = (&DAT_143d65f50)[(byte)(u_v6 >> 0x10)];
-            pu_v22[2] = *(ushort *)
-                          (&DAT_143d5cb50 + (ulonglong)((uint)(i_v9 - i_v18) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d5ff50 + (ulonglong)((uint)(i_v9 + i_v7) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d62f50 + (ulonglong)((uint)(i_v9 + i_v8) >> 0x14) * 4);
-            i_v9 = (&DAT_143d65f50)[u_v6 >> 0x18];
-            pu_v22[3] = *(ushort *)
-                          (&DAT_143d5d750 + (ulonglong)((uint)(i_v9 - i_v18) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d60b50 + (ulonglong)((uint)(i_v9 + i_v7) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d63b50 + (ulonglong)((uint)(i_v9 + i_v8) >> 0x14) * 4);
-            i_v9 = (&DAT_143d65f50)[(byte)(u_v11 >> 0x10)];
-            pu_v26[2] = *(ushort *)
-                          (&DAT_143d5e350 + (ulonglong)((uint)(i_v9 - i_v18) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d61750 + (ulonglong)((uint)(i_v9 + i_v7) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d64750 + (ulonglong)((uint)(i_v9 + i_v8) >> 0x14) * 4);
-            i_v9 = (&DAT_143d65f50)[u_v11 >> 0x18];
-            pu_v19 = pu_v19 + 2;
-            pu_v26[3] = *(ushort *)
-                          (&DAT_143d5ef50 + (ulonglong)((uint)(i_v9 - i_v18) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d62350 + (ulonglong)((uint)(i_v9 + i_v7) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d65350 + (ulonglong)((uint)(i_v9 + i_v8) >> 0x14) * 4);
-            u_v11 = *pu_v20;
-            u_v6 = pu_v24[1];
-            u_v13 = u_v5 >> 0x10 & 0xff;
-            i_v7 = (&DAT_143d5fb50)[u_v13];
-            u_v12 = u_v4 >> 0x10 & 0xff;
-            i_v8 = (&DAT_143d66350)[u_v12];
-            i_v18 = (&DAT_143d5c750)[u_v13] + (&DAT_143d5c350)[u_v12];
-            i_v9 = (&DAT_143d65f50)[(ulonglong)u_v6 & 0xff];
-            pu_v22[4] = *(ushort *)
-                          (&DAT_143d5cb50 + (ulonglong)((uint)(i_v9 - i_v18) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d5ff50 + (ulonglong)((uint)(i_v9 + i_v7) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d62f50 + (ulonglong)((uint)(i_v9 + i_v8) >> 0x14) * 4);
-            i_v9 = (&DAT_143d65f50)[(byte)(u_v6 >> 8)];
-            pu_v22[5] = *(ushort *)
-                          (&DAT_143d5d750 + (ulonglong)((uint)(i_v9 - i_v18) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d60b50 + (ulonglong)((uint)(i_v9 + i_v7) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d63b50 + (ulonglong)((uint)(i_v9 + i_v8) >> 0x14) * 4);
-            i_v9 = (&DAT_143d65f50)[(ulonglong)u_v11 & 0xff];
-            pu_v26[4] = *(ushort *)
-                          (&DAT_143d5e350 + (ulonglong)((uint)(i_v9 - i_v18) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d61750 + (ulonglong)((uint)(i_v9 + i_v7) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d64750 + (ulonglong)((uint)(i_v9 + i_v8) >> 0x14) * 4);
-            i_v9 = (&DAT_143d65f50)[(byte)(u_v11 >> 8)];
-            pu_v26[5] = *(ushort *)
-                          (&DAT_143d5ef50 + (ulonglong)((uint)(i_v9 - i_v18) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d62350 + (ulonglong)((uint)(i_v9 + i_v7) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d65350 + (ulonglong)((uint)(i_v9 + i_v8) >> 0x14) * 4);
-            i_v7 = (&DAT_143d65f50)[(byte)(u_v6 >> 0x10)];
-            i_v18 = (&DAT_143d5c750)[u_v5 >> 0x18] + (&DAT_143d5c350)[u_v4 >> 0x18];
-            i_v8 = (&DAT_143d5fb50)[u_v5 >> 0x18];
-            i_v9 = (&DAT_143d66350)[u_v4 >> 0x18];
-            pu_v22[6] = *(ushort *)
-                          (&DAT_143d5cb50 + (ulonglong)((uint)(i_v7 - i_v18) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d5ff50 + (ulonglong)((uint)(i_v7 + i_v8) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d62f50 + (ulonglong)((uint)(i_v7 + i_v9) >> 0x14) * 4);
-            pu_v27 = pu_v26 + 8;
-            pu_v23 = pu_v22 + 8;
-            i_v7 = (&DAT_143d65f50)[u_v6 >> 0x18];
-            pu_v22[7] = *(ushort *)
-                          (&DAT_143d5d750 + (ulonglong)((uint)(i_v7 - i_v18) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d60b50 + (ulonglong)((uint)(i_v7 + i_v8) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d63b50 + (ulonglong)((uint)(i_v7 + i_v9) >> 0x14) * 4);
-            i_v7 = (&DAT_143d65f50)[(byte)(u_v11 >> 0x10)];
-            pu_v26[6] = *(ushort *)
-                          (&DAT_143d5e350 + (ulonglong)((uint)(i_v7 - i_v18) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d61750 + (ulonglong)((uint)(i_v7 + i_v8) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d64750 + (ulonglong)((uint)(i_v7 + i_v9) >> 0x14) * 4);
-            i_v7 = (&DAT_143d65f50)[u_v11 >> 0x18];
-            local_res20 = local_res20 - 1;
-            pu_v26[7] = *(ushort *)
-                          (&DAT_143d5ef50 + (ulonglong)((uint)(i_v7 - i_v18) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d62350 + (ulonglong)((uint)(i_v7 + i_v8) >> 0x14) * 4) |
-                         *(ushort *)
-                          (&DAT_143d65350 + (ulonglong)((uint)(i_v7 + i_v9) >> 0x14) * 4);
-            pu_v22 = pu_v23;
-            pu_v24 = pu_v25;
-            pu_v26 = pu_v27;
-          } while (local_res20 != 0);
-        }
-        pu_v25 = pu_v25 + u_v16;
-        pu_v19 = pu_v19 + u_v16;
-        pu_v15 = pu_v15 + ((uint)(i_v2 - i_v1 / 2) >> 2);
-        pu_v21 = pu_v21 + ((uint)(i_v3 - i_v1 / 2) >> 2);
-        pu_v23 = pu_v23 + u_v17;
-        pu_v27 = pu_v27 + u_v17;
-        u_v14 = u_v14 - 1;
-      } while (u_v14 != 0);
+  CFTCOM_SetCftFunctionName("CFT_Ycc420plnToRgb565WithDither");
+  w = *(int *)((char *)arg2 + 0x10);
+  py0 = *(uint **)(arg1 + 8);
+  pd0 = *(ushort **)(arg2 + 8);
+  pu = *(uint **)((char *)arg1 + 0x20);
+  pv = *(uint **)((char *)arg1 + 0x38);
+  py1 = py0 + (*(uint *)((char *)arg1 + 0x18) >> 2);
+  yskip = *(uint *)((char *)arg1 + 0x18) * 2 - w >> 2;
+  dp = *(uint *)((char *)arg2 + 0x18) >> 1;
+  pd1 = pd0 + dp;
+  dskip = dp * 2 - *(int *)((char *)arg2 + 0x10);
+  nx = w / 8;
+  ny = *(int *)((char *)arg2 + 0x14) / 2;
+  vskip = (uint)(*(int *)((char *)arg1 + 0x30) - w / 2) >> 2;
+  uskip = (uint)(*(int *)((char *)arg1 + 0x48) - w / 2) >> 2;
+  for (j = ny; j != 0; j--) {
+    for (i = nx; i != 0; i--) {
+      cu = *pu++;
+      cv = *pv++;
+      a0 = py0[0];
+      a1 = py1[0];
+      CFT07_UV(0);
+      pd0[0] = CFT07_RGB(a0 & 0xff, DAT_143d5cb50, DAT_143d5ff50, DAT_143d62f50);
+      pd0[1] = CFT07_RGB(a0 >> 8 & 0xff, DAT_143d5d750, DAT_143d60b50, DAT_143d63b50);
+      pd1[0] = CFT07_RGB(a1 & 0xff, DAT_143d5e350, DAT_143d61750, DAT_143d64750);
+      pd1[1] = CFT07_RGB(a1 >> 8 & 0xff, DAT_143d5ef50, DAT_143d62350, DAT_143d65350);
+      CFT07_UV(8);
+      pd0[2] = CFT07_RGB(a0 >> 16 & 0xff, DAT_143d5cb50, DAT_143d5ff50, DAT_143d62f50);
+      pd0[3] = CFT07_RGB(a0 >> 24, DAT_143d5d750, DAT_143d60b50, DAT_143d63b50);
+      pd1[2] = CFT07_RGB(a1 >> 16 & 0xff, DAT_143d5e350, DAT_143d61750, DAT_143d64750);
+      pd1[3] = CFT07_RGB(a1 >> 24, DAT_143d5ef50, DAT_143d62350, DAT_143d65350);
+      a0 = py0[1];
+      a1 = py1[1];
+      CFT07_UV(16);
+      pd0[4] = CFT07_RGB(a0 & 0xff, DAT_143d5cb50, DAT_143d5ff50, DAT_143d62f50);
+      pd0[5] = CFT07_RGB(a0 >> 8 & 0xff, DAT_143d5d750, DAT_143d60b50, DAT_143d63b50);
+      pd1[4] = CFT07_RGB(a1 & 0xff, DAT_143d5e350, DAT_143d61750, DAT_143d64750);
+      pd1[5] = CFT07_RGB(a1 >> 8 & 0xff, DAT_143d5ef50, DAT_143d62350, DAT_143d65350);
+      CFT07_UV(24);
+      pd0[6] = CFT07_RGB(a0 >> 16 & 0xff, DAT_143d5cb50, DAT_143d5ff50, DAT_143d62f50);
+      pd0[7] = CFT07_RGB(a0 >> 24, DAT_143d5d750, DAT_143d60b50, DAT_143d63b50);
+      pd1[6] = CFT07_RGB(a1 >> 16 & 0xff, DAT_143d5e350, DAT_143d61750, DAT_143d64750);
+      pd1[7] = CFT07_RGB(a1 >> 24, DAT_143d5ef50, DAT_143d62350, DAT_143d65350);
+      py0 += 2;
+      py1 += 2;
+      pd0 += 8;
+      pd1 += 8;
     }
+    py0 += yskip;
+    py1 += yskip;
+    pv += vskip;
+    pu += uskip;
+    pd0 += dskip;
+    pd1 += dskip;
+  }
     return;
   }
-  do {
-                    /* WARNING: Do nothing block with infinite loop */
-  } while( true );
+  for (;;) {
+  }
+#undef CFT07_UV
+#undef CFT07_RGB
+#undef CFT07_P
 }
 
 // @0x140094df0
