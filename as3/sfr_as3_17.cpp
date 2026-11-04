@@ -2501,8 +2501,9 @@ bool FUN_1424f8910(void* tr, void* state, Scaleform::GFx::AS3::Multiname mn, boo
     return true;
 }
 
-Scaleform::UPInt FUN_14250a060(Scaleform::UPInt vm, void* value);   // value -> traits
 namespace Scaleform { namespace GFx { namespace AS3 { InstanceTraits::Traits& FUN_14250a060(VM&, const Value&); } } }
+// value -> traits, through the real VM::GetFunctReturnType (0x14250a060)
+static __forceinline Scaleform::UPInt FUN_14250a060(Scaleform::UPInt vm, void* value) { return reinterpret_cast<Scaleform::UPInt>(&Scaleform::GFx::AS3::FUN_14250a060(*reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm), *static_cast<const Scaleform::GFx::AS3::Value*>(value))); }
 
 // Tracer: emits the call op (0x45 callsuper, 0x46 callproperty, 0x4e/0x4f the void forms, ...) of the call info
 // (+0x18 argc, +0x148 the name, +0x178 the receiver) and pushes the result type on the state's op stack (+0x38). A

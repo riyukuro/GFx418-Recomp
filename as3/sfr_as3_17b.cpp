@@ -14,7 +14,7 @@
 
 int FUN_142519a00(Scaleform::GFx::AS3::VM* vm, Scaleform::UPInt index, void* frame);   // the frame's handler at index, or < 0
 void FUN_1424efe30(Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3::Value* result);
-void FUN_14241de40(void* stack, unsigned n);   // ValueStack::PopBack: pops (and releases) the top n values
+void FUN_14241de40(Scaleform::GFx::AS3::ValueStack* stack, unsigned n);   // ValueStack::PopBack: pops (and releases) the top n values
 bool FUN_1425146d0(Scaleform::GFx::AS3::VM* vm, const Scaleform::GFx::AS3::Value* v, const void* traits);
 Scaleform::UPInt FUN_14250a550(Scaleform::UPInt vm);   // the VM's fallback object (global)
 void FUN_1424d9530(void* ra, Scaleform::GFx::AS3::VM* vm, Scaleform::UInt32 argc);   // ReadArgs::ReadArgs
@@ -241,7 +241,7 @@ Sfr33ExecExit Sfr33ExecFrame(VM& vm, CallFrame& cf, const UPInt* pc, UPInt sizeA
             case 0x17: jump = AbstractLessThan(r, b, a) && r == true3; break;   // ifgt
             case 0x18: jump = AbstractLessThan(r, a, b) && r == false3; break;  // ifge
             }
-            FUN_14241de40(vm.OpStack, 2);
+            FUN_14241de40(reinterpret_cast<ValueStack*>(&vm.OpStack), 2);
             SFR33_CHECK(ip + 2);
             if (pc == ip + 2 && jump)
                 pc = ip + 2 + off;
@@ -253,7 +253,7 @@ Sfr33ExecExit Sfr33ExecFrame(VM& vm, CallFrame& cf, const UPInt* pc, UPInt sizeA
             bool eq = false;
             const bool ok = AbstractEqual(eq, sp[-1], *sp);
             const bool jump = ok && (ip[0] == 0x13 ? eq : !eq);
-            FUN_14241de40(vm.OpStack, 2);
+            FUN_14241de40(reinterpret_cast<ValueStack*>(&vm.OpStack), 2);
             SFR33_CHECK(ip + 2);
             if (pc == ip + 2 && jump)
                 pc = ip + 2 + off;
