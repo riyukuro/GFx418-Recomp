@@ -100,10 +100,8 @@ SF_NOINLINE bool StringToNumber(Number* result, const char* str);
 // GetCaseCheck / RemoveCaseCheck of the watchpoint table (exe 0x142949eb0 / 0x14297cae0).
 const Object::Watchpoint* WatchpointHash_GetCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key,
                                                       bool caseSensitive);
-// The watchpoint hash's findIndexAlt (exact / ignoring case) and add, COMDATs the exe calls out of line.
+// The watchpoint hash's findIndexAlt (exact / ignoring case), COMDATs the exe calls out of line.
 MS2_AS2_HASH_FINDINDEX(Object::Watchpoint)
-void WatchpointHash_Add(ASStringHash_GC<Object::Watchpoint>* phash, void* pheapAddr,
-                        const ASStringHash_GC<Object::Watchpoint>::NodeType::NodeRef& key, UPInt h); // exe 0x142916110
 
 typedef ASStringHash_GC<Object::Watchpoint>::SetType WatchpointSet;
 
@@ -138,7 +136,7 @@ SF_INLINE void WatchpointHash_SetCaseCheck(ASStringHash_GC<Object::Watchpoint>* 
     else
     {
         ASStringHash_GC<Object::Watchpoint>::NodeType::NodeRef e(key, value);
-        WatchpointHash_Add(phash, phash, e, e.GetHash());
+        reinterpret_cast<WatchpointSet*>(phash)->Add(phash, e);
     }
 }
 void WatchpointHash_RemoveCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key,
