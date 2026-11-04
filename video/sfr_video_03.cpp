@@ -1992,7 +1992,9 @@ namespace {
 
 
 } // namespace
-extern "C" void* FUN_1425cf500(void* defImpl, void* ccinfo, const Scaleform::GFx::ResourceId& id);   // MS2: MovieDefImpl::GetCharacterCreateInfo
+// MovieDefImpl::GetCharacterCreateInfo(rid) with its hidden return slot spelled out (as in sfr_as2_01).
+typedef Scaleform::GFx::CharacterCreateInfo* (Scaleform::GFx::MovieDefImpl::*MS2_GetCreateInfoFn)(
+    Scaleform::GFx::CharacterCreateInfo* pret, const Scaleform::GFx::ResourceId* prid);
 // MS2-FUNCTIONAL: resolves and creates the Video display character from the owning MovieDef. Left: the exe stores the
 // ResourceId argument before loading the ASSupport vftable, and indexes the AVM object offset through eax, not ecx.
 // @0x14001a470
@@ -2013,7 +2015,10 @@ void* FUN_14001a470(void* self)
             if (!createInfo.pCharDef) {
                 // no symbol for the class: the exe falls back to the empty Video character (ResourceId 0x10005)
                 __declspec(align(8)) uint64_t tmp[3];
-                memcpy(&createInfo, FUN_1425cf500(movieDef, tmp, Scaleform::GFx::ResourceId(0x10005)), sizeof(createInfo));
+                const Scaleform::GFx::ResourceId emptyVideoId(0x10005);
+                memcpy(&createInfo, (static_cast<Scaleform::GFx::MovieDefImpl*>(movieDef)->*reinterpret_cast<MS2_GetCreateInfoFn>(
+                    &Scaleform::GFx::MovieDefImpl::GetCharacterCreateInfo))(reinterpret_cast<Scaleform::GFx::CharacterCreateInfo*>(tmp), &emptyVideoId),
+                    sizeof(createInfo));
             }
             Scaleform::GFx::ASSupport* asSupport = *reinterpret_cast<Scaleform::GFx::ASSupport**>(library + 0x18);
             void* display = asSupport->CreateCharacterInstance(*reinterpret_cast<Scaleform::GFx::MovieImpl**>(library + 0x10), createInfo, 0,

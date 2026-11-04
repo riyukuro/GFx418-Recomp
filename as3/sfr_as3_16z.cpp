@@ -48,6 +48,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_valueobjectinterface.h"
 #include "ms2/scaleform/include/gfx/as3/as3_userdefinedfunction.h"
 #include "ms2/scaleform/include/gfx/as3/as3_support.h"
+#include "ms2/scaleform/include/render/render_statebag.h"
 #undef GetObject
 // VM: runs the queued code (unrecovered).
 
@@ -980,7 +981,6 @@ void FUN_1425456e0(void* p);            // Abc::File::~File
 void FUN_14257eb30(void* p);
 void FUN_1424dc630(void* p);
 void FUN_1424de650(void* p);            // MovieRoot::~MovieRoot
-void FUN_142626160(void* p);
 void FUN_1423f0720(void* p);            // ArrayDataBase<SPtr<Namespace>,..,2> dtor (already instantiated here)
 void FUN_1424df070(void* p);            // Tracer::~Tracer
 void FUN_1424df380(void* p);            // VM::~VM
@@ -1069,10 +1069,15 @@ static void Sfr21GShapeData(void* p)
     FUN_1424dc260(Sfr21At(p, 0x18));
     static_cast<Scaleform::RefCountImplCore*>(p)->Scaleform::RefCountImplCore::~RefCountImplCore();
 }
+// StateData::destroyBag_NotEmpty is protected; this view only names it.
+struct Sfr21StateDataAccess : Scaleform::Render::StateData
+{
+    static void DestroyBag(Scaleform::Render::StateData* bag) { (bag->*&Sfr21StateDataAccess::destroyBag_NotEmpty)(); }
+};
 static void Sfr21GNodeData(void* p)
 {
     if (Sfr21Mem(p, 0x40))
-        FUN_142626160(Sfr21At(p, 0x40));
+        Sfr21StateDataAccess::DestroyBag(reinterpret_cast<Scaleform::Render::StateData*>(Sfr21At(p, 0x40)));
     FUN_14257eb30(p);
 }
 
@@ -1366,8 +1371,10 @@ void* DeleteAs3_1424e4190(void* p, unsigned flags)
 
 // ==== AvmSprite::AddDisplayObject ====================================================================================
 
+// MovieDefImpl::GetCharacterCreateInfo(rid) with its hidden return slot spelled out (as in sfr_as2_01).
+typedef Scaleform::GFx::CharacterCreateInfo* (Scaleform::GFx::MovieDefImpl::*MS2_GetCreateInfoFn)(
+    Scaleform::GFx::CharacterCreateInfo* pret, const Scaleform::GFx::ResourceId* prid);
 extern "C" {
-extern "C" void* FUN_1425cf500(void* defImpl, void* ccinfo, const unsigned* id);         // MovieDefImpl::GetCharacterCreateInfo
 void  FUN_1425dcaf0(void* sprite);                                            // Sprite::SetDirtyFlag (empty)
 void  FUN_1425f7f70(void* io);                                                // InteractiveObject::AddToPlayList
 }
@@ -1419,7 +1426,9 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
     else
     {
         CCInfo tmp;
-        memcpy(&cc, FUN_1425cf500(defImpl, &tmp, &id), sizeof(cc));
+        memcpy(&cc, (static_cast<Scaleform::GFx::MovieDefImpl*>(defImpl)->*reinterpret_cast<MS2_GetCreateInfoFn>(
+            &Scaleform::GFx::MovieDefImpl::GetCharacterCreateInfo))(reinterpret_cast<Scaleform::GFx::CharacterCreateInfo*>(&tmp),
+            reinterpret_cast<const Scaleform::GFx::ResourceId*>(&id)), sizeof(cc));
     }
     if (!cc.pCharDef)
     {

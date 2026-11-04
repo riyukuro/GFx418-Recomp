@@ -264,7 +264,7 @@ extern "C" void FUN_1424de650(void* self)
     reinterpret_cast<Scaleform::GFx::ASMovieRootBase*>(self)->Scaleform::GFx::ASMovieRootBase::~ASMovieRootBase();
 }
 
-extern "C" void FUN_142530d50(Scaleform::UPInt self);
+namespace Scaleform { namespace GFx { namespace AS3 { void Sfr31ShutdownRegistered(UPInt self); }}} // sfr_as3_19
 extern "C" void FUN_1424dfbf0(void* self);
 void FUN_1424dc8e0(void* self);
 void FUN_1424de240(long long* state);
@@ -584,7 +584,7 @@ VMGCGuard::~VMGCGuard() { FUN_1424de240(reinterpret_cast<long long*>(&pGC)); }
 VM::~VM()
 {
     InDestructor = true;
-    FUN_142530d50(reinterpret_cast<Scaleform::UPInt>(this));
+    Scaleform::GFx::AS3::Sfr31ShutdownRegistered(reinterpret_cast<Scaleform::UPInt>(this));
     // The exe's GlobalObjects is ArrayLH<GlobalObject*>: its data is freed without releasing the (unowned) elements.
     // as3_vm.h still declares SPtr elements (shared with the as3_17/18 lanes), so empty it here; the member dtor then only frees Data.
     reinterpret_cast<Scaleform::UPInt*>(&GlobalObjects)[1] = 0; // Size (+0x1b0)
