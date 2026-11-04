@@ -343,7 +343,6 @@ void criUsfDmx_SetThrououtSwitch(void* demux, CriBool value);   // the exe C cal
 #endif
 void criSj_Reset(void* streamJoint);
 void* criMvPly_GetInputSj(void* player, CriUint32* available, CriUint32* bounded);
-void FUN_1400467a0(void* queue, CriSint32 operation, CriSint32 timeout, void* item);
 CRI_C_LINKAGE void criSj_UngetChunk(void* queue, CriSint32 operation, void* chunk);
 CRI_C_LINKAGE CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
 void criSj_GetInputChunk(void* object, void* value);
@@ -1424,7 +1423,7 @@ CriSint32 FUN_140032090(void* player)
     CriMvAnalyzedAlpha* alph;
     while ((CriUint32)FUN_1400467b8(queue, 1) > 0)
     {
-        FUN_1400467a0(queue, 1, -1, &usfHead);
+        criSj_GetChunk(queue, 1, -1, &usfHead);
         if (usfHead.Type >= 0x20)
         {
             FUN_14003b3fc((const CriUint8*)usfHead.Chunk, usfHead.Type, &hdr);
@@ -1558,7 +1557,7 @@ CriBool decodeMetaData(void* player)
     end = 0;
     while ((CriUint32)FUN_1400467b8(sj, 1) > 0)
     {
-        FUN_1400467a0(sj, 1, -1, &ck);
+        criSj_GetChunk(sj, 1, -1, &ck);
         if (ck.Size >= 0x20)
         {
             FUN_14003b3fc(ck.Data, ck.Size, hdr);
@@ -1754,11 +1753,11 @@ void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue
     if (((CriMvReadModeView*)player)->Mode != 0)
         return;
     while ((CriUint32)FUN_1400467b8(readBuffer, 2) > 0)
-        FUN_1400467a0(readBuffer, 2, -1, &chunk);
+        criSj_GetChunk(readBuffer, 2, -1, &chunk);
     while ((CriUint32)FUN_1400467b8(readBuffer, 1) > 0)
     {
         criSj_GetInputChunk(dataQueue, &dst);
-        FUN_1400467a0(readBuffer, 1, -1, &chunk);
+        criSj_GetChunk(readBuffer, 1, -1, &chunk);
         if (chunk.Type > dst.Capacity)
             crimvply_occurFatalError(player, "E08120301M : Illigal data size of analize header against demux data line.", dst.Capacity);
         memcpy(dst.Data, chunk.Chunk, chunk.Type);
@@ -1768,7 +1767,7 @@ void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue
     while ((CriUint32)FUN_1400467b8(source, 1) > 0)
     {
         criSj_GetInputChunk(dataQueue, &dst);
-        FUN_1400467a0(source, 1, -1, &chunk);
+        criSj_GetChunk(source, 1, -1, &chunk);
         if (chunk.Type > dst.Capacity)
             crimvply_occurFatalError(player, "E08120302M : Illigal data size in read buffer data line of analize header.", dst.Capacity);
         memcpy(dst.Data, chunk.Chunk, chunk.Type);
@@ -1796,7 +1795,7 @@ void executeUsfServer(void* player)
     if (((CriMvUsfHeaderGateView*)player)->HeaderChecked == 0 && ((CriMvPlyStateView*)player)->Status == 1 &&
         ((CriMvUsfHeaderSizeView*)player)->Size == 0)
     {
-        FUN_1400467a0(((CriMvPlyDemuxFields*)player)->InputBuffer, 1, -1, &record);
+        criSj_GetChunk(((CriMvPlyDemuxFields*)player)->InputBuffer, 1, -1, &record);
         if (record.Chunk == 0 || record.Type < 4)
         {
             criSj_UngetChunk(((CriMvPlyDemuxFields*)player)->InputBuffer, 1, &record);
@@ -1860,7 +1859,7 @@ void FUN_140034d40(void* player, CriMovieInputChunk* output)
     if (isLockedInputChunk(player) == 1)
         return;
     record = (CriMovieInputChunk*)((CriUint8*)player + 0xd90);
-    FUN_1400467a0(source, 0, -1, record);
+    criSj_GetChunk(source, 0, -1, record);
     if (record->Size == 0)
     {
         output->Data = 0;
@@ -2033,7 +2032,7 @@ void executeHeaderServer(void* player)
     stream = ((CriMvHeaderQueueView*)player)->Queue;
     if ((CriUint32)FUN_1400467b8(stream, 1) > 0)
     {
-        FUN_1400467a0(stream, 1, -1, &chunk);
+        criSj_GetChunk(stream, 1, -1, &chunk);
         if (chunk.Size >= 0x20)
         {
             FUN_14003b3fc(chunk.Data, chunk.Size, info);
@@ -2074,7 +2073,7 @@ CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* output, CriSint32 chan
     sj = ((CriMvSubtitleFields*)player)->Queue;
     for (;;)
     {
-        FUN_1400467a0(sj, 1, -1, &record);
+        criSj_GetChunk(sj, 1, -1, &record);
         if (record.Chunk == NULL || record.Type < 0x20)
             break;
         FUN_14003b3fc((const CriUint8*)record.Chunk, record.Type, &headerInfo);
