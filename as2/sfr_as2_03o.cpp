@@ -29,29 +29,26 @@ SuperObject::SuperObject(Object* pproto, ObjectInterface* prealThis, const Funct
     pProto = pproto;
 }
 
-// SuperObject's out-of-line ForEachChild_GC<Functor> instantiations (this in rcx).
-void FUN_142911340(const SuperObject* pthis, ASRefCountBaseType::Collector* prcc); // ReleaseFunctor
-void FUN_14290e280(const SuperObject* pthis, ASRefCountBaseType::Collector* prcc); // MarkInCycleFunctor
-void FUN_1429141f0(const SuperObject* pthis, ASRefCountBaseType::Collector* prcc); // ScanInUseFunctor
-
-// The collector's walk, per operation (the exe tail-calls the three instantiations).
+// The collector's walk, per operation (the exe tail-calls the three instantiations, so they stay out of line).
+#pragma inline_depth(0)
 // @0x142941250
 void SuperObject::ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) const
 {
     switch (operation)
     {
     case ASRefCountBaseType::Operation_Release:
-        FUN_142911340(this, prcc);
+        ForEachChild_GC<ASRefCountBaseType::ReleaseFunctor>(prcc);
         break;
     case ASRefCountBaseType::Operation_MarkInCycle:
-        FUN_14290e280(this, prcc);
+        ForEachChild_GC<ASRefCountBaseType::MarkInCycleFunctor>(prcc);
         break;
     case ASRefCountBaseType::Operation_ScanInUse:
-        FUN_1429141f0(this, prcc);
+        ForEachChild_GC<ASRefCountBaseType::ScanInUseFunctor>(prcc);
         break;
     default:;
     }
 }
+#pragma inline_depth()
 
 // The member accessors forward to the prototype above the caller's (the exe tail-calls through its ObjectInterface).
 // @0x142987700
