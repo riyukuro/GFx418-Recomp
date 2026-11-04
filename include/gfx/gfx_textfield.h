@@ -167,8 +167,7 @@ public:
         virtual void    View_OnVScroll(Render::Text::DocView& view, unsigned newScroll);     // 3
         virtual void    View_OnMaxScrollChanged(Render::Text::DocView& view);                // 4
         virtual void    View_OnChanged(Render::Text::DocView& view);                         // 5
-        virtual unsigned Editor_OnKey(Render::Text::EditorKitBase& editor, unsigned keyCode);       // 6
-        virtual wchar_t Editor_OnCharacter(Render::Text::EditorKitBase& editor, wchar_t srcChar);   // 7
+        // slots 6 Editor_OnKey and 7 Editor_OnCharacter are DocumentListener's (the exe table points at the base bodies)
         virtual void    Editor_OnChanged(Render::Text::EditorKitBase& editor);               // 8
         virtual void    Editor_OnCursorMoved(Render::Text::EditorKitBase& editor);           // 9
         virtual void    Editor_OnCursorBlink(Render::Text::EditorKitBase& editor, bool cursorState); // 10
