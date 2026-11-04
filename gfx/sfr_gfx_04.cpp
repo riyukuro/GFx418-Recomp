@@ -126,7 +126,6 @@ public:
 };
 
 extern "C" const void* const MS2_SF_ConstShapeNoStyles_vftable[]; // ??_7ConstShapeNoStyles@GFx@Scaleform@@6B@ 0x14318b708
-extern "C" const void* DAT_143183208[]; // StateBag base vftable
 extern "C" void FUN_14015b310(void*, unsigned long long);
 
 // The shape data without styles of the empty shape (GFx_ShapeSwf): the base with the exe's vtable.
@@ -148,7 +147,7 @@ Video::VideoCharacterDef::~VideoCharacterDef() {}
 // @0x1425ccf60
 void* FUN_1425ccf60(void* object, unsigned flags)
 {
-    *reinterpret_cast<const void***>(static_cast<unsigned char*>(object) + 0x18) = DAT_143183208;
+    reinterpret_cast<StateBag*>(static_cast<unsigned char*>(object) + 0x18)->StateBag::~StateBag();
     static_cast<Resource*>(object)->Resource::~Resource();
     if (flags & 1) {
         if (!(flags & 4)) Memory::Free(object);

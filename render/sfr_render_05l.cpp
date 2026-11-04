@@ -10,11 +10,10 @@
 // MS2-RANGE: 0x142688ed0-0x142688f50 .text$mn
 
 #include "../gfx/sfr_gfx_07raw.h"
+#include "ms2/scaleform/include/render/render_statebag.h"
 #include <intrin.h>
 
 namespace Scaleform { namespace GFx {
-
-extern char DAT_14318f0a8[];
 
 void FUN_14015b310(void*, UPInt);
 
@@ -30,10 +29,12 @@ static inline void RawDeleteBranch(void* self, unsigned flags, UPInt size)
 }
 
 // Bare vftable holders (the SysAlloc singleton bases and SysAllocMalloc): vftable store, then the plain delete.
+// The stored table is Render::StateData::Interface's (no RTTI in Scaleform).
+// MS2-PIN: ??_7Interface@StateData@Render@Scaleform@@6B@ 0x14318f0a8
 // @0x142685e20
 void* FUN_142685e20(void* self, unsigned flags)
 {
-    RawField<void*>(self, 0) = DAT_14318f0a8;
+    static_cast<Render::StateData::Interface*>(self)->Render::StateData::Interface::~Interface();
     if (flags & 1)
         ::operator delete(self, 0x10);
     return self;
@@ -42,7 +43,7 @@ void* FUN_142685e20(void* self, unsigned flags)
 // @0x142685e70
 void* FUN_142685e70(void* self, unsigned flags)
 {
-    RawField<void*>(self, 0) = DAT_14318f0a8;
+    static_cast<Render::StateData::Interface*>(self)->Render::StateData::Interface::~Interface();
     if (flags & 1)
         ::operator delete(self, 0x10);
     return self;
@@ -51,7 +52,7 @@ void* FUN_142685e70(void* self, unsigned flags)
 // @0x142685ec0
 void* FUN_142685ec0(void* self, unsigned flags)
 {
-    RawField<void*>(self, 0) = DAT_14318f0a8;
+    static_cast<Render::StateData::Interface*>(self)->Render::StateData::Interface::~Interface();
     if (flags & 1)
         ::operator delete(self, 0x10);
     return self;
