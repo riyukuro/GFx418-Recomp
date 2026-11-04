@@ -11,13 +11,22 @@
 
 // Bodies of the exe called here (not recovered yet), by their addresses.
 void FUN_1424dd110(void* paliases);                                       // ~ASStringHash<Value> (the invoke aliases)
-void FUN_1424ef380(void** pchains);                                       // EventChains::Clear
-// ArrayLH<SPtr<DisplayObject>>::Resize 0x1425245c0 (sfr_as3_19)
 namespace Scaleform { namespace GFx { namespace AS3 {
-void Sfr31ResizeObjZero(UPInt* a, UPInt n);
 void Sfr31ShutdownRegistered(UPInt self);  // ASVM: drops the loaded ABC files
 } } }
 void FUN_14257dcd0(void* p);                                              // RefCountNTSImpl::Release
+
+namespace Scaleform {
+// The event chains (Clear 0x1424ef380, sfr_as3_17) and the rollover stacks (Resize 0x1425245c0, sfr_as3_19); the
+// members are raw words in as3_asvm.h.
+using Sfr01fChainArray  = ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy>;
+using Sfr01fChainNode   = HashNode<int, AutoPtr<Sfr01fChainArray>, IdentityHash<int>>;
+using Sfr01fChainSet    = HashSetBase<Sfr01fChainNode, Sfr01fChainNode::NodeHashF, Sfr01fChainNode::NodeAltHashF,
+                                      AllocatorLH<int, 2>, HashsetNodeEntry<Sfr01fChainNode, Sfr01fChainNode::NodeHashF>>;
+using Sfr01fRolloverData = ArrayData<Ptr<GFx::InteractiveObject>,
+                                     AllocatorLH<Ptr<GFx::InteractiveObject>, GFx::AS3::StatMV_ActionScript_Mem>,
+                                     ArrayDefaultPolicy>;
+}
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -51,11 +60,13 @@ void MovieRoot::Shutdown()
     pInvokeAliases = NULL;
     void (Scaleform::GFx::AS3::Value::*setUndefined)() = &Scaleform::GFx::AS3::Value::SetUndefined;
     (ExternalIntfRetVal.*setUndefined)();
-    FUN_1424ef380(&mEventChains);
+    void (Sfr01fChainSet::*clearChains)() = &Sfr01fChainSet::Clear;
+    (reinterpret_cast<Sfr01fChainSet*>(&mEventChains)->*clearChains)();
+    void (Sfr01fRolloverData::*resizeRollover)(UPInt) = &Sfr01fRolloverData::Resize;
     for (unsigned i = 0; i < 4; ++i)
     {
         MouseState& ms = mMouseState[i];
-        Scaleform::GFx::AS3::Sfr31ResizeObjZero(reinterpret_cast<UPInt*>(ms.RolloverStack), 0);
+        (reinterpret_cast<Sfr01fRolloverData*>(ms.RolloverStack)->*resizeRollover)(0);
         if (ms.LastMouseOverObj)
             FUN_14257dcd0(ms.LastMouseOverObj);
         ms.LastMouseOverObj = NULL;
