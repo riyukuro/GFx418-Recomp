@@ -5984,10 +5984,6 @@ void FUN_14241e4f0(AS3::Object* self, const AS3::Value& v)
     new (top) AS3::Value(v);
 }
 
-// FunctionBase(InstanceTraits::Traits&), sfr_as3_01c
-extern "C++" Scaleform::GFx::AS3::Instances::FunctionBase* FUN_1423ed140(void* mem,
-                                                                         Scaleform::GFx::AS3::InstanceTraits::Traits& t);
-
 namespace Scaleform { namespace GFx { namespace AS3
 {
 namespace Classes
@@ -5998,7 +5994,7 @@ namespace Classes
     {
         InstanceTraits::Traits& itr = GetClassTraits().GetInstanceTraits();
         void* mem = itr.Alloc();
-        return Pickable<AS3::Object>(mem ? FUN_1423ed140(mem, itr) : NULL);
+        return Pickable<AS3::Object>(mem ? new (mem) Instances::FunctionBase(itr) : NULL);
     }
 
     // Runs the instance initializer of the class on _this.
@@ -6025,7 +6021,7 @@ namespace InstanceTraits
     void Function::MakeObject(Value& result, Traits& t)
     {
         void* mem = t.Alloc();
-        result.Pick(mem ? FUN_1423ed140(mem, *this) : NULL);
+        result.Pick(mem ? new (mem) Instances::FunctionBase(*this) : NULL);
     }
 } // namespace InstanceTraits
 

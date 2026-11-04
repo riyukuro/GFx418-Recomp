@@ -50,8 +50,9 @@ namespace Instances
         class GlobalObjectScript;
     }
 }
-namespace InstanceTraits { class Traits; class CTraits; class Interface; namespace fl { class Object; class Namespace; } }
+namespace InstanceTraits { class Traits; class CTraits; class Interface; class Function; namespace fl { class Object; class Namespace; } }
 namespace ClassTraits    { class Traits; }
+namespace Classes        { class Function; }
 
 namespace Abc
 {
@@ -1149,6 +1150,9 @@ namespace Instances
     // Base of callable objects. 0x40 bytes.
     class FunctionBase : public fl::Object
     {
+        friend class InstanceTraits::Function;  // MakeObject constructs one in place
+        friend class Classes::Function;         // MakePrototype constructs one in place
+
     protected:
         explicit FunctionBase(InstanceTraits::Traits& t);
 
