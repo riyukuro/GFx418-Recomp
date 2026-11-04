@@ -154,7 +154,6 @@ cri_u64 FUN_140027fb4(Any a0,Any a1);
 extern "C" void* criHeap_AllocFix(void* heap, int size, const char* name, int align);
 extern "C" int criHeap_Free(void* heap, void* ptr);
 long FUN_140039180(CriMvEasyPlayer *, long, unsigned long *);  // C3: the definition's signature
-uint FUN_14003b3fc(Any a0,Any a1,Any a2);
 longlong FUN_14003b674(Any a0,Any a1,Any a2);
 void FUN_1400467a0(Any a0,Any a1,Any a2,Any a3);
 void FUN_1400467a8(Any a0,Any a1,Any a2);
@@ -298,7 +297,7 @@ void MPVUMC_InitOutRfb(cri_any);  // C3: the definition's signature
 void MPVUMC_EndOfFrame(void);  // C3: the definition's signature
 void FUN_140065900(Any a0);
 void FUN_1400659a0(unsigned char const *, unsigned char *);  // C3: the definition's signature
-void FUN_140066180(__int64);  // C3: the definition's signature
+void DCT_FsriInitScaleTbl(__int64);  // 0x140066180
 void DCT_FsriInit();
 void FUN_140066350(Any a0);
 void FUN_140066360(longlong a0);
@@ -334,7 +333,6 @@ void FUN_140068d50(__int64, int);  // C3: the definition's signature
 void FUN_140068db0(__int64);  // C3: the definition's signature
 void FUN_140068e70(__int64);  // C3: the definition's signature
 void FUN_140068f30(__int64);  // C3: the definition's signature
-void FUN_140069020(__int64 *, int, __int64 *, __int64 *);  // C3: the definition's signature
 unsigned __int64 FUN_140069270(__int64, unsigned __int64 *, unsigned __int64);  // C3: the definition's signature
 unsigned __int64 FUN_140069480(__int64, unsigned __int64 *, unsigned __int64 *, unsigned __int64 *);  // C3: the definition's signature
 int criAdxDecCore_Decode(longlong, int, byte *, uint, int *, uint, longlong *, uint);
@@ -1187,7 +1185,7 @@ void m2vidct_InitIdctTbls(void)
 {
   DCT_Isse2Init();
   DCT_FsriInit();
-  FUN_140066180((__int64)&DAT_143fe82e0);
+  DCT_FsriInitScaleTbl((__int64)&DAT_143fe82e0);
   FUN_1400659a0((const unsigned char *)&DAT_1431ba950,(unsigned char *)&DAT_143fe8420);
   FUN_1400659a0((const unsigned char *)&DAT_1431ba990,(unsigned char *)&DAT_143fe83e0);
   return;

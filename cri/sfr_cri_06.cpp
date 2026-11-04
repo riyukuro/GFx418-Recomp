@@ -46,7 +46,7 @@ struct Unk_M2vCtx;
     buf = buf << (n); \
   }
 
-// A byte-stream chunk as FUN_140069020 splits it: data pointer and a 32-bit size, 16 bytes on the stack.
+// A byte-stream chunk as SJ_SplitChunk (0x140069020) splits it: data pointer and a 32-bit size, 16 bytes on the stack.
 // Typed by its fields rather than as a byte array, which the exe would not guard with a /GS cookie.
 struct cri06_chunk { cri_u1* data; int size; };
 struct cri06_plane3 { cri_u8 p0; cri_u8 p1; cri_u8 p2; cri_u4 s0; cri_u4 s1; cri_u4 s2; };
@@ -698,7 +698,6 @@ void DCT_FsriInitScanTbl(const cri_u1 *, cri_u1 *);
 void initB0Tbl();
 void DCT_FsriTrans(longlong arg1, longlong arg2, longlong arg3);
 void DCT_FsriTransCore(char *, int);
-void FUN_140066180(cri_any = cri_any());
 void FUN_140066320(cri_any = cri_any());
 void FUN_140066370(__int64);  // C3: the definition's signature
 void FUN_1400663b0(__int64);  // C3: the definition's signature
@@ -710,7 +709,7 @@ void FUN_140067a90(cri_any = cri_any());
 cri_u4 FUN_140067f40(cri_any = cri_any());
 cri_u8 FUN_1400682e0(cri_any = cri_any(), cri_any = cri_any());
 cri_u8 FUN_140068380(cri_any = cri_any());
-void FUN_140069020(__int64 *, int, __int64 *, __int64 *);  // C3: the definition's signature
+void SJ_SplitChunk(__int64 *, int, __int64 *, __int64 *);  // 0x140069020
 void FUN_14006aa90(cri_any = cri_any());
 void DCT_Isse2Trans(V16 *, V16 *, int);
 __int64 FUN_14006b0d0(__int64);  // C3: the definition's signature
@@ -1684,7 +1683,7 @@ uint m2vhdec_ParseSj(cri_any cri_p0, cri_any cri_p1)
         (**(cri_code **)(*arg2 + 0x38))(arg2,1,&head);
         break;
       }
-      FUN_140069020((__int64 *)&head,(int)l_v2 - (int)head.Data,(__int64 *)&head,(__int64 *)&loc_18);
+      SJ_SplitChunk((__int64 *)&head,(int)l_v2 - (int)head.Data,(__int64 *)&head,(__int64 *)&loc_18);
       (**(cri_code **)(*arg2 + 0x40))(arg2,0,&head);
       (**(cri_code **)(*arg2 + 0x38))(arg2,1,&loc_18);
     } while ((*(int *)((char *)arg1 + 0xd0c) == 0) && ((i_v1 = FUN_140051d90(arg2)) != 0));
@@ -4647,7 +4646,7 @@ void M2VFRM_ParseSsc(cri_any cri_p0, cri_any cri_p1)
       rem = pos & 7;
       i_v12 = (((int)((pos - rem) + 7) >> 3) - *(int *)((char *)arg1 + 0xd30)) + -8 + (int)p;
       if (*(int *)((char *)arg1 + 0xd38) - i_v12 <= 0x800) {
-        FUN_140069020((__int64 *)((char *)arg1 + 0xd30),i_v12,(__int64 *)((char *)arg1 + 0xd30),(__int64 *)&loc_18);
+        SJ_SplitChunk((__int64 *)((char *)arg1 + 0xd30),i_v12,(__int64 *)((char *)arg1 + 0xd30),(__int64 *)&loc_18);
         (**(cri_code **)(*arg2 + 0x40))(arg2,0,arg1 + 0xd30);
         (**(cri_code **)(*arg2 + 0x38))(arg2,1,&loc_18);
         (**(cri_code **)(*arg2 + 0x30))(arg2,1,0x7fffffff,arg1 + 0xd30);
@@ -4698,7 +4697,7 @@ void M2VFRM_ParseSsc(cri_any cri_p0, cri_any cri_p1)
   else {
     *(int *)((char *)arg1 + 0xd0c) = *(int *)((char *)arg1 + 0xd0c) + 1;
   }
-  FUN_140069020((__int64 *)((char *)arg1 + 0xd30),
+  SJ_SplitChunk((__int64 *)((char *)arg1 + 0xd30),
                 (((int)(pos + 7) >> 3) - *(int *)((char *)arg1 + 0xd30)) + -8 + (int)p,
                 (__int64 *)((char *)arg1 + 0xd30),(__int64 *)&loc_18);
   (**(cri_code **)(*arg2 + 0x40))(arg2,0,arg1 + 0xd30);
@@ -6839,7 +6838,7 @@ void MPVDEC_DecDpicMb(longlong arg1, longlong *arg2)
     u_v12 = u_v8 & 7;
     i_v7 = (((int)((u_v8 - u_v12) + 7) >> 3) - *(int *)((char *)arg1 + 0x1800)) + -8 + (int)pu_v10;
     if (*(int *)((char *)arg1 + 0x1808) - i_v7 <= 0x800) {
-      FUN_140069020((__int64 *)((char *)arg1 + 0x1800),i_v7,(__int64 *)((char *)arg1 + 0x1800),(__int64 *)&loc_28);
+      SJ_SplitChunk((__int64 *)((char *)arg1 + 0x1800),i_v7,(__int64 *)((char *)arg1 + 0x1800),(__int64 *)&loc_28);
       (**(cri_code **)(*arg2 + 0x40))(arg2,0,arg1 + 0x1800);
       (**(cri_code **)(*arg2 + 0x38))(arg2,1,&loc_28);
       (**(cri_code **)(*arg2 + 0x30))(arg2,1,0x7fffffff,arg1 + 0x1800);
@@ -6861,7 +6860,7 @@ void MPVDEC_DecDpicMb(longlong arg1, longlong *arg2)
       }
     }
   }
-  FUN_140069020((__int64 *)((char *)arg1 + 0x1800),
+  SJ_SplitChunk((__int64 *)((char *)arg1 + 0x1800),
                 (((int)(u_v8 + 7) >> 3) - *(int *)((char *)arg1 + 0x1800)) + -8 + (int)pu_v10,
                 (__int64 *)((char *)arg1 + 0x1800),(__int64 *)&loc_28);
   (**(cri_code **)(*arg2 + 0x40))(arg2,0,arg1 + 0x1800);
@@ -8098,7 +8097,7 @@ void MPVSL_DecSliceOne(longlong arg1, longlong *arg2, int *arg3)
     cur += 4;
   }
   *(uint *)((char *)arg1 + 0x1810) = pos & 7;
-  FUN_140069020((__int64 *)((char *)arg1 + 0x1800),
+  SJ_SplitChunk((__int64 *)((char *)arg1 + 0x1800),
                 (((pos - (pos & 7)) + 7) >> 3) - *(int *)((char *)arg1 + 0x1800) - 8 + (int)(ulonglong)cur,
                 (__int64 *)((char *)arg1 + 0x1800),(__int64 *)&loc_48);
   (**(cri_code **)(*arg2 + 0x40))(arg2,0,arg1 + 0x1800);

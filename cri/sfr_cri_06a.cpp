@@ -21,7 +21,7 @@
 #endif
 // A big-endian stream word as the CRI bit reader loads it: the first byte sign-extended, 32-bit shifts.
 #define CRI06_BE32(a, b, c, d) ((((((int)(signed char)(a) << 8) | (b)) << 8 | (c)) << 8) | (d))
-// A byte-stream chunk as FUN_140069020 splits it: data pointer and a 32-bit size, 16 bytes on the stack.
+// A byte-stream chunk as SJ_SplitChunk (0x140069020) splits it: data pointer and a 32-bit size, 16 bytes on the stack.
 // Typed by its fields rather than as a byte array, which the exe would not guard with a /GS cookie.
 struct cri06_chunk { cri_u1* data; int size; };
 struct cri06_plane3 { cri_u8 p0; cri_u8 p1; cri_u8 p2; cri_u4 s0; cri_u4 s1; cri_u4 s2; };
@@ -652,7 +652,6 @@ int seq2dctfsir(int);
 void DCT_FsriInitScanTbl(const cri_u1 *, cri_u1 *);
 void initB0Tbl();
 void DCT_FsriTransCore(cri_any = cri_any(), cri_any = cri_any());
-void FUN_140066180(cri_any = cri_any());
 void FUN_140066320(cri_any = cri_any());
 void FUN_140066370(cri_any = cri_any());
 void FUN_1400663b0(cri_any = cri_any());
@@ -664,7 +663,6 @@ void FUN_140067a90(cri_any = cri_any());
 cri_u4 FUN_140067f40(cri_any = cri_any());
 cri_u8 FUN_1400682e0(cri_any = cri_any(), cri_any = cri_any());
 cri_u8 FUN_140068380(cri_any = cri_any());
-void FUN_140069020(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_14006aa90(cri_any = cri_any());
 void DCT_Isse2Trans(V16 *, V16 *, int);
 longlong FUN_14006b0d0(cri_any = cri_any());

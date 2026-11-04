@@ -142,7 +142,6 @@ cri_u64 FUN_140027fb4(Any a0,Any a1);
 extern "C" void* criHeap_AllocFix(void* heap, int size, const char* name, int align);
 extern "C" int criHeap_Free(void* heap, void* ptr);
 int FUN_140039180(longlong player,int updateTime,cri_u32 *output);
-uint FUN_14003b3fc(Any a0,Any a1,Any a2);
 longlong FUN_14003b674(Any a0,Any a1,Any a2);
 void FUN_1400467a0(Any a0,Any a1,Any a2,Any a3);
 void FUN_1400467a8(Any a0,Any a1,Any a2);
@@ -278,7 +277,6 @@ void FUN_1400657a0(Any a0);
 void FUN_1400657e0(Any a0);
 void DCT_FsriInitPa(void *);  // C3: the definition's signature
 void FUN_1400659a0(Any a0,Any a1);
-void FUN_140066180(Any a0);
 void DCT_FsriInit();
 void FUN_140066350(__int64);  // C3: the definition's signature
 void MPVCONCEAL_Finish(void);  // C3: the definition's signature
@@ -316,7 +314,6 @@ void FUN_140068d50(Any a0);
 void FUN_140068db0(Any a0);
 void FUN_140068e70(Any a0);
 void FUN_140068f30(Any a0);
-void FUN_140069020(Any a0,Any a1,Any a2,Any a3);
 cri_u64 FUN_140069270(cri_u64 a0,cri_u64 a1,cri_u64 a2);
 cri_u64 FUN_140069480(cri_u64 a0,cri_u64 a1,cri_u64 a2,cri_u64 a3);
 int FUN_140069844(Any a0,Any a1,Any a2,Any a3,Any a4,Any a5,Any a6,Any a7);

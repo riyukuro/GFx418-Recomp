@@ -152,7 +152,6 @@ cri_u64 FUN_140027fb4(Any a0,Any a1);
 extern "C" void* criHeap_AllocFix(void* heap, int size, const char* name, int align);
 extern "C" int criHeap_Free(void* heap, void* ptr);
 long FUN_140039180(CriMvEasyPlayer *, long, unsigned long *);  // C3: the definition's signature
-uint FUN_14003b3fc(Any a0,Any a1,Any a2);
 longlong FUN_14003b674(Any a0,Any a1,Any a2);
 void FUN_1400467a0(Any a0,Any a1,Any a2,Any a3);
 void FUN_1400467a8(Any a0,Any a1,Any a2);
@@ -296,7 +295,6 @@ void MPVUMC_InitOutRfb(cri_any);  // C3: the definition's signature
 void MPVUMC_EndOfFrame(void);  // C3: the definition's signature
 void FUN_140065900(Any a0);
 void FUN_1400659a0(unsigned char const *, unsigned char *);  // C3: the definition's signature
-void FUN_140066180(__int64);  // C3: the definition's signature
 void DCT_FsriInit();
 void FUN_140066350(Any a0);
 void FUN_140066360(longlong a0);

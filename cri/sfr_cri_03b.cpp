@@ -2616,7 +2616,7 @@ extern "C" const CriSint16* DAT_143d74a20;
 extern "C" const CriSint16* DAT_143d74a00;
 extern "C" const CriSint16* DAT_143d749f8;
 extern "C" const CriSint16* DAT_143d749d0;
-void FUN_140069020(const void*, CriUint32, void*, void*);
+void SJ_SplitChunk(__int64 *, int, __int64 *, __int64 *);  // 0x140069020
 CriSint32 FUN_140051d90(void*);
 void FUN_1400663f0(void* decoder);   // reads [decoder+0x1794], writes [decoder+0x18dc]
 
@@ -2745,7 +2745,7 @@ struct CriMpvSlice
     void ReturnUnread(CriSint32 consumed)
     {
         CriMpvChunk remaining;
-        FUN_140069020(&Chunk(), (CriUint32)consumed, &Chunk(), &remaining);
+        SJ_SplitChunk((__int64*)&Chunk(), (CriUint32)consumed, (__int64*)&Chunk(), (__int64*)&remaining);
         ((CriMpvQueuePut)Vtable()[8])(Queue, 0, &Chunk());
         ((CriMpvQueuePut)Vtable()[7])(Queue, 1, &remaining);
     }

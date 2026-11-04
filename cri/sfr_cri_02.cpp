@@ -164,7 +164,6 @@ CriSint32 FUN_14003a894(void* object, CriSint32 index, const char* key);
 void*    FUN_14003a648(void* object, CriSint32 index, CriSint32 value);
 void     FUN_14003af50(void* object, CriSint32 row, CriSint32 field, CriUtfRtvCell* cell);
 void     criUtfRtv_Destroy(CriUint64* table);
-CriUint32 FUN_14003b3fc(const CriUint8* data, CriUint32 size, void* output);
 CriBool  criAlphaDec_DecodeFrame(void* decoder);
 CriBool  criVdec_DecodeFrame(void* decoder);
 void     FUN_140044ae0(void* decoder);
