@@ -7,6 +7,7 @@
 // MS2-RANGE: 0x1427439d0-0x142743db0 .text$mn
 
 #include "../gfx/sfr_gfx_07raw.h"
+#include "../include/kernel/sf_lock.h"
 #include <windows.h>
 #include <intrin.h>
 
@@ -23,9 +24,7 @@ extern "C" char DAT_1431bcbe8[];   // RefCountBase
 void FUN_14015b310(void*, UPInt);           // sized operator delete (Scaleform heap)
 void FUN_142743580(void* self);             // audio channel dtor (sfr_kernel_03o)
 void FUN_1427434d0(U** self);               // array-valued set Clear (sfr_kernel_03o)
-extern "C" void FUN_142582530(void*);       // Event::~Event
 extern "C" void FUN_142747b30(void*);       // audio event listener: shut down
-extern "C" void FUN_14258d0b0(void*);       // Lock::~Lock
 
 static inline void* RawDeleteTail(void* self, unsigned flags, UPInt size)
 {
@@ -74,7 +73,7 @@ void* FUN_142743ac0(void* self, unsigned flags)
     char* sound = RawField<char*>(self, 0x30);
     if (_InterlockedExchangeAdd((volatile long*)(sound + 8), -1) == 1 && sound)
         (*(void (**)(void*, unsigned))*(void**)sound)(sound, 1);
-    FUN_14258d0b0(RawFieldPtr<void>(self, 0x70));
+    RawFieldPtr<Lock>(self, 0x70)->Lock::~Lock();
     FUN_142743580(self);
     return RawDeleteTail(self, flags, 0xa0);
 }
@@ -130,11 +129,11 @@ void* FUN_142743cf0(void* self, unsigned flags)
 {
     RawField<void*>(self, 0) = DAT_1431bede8;
     FUN_142747b30(self);
-    FUN_14258d0b0(RawFieldPtr<void>(self, 0xc8));
+    RawFieldPtr<Lock>(self, 0xc8)->Lock::~Lock();
     RawField<void*>(self, 0xb0) = DAT_1431bec40;
     FUN_1427434d0(RawFieldPtr<U*>(self, 0xa8));
-    FUN_14258d0b0(RawFieldPtr<void>(self, 0x80));
-    FUN_142582530(RawFieldPtr<void>(self, 0x20));
+    RawFieldPtr<Lock>(self, 0x80)->Lock::~Lock();
+    RawFieldPtr<Event>(self, 0x20)->Event::~Event();
     if (RawField<void*>(self, 0x18))
         FUN_14257dcb0(RawField<void*>(self, 0x18));
     RawField<void*>(self, 0) = DAT_1431bcbe8;
