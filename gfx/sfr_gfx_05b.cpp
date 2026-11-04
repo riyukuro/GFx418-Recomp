@@ -888,8 +888,7 @@ static SF_FORCEINLINE void ModifyOptimizedPlayListInline(Sprite* psprite)
 // Removes the sounds that stopped playing (their Sound objects get onSoundComplete) and updates the clip's place on
 // the advance list, which a playing sound keeps it on.
 // @0x1425da3c0
-// MS2-FUNCTIONAL: the exe inlines the play list update (CheckAdvanceStatus included); here it is the out of line
-// ModifyOptimizedPlayListLocal<Sprite> instance
+// The play list update is inlined (CheckAdvanceStatus included), as in the exe.
 void Sprite::CheckActiveSounds()
 {
     if (!pActiveSounds)
@@ -916,17 +915,20 @@ void Sprite::CheckActiveSounds()
 
     for (UPInt i = 0; i < finished.GetSize(); i++)
     {
+        ActiveSoundItem* pitem = finished[i];
         if (!pActiveSounds)
             continue;
-        ArrayLH<Ptr<ActiveSoundItem> >& active = pActiveSounds->Sounds;
-        for (UPInt j = 0; j < active.GetSize(); j++)
+        int idx = -1;
+        for (UPInt j = 0; j < pActiveSounds->Sounds.GetSize(); j++)
         {
-            if (active[j] == finished[i])
+            if (pActiveSounds->Sounds[j] == pitem)
             {
-                active.RemoveAt(j);
+                idx = (int)j;
                 break;
             }
         }
+        if (idx != -1)
+            pActiveSounds->Sounds.RemoveAt(idx);
     }
 }
 
