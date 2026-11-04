@@ -1115,7 +1115,7 @@ longlong parseShc(cri_any cri_p0, cri_any cri_p1)
   }
   resetQuantiserMatrix(arg1);  // the exe passes rcx through
   p = (cri_u1 *)(arg2 & 0xfffffffffffffffc);
-  pos = (int)arg2 * 8 - (int)p * 8;
+  pos = ((int)arg2 << 3) - ((int)p << 3);
   buf = CRI06_BE32(p[0],p[1],p[2],p[3]) << pos;
   nxt = CRI06_BE32(p[4],p[5],p[6],p[7]);
   if (pos != 0) {
@@ -1242,7 +1242,7 @@ longlong parseEsc(cri_any cri_p0, cri_any cri_p1)
 
   *(int *)((char *)arg1 + 0xcb0) = *(int *)((char *)arg1 + 0xcb0) + 1;
   p = (cri_u1 *)(arg2 & 0xfffffffffffffffc);
-  pos = (int)arg2 * 8 - (int)p * 8;
+  pos = ((int)arg2 << 3) - ((int)p << 3);
   buf = CRI06_BE32(p[0],p[1],p[2],p[3]) << pos;
   nxt = CRI06_BE32(p[4],p[5],p[6],p[7]);
   if (pos != 0) {
@@ -1478,7 +1478,7 @@ longlong parseGsc(cri_any cri_p0, cri_any cri_p1)
     *(int *)((char *)arg1 + 0xd0c) = *(int *)((char *)arg1 + 0xd0c) + 1;
   }
   p = (cri_u1 *)(arg2 & 0xfffffffffffffffc);
-  pos = (int)arg2 * 8 - (int)p * 8;
+  pos = ((int)arg2 << 3) - ((int)p << 3);
   buf = CRI06_BE32(p[0],p[1],p[2],p[3]) << pos;
   nxt = CRI06_BE32(p[4],p[5],p[6],p[7]);
   if (pos != 0) {
@@ -1522,7 +1522,7 @@ longlong parsePsc(cri_any cri_p0, cri_any cri_p1)
     *(int *)((char *)arg1 + 0xd0c) = *(int *)((char *)arg1 + 0xd0c) + 1;
   }
   p = (cri_u1 *)(arg2 & 0xfffffffffffffffc);
-  pos = (int)arg2 * 8 - (int)p * 8;
+  pos = ((int)arg2 << 3) - ((int)p << 3);
   buf = CRI06_BE32(p[0],p[1],p[2],p[3]) << pos;
   nxt = CRI06_BE32(p[4],p[5],p[6],p[7]);
   if (pos != 0) {
@@ -4606,9 +4606,9 @@ LAB_14005dbf5:
   return 0xffffffff;
 }
 
-// MS2-FUNCTIONAL: written as CRI06_GETBITS steps (VS2008 build, our toolset differs). What is left: ours folds
-// the bit offset to (addr - p) << 3 where the exe takes addr * 8 - p * 8, it reads the +0x5b8 low byte as a dword
-// then movzx, our toolset adds a loop-alignment nop, and register choice.
+// MS2-FUNCTIONAL: written as CRI06_GETBITS steps (VS2008 build, our toolset differs). The bit offsets are shifts
+// ((addr << 3) - (p << 3)); `* 8 - * 8` folds to (addr - p) << 3. What is left: the exe reads the +0x5b8 low byte
+// as a dword then movzx, our toolset adds a loop-alignment nop, and register choice.
 // @0x14005dc70
 void M2VFRM_ParseSsc(cri_any cri_p0, cri_any cri_p1)
 {
@@ -4639,7 +4639,7 @@ void M2VFRM_ParseSsc(cri_any cri_p0, cri_any cri_p1)
   resetVector(arg1);  // resetDcDctPred keeps rcx
   (**(cri_code **)(*arg2 + 0x30))(arg2,1,0x7fffffff,arg1 + 0xd30);
   p = (cri_u1 *)(*(ulonglong *)((char *)arg1 + 0xd30) & 0xfffffffffffffffc);
-  pos = *(int *)((char *)arg1 + 0xd30) * 8 - (int)p * 8;
+  pos = (*(int *)((char *)arg1 + 0xd30) << 3) - ((int)p << 3);
   buf = CRI06_BE32(p[0],p[1],p[2],p[3]) << pos;
   nxt = CRI06_BE32(p[4],p[5],p[6],p[7]);
   if (pos != 0) {
@@ -4694,7 +4694,7 @@ void M2VFRM_ParseSsc(cri_any cri_p0, cri_any cri_p1)
         (**(cri_code **)(*arg2 + 0x38))(arg2,1,&loc_18);
         (**(cri_code **)(*arg2 + 0x30))(arg2,1,0x7fffffff,arg1 + 0xd30);
         p = (cri_u1 *)(*(ulonglong *)((char *)arg1 + 0xd30) & 0xfffffffffffffffc);
-        i_v12 = *(int *)((char *)arg1 + 0xd30) * 8 - (int)p * 8;
+        i_v12 = (*(int *)((char *)arg1 + 0xd30) << 3) - ((int)p << 3);
         pos = i_v12 + rem;
         buf = CRI06_BE32(p[0],p[1],p[2],p[3]) << i_v12;
         nxt = CRI06_BE32(p[4],p[5],p[6],p[7]);
