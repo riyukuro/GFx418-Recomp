@@ -11,6 +11,7 @@
 // MS2-PINS-END tplpin
 #define MS2_AS2_VALUE_DTOR_CALL
 #include "../include/video/video_video.h"
+#include "../include/video/video_characterdef.h"
 #include "../include/video/video_as3providernetstream.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/as2/as2_actiontypes.h"
@@ -1526,14 +1527,17 @@ UByte FUN_14000ef80(Stream* stream) { return stream->ReadU8(); }
 // @0x14000efc0
 UInt16 FUN_14000efc0(Stream* stream) { return stream->ReadU16(); }
 
-// MS2-FUNCTIONAL: reads the tag fields at the executable offsets; the tag's public type is not yet recovered.
+}}} // namespace Scaleform::GFx::AS2
+namespace Scaleform { namespace GFx { namespace Video {
+// MS2-FUNCTIONAL: reads the tag fields at the executable offsets (the LoadProcess stream: the alternate one at
+// +0x418, else the one at +0x50).
 // @0x14000f2d0
-void FUN_14000f2d0(void* tag, void* movieData)
+void VideoCharacterDef::Read(LoadProcess* p, int)
 {
-    char* movie = static_cast<char*>(movieData);
+    char* movie = reinterpret_cast<char*>(p);
     Stream* stream = *reinterpret_cast<Stream**>(movie + 0x418);
     if (!stream) stream = reinterpret_cast<Stream*>(movie + 0x50);
-    char* fields = static_cast<char*>(tag);
+    char* fields = reinterpret_cast<char*>(this);
     *reinterpret_cast<unsigned*>(fields + 0x20) = stream->ReadU16();
     *reinterpret_cast<unsigned*>(fields + 0x24) = stream->ReadU16();
     *reinterpret_cast<unsigned*>(fields + 0x28) = stream->ReadU16();
@@ -1542,6 +1546,8 @@ void FUN_14000f2d0(void* tag, void* movieData)
     fields[0x2d] = stream->ReadUInt(1) != 0;
     fields[0x2e] = static_cast<char>(stream->ReadU8());
 }
+}}} // namespace Scaleform::GFx::Video
+namespace Scaleform { namespace GFx { namespace AS2 {
 
 // @0x14000f0e0
 void FUN_14000f0e0(void* entry)

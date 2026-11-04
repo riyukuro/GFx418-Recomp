@@ -5,7 +5,9 @@
 
 #include "../gfx/gfx_characterdef.h"
 
-namespace Scaleform { namespace GFx { namespace Video {
+namespace Scaleform { namespace GFx {
+class LoadProcess;
+namespace Video {
 
 class VideoCharacterDef : public CharacterDef
 {
@@ -29,6 +31,9 @@ public:
     virtual unsigned GetVersion() const { return 0; }
 
     Resource* GetResource() { return this; }
+
+    // the DefineVideoStream fields after the character id (tagType is not read). 0x14000f2d0
+    void Read(LoadProcess* p, int tagType);
 };
 
 static_assert(sizeof(VideoCharacterDef) == 0x30, "VideoCharacterDef exe layout");
