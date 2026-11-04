@@ -12,7 +12,10 @@
 #pragma inline_depth(0)
 #include <atlbase.h>
 #pragma inline_depth()
+// The exe's InitializeCAtlStringMgr initialiser inlines the initializer's ctor but tail-calls GetInstance.
+#pragma inline_depth(1)
 #include <atlstr.h>
+#pragma inline_depth()
 #include <stdlib.h>
 #include "../kernel/sf_random.h"
 #include "../kernel/sf_timer.h"
