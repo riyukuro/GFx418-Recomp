@@ -31137,446 +31137,213 @@ void cft_sse_Ycc420plnToArgb8888Prg(longlong *arg1, longlong *arg2, longlong arg
 // @0x140090080
 void cft_sse_Ycc420plnToRgb888Prg(longlong *arg1, longlong *arg2, longlong arg3, longlong arg4)
 {
-  cri_u8 u_v1;
-  cri_u8 u_v2;
-  cri_u8 u_v3;
-  cri_u8 u_v4;
-  cri_u8 u_v5;
-  cri_u8 u_v6;
-  cri_u8 u_v7;
-  cri_u8 u_v8;
-  short s_v9;
-  short s_v10;
-  ushort u_v11;
-  V16 au_v12;
-  V16 au_v13;
-  V16 au_v14;
-  V16 au_v15;
-  V16 au_v16;
-  V16 au_v17;
-  V16 au_v18;
-  V16 au_v19;
-  V16 au_v20;
-  unkuint10 Var21;
-  V16 au_v22;
-  V16 au_v23;
-  V16 au_v24;
-  V16 au_v25;
-  V16 au_v26;
-  V16 au_v27;
-  V16 au_v28;
-  V16 au_v29;
-  V16 au_v30;
-  V16 au_v31;
-  V16 au_v32;
-  V16 au_v33;
-  V16 au_v34;
-  V16 au_v35;
-  V16 au_v36;
-  V16 au_v37;
-  V16 au_v38;
-  V16 au_v39;
-  V16 au_v40;
-  uint5 u_v41;
-  cri_u8 *pu_v42;
-  cri_u8 *pu_v43;
-  ulonglong *pu_v44;
-  longlong l_v45;
-  uint u_v46;
-  uint u_v47;
-  uint u_v48;
-  ulonglong u_v49;
-  cri_u8 *pu_v50;
-  char *pc_v51;
-  longlong l_v52;
-  longlong l_v53;
-  int i_v54;
-  cri_u8 *pu_v55;
-  uint u_v56;
-  uint u_v57;
-  int i_v58;
-  cri_u8 *pu_v59;
-  cri_u8 *pu_v60;
-  longlong l_v61;
-  V16 au_v62;
-  cri_u1 u_v63;
-  cri_u1 u_v71;
-  cri_u1 u_v73;
-  cri_u1 u_v75;
-  cri_u1 u_v77;
-  cri_u1 u_v79;
-  cri_u1 u_v81;
-  cri_u1 u_v83;
-  V16 au_v64;
-  V16 au_v65;
-  V16 au_v66;
-  V16 au_v67;
-  V16 au_v68;
-  V16 au_v69;
-  V16 au_v70;
-  byte b_v91;
-  short s_v85;
-  short s_v92;
-  short s_v93;
-  byte b_v95;
-  short s_v94;
-  V16 au_v86;
-  V16 au_v87;
-  V16 au_v88;
-  V16 au_v89;
-  V16 au_v90;
-  longlong loc_a8;
-  longlong loc_98;
-  longlong loc_88;
-  ulonglong loc_80;
-  cri_u1 u_v72;
-  cri_u1 u_v74;
-  cri_u1 u_v76;
-  cri_u1 u_v78;
-  cri_u1 u_v80;
-  cri_u1 u_v82;
-  cri_u1 u_v84;
-  
+  unsigned int w16;
+  unsigned int h;
+  unsigned int n16;
+  unsigned int rows;
+  unsigned int j;
+  unsigned int i;
+  int n8;
+  int k;
+  int c;
+  int off;
+  int r;
+  int w;
+  int v;
+  const cri_u1 *tbl;
+  cri_u1 *y;
+  cri_u1 *ca;
+  cri_u1 *ca2;
+  cri_u1 *cb;
+  cri_u1 *cb2;
+  cri_u1 *cbuf;
+  cri_u1 *upbuf;
+  cri_u1 *src;
+  cri_u1 *dst;
+  cri_u1 *pcr;
+  cri_u1 *pcb;
+  cri_u1 *pp;
+  cri_u1 *pd;
+  cri_u1 *ps;
+  cri_u1 *d;
+  cri_u1 *q;
+  __m128i zero;
+  __m128i a;
+  __m128i b;
+  __m128i t;
+  __m128i vy;
+  __m128i vcr;
+  __m128i vcb;
+  __m128i lo;
+  __m128i hi;
+  __m128i px;
+
+#define CRI_T(off, x) _mm_loadl_epi64((const __m128i *)(tbl + (x) + (off)))
   CFTCOM_SetCftFunctionName("cft_sse_Ycc420plnToRgb888Prg");
-  loc_a8 = arg1[2];
-  l_v52 = *arg2;
-  l_v61 = arg1[1];
-  l_v53 = *arg1;
-  loc_98 = (int)arg1[4] + loc_a8;
-  u_v56 = (int)arg2[1] + 0xf;
-  u_v57 = u_v56 & 0xfffffff0;
-  pu_v60 = (cri_u8 *)(arg4 + 0x1fU & 0xffffffe0);
-  loc_88 = *(int *)((longlong)arg1 + 0x1c) + l_v61;
-  u_v46 = u_v57 >> 1;
-  pu_v50 = (cri_u8 *)((ulonglong)(u_v46 * 8) + 0x1f + (longlong)pu_v60 & 0xffffffe0);
-  if (*(int *)((longlong)arg2 + 0xc) != 0) {
-    pu_v42 = (cri_u8 *)((ulonglong)(u_v57 * 2) + (longlong)pu_v60);
-    u_v56 = u_v56 >> 4;
-    loc_80 = (ulonglong)((*(int *)((longlong)arg2 + 0xc) - 1U >> 2) + 1);
-    do {
-      if (u_v56 != 0) {
-        u_v49 = (ulonglong)u_v56;
-        pu_v55 = pu_v60;
-        do {
-          u_v1 = *(cri_u8 *)((l_v61 - (longlong)pu_v60) + (longlong)pu_v55);
-          pu_v43 = pu_v55 + 1;
-          u_v49 = u_v49 - 1;
-          u_v2 = *(cri_u8 *)
-                   ((longlong)pu_v55 + (loc_88 - l_v61) + (l_v61 - (longlong)pu_v60));
-          *pu_v55 = u_v1;
-          *(cri_u8 *)(((ulonglong)u_v46 - 8) + (longlong)pu_v43) = u_v1;
-          *(cri_u8 *)(((ulonglong)(u_v46 * 2) - 8) + (longlong)pu_v43) = u_v2;
-          *(cri_u8 *)((longlong)pu_v55 + (ulonglong)(u_v46 * 3)) = u_v2;
-          pu_v55 = pu_v43;
-        } while (u_v49 != 0);
+  w16 = (int)arg2[1] + 0xf & 0xfffffff0;
+  rows = *(int *)((char *)arg2 + 0xc);
+  cb = (cri_u1 *)arg1[2];
+  d = (cri_u1 *)arg2[0];
+  cb2 = cb + (int)arg1[4];
+  ca = (cri_u1 *)arg1[1];
+  ca2 = ca + *(int *)((char *)arg1 + 0x1c);
+  y = (cri_u1 *)arg1[0];
+  h = w16 >> 1;
+  cbuf = (cri_u1 *)(arg4 + 0x1f & 0xffffffe0U);
+  upbuf = (cri_u1 *)((longlong)cbuf + h * 8 + 0x1f & 0xffffffe0U);
+  for (j = 0; j < rows; j += 4) {
+    n16 = w16 >> 4;
+    pd = cbuf;
+    for (i = 0; i < n16; i++) {
+      a = _mm_loadl_epi64((const __m128i *)(ca + (pd - cbuf)));
+      b = _mm_loadl_epi64((const __m128i *)(ca2 + (pd - cbuf)));
+      _mm_storel_epi64((__m128i *)pd, a);
+      _mm_storel_epi64((__m128i *)(pd + h), a);
+      _mm_storel_epi64((__m128i *)(pd + h * 2), b);
+      _mm_storel_epi64((__m128i *)(pd + h * 3), b);
+      pd = pd + 8;
+    }
+    pd = cbuf + w16 * 2;
+    ps = cb;
+    for (i = 0; i < n16; i++) {
+      a = _mm_loadl_epi64((const __m128i *)ps);
+      b = _mm_loadl_epi64((const __m128i *)(ps + (cb2 - cb)));
+      _mm_storel_epi64((__m128i *)pd, a);
+      _mm_storel_epi64((__m128i *)(pd + h), a);
+      _mm_storel_epi64((__m128i *)(pd + h * 2), b);
+      _mm_storel_epi64((__m128i *)(pd + h * 3), b);
+      ps = ps + 8;
+      pd = pd + 8;
+    }
+    ca = ca + *(int *)((char *)arg1 + 0x1c) * 2;
+    ca2 = ca2 + *(int *)((char *)arg1 + 0x1c) * 2;
+    cb = cb + (int)arg1[4] * 2;
+    cb2 = cb2 + (int)arg1[4] * 2;
+    zero = _mm_loadl_epi64((const __m128i *)&cri07_zero8);
+    off = 0;
+    for (k = 8; k > 0; k--) {
+      src = cbuf + ((longlong)off >> 1);
+      dst = upbuf + off;
+      for (c = (w16 >> 3) - 1; c > 0; c--) {
+        a = _mm_loadl_epi64((const __m128i *)src);
+        src = src + 4;
+        t = _mm_move_epi64(a);
+        t = _mm_srli_epi64(_mm_avg_epu8(t, _mm_slli_epi64(t, 8)), 8);
+        _mm_storel_epi64((__m128i *)dst, _mm_unpacklo_epi8(a, t));
+        dst = dst + 8;
       }
-      if (u_v56 != 0) {
-        u_v49 = (ulonglong)u_v56;
-        pu_v43 = (cri_u8 *)
-                  ((longlong)pu_v42 + loc_a8 + (-(longlong)pu_v60 - (ulonglong)(u_v57 * 2)));
-        pu_v55 = pu_v42;
-        do {
-          u_v1 = *pu_v43;
-          u_v2 = *(cri_u8 *)((longlong)pu_v43 + (loc_98 - loc_a8));
-          pu_v59 = pu_v55 + 1;
-          pu_v43 = pu_v43 + 1;
-          u_v49 = u_v49 - 1;
-          *pu_v55 = u_v1;
-          *(cri_u8 *)(((ulonglong)u_v46 - 8) + (longlong)pu_v59) = u_v1;
-          *(cri_u8 *)(((ulonglong)(u_v46 * 2) - 8) + (longlong)pu_v59) = u_v2;
-          *(cri_u8 *)(((ulonglong)(u_v46 * 3) - 8) + (longlong)pu_v59) = u_v2;
-          pu_v55 = pu_v59;
-        } while (u_v49 != 0);
+      a = _mm_loadl_epi64((const __m128i *)src);
+      t = _mm_move_epi64(a);
+      b = _mm_unpacklo_epi8(_mm_srli_epi64(t, 8), zero);
+      t = _mm_unpacklo_epi8(t, zero);
+      b = _mm_srli_epi64(_mm_slli_epi64(b, 0x10), 0x10);
+      b = _mm_or_si128(b, _mm_slli_epi64(_mm_srli_epi64(_mm_move_epi64(b), 0x20), 0x30));
+      t = _mm_packus_epi16(_mm_avg_epu16(t, b), zero);
+      _mm_storel_epi64((__m128i *)dst, _mm_unpacklo_epi8(a, _mm_shuffle_epi32(t, 0xd8)));
+      off = off + w16;
+    }
+    pcr = upbuf;
+    tbl = (const cri_u1 *)arg3;
+    for (r = 4; r != 0; r--) {
+      if (w16 != 0) {
+        pcb = pcr + w16 * 4;
+        q = d;
+        pp = pcr;
+        for (i = 0; i < w16; i += 8) {
+          vy = _mm_loadl_epi64((const __m128i *)(y - pcr + pp));
+          vcr = _mm_loadl_epi64((const __m128i *)pp);
+          vcb = _mm_loadl_epi64((const __m128i *)pcb);
+          w = _mm_extract_epi16(vy, 0);
+          lo = CRI_T(0, (w & 0xff) << 3);
+          hi = CRI_T(0, (w >> 8) << 3);
+          w = _mm_extract_epi16(vcr, 0);
+          lo = _mm_add_epi16(lo, CRI_T(0x800, (w & 0xff) << 3));
+          hi = _mm_add_epi16(hi, CRI_T(0x800, (w >> 8) << 3));
+          w = _mm_extract_epi16(vcb, 0);
+          lo = _mm_add_epi16(lo, CRI_T(0x1000, (w & 0xff) << 3));
+          hi = _mm_add_epi16(hi, CRI_T(0x1000, (w >> 8) << 3));
+          px = _mm_shuffle_epi32(_mm_packus_epi16(_mm_srai_epi16(lo, 6), _mm_srai_epi16(hi, 6)), 0xd8);
+          v = _mm_extract_epi16(px, 0);
+          q[0] = (cri_u1)v;
+          q[1] = (cri_u1)(v >> 8);
+          v = _mm_extract_epi16(px, 1);
+          q[2] = (cri_u1)v;
+          v = _mm_extract_epi16(px, 2);
+          q[3] = (cri_u1)v;
+          q[4] = (cri_u1)(v >> 8);
+          v = _mm_extract_epi16(px, 3);
+          q[5] = (cri_u1)v;
+          w = _mm_extract_epi16(vy, 1);
+          lo = CRI_T(0, (w & 0xff) << 3);
+          hi = CRI_T(0, (w >> 8) << 3);
+          w = _mm_extract_epi16(vcr, 1);
+          lo = _mm_add_epi16(lo, CRI_T(0x800, (w & 0xff) << 3));
+          hi = _mm_add_epi16(hi, CRI_T(0x800, (w >> 8) << 3));
+          w = _mm_extract_epi16(vcb, 1);
+          lo = _mm_add_epi16(lo, CRI_T(0x1000, (w & 0xff) << 3));
+          hi = _mm_add_epi16(hi, CRI_T(0x1000, (w >> 8) << 3));
+          px = _mm_shuffle_epi32(_mm_packus_epi16(_mm_srai_epi16(lo, 6), _mm_srai_epi16(hi, 6)), 0xd8);
+          v = _mm_extract_epi16(px, 0);
+          q[6] = (cri_u1)v;
+          q[7] = (cri_u1)(v >> 8);
+          v = _mm_extract_epi16(px, 1);
+          q[8] = (cri_u1)v;
+          v = _mm_extract_epi16(px, 2);
+          q[9] = (cri_u1)v;
+          q[10] = (cri_u1)(v >> 8);
+          v = _mm_extract_epi16(px, 3);
+          q[11] = (cri_u1)v;
+          w = _mm_extract_epi16(vy, 2);
+          lo = CRI_T(0, (w & 0xff) << 3);
+          hi = CRI_T(0, (w >> 8) << 3);
+          w = _mm_extract_epi16(vcr, 2);
+          lo = _mm_add_epi16(lo, CRI_T(0x800, (w & 0xff) << 3));
+          hi = _mm_add_epi16(hi, CRI_T(0x800, (w >> 8) << 3));
+          w = _mm_extract_epi16(vcb, 2);
+          lo = _mm_add_epi16(lo, CRI_T(0x1000, (w & 0xff) << 3));
+          hi = _mm_add_epi16(hi, CRI_T(0x1000, (w >> 8) << 3));
+          px = _mm_shuffle_epi32(_mm_packus_epi16(_mm_srai_epi16(lo, 6), _mm_srai_epi16(hi, 6)), 0xd8);
+          v = _mm_extract_epi16(px, 0);
+          q[12] = (cri_u1)v;
+          q[13] = (cri_u1)(v >> 8);
+          v = _mm_extract_epi16(px, 1);
+          q[14] = (cri_u1)v;
+          v = _mm_extract_epi16(px, 2);
+          q[15] = (cri_u1)v;
+          q[16] = (cri_u1)(v >> 8);
+          v = _mm_extract_epi16(px, 3);
+          q[17] = (cri_u1)v;
+          w = _mm_extract_epi16(vy, 3);
+          lo = CRI_T(0, (w & 0xff) << 3);
+          hi = CRI_T(0, (w >> 8) << 3);
+          w = _mm_extract_epi16(vcr, 3);
+          lo = _mm_add_epi16(lo, CRI_T(0x800, (w & 0xff) << 3));
+          hi = _mm_add_epi16(hi, CRI_T(0x800, (w >> 8) << 3));
+          w = _mm_extract_epi16(vcb, 3);
+          lo = _mm_add_epi16(lo, CRI_T(0x1000, (w & 0xff) << 3));
+          hi = _mm_add_epi16(hi, CRI_T(0x1000, (w >> 8) << 3));
+          px = _mm_shuffle_epi32(_mm_packus_epi16(_mm_srai_epi16(lo, 6), _mm_srai_epi16(hi, 6)), 0xd8);
+          v = _mm_extract_epi16(px, 0);
+          q[18] = (cri_u1)v;
+          q[19] = (cri_u1)(v >> 8);
+          v = _mm_extract_epi16(px, 1);
+          q[20] = (cri_u1)v;
+          v = _mm_extract_epi16(px, 2);
+          q[21] = (cri_u1)v;
+          q[22] = (cri_u1)(v >> 8);
+          v = _mm_extract_epi16(px, 3);
+          q[23] = (cri_u1)v;
+          pp = pp + 8;
+          pcb = pcb + 8;
+          q = q + 0x18;
+        }
       }
-      i_v58 = 8;
-      l_v45 = (longlong)(*(int *)((longlong)arg1 + 0x1c) * 2);
-      loc_88 = loc_88 + l_v45;
-      l_v61 = l_v61 + l_v45;
-      l_v45 = (longlong)((int)arg1[4] * 2);
-      loc_a8 = loc_a8 + l_v45;
-      loc_98 = loc_98 + l_v45;
-      i_v54 = 0;
-      do {
-        pu_v44 = (ulonglong *)(((longlong)i_v54 >> 1) + (longlong)pu_v60);
-        pu_v55 = (cri_u8 *)((longlong)i_v54 + (longlong)pu_v50);
-        u_v47 = u_v57 >> 3;
-        while (u_v47 = u_v47 - 1, 0 < (int)u_v47) {
-          u_v49 = *pu_v44;
-          pu_v44 = (ulonglong *)((longlong)pu_v44 + 4);
-          u_v63 = (cri_u1)u_v49;
-          pavgb(u_v63,0);
-          u_v72 = (cri_u1)(u_v49 >> 8);
-          u_v71 = pavgb(u_v72,u_v63);
-          u_v74 = (cri_u1)(u_v49 >> 0x10);
-          u_v73 = pavgb(u_v74,u_v72);
-          u_v76 = (cri_u1)(u_v49 >> 0x18);
-          u_v75 = pavgb(u_v76,u_v74);
-          u_v78 = (cri_u1)(u_v49 >> 0x20);
-          u_v77 = pavgb(u_v78,u_v76);
-          u_v80 = (cri_u1)(u_v49 >> 0x28);
-          u_v79 = pavgb(u_v80,u_v78);
-          u_v82 = (cri_u1)(u_v49 >> 0x30);
-          u_v81 = pavgb(u_v82,u_v80);
-          u_v84 = (cri_u1)(u_v49 >> 0x38);
-          u_v83 = pavgb(u_v84,u_v82);
-          pavgb(0,0);
-          pavgb(0,0);
-          pavgb(0,0);
-          pavgb(0,0);
-          pavgb(0,0);
-          pavgb(0,0);
-          pavgb(0,0);
-          pavgb(0,0);
-          CRI_PART(au_v12,8,5) = 0;
-          CRI_PART(au_v12,0,8) = u_v49;
-          au_v12.b[0xd] = u_v83;
-          au_v12.b[0xe] = u_v84;
-          CRI_PART(au_v13,8,4) = 0;
-          CRI_PART(au_v13,0,8) = u_v49;
-          au_v13.b[0xc] = u_v82;
-          CRI_PART(au_v13,13,2) = CRI_PART(au_v12,13,2);
-          CRI_PART(au_v14,8,3) = 0;
-          CRI_PART(au_v14,0,8) = u_v49;
-          au_v14.b[0xb] = u_v81;
-          CRI_PART(au_v14,12,3) = CRI_PART(au_v13,12,3);
-          CRI_PART(au_v15,8,2) = 0;
-          CRI_PART(au_v15,0,8) = u_v49;
-          au_v15.b[10] = u_v80;
-          CRI_PART(au_v15,11,4) = CRI_PART(au_v14,11,4);
-          au_v16.b[8] = 0;
-          CRI_PART(au_v16,0,8) = u_v49;
-          au_v16.b[9] = u_v79;
-          CRI_PART(au_v16,10,5) = CRI_PART(au_v15,10,5);
-          au_v17.b[8] = u_v78;
-          CRI_PART(au_v17,0,8) = u_v49;
-          CRI_PART(au_v17,9,6) = CRI_PART(au_v16,9,6);
-          CRI_PART(au_v18,8,7) = CRI_PART(au_v17,8,7);
-          au_v18.b[7] = u_v77;
-          au_v18.b[6] = u_v76;
-          au_v18.b[5] = u_v75;
-          au_v18.b[4] = u_v74;
-          au_v18.b[3] = u_v73;
-          au_v18.b[2] = u_v72;
-          au_v18.b[1] = u_v71;
-          au_v18.b[0] = u_v63;
-          *pu_v55 = CRI_PART(au_v18,0,8);
-          pu_v55 = pu_v55 + 1;
-        }
-        u_v49 = *pu_v44;
-        i_v58 = i_v58 + -1;
-        i_v54 = i_v54 + u_v57;
-        *pu_v55 = cri07_upsample_tail(u_v49);
-      } while (0 < i_v58);
-      l_v45 = 4;
-      pu_v55 = pu_v50;
-      do {
-        if (u_v57 != 0) {
-          pu_v59 = (cri_u8 *)((ulonglong)(u_v57 * 4) + (longlong)pu_v55);
-          u_v49 = (ulonglong)((u_v57 - 1 >> 3) + 1);
-          pc_v51 = (char *)((char *)l_v52 + 0x14);
-          pu_v43 = pu_v55;
-          do {
-            u_v1 = *(cri_u8 *)((l_v53 - (longlong)pu_v55) + (longlong)pu_v43);
-            u_v2 = *pu_v43;
-            u_v3 = *pu_v59;
-            u_v4 = *(cri_u8 *)((((int)(uint)(ushort)u_v1 >> 8) << 3) + arg3);
-            u_v5 = *(cri_u8 *)((int)(((ushort)u_v1 & 0xff) << 3) + arg3);
-            u_v6 = *(cri_u8 *)((longlong)(int)(((ushort)u_v2 & 0xff) << 3) + 0x800 + arg3);
-            u_v7 = *(cri_u8 *)
-                     ((longlong)(((int)(uint)(ushort)u_v2 >> 8) << 3) + 0x800 + arg3);
-            u_v11 = (ushort)((ulonglong)u_v1 >> 0x10);
-            u_v8 = *(cri_u8 *)((longlong)(int)(((ushort)u_v3 & 0xff) << 3) + 0x1000 + arg3)
-            ;
-            CRI_PART(au_v86,0,2) = (short)u_v5 + (short)u_v6 + (short)u_v8;
-            CRI_PART(au_v86,2,2) =
-                 (short)((ulonglong)u_v5 >> 0x10) + (short)((ulonglong)u_v6 >> 0x10) +
-                 (short)((ulonglong)u_v8 >> 0x10);
-            CRI_PART(au_v86,4,2) =
-                 (short)((ulonglong)u_v5 >> 0x20) + (short)((ulonglong)u_v6 >> 0x20) +
-                 (short)((ulonglong)u_v8 >> 0x20);
-            CRI_PART(au_v86,6,2) =
-                 (short)((ulonglong)u_v5 >> 0x30) + (short)((ulonglong)u_v6 >> 0x30) +
-                 (short)((ulonglong)u_v8 >> 0x30);
-            CRI_PART(au_v86,8,8) = 0;
-            u_v5 = *(cri_u8 *)
-                     ((longlong)(((int)(uint)(ushort)u_v3 >> 8) << 3) + 0x1000 + arg3);
-            CRI_PART(au_v66,0,2) = (short)u_v4 + (short)u_v7 + (short)u_v5;
-            CRI_PART(au_v66,2,2) =
-                 (short)((ulonglong)u_v4 >> 0x10) + (short)((ulonglong)u_v7 >> 0x10) +
-                 (short)((ulonglong)u_v5 >> 0x10);
-            CRI_PART(au_v66,4,2) =
-                 (short)((ulonglong)u_v4 >> 0x20) + (short)((ulonglong)u_v7 >> 0x20) +
-                 (short)((ulonglong)u_v5 >> 0x20);
-            CRI_PART(au_v66,6,2) =
-                 (short)((ulonglong)u_v4 >> 0x30) + (short)((ulonglong)u_v7 >> 0x30) +
-                 (short)((ulonglong)u_v5 >> 0x30);
-            CRI_PART(au_v66,8,8) = 0;
-            au_v87 = psraw(au_v86,6);
-            au_v67 = psraw(au_v66,6);
-            s_v85 = CRI_PART(au_v87,0,2);
-            s_v92 = CRI_PART(au_v87,2,2);
-            s_v93 = CRI_PART(au_v87,4,2);
-            s_v94 = CRI_PART(au_v67,0,2);
-            s_v9 = CRI_PART(au_v67,2,2);
-            s_v10 = CRI_PART(au_v67,4,2);
-            *(ushort *)(pc_v51 + -0x14) =
-                 CONCAT11((0 < s_v92) * (s_v92 < 0x100) * au_v87.b[2] - (0xff < s_v92),
-                          (0 < s_v85) * (s_v85 < 0x100) * au_v87.b[0] - (0xff < s_v85));
-            pc_v51[-0x12] = (0 < s_v93) * (s_v93 < 0x100) * au_v87.b[4] - (0xff < s_v93);
-            pc_v51[-0x11] = (0 < s_v94) * (s_v94 < 0x100) * au_v67.b[0] - (0xff < s_v94);
-            pc_v51[-0x10] = (0 < s_v9) * (s_v9 < 0x100) * au_v67.b[2] - (0xff < s_v9);
-            pc_v51[-0xf] = (0 < s_v10) * (s_v10 < 0x100) * au_v67.b[4] - (0xff < s_v10);
-            u_v47 = (uint)(ushort)((ulonglong)u_v2 >> 0x10);
-            u_v4 = *(cri_u8 *)((((int)(uint)u_v11 >> 8) << 3) + arg3);
-            u_v5 = *(cri_u8 *)((int)((u_v11 & 0xff) << 3) + arg3);
-            u_v48 = (uint)(ushort)((ulonglong)u_v3 >> 0x10);
-            u_v6 = *(cri_u8 *)((longlong)(int)((u_v47 & 0xff) << 3) + 0x800 + arg3);
-            u_v7 = *(cri_u8 *)((longlong)(((int)u_v47 >> 8) << 3) + 0x800 + arg3);
-            u_v8 = *(cri_u8 *)((longlong)(int)((u_v48 & 0xff) << 3) + 0x1000 + arg3);
-            CRI_PART(au_v88,0,2) = (short)u_v5 + (short)u_v6 + (short)u_v8;
-            CRI_PART(au_v88,2,2) =
-                 (short)((ulonglong)u_v5 >> 0x10) + (short)((ulonglong)u_v6 >> 0x10) +
-                 (short)((ulonglong)u_v8 >> 0x10);
-            CRI_PART(au_v88,4,2) =
-                 (short)((ulonglong)u_v5 >> 0x20) + (short)((ulonglong)u_v6 >> 0x20) +
-                 (short)((ulonglong)u_v8 >> 0x20);
-            CRI_PART(au_v88,6,2) =
-                 (short)((ulonglong)u_v5 >> 0x30) + (short)((ulonglong)u_v6 >> 0x30) +
-                 (short)((ulonglong)u_v8 >> 0x30);
-            CRI_PART(au_v88,8,8) = 0;
-            u_v5 = *(cri_u8 *)((longlong)(((int)u_v48 >> 8) << 3) + 0x1000 + arg3);
-            au_v87 = psraw(au_v88,6);
-            CRI_PART(au_v68,0,2) = (short)u_v4 + (short)u_v7 + (short)u_v5;
-            CRI_PART(au_v68,2,2) =
-                 (short)((ulonglong)u_v4 >> 0x10) + (short)((ulonglong)u_v7 >> 0x10) +
-                 (short)((ulonglong)u_v5 >> 0x10);
-            CRI_PART(au_v68,4,2) =
-                 (short)((ulonglong)u_v4 >> 0x20) + (short)((ulonglong)u_v7 >> 0x20) +
-                 (short)((ulonglong)u_v5 >> 0x20);
-            CRI_PART(au_v68,6,2) =
-                 (short)((ulonglong)u_v4 >> 0x30) + (short)((ulonglong)u_v7 >> 0x30) +
-                 (short)((ulonglong)u_v5 >> 0x30);
-            CRI_PART(au_v68,8,8) = 0;
-            u_v11 = (ushort)((ulonglong)u_v1 >> 0x20);
-            au_v67 = psraw(au_v68,6);
-            s_v85 = CRI_PART(au_v87,0,2);
-            s_v92 = CRI_PART(au_v87,2,2);
-            s_v93 = CRI_PART(au_v87,4,2);
-            s_v94 = CRI_PART(au_v67,0,2);
-            s_v9 = CRI_PART(au_v67,2,2);
-            s_v10 = CRI_PART(au_v67,4,2);
-            *(ushort *)(pc_v51 + -0xe) =
-                 CONCAT11((0 < s_v92) * (s_v92 < 0x100) * au_v87.b[2] - (0xff < s_v92),
-                          (0 < s_v85) * (s_v85 < 0x100) * au_v87.b[0] - (0xff < s_v85));
-            pc_v51[-0xc] = (0 < s_v93) * (s_v93 < 0x100) * au_v87.b[4] - (0xff < s_v93);
-            pc_v51[-0xb] = (0 < s_v94) * (s_v94 < 0x100) * au_v67.b[0] - (0xff < s_v94);
-            pc_v51[-10] = (0 < s_v9) * (s_v9 < 0x100) * au_v67.b[2] - (0xff < s_v9);
-            pc_v51[-9] = (0 < s_v10) * (s_v10 < 0x100) * au_v67.b[4] - (0xff < s_v10);
-            u_v47 = (uint)(ushort)((ulonglong)u_v2 >> 0x20);
-            u_v4 = *(cri_u8 *)((((int)(uint)u_v11 >> 8) << 3) + arg3);
-            u_v5 = *(cri_u8 *)((int)((u_v11 & 0xff) << 3) + arg3);
-            u_v48 = (uint)(ushort)((ulonglong)u_v3 >> 0x20);
-            u_v6 = *(cri_u8 *)((longlong)(int)((u_v47 & 0xff) << 3) + 0x800 + arg3);
-            u_v7 = *(cri_u8 *)((longlong)(((int)u_v47 >> 8) << 3) + 0x800 + arg3);
-            u_v11 = (ushort)((ulonglong)u_v1 >> 0x30);
-            u_v1 = *(cri_u8 *)((longlong)(int)((u_v48 & 0xff) << 3) + 0x1000 + arg3);
-            CRI_PART(au_v89,0,2) = (short)u_v5 + (short)u_v6 + (short)u_v1;
-            CRI_PART(au_v89,2,2) =
-                 (short)((ulonglong)u_v5 >> 0x10) + (short)((ulonglong)u_v6 >> 0x10) +
-                 (short)((ulonglong)u_v1 >> 0x10);
-            CRI_PART(au_v89,4,2) =
-                 (short)((ulonglong)u_v5 >> 0x20) + (short)((ulonglong)u_v6 >> 0x20) +
-                 (short)((ulonglong)u_v1 >> 0x20);
-            CRI_PART(au_v89,6,2) =
-                 (short)((ulonglong)u_v5 >> 0x30) + (short)((ulonglong)u_v6 >> 0x30) +
-                 (short)((ulonglong)u_v1 >> 0x30);
-            CRI_PART(au_v89,8,8) = 0;
-            u_v1 = *(cri_u8 *)((longlong)(((int)u_v48 >> 8) << 3) + 0x1000 + arg3);
-            CRI_PART(au_v69,0,2) = (short)u_v4 + (short)u_v7 + (short)u_v1;
-            CRI_PART(au_v69,2,2) =
-                 (short)((ulonglong)u_v4 >> 0x10) + (short)((ulonglong)u_v7 >> 0x10) +
-                 (short)((ulonglong)u_v1 >> 0x10);
-            CRI_PART(au_v69,4,2) =
-                 (short)((ulonglong)u_v4 >> 0x20) + (short)((ulonglong)u_v7 >> 0x20) +
-                 (short)((ulonglong)u_v1 >> 0x20);
-            CRI_PART(au_v69,6,2) =
-                 (short)((ulonglong)u_v4 >> 0x30) + (short)((ulonglong)u_v7 >> 0x30) +
-                 (short)((ulonglong)u_v1 >> 0x30);
-            CRI_PART(au_v69,8,8) = 0;
-            au_v87 = psraw(au_v89,6);
-            au_v67 = psraw(au_v69,6);
-            s_v85 = CRI_PART(au_v87,0,2);
-            s_v92 = CRI_PART(au_v87,2,2);
-            s_v93 = CRI_PART(au_v87,4,2);
-            s_v94 = CRI_PART(au_v67,0,2);
-            s_v9 = CRI_PART(au_v67,2,2);
-            s_v10 = CRI_PART(au_v67,4,2);
-            *(ushort *)(pc_v51 + -8) =
-                 CONCAT11((0 < s_v92) * (s_v92 < 0x100) * au_v87.b[2] - (0xff < s_v92),
-                          (0 < s_v85) * (s_v85 < 0x100) * au_v87.b[0] - (0xff < s_v85));
-            pc_v51[-6] = (0 < s_v93) * (s_v93 < 0x100) * au_v87.b[4] - (0xff < s_v93);
-            pc_v51[-5] = (0 < s_v94) * (s_v94 < 0x100) * au_v67.b[0] - (0xff < s_v94);
-            pc_v51[-4] = (0 < s_v9) * (s_v9 < 0x100) * au_v67.b[2] - (0xff < s_v9);
-            pc_v51[-3] = (0 < s_v10) * (s_v10 < 0x100) * au_v67.b[4] - (0xff < s_v10);
-            u_v47 = (uint)(ushort)((ulonglong)u_v2 >> 0x30);
-            u_v1 = *(cri_u8 *)((((int)(uint)u_v11 >> 8) << 3) + arg3);
-            u_v2 = *(cri_u8 *)((int)((u_v11 & 0xff) << 3) + arg3);
-            u_v4 = *(cri_u8 *)((longlong)(int)((u_v47 & 0xff) << 3) + 0x800 + arg3);
-            u_v5 = *(cri_u8 *)((longlong)(((int)u_v47 >> 8) << 3) + 0x800 + arg3);
-            u_v11 = (ushort)((ulonglong)u_v3 >> 0x30);
-            pu_v43 = pu_v43 + 1;
-            pu_v59 = pu_v59 + 1;
-            u_v3 = *(cri_u8 *)((longlong)(int)((u_v11 & 0xff) << 3) + 0x1000 + arg3);
-            CRI_PART(au_v90,0,2) = (short)u_v2 + (short)u_v4 + (short)u_v3;
-            CRI_PART(au_v90,2,2) =
-                 (short)((ulonglong)u_v2 >> 0x10) + (short)((ulonglong)u_v4 >> 0x10) +
-                 (short)((ulonglong)u_v3 >> 0x10);
-            CRI_PART(au_v90,4,2) =
-                 (short)((ulonglong)u_v2 >> 0x20) + (short)((ulonglong)u_v4 >> 0x20) +
-                 (short)((ulonglong)u_v3 >> 0x20);
-            CRI_PART(au_v90,6,2) =
-                 (short)((ulonglong)u_v2 >> 0x30) + (short)((ulonglong)u_v4 >> 0x30) +
-                 (short)((ulonglong)u_v3 >> 0x30);
-            CRI_PART(au_v90,8,8) = 0;
-            u_v2 = *(cri_u8 *)((longlong)(((int)(uint)u_v11 >> 8) << 3) + 0x1000 + arg3);
-            CRI_PART(au_v70,0,2) = (short)u_v1 + (short)u_v5 + (short)u_v2;
-            CRI_PART(au_v70,2,2) =
-                 (short)((ulonglong)u_v1 >> 0x10) + (short)((ulonglong)u_v5 >> 0x10) +
-                 (short)((ulonglong)u_v2 >> 0x10);
-            CRI_PART(au_v70,4,2) =
-                 (short)((ulonglong)u_v1 >> 0x20) + (short)((ulonglong)u_v5 >> 0x20) +
-                 (short)((ulonglong)u_v2 >> 0x20);
-            CRI_PART(au_v70,6,2) =
-                 (short)((ulonglong)u_v1 >> 0x30) + (short)((ulonglong)u_v5 >> 0x30) +
-                 (short)((ulonglong)u_v2 >> 0x30);
-            CRI_PART(au_v70,8,8) = 0;
-            au_v87 = psraw(au_v90,6);
-            au_v67 = psraw(au_v70,6);
-            s_v85 = CRI_PART(au_v87,0,2);
-            s_v92 = CRI_PART(au_v87,2,2);
-            s_v93 = CRI_PART(au_v87,4,2);
-            s_v94 = CRI_PART(au_v67,0,2);
-            s_v9 = CRI_PART(au_v67,2,2);
-            s_v10 = CRI_PART(au_v67,4,2);
-            *(ushort *)(pc_v51 + -2) =
-                 CONCAT11((0 < s_v92) * (s_v92 < 0x100) * au_v87.b[2] - (0xff < s_v92),
-                          (0 < s_v85) * (s_v85 < 0x100) * au_v87.b[0] - (0xff < s_v85));
-            *pc_v51 = (0 < s_v93) * (s_v93 < 0x100) * au_v87.b[4] - (0xff < s_v93);
-            pc_v51[1] = (0 < s_v94) * (s_v94 < 0x100) * au_v67.b[0] - (0xff < s_v94);
-            u_v49 = u_v49 - 1;
-            pc_v51[2] = (0 < s_v9) * (s_v9 < 0x100) * au_v67.b[2] - (0xff < s_v9);
-            pc_v51[3] = (0 < s_v10) * (s_v10 < 0x100) * au_v67.b[4] - (0xff < s_v10);
-            pc_v51 = pc_v51 + 0x18;
-          } while (u_v49 != 0);
-        }
-        l_v53 = l_v53 + (int)arg1[3];
-        l_v52 = l_v52 + (int)arg2[2];
-        pu_v55 = (cri_u8 *)((longlong)pu_v55 + (ulonglong)u_v57);
-        l_v45 = l_v45 + -1;
-      } while (l_v45 != 0);
-      loc_80 = loc_80 - 1;
-    } while (loc_80 != 0);
+      y = y + (int)arg1[3];
+      d = d + (int)arg2[2];
+      pcr = pcr + w16;
+    }
   }
+#undef CRI_T
   return;
 }
 
