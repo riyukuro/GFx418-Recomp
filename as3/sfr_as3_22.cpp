@@ -1583,9 +1583,8 @@ void ReleasePlayerSoundCopy(void* player)
 
 
 namespace Scaleform {
-// MS2-FUNCTIONAL: unregisters callback and user data, then clears the channel reference.
-// @0x142746180
-void DetachChannelCallback(void** object)
+// DetachChannelCallback's body; DetachChannelNode inlines it for a node's owner.
+static __forceinline void DetachChannelCallbackInline(void** object)
 {
     if (!object[7])
         return;
@@ -1598,21 +1597,22 @@ void DetachChannelCallback(void** object)
     object[7] = nullptr;
 }
 
-// MS2-FUNCTIONAL: clears the channel registration and unlinks this node from its intrusive list.
+// Unregisters the callback and user data, then clears the channel reference.
+// @0x142746180
+void DetachChannelCallback(void** object)
+{
+    DetachChannelCallbackInline(object);
+}
+
+// Clears the owner's channel registration while it is still referenced, then unlinks this node from its
+// intrusive list. The node is at owner + 0x10, so the owner's RefCount is at node - 8 (the exe loads it into a
+// register before the test, as a volatile read does).
 // @0x142746230
 void DetachChannelNode(void* node)
 {
     auto* bytes = static_cast<unsigned char*>(node);
-    const int references = *reinterpret_cast<int*>(bytes - 8);
-    void** channel = reinterpret_cast<void**>(bytes + 0x28);
-    if (references > 0 && *channel) {
-        auto** vtable = *reinterpret_cast<void***>(bytes - 0x10);
-        reinterpret_cast<void (*)(void*)>(vtable[3])(bytes - 0x10);
-        // The exe reloads the channel after the virtual call and between the two FMOD calls.
-        FUN_1428d8efc(*channel, nullptr);
-        FUN_1428d8f14(*channel, nullptr);
-        *reinterpret_cast<void**>(bytes + 0x28) = nullptr;
-    }
+    if (*reinterpret_cast<volatile int*>(bytes - 8) > 0)
+        DetachChannelCallbackInline(reinterpret_cast<void**>(bytes - 0x10));
     *reinterpret_cast<void**>(bytes + 0x18) = nullptr;
     if (*reinterpret_cast<void**>(bytes + 0x10)) {
         *reinterpret_cast<void**>(*reinterpret_cast<char**>(bytes + 8) + 0x10) = *reinterpret_cast<void**>(bytes + 0x10);
