@@ -221,7 +221,7 @@ public:
     unsigned int refPad;
     unsigned int state;
     unsigned int statePad;
-    // The IMEManagerBase state. Its destructor runs ~IMEManagerBase (FUN_1425b3fb0) on the whole manager; as the first
+    // The IMEManagerBase state. Its destructor runs ~IMEManagerBase (0x1425b3fb0) on the whole manager; as the first
     // member with a destructor it is destroyed last, after the String members, as in the exe.
     struct BaseState { unsigned char pad[0x48]; ~BaseState(); };
     BaseState pad_18;
@@ -255,8 +255,6 @@ static_assert(offsetof(GFxIMEManagerWin32, pad_18) == 0x18, "IME layout");
 // The IMEManagerBase constructor (sfr_gfx_03d) and the manager's own vtable (data_rdata_sf_a): this stand-in class
 // has no IMEManagerBase base, so the constructor builds the base part and installs the exe's 38-slot vtable itself,
 // and the pad_18 member tears the base part down (~IMEManagerBase).
-extern "C" void FUN_1425b3e90(void* self);
-extern "C" void FUN_1425b3fb0(void* self);
 extern "C" void* DAT_1431383e0[];
 #endif
 
@@ -266,7 +264,7 @@ GFxIMEManagerWin32::GFxIMEManagerWin32(::HWND__* window)
     : refCount(1), refPad(0), state(0), statePad(0), p60(0), hwnd(window), p70(0), p78(0)
 {
 #ifndef MS2_HOOK_DLL
-    FUN_1425b3e90(this);
+    reinterpret_cast<IMEManagerBase*>(this)->IMEManagerBase::IMEManagerBase();
     *reinterpret_cast<void***>(this) = DAT_1431383e0;
     p60 = 0;
     hwnd = window;
@@ -292,7 +290,7 @@ GFxIMEManagerWin32::~GFxIMEManagerWin32()
 GFxIMEManagerWin32::BaseState::~BaseState()
 {
 #ifndef MS2_HOOK_DLL
-    FUN_1425b3fb0(reinterpret_cast<unsigned char*>(this) - 0x18);
+    reinterpret_cast<IMEManagerBase*>(reinterpret_cast<unsigned char*>(this) - 0x18)->IMEManagerBase::~IMEManagerBase();
 #endif
 }
 
