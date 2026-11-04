@@ -2752,10 +2752,12 @@ struct Sfr31TraitsVtView
     virtual char IsSubtypeOf(UPInt tr);
 };
 
-// A recorded state's traits equal to, or derived from, tr (state array at +0xd0, 0x30 bytes each).
+// CTraits::SupportsInterface: a recorded interface's traits equal to, or derived from, tr (state array at +0xd0, 0x30 bytes each).
 // @0x14252e480
-bool Sfr31TracerHasTraits(UPInt self, UPInt tr)
+bool InstanceTraits::CTraits::SupportsInterface(const InstanceTraits::Traits& other) const
 {
+    const UPInt self = reinterpret_cast<UPInt>(this);
+    const UPInt tr = reinterpret_cast<UPInt>(&other);
     const UPInt root = Sfr31Rd(self, 0x78);
     for (UPInt i = 0; i < Sfr31Rd(self, 0xd8); ++i)
     {
