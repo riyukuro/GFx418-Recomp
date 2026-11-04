@@ -622,10 +622,10 @@ void FUN_14005e650(longlong, int *, cri_u4 *, cri_u4 *);
 void FUN_14005e6c0(longlong, cri_u4 *, cri_u4 *);
 void CFT_Ycc420plnToArgb8888IntInit();
 void CFT_Ycc420plnToArgb8888PrgInit();
-void cft_c_Ycc420plnToArgb8888Int2smp(cri_any = cri_any(), cri_any = cri_any());
-void cft_c_Ycc420plnToRgb888Int2smp(cri_any = cri_any(), cri_any = cri_any());
-void cft_c_Ycc420plnToArgb8888Prg(cri_any = cri_any(), cri_any = cri_any());
-void cft_c_Ycc420plnToRgb888Prg(cri_any = cri_any(), cri_any = cri_any());
+void cft_c_Ycc420plnToArgb8888Int2smp(cri_u8 *arg1, cri_u8 *arg2);
+void cft_c_Ycc420plnToRgb888Int2smp(cri_u8 *arg1, cri_u8 *arg2);
+void cft_c_Ycc420plnToArgb8888Prg(cri_u8 *arg1, longlong *arg2);
+void cft_c_Ycc420plnToRgb888Prg(cri_u8 *arg1, cri_u8 *arg2);
 void cft_c_Ycc420plnToYcc422pix2Int2smp(cri_u8 *arg1, longlong *arg2);
 void CFT_Ycc420plnToArgb8888Int(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void CFT_Ycc420plnToRgb888Int(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
@@ -5006,10 +5006,8 @@ void CFT_Ycc420plnToArgb8888PrgInit()
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005ebd0
-void cft_c_Ycc420plnToArgb8888Int2smp(cri_any cri_p0, cri_any cri_p1)
+void cft_c_Ycc420plnToArgb8888Int2smp(cri_u8 *arg1, cri_u8 *arg2)
 {
-  cri_u8 *arg1 = cri_p0;
-  cri_u8 *arg2 = cri_p1;
   byte *pb_v1;
   byte *pb_v2;
   byte b_v3;
@@ -5476,10 +5474,8 @@ void cft_c_Ycc420plnToArgb8888Int2smp(cri_any cri_p0, cri_any cri_p1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005fe40
-void cft_c_Ycc420plnToRgb888Int2smp(cri_any cri_p0, cri_any cri_p1)
+void cft_c_Ycc420plnToRgb888Int2smp(cri_u8 *arg1, cri_u8 *arg2)
 {
-  cri_u8 *arg1 = cri_p0;
-  cri_u8 *arg2 = cri_p1;
   byte *pb_v1;
   byte b_v2;
   byte b_v3;
@@ -5987,11 +5983,9 @@ void cft_c_Ycc420plnToRgb888Int2smp(cri_any cri_p0, cri_any cri_p1)
 // (sfr_cri_07) with the odd pixel's chroma averaged with the next sample. Left is register choice and the exe's
 // spills of the row strides.
 // @0x140061080
-void cft_c_Ycc420plnToArgb8888Prg(cri_any cri_p0, cri_any cri_p1)
+void cft_c_Ycc420plnToArgb8888Prg(cri_u8 *arg1, longlong *arg2)
 {
 #define CFT06_ARGB(y, u, v) ((uint)(&DAT_143dc4b00)[(y) * 0x400 + (&DAT_143e44b00)[((u) << 8) + (v)]] | (&DAT_143d74a80)[(y) << 8 | (v)] | (uint)(&DAT_143db4ac0)[(y) << 8 | (u)] | 0xff000000)
-  cri_u8 *arg1 = cri_p0;
-  longlong *arg2 = cri_p1;
   int pitch, row;
   uint w, odd, cw, n, yskip, dskip, i;
   longlong cskip;
@@ -6085,10 +6079,8 @@ void cft_c_Ycc420plnToArgb8888Prg(cri_any cri_p0, cri_any cri_p1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400616c0
-void cft_c_Ycc420plnToRgb888Prg(cri_any cri_p0, cri_any cri_p1)
+void cft_c_Ycc420plnToRgb888Prg(cri_u8 *arg1, cri_u8 *arg2)
 {
-  cri_u8 *arg1 = cri_p0;
-  cri_u8 *arg2 = cri_p1;
   byte b_v1;
   byte b_v2;
   byte b_v3;
@@ -6546,7 +6538,7 @@ void CFT_Ycc420plnToArgb8888Int(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
     FUN_14008d2a0((__int64 *)&dst,(__int64 *)&src,(__int64)&DAT_143a488c0,u_v1);
     return;
   }
-  cft_c_Ycc420plnToArgb8888Int2smp(&dst,&src);
+  cft_c_Ycc420plnToArgb8888Int2smp((cri_u8 *)&dst,(cri_u8 *)&src);
   return;
 }
 
@@ -6582,7 +6574,7 @@ void CFT_Ycc420plnToRgb888Int(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
     cft_sse_Ycc420plnToRgb888Int2smp((__int64 *)&dst,(__int64 *)&src,(__int64)&DAT_143a488c0,u_v1);
     return;
   }
-  cft_c_Ycc420plnToRgb888Int2smp(&dst,&src);
+  cft_c_Ycc420plnToRgb888Int2smp((cri_u8 *)&dst,(cri_u8 *)&src);
   return;
 }
 
@@ -6623,7 +6615,7 @@ void CFT_Ycc420plnToArgb8888Prg(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
     cft_sse_Ycc420plnToArgb8888Prg((__int64 *)&dst,(__int64 *)&src,(__int64)&DAT_143a488c0,u_v1);
     return;
   }
-  cft_c_Ycc420plnToArgb8888Prg(&dst,&src);
+  cft_c_Ycc420plnToArgb8888Prg((cri_u8 *)&dst,(longlong *)&src);
   return;
 }
 
@@ -6659,7 +6651,7 @@ void CFT_Ycc420plnToRgb888Prg(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
     cft_sse_Ycc420plnToRgb888Prg((__int64 *)&dst,(__int64 *)&src,(__int64)&DAT_143a488c0,u_v1);
     return;
   }
-  cft_c_Ycc420plnToRgb888Prg(&dst,&src);
+  cft_c_Ycc420plnToRgb888Prg((cri_u8 *)&dst,(cri_u8 *)&src);
   return;
 }
 
