@@ -1004,7 +1004,7 @@ void LoadProcess::ReadRgbaTag(Render::Color* pc, TagType tagType)
 }
 
 // @0x142639520
-TimelineDef::Frame LoadProcess::TagArrayToFrame(
+SF_NOINLINE TimelineDef::Frame LoadProcess::TagArrayToFrame(
     Array<ExecuteTag*, Stat_Default_Mem, ArrayConstPolicy<32, 16, false> >& tagArray)
 {
     TimelineDef::Frame frame;
