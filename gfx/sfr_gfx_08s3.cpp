@@ -256,9 +256,21 @@ void MorphCharacterDef::Read(LoadProcess* p, const TagInfo& tagInfo, bool withSt
     pShapeMeshProvider = *SF_HEAP_AUTO_NEW(this) Render::ShapeMeshProvider(pShape1, pShape2);
 }
 
+// Ptr<ImageBase>::operator=(ImageBase*), which the exe inlines here and ours calls out of line.
+static SF_INLINE void SetFillImage(Ptr<Render::ImageBase>& dst, Render::ImageBase* pimage)
+{
+    Render::ImageBase*& pobject = reinterpret_cast<Render::ImageBase*&>(dst);
+    if (pimage)
+        pimage->AddRef();
+    if (pobject)
+        pobject->Release();
+    pobject = pimage;
+}
+
 // A solid colour pair, a gradient pair (same kind and count, own matrices and records) or a bitmap pair (one image,
 // own matrices). A bitmap not loaded yet keeps its bind index for the binding; a missing one shows as the debug green.
-// MS2-FUNCTIONAL: register allocation and the inlined stream reads / ComplexFill setup differ.
+// MS2-FUNCTIONAL 0x14265fbb0: register allocation, the gradient-type switch's last compare and the missing-image
+// Ptr clears differ.
 // @0x14265fbb0
 void MorphCharacterDef::ReadMorphFillStyle(LoadProcess* p, TagType tagType, FillStyleType& fs1, FillStyleType& fs2,
                                            bool* needResolve)
@@ -308,7 +320,8 @@ void MorphCharacterDef::ReadMorphFillStyle(LoadProcess* p, TagType tagType, Fill
         bool  linearRGB = false;
         if (tagType == MorphTag_DefineMorphShape2 || type == 0x13)
         {
-            linearRGB = (spec & 0x10) != 0;
+            if (spec & 0x10)
+                linearRGB = true;
             spec &= 0xF;
         }
 
@@ -378,12 +391,11 @@ void MorphCharacterDef::ReadMorphFillStyle(LoadProcess* p, TagType tagType, Fill
 
         if (p->GetResourceHandle(&handle, ResourceId(bitmapId)) && handle.GetResourcePtr())
         {
-            Resource* pres = handle.GetResourcePtr();
-            if (pres->GetResourceType() == Resource::RT_Image)
+            if (handle.GetResourcePtr()->GetResourceType() == Resource::RT_Image)
             {
-                Render::ImageBase* pimage = static_cast<ImageResource*>(pres)->GetImage();
-                fs1.pFill->pImage = pimage;
-                fs2.pFill->pImage = pimage;
+                Render::ImageBase* pimage = static_cast<ImageResource*>(handle.GetResourcePtr())->GetImage();
+                SetFillImage(fs1.pFill->pImage, pimage);
+                SetFillImage(fs2.pFill->pImage, pimage);
             }
         }
         else
