@@ -100,6 +100,12 @@ AvmButton::AvmButton(Button* pbutton)
     pProto = GetAS2Root()->pGlobalContext->GetActualPrototype(penv, ASBuiltin_Button);
 }
 
+// The exe folds this with AvmCharacter::OnEventLoadBase (0x14296b820, sfr_as2_06), the same body.
+void AvmButton::OnEventLoad()
+{
+    OnEvent(EventId::Event_Load);
+}
+
 }}} // namespace Scaleform::GFx::AS2
 
 // MS2-PIN: ??_7AvmButton@AS2@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x143217980
