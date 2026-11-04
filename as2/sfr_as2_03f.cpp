@@ -34,6 +34,7 @@ namespace Scaleform { class Range; } // gfx_textfield.h (WIP header) names Range
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/gfx/gfx_event.h"
 #include "../include/gfx/gfx_textfield.h"
+#include "../include/gfx/text_stylesheet.h"
 #include "../include/gfx/gfx_imageresource.h"
 #include "../include/gfx/gfx_moviedef.h"
 #include "../include/gfx/gfx_placeobject.h"
@@ -50,10 +51,8 @@ namespace Scaleform { class Range; } // gfx_textfield.h (WIP header) names Range
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-void FUN_142609070(void* pthis);
+// The Prototype<TextFieldObject> dtor, called out of line (the real dtor inlines here: 9 -> 8 matched).
 void FUN_1429250a0(void* pthis);
-void FUN_142925750(void* pthis);
-void FUN_142925cf0(void* pthis);
 
 // The base vftables the inlined destructors store.
 extern const void* DAT_14317bc90[];
@@ -87,9 +86,9 @@ void* DeleteAs2_142928770(void* p, unsigned flags)
     *(const void**)p = DAT_1432173f8;
     *(const void**)((char*)p+0x20) = DAT_143217440;
     *(const void**)((char*)p+0x98) = DAT_1432174e8;
-    FUN_142925750((void*)((char*)p+0x98));
-    FUN_142609070((void*)((char*)p+0x68));
-    FUN_142925cf0(p);
+    reinterpret_cast<GASPrototypeBase*>((char*)p+0x98)->GASPrototypeBase::~GASPrototypeBase();
+    reinterpret_cast<Text::StyleManager*>((char*)p+0x68)->Text::StyleManager::~StyleManager();
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
