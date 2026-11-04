@@ -503,10 +503,9 @@ void LineBuffer::CreateVisibleTextLayout(TextLayout::Builder& bld, const Highlig
     for (; linesIt.IsVisible(); ++linesIt)
     {
         Line&  line = *linesIt;
-        PointF offset;
-        offset.x = (float)line.GetOffsetX();
-        offset.y = (float)line.GetOffsetY();
-        offset += Geom.VisibleRect.TopLeft();
+        PointF offset = Geom.VisibleRect.TopLeft();
+        offset.x += (float)line.GetOffsetX();
+        offset.y += (float)line.GetOffsetY();
         offset.y += yOffset + line.GetBaseLineOffset();
         GlyphIterator glyphIt      = line.Begin(phighlighter);
         bool          firstVisible = true;
