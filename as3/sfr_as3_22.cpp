@@ -69,8 +69,6 @@ extern "C" char DAT_1431bcbb0[];   // the sound objects' outermost base
 struct Sd_1431bec40;
 extern Sd_1431bec40 DAT_1431bec40;
 #define AS3AudioListNodeVtable (*reinterpret_cast<void**>(&DAT_1431bec40))
-extern unsigned char DAT_142dc9d48[];
-#define Sfr22RefCountImplCoreVtable (static_cast<void*>(DAT_142dc9d48))
 struct Sd_1431bed18;
 extern Sd_1431bed18 DAT_1431bed18;
 #define AS3SoundRequestVtable (*reinterpret_cast<void**>(&DAT_1431bed18))
@@ -3809,9 +3807,7 @@ void* CreateAudioEventManager()
     auto* object = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, std::size_t, const void*)>(heapVtable[10])(
         DAT_143b15f60, 0xf8, nullptr));
     if (object) {
-        // RefCountImplCore(): its vftable, then RefCount = 1
-        *reinterpret_cast<void**>(object) = Sfr22RefCountImplCoreVtable;
-        *reinterpret_cast<unsigned*>(object + 8) = 1;
+        ::new (static_cast<void*>(object)) Scaleform::RefCountImplCore;
         *reinterpret_cast<void***>(object) = &AS3AudioEventVtable;
         *reinterpret_cast<unsigned long long*>(object + 0x10) = 0;
         *reinterpret_cast<unsigned long long*>(object + 0x18) = 0;

@@ -31,7 +31,6 @@ extern ExeDecl<void*>::type DAT_1431b5938;
 #define VideoProtoBaseVtable DAT_1431b5938
 extern ExeDecl<void*>::type DAT_1431b4be0;
 #define VideoSoundStreamVtable DAT_1431b4be0
-extern unsigned char DAT_142dc9d48[];
 extern ExeDecl<void*>::type DAT_1431b4b80;
 #define VideoSoundVtable DAT_1431b4b80
 extern ExeDecl<void*>::type DAT_1431b4ce0;
@@ -315,10 +314,9 @@ void* FUN_140002e80(void* stream)
     void* channel;
     if (mem) {
         unsigned char* channelBytes = static_cast<unsigned char*>(mem);
-        *reinterpret_cast<void* volatile*>(channelBytes) = DAT_142dc9d48;   // RefCountImplCore base vftable
+        ::new (mem) Scaleform::RefCountImplCore;
         *reinterpret_cast<void**>(channelBytes + 0x10) = stream;
         *reinterpret_cast<float*>(channelBytes + 0x18) = 1.0f;
-        *reinterpret_cast<unsigned*>(channelBytes + 8) = 1;
         *reinterpret_cast<void***>(channelBytes) = &VideoSoundChannelSystemVtable;
         channel = mem;
     } else {

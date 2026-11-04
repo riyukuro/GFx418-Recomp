@@ -49,7 +49,6 @@ extern const void* DAT_1431b91b0[];
 extern const void* DAT_1431b91d8[];
 extern const void* DAT_1431b9170[];
 extern const void* DAT_143149940[];
-extern unsigned char DAT_142dc9d48[];
 extern const void* DAT_1431b93b0[];
 extern const void* DAT_1431b9360[];
 extern const void* DAT_1431b9410[];
@@ -1639,9 +1638,8 @@ void FUN_14002ab90(void* object)
 void* FUN_14002aab0(void* object, void* first, void* second)
 {
     void** fields = (void**)object;
-    fields[0] = (void*)DAT_142dc9d48;   // RefCountImplCore base vftable
-    _ReadWriteBarrier();
-    *(CriUint32*)((CriUint8*)object + 8) = 1;
+    __assume(object != NULL); // no null test on the placement new
+    ::new (object) Scaleform::RefCountImplCore;
     fields[0] = (void*)DAT_143149940;
     _ReadWriteBarrier();
     fields[2] = first;

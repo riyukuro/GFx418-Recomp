@@ -19,7 +19,6 @@
 
 namespace Scaleform { namespace GFx {
 
-extern char DAT_142dc9d48[];
 extern char DAT_143184be8[];
 extern char DAT_143184c18[];
 
@@ -269,10 +268,9 @@ void FUN_1425916c0(void* self, void* psc, void* object)
 void* FUN_142591be0(void* self, void* renderer, float maxTimeDifference, unsigned checkFrameInterval, unsigned syncType)
 {
     RawField<float>(self, 0x18) = maxTimeDifference;
-    RawField<void* volatile>(self, 0) = DAT_142dc9d48; // the exe keeps the AudioBase vftable store
+    ::new (self) RefCountImplCore;
     RawField<unsigned>(self, 0x20) = syncType;
     RawField<void*>(self, 0) = DAT_143184be8;
-    RawField<int>(self, 8) = 1;
     RawField<int>(self, 0x10) = 0x1d;
     RawField<unsigned>(self, 0x1c) = checkFrameInterval;
     if (renderer)
