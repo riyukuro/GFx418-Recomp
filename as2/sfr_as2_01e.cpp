@@ -36,9 +36,6 @@ template void TFunc_Classes_fl_Date_UTC::Func(const ThunkInfo&, VM&, const Value
 
 // ---- fl_display: loader info ----
 // Bodies of the exe called here (not recovered yet), by their addresses.
-// ASVM::_constructInstance: makes an instance of classObj into pobj.
-bool FUN_142531f40(Scaleform::GFx::AS3::VM& vm, Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Object>& pobj,
-                   Scaleform::GFx::AS3::Object* classObj, unsigned argc, const Scaleform::GFx::AS3::Value* argv);
 // AvmDisplayObj::AssignAS3Obj: makes pinst the AS3 object of pavm.
 void FUN_1424edca0(Scaleform::GFx::AvmDisplayObjBase* pavm, Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* pinst);
 // MovieRoot::AddScriptableMovieClip.
@@ -96,7 +93,7 @@ namespace Instances { namespace fl_display
         if (!extCall)
         {
             SPtr<Class> cls = vm.GetClass(StringDataPtr("flash.display.LoaderInfo", 0x18));
-            FUN_142531f40(vm, reinterpret_cast<SPtr<AS3::Object>&>(pContentLoaderInfo), cls.GetPtr(), 0, NULL);
+            static_cast<ASVM&>(vm)._constructInstance(reinterpret_cast<SPtr<AS3::Object>&>(pContentLoaderInfo), cls.GetPtr(), 0, NULL);
             pContentLoaderInfo->SetLoader(this);
             if (!pDispObj)
             {

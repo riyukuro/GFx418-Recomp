@@ -628,7 +628,6 @@ extern void* const AvmStage_vftable[];
 extern void* const AvmStage_vftable_30[];
 extern void* const AvmStage_vftable_40[];
 }}}
-bool FUN_142531f40(AS3::VM& vm, AS3::SPtr<AS3::Object>& pobj, AS3::Object* classObj, unsigned argc, const AS3::Value* argv);   // ASVM::_constructInstance
 
 // The Stage constructor (0x1424d9b50, sfr_as3_15) as the exe inlines it in CreateStage.
 __forceinline Stage::Stage(MovieDefImpl* pbindingDefImpl, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id, InlineCtorTag)
@@ -734,7 +733,7 @@ void Stage::ExecuteFrame0Events()
     if (cls)
     {
         SPtr<Instances::fl_display::LoaderInfo> li;
-        if (FUN_142531f40(vm, reinterpret_cast<SPtr<Object>&>(li), cls, 0, NULL))
+        if (static_cast<ASVM&>(vm)._constructInstance(reinterpret_cast<SPtr<Object>&>(li), cls, 0, NULL))
         {
             if (Instances::fl_display::DisplayObject* pas3obj = ToAvmDisplayObj(root)->GetAS3Obj())
             {
