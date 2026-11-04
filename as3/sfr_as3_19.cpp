@@ -367,7 +367,6 @@ inline void FUN_142545310(Scaleform::UPInt entry, void* out) { ::new (out) Scale
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 void FUN_142501e80(void* state, void* propRef, void* multiname, void* a, void* b);   // Tracer: resolve a multiname to a property reference
-void FUN_1423f1060(Multiname* mn);   // Multiname::~Multiname, which the exe calls out of line (sfr_as3_01c)
 // Defined below under their recovered names (the callers used to spell them FUN_<va>, which never linked).
 char* Sfr27SlotSetValueThis(const SlotInfo* si, char* ret, VM* vm, const Value* v, const Value* thisV, VTable* vt);
 char* Sfr27SlotSetValueObj(const SlotInfo* si, char* ret, VM* vm, const Value* v, Object* obj);
@@ -3991,7 +3990,7 @@ struct Sfr31MnSlot
 {
     union { Multiname mn; };
     Sfr31MnSlot(VMAbcFile& file, const Abc::Multiname& e) : mn(file, e) {}
-    ~Sfr31MnSlot() { FUN_1423f1060(&mn); }
+    ~Sfr31MnSlot() { mn.~Multiname(); }
 };
 
 // The multiname reader's context with its ABC file.
@@ -4007,7 +4006,7 @@ struct Sfr31MnCtx4
 struct Sfr31MnRaw
 {
     Sfr31MnRaw(VMAbcFile& file, const Abc::Multiname& e) { ::new (&w0) Multiname(file, e); }
-    ~Sfr31MnRaw() { FUN_1423f1060(&Get()); }
+    ~Sfr31MnRaw() { Get().~Multiname(); }
     Multiname& Get() { return *reinterpret_cast<Multiname*>(&w0); }
     UPInt w0, w1, w2, w3, w4, w5;
 };
