@@ -626,7 +626,7 @@ void cft_c_Ycc420plnToArgb8888Int2smp(cri_any = cri_any(), cri_any = cri_any());
 void cft_c_Ycc420plnToRgb888Int2smp(cri_any = cri_any(), cri_any = cri_any());
 void cft_c_Ycc420plnToArgb8888Prg(cri_any = cri_any(), cri_any = cri_any());
 void cft_c_Ycc420plnToRgb888Prg(cri_any = cri_any(), cri_any = cri_any());
-void cft_c_Ycc420plnToYcc422pix2Int2smp(cri_any = cri_any(), cri_any = cri_any());
+void cft_c_Ycc420plnToYcc422pix2Int2smp(cri_u8 *arg1, longlong *arg2);
 void CFT_Ycc420plnToArgb8888Int(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void CFT_Ycc420plnToRgb888Int(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void CFT_Ycc420plnToArgb8888Prg(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
@@ -6344,10 +6344,8 @@ void cft_c_Ycc420plnToRgb888Prg(cri_any cri_p0, cri_any cri_p1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs). The 4-row loop is written as plain pointer steps with 5a+3b+4 and 7a+b+4 filters; left: our cl folds (x >> 3) << 16 of the non-negative sums into shl+and where the exe keeps sar+shl, and register choice.
 // @0x140061ce0
-void cft_c_Ycc420plnToYcc422pix2Int2smp(cri_any cri_p0, cri_any cri_p1)
+void cft_c_Ycc420plnToYcc422pix2Int2smp(cri_u8 *arg1, longlong *arg2)
 {
-  cri_u8 *arg1 = cri_p0;
-  longlong *arg2 = cri_p1;
   byte b_v4;
   byte b_v5;
   byte b_v6;
@@ -6737,7 +6735,7 @@ void CFT_Ycc420plnToYcc422pix2Int(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2
     FUN_140090730((unsigned __int64 *)&dst,(__int64 *)&src,u_v1,u_v2);
     return;
   }
-  cft_c_Ycc420plnToYcc422pix2Int2smp(&dst,&src);
+  cft_c_Ycc420plnToYcc422pix2Int2smp((cri_u8 *)&dst,(longlong *)&src);
   return;
 }
 
