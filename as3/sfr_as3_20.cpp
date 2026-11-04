@@ -562,9 +562,9 @@ static inline String ConcatASString(const char* l, const ASString& r) { return S
 // the exe builds the String before it reads the VM's string manager
 static inline ASString CreateVMString(Object* pobj, const String& str) { return pobj->GetVM().GetStringManager().CreateString(str); }
 // @0x142542a60
-void ClassToString(Object* pobj, ASString* presult)
+void Class::toString(ASString& result)
 {
-    *presult = CreateVMString(pobj, ConcatASString("[class ", pobj->GetTraits().GetName()) + "]");
+    result = CreateVMString(this, ConcatASString("[class ", GetTraits().GetName()) + "]");
 }
 }}}
 
