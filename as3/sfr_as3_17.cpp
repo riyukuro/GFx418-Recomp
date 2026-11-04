@@ -1471,13 +1471,9 @@ String& Sfr33AvmStaticTextGetASClassName(const void*, String* className)
     return *className;
 }
 
-// A copy of the name (+0x18) of the object at +0x28 (an unidentified by-value String virtual).
-struct Sfr33NamedOwner
-{
-    String GetOwnerName() const;
-};
+// A copy of the name (+0x18) of the abc file at +0x28.
 // @0x142505dd0
-String Sfr33NamedOwner::GetOwnerName() const
+String VMAbcFile::GetAS3ObjectName() const
 {
     const UByte* powner = *reinterpret_cast<const UByte* const*>(reinterpret_cast<const UByte*>(this) + 0x28);
     return *reinterpret_cast<const String*>(powner + 0x18);

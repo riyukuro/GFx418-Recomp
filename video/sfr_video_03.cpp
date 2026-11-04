@@ -124,7 +124,6 @@ ExeDecl<void(void*)>::type FUN_14257dc30;
 ExeDecl<void(void*)>::type FUN_14257dcd0;
 ExeDecl<void(void*)>::type FUN_14257dcb0;
 ExeDecl<bool(void*, void*)>::type FUN_142518c70;
-namespace Scaleform { namespace GFx { namespace AS3 { void Sfr31SetGcRefClearNext(uint64_t value, uint64_t atom); }}}
 ExeDecl<void(void*)>::type FUN_142519860;
 ExeDecl<bool(const void*, const void*)>::type FUN_142510dc0;
 ExeDecl<bool(const void*)>::type FUN_142514f70;

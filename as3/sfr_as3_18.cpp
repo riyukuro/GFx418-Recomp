@@ -59,7 +59,6 @@ UPInt Sfr31ResolveClassTraits(UPInt vm, UPInt file, UPInt mn);                  
 UPInt Sfr31FindClassTraitsByMn(UPInt vm, UPInt mn);                                               // 0x142525270
 Value* Sfr31ResolveInvokeAlias(UPInt proot, const char* pname);                                   // 0x142525400
 ClassTraits::Traits* Sfr31GetClassTraitsByInfo(VM* vm, UPInt info);                               // 0x142525ca0
-void Sfr31SetGcRefClearNext(UPInt avm, UPInt as3obj);                                             // 0x142526340
 void Sfr27MultinameFromQName(Multiname* mn, const Value* qname);                                  // 0x1425273b0
 void Sfr31SetResource(UPInt bitmap, Resource* pimage);                                            // 0x1425274b0
 void Sfr31SetGcRefClearFlags(unsigned long* mn, UPInt ns);                                        // 0x142528d20
@@ -2281,7 +2280,6 @@ Instances::Namespace& VMAbcFile::GetInternedNamespace(const Abc::Multiname& mn)
 
 }}} // namespace Scaleform::GFx::AS3
 
-static inline void FUN_142526340(void* avm, void* as3obj) { ::Scaleform::GFx::AS3::Sfr31SetGcRefClearNext(reinterpret_cast<Scaleform::UPInt>(avm), reinterpret_cast<Scaleform::UPInt>(as3obj)); }                                             // AvmDisplayObj::SetAS3ObjCollectible
 void FUN_1425f7e30(void* intObj);                                                        // InteractiveObject::AddToOptimizedPlayList
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -2546,7 +2544,7 @@ bool AvmDisplayObj::IsStageAccessible() const
 // @0x142519080
 void AvmInteractiveObj::OnEventLoad()
 {
-    FUN_142526340(this, GetAS3Obj());
+    SetAS3ObjCollectible(GetAS3Obj());
 }
 
 // data_rdata_sf_b's two IsTabable vtable slots name the free forms these were; a data slot cannot name the members.
@@ -2647,7 +2645,7 @@ void AvmTextField::OnEventLoad()
     else
         t->AddToPlayList();
     static_cast<InteractiveObject*>(avm->pDispObj)->ModifyOptimizedPlayList();
-    FUN_142526340(avm, avm->GetAS3Obj());
+    avm->SetAS3ObjCollectible(avm->GetAS3Obj());
 }
 
 // AvmTextField::GetStyleSheet; self is the AvmTextFieldBase part (+0x40). The style manager of the field's
@@ -3148,7 +3146,7 @@ void AvmDisplayObj::OnAdded(bool byTimeline)
 {
     const ASString&                       added = AS3RootOf(pDispObj)->BuiltinsMgr.GetBuiltin(AS3Builtin_added);
     Instances::fl_display::DisplayObject* obj   = GetAS3Obj();
-    FUN_142526340(this, obj);
+    SetAS3ObjCollectible(obj);
     if (obj)
     {
         SPtr<Instances::fl_events::Event> evt = obj->CreateEventObject(added, true, false);

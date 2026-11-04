@@ -2303,8 +2303,10 @@ static void Sfr31AssignGcRef(UPInt* slot, UPInt np)
 
 // Stores the new GC reference at +8 and clears the word after it.
 // @0x142526340
-void Sfr31SetGcRefClearNext(UPInt self, UPInt np)
+void AvmDisplayObj::SetAS3ObjCollectible(Instances::fl_display::DisplayObject* p)
 {
+    const UPInt self = reinterpret_cast<UPInt>(this);
+    const UPInt np = reinterpret_cast<UPInt>(p);
     Sfr31AssignGcRef(reinterpret_cast<UPInt*>(self + 8), np);
     *reinterpret_cast<UPInt*>(self + 0x10) = 0;
 }
@@ -2515,7 +2517,7 @@ void Sfr31SwitchAS3ObjPtrType(UPInt self, int type)
     AvmDisplayObj* avm = reinterpret_cast<AvmDisplayObj*>(self);
     if (type == 1)
     {
-        Sfr31SetGcRefClearNext(self, reinterpret_cast<UPInt>(avm->GetAS3Obj()));
+        avm->SetAS3ObjCollectible(avm->GetAS3Obj());
         return;
     }
     avm->pAS3RawPtr = avm->GetAS3Obj();
@@ -2627,7 +2629,7 @@ static inline void Sfr31Wr(UPInt base, UPInt off, UPInt v) { *reinterpret_cast<U
 // @0x1425262e0
 void Sfr31AvmDisplayObjSetAS3Obj(UPInt self, UPInt obj)
 {
-    if (Sfr31Rd(Sfr31Rd(self, 0x18), 0x38) != 0) { Sfr31SetGcRefClearNext(self, obj); return; }
+    if (Sfr31Rd(Sfr31Rd(self, 0x18), 0x38) != 0) { reinterpret_cast<AvmDisplayObj*>(self)->SetAS3ObjCollectible(reinterpret_cast<Instances::fl_display::DisplayObject*>(obj)); return; }
     *reinterpret_cast<UPInt*>(self + 0x10) = obj;
     UPInt old = Sfr31Rd(self, 8);
     if (old != 0)
