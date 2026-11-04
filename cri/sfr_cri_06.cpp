@@ -530,10 +530,10 @@ DWORD mpvmulti_GetNumberOfProcessors();   // sfr_cri_05b
 void MPVMULTI_Init();   // sfr_cri_05b
 void MPVMULTI_Finish();   // sfr_cri_05b
 void m2vidct_InitIdctTbls();   // sfr_cri_05b
-void FUN_140050210(longlong, cri_u4);   // sfr_cri_05b
+void MPVMULTI_SetProcessorMask(longlong, cri_u4);   // sfr_cri_05b, 0x140050210
 void FUN_140050310(unsigned int *);  // C3: the definition's signature
 longlong MPVMULTI_Create();   // sfr_cri_05b
-unsigned __int64 FUN_140050820(__int64, unsigned __int64, unsigned __int64, unsigned __int64 *);  // C3: the definition's signature
+unsigned __int64 MPVMULTI_DecPicture(__int64, unsigned __int64, unsigned __int64, unsigned __int64 *);  // sfr_cri_05b, 0x140050820
 unsigned int FUN_140051d90(__int64 *);  // C3: the definition's signature
 unsigned int FUN_140051ec0(__int64 *, unsigned int *);  // C3: the definition's signature
 cri_u4 FUN_140052010(longlong *a1, int a2, int a3);   // sfr_cri_05b
@@ -7992,7 +7992,7 @@ void MPVSL_Create(cri_any cri_p0)
   l_v1 = MPVMULTI_Create();
   *(longlong *)((char *)arg1 + 0x18f8) = l_v1;
   if (l_v1 != 0) {
-    FUN_140050210(l_v1,*(cri_u4 *)((char *)arg1 + 0x1574));
+    MPVMULTI_SetProcessorMask(l_v1,*(cri_u4 *)((char *)arg1 + 0x1574));
   }
   return;
 }
@@ -8163,7 +8163,7 @@ cri_u8 MPVSL_DecPicture(longlong arg1, longlong *arg2)
   ulonglong u_v4;
   uint u_v5;
   int i_v6;
-  // one frame (exe rsp+0x20..0x72): &loc_68 and loc_58 are out-structs, &loc_40 is the FUN_140050820 context
+  // one frame (exe rsp+0x20..0x72): &loc_68 and loc_58 are out-structs, &loc_40 is the MPVMULTI_DecPicture context
   __declspec(align(16)) cri_u8 frameq_[11];
   longlong &loc_68 = *(longlong *)(((cri_u1 *)frameq_) + 0);
   int &loc_60 = *(int *)(((cri_u1 *)frameq_) + 8);
@@ -8182,13 +8182,13 @@ cri_u8 MPVSL_DecPicture(longlong arg1, longlong *arg2)
   
   FUN_140066370(arg1);  // the exe passes rcx through
   if (*(longlong *)((char *)arg1 + 0x18f8) != 0) {
-    FUN_140050210(*(longlong *)((char *)arg1 + 0x18f8),*(cri_u4 *)((char *)arg1 + 0x1574));
+    MPVMULTI_SetProcessorMask(*(longlong *)((char *)arg1 + 0x18f8),*(cri_u4 *)((char *)arg1 + 0x1574));
     loc_38 = &PTR_FUN_143a4a0d8;
     loc_2c = *(cri_u4 *)((char *)arg1 + 0x17a0);
     loc_28 = *(cri_u4 *)((char *)arg1 + 0x159c);
     loc_30 = 1;
     loc_40 = arg1;
-    u_v3 = FUN_140050820(*(cri_u8 *)((char *)arg1 + 0x18f8),(unsigned __int64)arg2,arg1 + 0x1638,(unsigned __int64 *)&loc_40);
+    u_v3 = MPVMULTI_DecPicture(*(cri_u8 *)((char *)arg1 + 0x18f8),(unsigned __int64)arg2,arg1 + 0x1638,(unsigned __int64 *)&loc_40);
     if (loc_24 != 0) {
       *(int *)((char *)arg1 + 0x162c) = *(int *)((char *)arg1 + 0x162c) + loc_20;
       *(int *)((char *)arg1 + 0x1630) = *(int *)((char *)arg1 + 0x1630) + loc_1c;

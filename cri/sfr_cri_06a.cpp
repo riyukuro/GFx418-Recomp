@@ -505,10 +505,8 @@ DWORD mpvmulti_GetNumberOfProcessors();   // sfr_cri_05b
 void MPVMULTI_Init();   // sfr_cri_05b
 void MPVMULTI_Finish();   // sfr_cri_05b
 void m2vidct_InitIdctTbls();   // sfr_cri_05b
-void FUN_140050210(longlong, cri_u4);   // sfr_cri_05b
 void FUN_140050310(cri_any = cri_any());
 longlong MPVMULTI_Create();   // sfr_cri_05b
-cri_u8 FUN_140050820(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 cri_u4 FUN_140051d90(cri_any = cri_any());
 cri_u4 FUN_140051ec0(cri_any = cri_any(), cri_any = cri_any());
 cri_u4 FUN_140052010(longlong *a1, int a2, int a3);   // sfr_cri_05b

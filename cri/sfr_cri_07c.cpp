@@ -234,8 +234,6 @@ void FUN_140044050(cri_any = cri_any(), cri_any = cri_any());
 cri_u4 FUN_140044950(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 cri_u8 FUN_1400449c0(cri_any = cri_any(), cri_any = cri_any());
 void FUN_140044a30(cri_any = cri_any(), cri_any = cri_any());
-void FUN_140050210(cri_any = cri_any(), cri_any = cri_any());
-cri_u8 FUN_140050820(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 cri_u4 FUN_140051ec0(longlong *, uint *);
 void M2VIDCT_SetWork(cri_any = cri_any());
 void M2VFRM_ParseSsc(cri_any = cri_any(), cri_any = cri_any());
