@@ -60,7 +60,16 @@ extern template Scaleform::String Scaleform::AsString<unsigned long>(const unsig
 #undef GetObject
 
 // The exe calls the event chains' ResizeNoConstruct out of line (explicitly instantiated in sfr_as3_19, 0x142524cd0).
-void FUN_1423ed140(void* self, Scaleform::GFx::AS3::InstanceTraits::Traits* t);   // FunctionBase(InstanceTraits::Traits&)
+namespace Scaleform { namespace GFx { namespace AS3 {
+// The protected FunctionBase(InstanceTraits::Traits&) (0x1423ed140, sfr_as3_01c), called in place on the allocation.
+struct Sfr17FunctionBaseAccess : Instances::FunctionBase
+{
+    static void Construct(void* mem, InstanceTraits::Traits& t)
+    {
+        static_cast<Sfr17FunctionBaseAccess*>(mem)->Instances::FunctionBase::FunctionBase(t);
+    }
+};
+}}} // namespace Scaleform::GFx::AS3
 char* FUN_14250e2d0(const void* si, void* ret, Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::Value* value, const Scaleform::GFx::AS3::Value* thisValue, void* vtable, int valTarget);   // SlotInfo: read the slot into value
 namespace Scaleform {
 typedef ArrayData<UPInt, AllocatorLH_POD<UPInt, 338>, ArrayDefaultPolicy> Sfr17WordArray;
@@ -1173,7 +1182,7 @@ Sprite* Sfr33MovieRoot::CreateSprite(CharacterDef* pdef, MovieDefImpl* pdefImpl,
 static inline UByte* Sfr33ConstructUserDefinedFunction(void* addr, InstanceTraits::Traits& t, FunctionHandler* pfc, void* puserData)
 {
     UByte* pf = static_cast<UByte*>(addr);
-    FUN_1423ed140(pf, &t);
+    Scaleform::GFx::AS3::Sfr17FunctionBaseAccess::Construct(pf, t);
     *reinterpret_cast<const void**>(pf) = DAT_14317ef38;
     Ptr<FunctionHandler>* pcontext = ::new (pf + 0x40) Ptr<FunctionHandler>();
     *pcontext = pfc;
