@@ -27,10 +27,12 @@
 #include "../include/kernel/sf_hash.h"
 #include "sfr_gfx_07raw.h"
 
+struct Sd_143184be8;
+extern Sd_143184be8 DAT_143184be8;   // ??_7Audio@GFx@Scaleform@@6B@ (data_rdata_sf_b)
+
 namespace Scaleform { namespace GFx {
 
 void FUN_14015b310(void*, UPInt);    // sized delete
-extern "C" char DAT_143184be8[];     // ??_7Audio@GFx@Scaleform@@6B@
 
 // RefCountBase<T, Stat> scalar deleting destructor (folded for the 0x10-byte classes, three copies here).
 // MS2-FUNCTIONAL: raw-layout COMDAT (folded identical bodies of many RefCountBase instances)
@@ -68,7 +70,7 @@ void* FUN_142591e70(void* self, unsigned flags)
 // @0x142591ed0
 void* FUN_142591ed0(void* self, unsigned flags)
 {
-    RawField<void*>(self, 0) = DAT_143184be8;
+    RawField<void*>(self, 0) = &::DAT_143184be8;
     if (RawField<void*>(self, 0x30))
         FUN_14257dcd0(RawField<void*>(self, 0x30));
     if (RawField<void*>(self, 0x28))

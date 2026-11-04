@@ -144,7 +144,7 @@ extern "C" unsigned char DAT_143ffbd18;
 extern "C" longlong _DAT_143bad6a0;
 extern "C" longlong _DAT_143badb00;
 extern "C" int DAT_143c492a0;
-extern "C" cri_u8 LAB_142ccc850;
+void FUN_142ccc850(void* decoder);   // the macroblock-type dispatch (sfr_cri_03)
 
 cri_u64 FUN_140027ed8(Any a0,Any a1,Any a2,Any a3);
 cri_u64 FUN_140027fb4(Any a0,Any a1);
@@ -2306,14 +2306,14 @@ void MPVHDEC_Init(void)
   FUN_140050f90(DAT_143c49160,0x50);
   _DAT_143c493a8 = cri_conv(FUN_142cccb30);
   _DAT_143c493b8 = cri_conv(FUN_142ccc860);
-  _DAT_143c491b8 = cri_conv(&LAB_142ccc850);
-  _DAT_143c491c0 = cri_conv(&LAB_142ccc850);
-  _DAT_143c491c8 = cri_conv(&LAB_142ccc850);
-  _DAT_143c491d0 = cri_conv(&LAB_142ccc850);
-  _DAT_143c49208 = cri_conv(&LAB_142ccc850);
-  _DAT_143c49210 = cri_conv(&LAB_142ccc850);
-  _DAT_143c49218 = cri_conv(&LAB_142ccc850);
-  _DAT_143c49220 = cri_conv(&LAB_142ccc850);
+  _DAT_143c491b8 = cri_conv(&FUN_142ccc850);
+  _DAT_143c491c0 = cri_conv(&FUN_142ccc850);
+  _DAT_143c491c8 = cri_conv(&FUN_142ccc850);
+  _DAT_143c491d0 = cri_conv(&FUN_142ccc850);
+  _DAT_143c49208 = cri_conv(&FUN_142ccc850);
+  _DAT_143c49210 = cri_conv(&FUN_142ccc850);
+  _DAT_143c49218 = cri_conv(&FUN_142ccc850);
+  _DAT_143c49220 = cri_conv(&FUN_142ccc850);
   _DAT_143c49260 = cri_conv(FUN_142ccca50);
   _DAT_143c49268 = cri_conv(FUN_142ccca50);
   _DAT_143c492c8 = cri_conv(FUN_142ccca90);

@@ -166,8 +166,6 @@ struct CriUsfHeaderFields
     CriUint32 Words[5];     // 0x10
 };
 CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config);
-CriSint32 FUN_140045910(const CriSint32*);
-CriSint32 FUN_140045ed0(const CriSint32*);
 void* criSjUni_Create(const void*, void*, CriSint32);
 CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config);
 void* criSjRbf_Create(const void*, void*, CriSint32);
@@ -3292,8 +3290,8 @@ static_assert(offsetof(CriVideoQueueFields, Queue) == 0x58 && offsetof(CriVideoQ
               offsetof(CriVideoQueueFields, Decoded) == 0x190 && offsetof(CriVideoQueueFields, UnitSize) == 0x50, "layout");
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// 0x14003ed40 FUN_14003ed40 is in sfr_cri_03d: its exe obj was compiled as C (/TC).
-CriSint32 FUN_14003ed40(void* player);
+// 0x14003ed40 FUN_14003ed40 is in sfr_cri_03d: its exe obj was compiled as C (/TC), so the name is unmangled.
+extern "C" CriSint32 FUN_14003ed40(void* player);
 
 // flush the pending reference-picture input of a VMPV player into its stream joint.
 // @0x140040a90
