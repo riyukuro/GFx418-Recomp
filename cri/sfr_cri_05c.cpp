@@ -155,13 +155,11 @@ extern "C" void* criHeap_AllocFix(void* heap, int size, const char* name, int al
 extern "C" int criHeap_Free(void* heap, void* ptr);
 long FUN_140039180(CriMvEasyPlayer *, long, unsigned long *);  // C3: the definition's signature
 longlong FUN_14003b674(Any a0,Any a1,Any a2);
-void FUN_1400467a8(Any a0,Any a1,Any a2);
-void FUN_1400467b0(Any a0,Any a1,Any a2);
+extern "C" void criSj_UngetChunk(void* object, long operation, void* chunk);   // sfr_cri_03b, 0x1400467a8
+extern "C" void criSj_PutChunk(void* object, long operation, void* chunk);   // sfr_cri_03b, 0x1400467b0
 cri_u64 FUN_1400467b8(Any a0,Any a1 = 0);
 // sfr_cri_03's definitions; the /Od criAdec code calls them with these types
 void criSj_GetChunk(void* object, long operation, unsigned long limit, void* output);   // 0x1400467a0
-void FUN_1400467a8(void* object, long operation, void* chunk);
-void FUN_1400467b0(void* object, long operation, void* chunk);
 extern "C" long FUN_1400467b8(void* object, long query);
 void FUN_1400467c0(Any a0,Any a1,Any a2,Any a3);
 // sfr_cri_03's names and types for 0x14003b3fc, 0x14003b674 and 0x1400467c0: the /Od ADX loader functions below
@@ -273,14 +271,11 @@ void FUN_1400536d0(longlong a1);
 void FUN_140053880(longlong a1);
 void FUN_140054040(longlong a1,cri_u64 a2,cri_u64 a3);
 void MPVM2V_Init();
-cri_u64 FUN_140062900(Any a0);
 void MPVM2V_Destroy(longlong a0);
-void FUN_140062920(longlong a0,int a1,cri_u32 a2);
 cri_u64 FUN_140062a40(cri_any,cri_any,cri_any);  // C3: the definition's signature
 void MPVM2V_RequestStop(cri_any);  // C3: the definition's signature
 unsigned __int64 FUN_140062ae0(cri_any, cri_any);  // C3: the definition's signature
 int FUN_140062bc0(Any a0,Any a1,Any a2);
-int FUN_1400630c0();
 void FUN_140064d90(Any a0,Any a1);
 void UTY_MemcpyDword(void *dst, const void *src, ulonglong n);  // C3: the definition's signature
 void * FUN_140064eb0(Any a0,Any a1,Any a2);
@@ -295,15 +290,12 @@ void MPVUMC_Finish();
 void MPVUMC_InitOutRfb(cri_any);  // C3: the definition's signature
 void MPVUMC_EndOfFrame(void);  // C3: the definition's signature
 void FUN_140065900(Any a0);
-void FUN_1400659a0(unsigned char const *, unsigned char *);  // C3: the definition's signature
+void DCT_FsriInitScanTbl(unsigned char const *, unsigned char *);  // sfr_cri_06, 0x1400659a0
 void DCT_FsriInitScaleTbl(__int64);  // 0x140066180
 void DCT_FsriInit();
-void FUN_140066350(Any a0);
 void FUN_140066360(longlong a0);
-void FUN_140066f60(Any a0);
 void FUN_140066f80(__int64);  // C3: the definition's signature
 void FUN_140067210(__int64);  // C3: the definition's signature
-void FUN_140067370(Any a0);
 void FUN_140067420(__int64);  // C3: the definition's signature
 void FUN_140067470(__int64);  // C3: the definition's signature
 char * FUN_1400674d0(char *dst,cri_u64 size,const char *src);  // C3: the definition's signature
@@ -332,8 +324,8 @@ void FUN_140068d50(__int64, int);  // C3: the definition's signature
 void FUN_140068db0(__int64);  // C3: the definition's signature
 void FUN_140068e70(__int64);  // C3: the definition's signature
 void FUN_140068f30(__int64);  // C3: the definition's signature
-unsigned __int64 FUN_140069270(__int64, unsigned __int64 *, unsigned __int64);  // C3: the definition's signature
-unsigned __int64 FUN_140069480(__int64, unsigned __int64 *, unsigned __int64 *, unsigned __int64 *);  // C3: the definition's signature
+unsigned __int64 criMvPly_GetFrameYUVBuffers(__int64, unsigned __int64 *, unsigned __int64);  // sfr_cri_07, 0x140069270
+unsigned __int64 criMvPly_CopyFrameYUVBuffers(__int64, unsigned __int64 *, unsigned __int64 *, unsigned __int64 *);  // sfr_cri_07, 0x140069480
 int criAdxDecCore_Decode(longlong, int, byte *, uint, int *, uint, longlong *, uint);
 int FUN_140069ac4(longlong, int, byte *, uint, int *, uint, longlong *, uint);
 void criAdxDecCore_Reset(longlong);
@@ -341,7 +333,7 @@ void criAdxDecCore_SetNumChan(longlong, int);
 void criAdxDecCore_SetEncryptionKey(longlong, int, int, int);
 void criAdxDecCore_SetDlyVal(longlong, uint, short, short);
 void criAdxDecCore_SetCutoffFreqency(longlong, uint, uint);
-uint FUN_14006a7f8(cri_u64, uint, longlong);
+uint criAdxDec_DecodeHeader(cri_u64, uint, longlong);  // sfr_cri_07, 0x14006a7f8
 void DCT_Isse2Init();
 void FUN_142ccca50(void *);  // C3: the definition's signature
 void FUN_142ccca90(void *);  // C3: the definition's signature
@@ -790,7 +782,7 @@ cri_u32 FUN_1400531e0(longlong a1,cri_u64 a2,cri_u64 a3,cri_u32 *a4)
   if (FUN_140039180((CriMvEasyPlayer *)a1,0,(unsigned long *)a4) != 1) {
     return result;
   }
-  result = (cri_u32)FUN_140069270((*(cri_u64*)((char*)(a1) + 0x8)),(unsigned __int64 *)a2,a3);
+  result = (cri_u32)criMvPly_GetFrameYUVBuffers((*(cri_u64*)((char*)(a1) + 0x8)),(unsigned __int64 *)a2,a3);
   return result;
 }
 
@@ -799,7 +791,7 @@ cri_u32 FUN_1400531e0(longlong a1,cri_u64 a2,cri_u64 a3,cri_u32 *a4)
 long FUN_140053260(longlong a1,cri_u64 a2,cri_u64 a3,cri_u64 a4, cri_u32 *a5)
 {
   *a5 = 0;
-  FUN_140069480((*(cri_u64*)((char*)(a1) + 0x8)),(unsigned __int64 *)a2,(unsigned __int64 *)a3,(unsigned __int64 *)a4);
+  criMvPly_CopyFrameYUVBuffers((*(cri_u64*)((char*)(a1) + 0x8)),(unsigned __int64 *)a2,(unsigned __int64 *)a3,(unsigned __int64 *)a4);
   return 1;
 }
 #pragma optimize("", on)
@@ -1000,12 +992,12 @@ void FUN_1400536d0(longlong a1)
   }
   // One comma expression: cl then tests the flag in r11d, as the exe does (a separate statement uses eax).
   if (criUsfCmn_ParseUsfHeaderStd(usfh.Data,usfh.Size,(CriUsfStandardHeader*)&usf), usf.Flag != 0) {
-    FUN_1400467b0(data,0,&usfh);
+    criSj_PutChunk(data,0,&usfh);
     return;
   }
   {
   const cri_u8* contents = criUsfCmn_GetContents(usfh.Data,usfh.Size,&len);
-  FUN_14006a7f8((cri_u64)contents,len,a1 + 0x28);
+  criAdxDec_DecodeHeader((cri_u64)contents,len,a1 + 0x28);
   criAdxDecCore_Reset(hdr);
   criAdxDecCore_SetNumChan(hdr,(int)(char)sj->Bytes[5]);
   criAdxDecCore_SetEncryptionKey(hdr,0,0,0);
@@ -1013,7 +1005,7 @@ void FUN_1400536d0(longlong a1)
   for (i = 0; i < (uint)(int)(char)sj->Bytes[5]; i = i + 1) {
     criAdxDecCore_SetDlyVal(hdr,i,sj->HistA[i],sj->HistB[i]);
   }
-  FUN_1400467b0(data,0,&usfh);
+  criSj_PutChunk(data,0,&usfh);
   *(cri_u32*)((char*)a1 + 0x170) = 0;
   *((cri_u8*)a1 + 0x10) = 2;
   }
@@ -1060,13 +1052,13 @@ void FUN_140053880(longlong a1)
   }
   // One comma expression: cl then tests the flag in r11d, as the exe does (a separate statement uses eax).
   if (criUsfCmn_ParseUsfHeaderStd(chunk.Data,chunk.Size,(CriUsfStandardHeader*)&hdrStd), hdrStd.Flag != 0) {
-    FUN_1400467b0(sj,0,&chunk);
+    criSj_PutChunk(sj,0,&chunk);
     return;
   }
   pdata = criUsfCmn_GetContents(chunk.Data,chunk.Size,&nLen);
   code = (cri_u16)((pdata[0] << 8) | pdata[1]);
   if (code == 0x8001) {
-    FUN_1400467b0(sj,0,&chunk);
+    criSj_PutChunk(sj,0,&chunk);
     *((cri_u8*)a1 + 0x10) = 1;
     return;
   }
@@ -1074,15 +1066,15 @@ void FUN_140053880(longlong a1)
   room = samples * *(uint*)((char*)a1 + 0x16c);
   for (i = 0; i < nchans; i = i + 1) {
     if ((uint)FUN_1400467b8(chans[i],0) < room) {
-      FUN_1400467a8(sj,1,&chunk);
+      criSj_UngetChunk(sj,1,&chunk);
       return;
     }
   }
   for (i = 0; i < nchans; i = i + 1) {
     criSj_GetChunk(chans[i],0,room,&bufs[i]);
     if (bufs[i].Size < room) {
-      FUN_1400467a8(chans[i],0,&bufs[i]);
-      FUN_1400467a8(sj,1,&chunk);
+      criSj_UngetChunk(chans[i],0,&bufs[i]);
+      criSj_UngetChunk(sj,1,&chunk);
       return;
     }
     dst16A[i] = (longlong)bufs[i].Data;
@@ -1110,10 +1102,10 @@ void FUN_140053880(longlong a1)
       cutLen = (uint)(samples * sizeof(int));
     }
     criSj_SplitChunk(&bufs[i],cutLen,&pfx,&sfx);
-    FUN_1400467b0(chans[i],1,&pfx);
-    FUN_1400467a8(chans[i],0,&sfx);
+    criSj_PutChunk(chans[i],1,&pfx);
+    criSj_UngetChunk(chans[i],0,&sfx);
   }
-  FUN_1400467b0(sj,0,&chunk);
+  criSj_PutChunk(sj,0,&chunk);
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
@@ -1183,8 +1175,8 @@ void m2vidct_InitIdctTbls(void)
   DCT_Isse2Init();
   DCT_FsriInit();
   DCT_FsriInitScaleTbl((__int64)&DAT_143fe82e0);
-  FUN_1400659a0((const unsigned char *)&DAT_1431ba950,(unsigned char *)&DAT_143fe8420);
-  FUN_1400659a0((const unsigned char *)&DAT_1431ba990,(unsigned char *)&DAT_143fe83e0);
+  DCT_FsriInitScanTbl((const unsigned char *)&DAT_1431ba950,(unsigned char *)&DAT_143fe8420);
+  DCT_FsriInitScanTbl((const unsigned char *)&DAT_1431ba990,(unsigned char *)&DAT_143fe83e0);
   return;
 }
 

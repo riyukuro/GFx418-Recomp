@@ -153,12 +153,8 @@ extern "C" void* criHeap_AllocFix(void* heap, int size, const char* name, int al
 extern "C" int criHeap_Free(void* heap, void* ptr);
 long FUN_140039180(CriMvEasyPlayer *, long, unsigned long *);  // C3: the definition's signature
 longlong FUN_14003b674(Any a0,Any a1,Any a2);
-void FUN_1400467a8(Any a0,Any a1,Any a2);
-void FUN_1400467b0(Any a0,Any a1,Any a2);
 cri_u64 FUN_1400467b8(Any a0,Any a1 = 0);
 // sfr_cri_03's definitions; the /Od criAdec code calls them with these types
-void FUN_1400467a8(void* object, long operation, void* chunk);
-void FUN_1400467b0(void* object, long operation, void* chunk);
 extern "C" long FUN_1400467b8(void* object, long query);
 void FUN_1400467c0(Any a0,Any a1,Any a2,Any a3);
 // sfr_cri_03's names and types for 0x14003b3fc, 0x14003b674 and 0x1400467c0: the /Od ADX loader functions below
@@ -270,14 +266,11 @@ void FUN_1400536d0(longlong a1);
 void FUN_140053880(longlong a1);
 void FUN_140054040(longlong a1,cri_u64 a2,cri_u64 a3);
 void MPVM2V_Init();
-cri_u64 FUN_140062900(Any a0);
 void MPVM2V_Destroy(longlong a0);
-void FUN_140062920(longlong a0,int a1,cri_u32 a2);
 cri_u64 FUN_140062a40(cri_any,cri_any,cri_any);  // C3: the definition's signature
 void MPVM2V_RequestStop(cri_any);  // C3: the definition's signature
 unsigned __int64 FUN_140062ae0(cri_any, cri_any);  // C3: the definition's signature
 int FUN_140062bc0(Any a0,Any a1,Any a2);
-int FUN_1400630c0();
 void FUN_140064d90(Any a0,Any a1);
 void UTY_MemcpyDword(void *dst, const void *src, ulonglong n);  // C3: the definition's signature
 void * FUN_140064eb0(Any a0,Any a1,Any a2);
@@ -292,14 +285,10 @@ void MPVUMC_Finish();
 void MPVUMC_InitOutRfb(cri_any);  // C3: the definition's signature
 void MPVUMC_EndOfFrame(void);  // C3: the definition's signature
 void FUN_140065900(Any a0);
-void FUN_1400659a0(unsigned char const *, unsigned char *);  // C3: the definition's signature
 void DCT_FsriInit();
-void FUN_140066350(Any a0);
 void FUN_140066360(longlong a0);
-void FUN_140066f60(Any a0);
 void MPVCDEC_StartFrame(__int64); // C3: the definition's signature
 void MPVBDEC_StartFrame(__int64); // C3: the definition's signature
-void FUN_140067370(Any a0);
 void MPVCMC_InitMcOiRt(__int64); // C3: the definition's signature
 void MPVCMC_SetCcnt(__int64); // C3: the definition's signature
 char * CRICRW_Strcpy(char *dst,cri_u64 size,const char *src);  // C3: the definition's signature
@@ -328,8 +317,6 @@ void FUN_140068db0(__int64);  // C3: the definition's signature
 void FUN_140068e70(__int64);  // C3: the definition's signature
 void MPVUMCT_BiDirect(__int64); // C3: the definition's signature
 void SJ_SplitChunk(__int64 *, int, __int64 *, __int64 *);  // C3: the definition's signature
-unsigned __int64 FUN_140069270(__int64, unsigned __int64 *, unsigned __int64);  // C3: the definition's signature
-unsigned __int64 FUN_140069480(__int64, unsigned __int64 *, unsigned __int64 *, unsigned __int64 *);  // C3: the definition's signature
 int criAdxDecCore_Decode(longlong, int, byte *, uint, int *, uint, longlong *, uint);
 int FUN_140069ac4(longlong, int, byte *, uint, int *, uint, longlong *, uint);
 void criAdxDecCore_Reset(longlong);
@@ -337,7 +324,6 @@ void criAdxDecCore_SetNumChan(longlong, int);
 void criAdxDecCore_SetEncryptionKey(longlong, int, int, int);
 void criAdxDecCore_SetDlyVal(longlong, uint, short, short);
 void criAdxDecCore_SetCutoffFreqency(longlong, uint, uint);
-uint FUN_14006a7f8(cri_u64, uint, longlong);
 void DCT_Isse2Init();
 void MPVUMC_BpicSkipped(void *,long);  // sfr_cri_03, 0x142ccc860
 void FUN_142ccca50(void *);  // C3: the definition's signature

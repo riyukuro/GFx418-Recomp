@@ -143,12 +143,8 @@ extern "C" void* criHeap_AllocFix(void* heap, int size, const char* name, int al
 extern "C" int criHeap_Free(void* heap, void* ptr);
 int FUN_140039180(longlong player,int updateTime,cri_u32 *output);
 longlong FUN_14003b674(Any a0,Any a1,Any a2);
-void FUN_1400467a8(Any a0,Any a1,Any a2);
-void FUN_1400467b0(Any a0,Any a1,Any a2);
 cri_u64 FUN_1400467b8(Any a0,Any a1 = 0);
 // sfr_cri_03's definitions; the /Od criAdec code calls them with these types
-void FUN_1400467a8(void* object, long operation, void* chunk);
-void FUN_1400467b0(void* object, long operation, void* chunk);
 extern "C" long FUN_1400467b8(void* object, long query);
 void FUN_1400467c0(Any a0,Any a1,Any a2,Any a3);
 void FUN_14004c370();
@@ -254,14 +250,14 @@ void FUN_1400536d0(longlong a1);
 void FUN_140053880(longlong a1);
 void FUN_140054040(longlong a1,cri_u64 a2,cri_u64 a3);
 void MPVM2V_Init();
-unsigned __int64 FUN_140062900(__int64);  // C3: the definition's signature
+unsigned __int64 MPVM2V_Create(__int64);  // sfr_cri_06b, 0x140062900
 void MPVM2V_Destroy(longlong a0);
-void FUN_140062920(__int64);  // C3: the definition's signature
+void MPVM2V_SetCond(__int64);  // sfr_cri_06b, 0x140062920
 cri_u64 FUN_140062a40(Any a0,Any a1,Any a2);
 void FUN_140062ab0(Any a0);
 cri_u64 FUN_140062ae0(Any a0,Any a1);
 int MPVDEC_CheckVersion(cri_any, cri_any, cri_any);  // C3: the definition's signature
-unsigned __int64 FUN_1400630c0(void);  // C3: the definition's signature
+unsigned __int64 MPVVLC_IsVlcSizErr(void);  // sfr_cri_06, 0x1400630c0
 void MPVVLC_Init(cri_any);  // C3: the definition's signature
 void UTY_MemcpyDword(void *dst, const void *src, ulonglong n);  // C3: the definition's signature
 void * MEM_Copy(cri_any, cri_any, cri_any);  // C3: the definition's signature
@@ -274,14 +270,13 @@ void MPVUMC_Finish();
 void FUN_1400657a0(Any a0);
 void FUN_1400657e0(Any a0);
 void DCT_FsriInitPa(void *);  // C3: the definition's signature
-void FUN_1400659a0(Any a0,Any a1);
 void DCT_FsriInit();
-void FUN_140066350(__int64);  // C3: the definition's signature
+void MPVCONCEAL_Init(__int64);  // sfr_cri_07, 0x140066350
 void MPVCONCEAL_Finish(void);  // C3: the definition's signature
-void FUN_140066f60(__int64);  // C3: the definition's signature
+void MPVCDEC_Init(__int64);  // sfr_cri_07, 0x140066f60
 void FUN_140066f80(Any a0);
 void FUN_140067210(Any a0);
-void FUN_140067370(unsigned __int64);  // C3: the definition's signature
+void MPVBDEC_Init(unsigned __int64);  // sfr_cri_07, 0x140067370
 void FUN_140067420(Any a0);
 void FUN_140067470(Any a0);
 char * FUN_1400674d0(Any a0,Any a1,Any a2);
@@ -312,8 +307,6 @@ void FUN_140068d50(Any a0);
 void FUN_140068db0(Any a0);
 void FUN_140068e70(Any a0);
 void FUN_140068f30(Any a0);
-cri_u64 FUN_140069270(cri_u64 a0,cri_u64 a1,cri_u64 a2);
-cri_u64 FUN_140069480(cri_u64 a0,cri_u64 a1,cri_u64 a2,cri_u64 a3);
 int FUN_140069844(Any a0,Any a1,Any a2,Any a3,Any a4,Any a5,Any a6,Any a7);
 int FUN_140069ac4(Any a0,Any a1,Any a2,Any a3,Any a4,Any a5,Any a6,Any a7);
 void FUN_140069e44(Any a0);
@@ -321,7 +314,6 @@ void FUN_140069e54(Any a0,Any a1);
 void FUN_140069e5c(Any a0,Any a1,Any a2,Any a3);
 void FUN_140069e98(Any a0,Any a1,Any a2,Any a3);
 void FUN_140069ef4(Any a0,Any a1,Any a2);
-uint FUN_14006a7f8(Any a0,Any a1,Any a2);
 void DCT_Isse2Init();
 /* unknown */ void FUN_142ccca50();
 /* unknown */ void FUN_142ccca90();
@@ -492,7 +484,7 @@ uint MPV_IsConformable(cri_u64 a1,int a2)
 // @0x14004dd30
 cri_u32 mpvlib_ChkFatal(void)
 {
-  if ((int)FUN_1400630c0() != 0) {  // C3: the exe tests only the low 32 bits of the u64 result
+  if ((int)MPVVLC_IsVlcSizErr() != 0) {  // C3: the exe tests only the low 32 bits of the u64 result
     return FUN_14004ff50(0,0xff03ff03);
   }
   if (MPVDEC_CheckVersion(&DAT_1431ba2e0,0x1900,0x80) != 0) {
@@ -781,7 +773,7 @@ cri_u32 MPV_SetCond(longlong a1,int a2,cri_u32 a3)
     table = (cri_u32 *)((char *)(a1) + 0x1540);
   }
   table[a2] = a3;
-  ((void (*)(longlong, int, cri_u32))FUN_140062920)(a1,a2,a3);  // C3: the exe passes three arguments to the one-argument definition (C call)
+  ((void (*)(longlong, int, cri_u32))MPVM2V_SetCond)(a1,a2,a3);  // C3: the exe passes three arguments to the one-argument definition (C call)
   return 0;
 }
 
@@ -828,9 +820,9 @@ int MPV_Init(cri_u32 a1,cri_u64 a2)
   MPVFRM_Init();
   thunk_FUN_140050520();
   ((void (*)(longlong, longlong))MPVVLC_Init)(l_v1 + 0x1320,l_v1);  // C3: two arguments to the one-argument definition (C call)
-  FUN_140067370(l_v1);
+  MPVBDEC_Init(l_v1);
   MPVUMC_Init();
-  FUN_140066f60(l_v1);
+  MPVCDEC_Init(l_v1);
   FUN_14004e0c0(l_v1 + 0x18d0);
   mpvlib_InitObjTbl();
   MPVM2V_Init();
@@ -864,10 +856,10 @@ longlong FUN_14004e460(longlong a1)
     FUN_1400511a0(a1,i,0,0,0);
   }
   FUN_1400511d0(a1,0,0);
-  FUN_140066350(a1);
+  MPVCONCEAL_Init(a1);
   CriAt<cri_u32>(a1, 0x18f0) = 0;
   MPVSL_Create(a1);
-  CriAt<cri_u64>(a1, 0x1848) = FUN_140062900(a1);
+  CriAt<cri_u64>(a1, 0x1848) = MPVM2V_Create(a1);
   CriAt<cri_u32>(a1, 0x1538) = 2;
   return a1;
 }

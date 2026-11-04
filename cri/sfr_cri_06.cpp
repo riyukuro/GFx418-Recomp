@@ -531,7 +531,7 @@ void MPVMULTI_Init();   // sfr_cri_05b
 void MPVMULTI_Finish();   // sfr_cri_05b
 void m2vidct_InitIdctTbls();   // sfr_cri_05b
 void MPVMULTI_SetProcessorMask(longlong, cri_u4);   // sfr_cri_05b, 0x140050210
-void FUN_140050310(unsigned int *);  // C3: the definition's signature
+void MPVMULTI_Destroy(unsigned int *);  // sfr_cri_05b, 0x140050310
 longlong MPVMULTI_Create();   // sfr_cri_05b
 unsigned __int64 MPVMULTI_DecPicture(__int64, unsigned __int64, unsigned __int64, unsigned __int64 *);  // sfr_cri_05b, 0x140050820
 unsigned int FUN_140051d90(__int64 *);  // C3: the definition's signature
@@ -699,9 +699,9 @@ void initB0Tbl();
 void DCT_FsriTrans(longlong arg1, longlong arg2, longlong arg3);
 void DCT_FsriTransCore(char *, int);
 void FUN_140066320(cri_any = cri_any());
-void FUN_140066370(__int64);  // C3: the definition's signature
-void FUN_1400663b0(__int64);  // C3: the definition's signature
-void FUN_1400663d0(__int64, unsigned int *, unsigned int *);  // C3: the definition's signature
+void MPVCONCEAL_StartFrame(__int64);  // sfr_cri_07, 0x140066370
+void MPVCONCEAL_StartTask(__int64);  // sfr_cri_07, 0x1400663b0
+void MPVCONCEAL_GetMbaInfo(__int64, unsigned int *, unsigned int *);  // sfr_cri_07, 0x1400663d0
 void FUN_1400677f0(cri_any = cri_any());
 void FUN_140067840(cri_any = cri_any());
 cri_u8 FUN_140067890(cri_any = cri_any(), cri_any = cri_any());
@@ -717,11 +717,11 @@ __int64 FUN_140073c80(__int64);  // C3: the definition's signature
 __int64 FUN_14007ba60(__int64);  // C3: the definition's signature
 __int64 FUN_140083350(__int64);  // C3: the definition's signature
 void M2VSL_DecPicture(__int64, unsigned __int64);  // C3: the definition's signature
-void FUN_14008a3c0(__int64);  // C3: the definition's signature
-void FUN_14008a970(__int64, unsigned int);  // C3: the definition's signature
+void M2VMC_MacroBlock(__int64);  // sfr_cri_07, 0x14008a3c0
+void M2VMC_Skipped(__int64, unsigned int);  // sfr_cri_07, 0x14008a970
 void M2VMC_StartFrame(__int64);  // C3: the definition's signature
 void M2VPRD_SetFunction(__int64);  // C3: the definition's signature
-void FUN_14008c820(__int64);  // C3: the definition's signature
+void M2VCONCEAL_SkippedMb(__int64);  // sfr_cri_07, 0x14008c820
 void FUN_14008d2a0(__int64 *, __int64 *, __int64, __int64);  // C3: the definition's signature
 void cft_sse_Ycc420plnToRgb888Int2smp(__int64 *, __int64 *, __int64, __int64);  // C3: the definition's signature
 void cft_sse_Ycc420plnToArgb8888Prg(__int64 *, __int64 *, __int64, __int64);  // C3: the definition's signature
@@ -732,7 +732,7 @@ void CFT_Ycc420plnToArgb8888Prg1smp(unsigned char *, unsigned char *, unsigned _
 void CFT_Ycc420plnToYcc422pix2Int1smp(unsigned char *, unsigned char *, unsigned __int64, unsigned __int64);  // C3: the definition's signature
 void CFT_Ycc420plnToRgb555Init();
 void CFT_Ycc420plnToRgb565Init();
-void FUN_140095450(unsigned int);  // C3: the definition's signature
+void DCTVER_Error(unsigned int);  // sfr_cri_07, 0x140095450
 struct CriMpvDecoderState;
 void MPVDEC_ResetMv(CriMpvDecoderState* state);  // C3: sfr_cri_03's definitions (0x142ccb4f0/0x142ccb500)
 void MPVDEC_ResetDc(CriMpvDecoderState* state);
@@ -3170,8 +3170,8 @@ cri_u8 parseMb(longlong arg1)
           if (*(int *)((char *)arg1 + 0x2e0) == 2) {
             resetVector(arg1);  // resetDcDctPred keeps rcx
           }
-          FUN_14008a970(arg1,i_v3);  // edx = r10d, the subtrahend of the test above
-          FUN_14008c820(arg1);
+          M2VMC_Skipped(arg1,i_v3);  // edx = r10d, the subtrahend of the test above
+          M2VCONCEAL_SkippedMb(arg1);
         }
       }
       (**(cri_code **)((char *)arg1 + 0x1be0))(arg1);
@@ -4673,7 +4673,7 @@ void M2VFRM_ParseSsc(cri_any cri_p0, cri_any cri_p1)
       i_v12 = parseMb(arg1);  // rcx = rbx = arg1 in the exe
       if (i_v12 == 0) {
         (**(cri_code **)((char *)arg1 + 0x1bc8))(arg1);
-        FUN_14008a3c0(arg1);
+        M2VMC_MacroBlock(arg1);
       }
       buf = *(uint *)((char *)arg1 + 0xc7c);
       nxt = *(uint *)((char *)arg1 + 0xc80);
@@ -8002,7 +8002,7 @@ void MPVSL_Destroy(cri_any cri_p0)
 {
   longlong arg1 = cri_p0;
   if (*(longlong *)((char *)arg1 + 0x18f8) != 0) {
-    FUN_140050310((unsigned int *)(*(longlong *)((char *)arg1 + 0x18f8)));  // the exe passes the 0x18f8 field (0x140065039)
+    MPVMULTI_Destroy((unsigned int *)(*(longlong *)((char *)arg1 + 0x18f8)));  // the exe passes the 0x18f8 field (0x140065039)
     *(cri_u8 *)((char *)arg1 + 0x18f8) = 0;
   }
   return;
@@ -8109,7 +8109,7 @@ void MPVSL_DecSliceOne(longlong arg1, longlong *arg2, int *arg3)
   *arg3 = *(int *)((char *)arg1 + 0x162c) - mbx;
   arg3[1] = *(int *)((char *)arg1 + 0x1630) - mby;
   arg3[2] = *(int *)((char *)arg1 + 0x18ec);
-  FUN_1400663d0(arg1,(unsigned int *)(arg3 + 3),(unsigned int *)(arg3 + 4));
+  MPVCONCEAL_GetMbaInfo(arg1,(unsigned int *)(arg3 + 3),(unsigned int *)(arg3 + 4));
   return;
 }
 
@@ -8180,7 +8180,7 @@ cri_u8 MPVSL_DecPicture(longlong arg1, longlong *arg2)
   int &loc_1c = *(int *)(((cri_u1 *)frameq_) + 76);
   cri_u2 &loc_18 = *(cri_u2 *)(((cri_u1 *)frameq_) + 80);
   
-  FUN_140066370(arg1);  // the exe passes rcx through
+  MPVCONCEAL_StartFrame(arg1);  // the exe passes rcx through
   if (*(longlong *)((char *)arg1 + 0x18f8) != 0) {
     MPVMULTI_SetProcessorMask(*(longlong *)((char *)arg1 + 0x18f8),*(cri_u4 *)((char *)arg1 + 0x1574));
     loc_38 = &PTR_FUN_143a4a0d8;
@@ -8266,7 +8266,7 @@ void mpvsl_DecTaskOne(longlong arg1, cri_u8 arg2, int *arg3)
   if ((u_v2 & 1) == 0) {
     return;
   }
-  FUN_1400663b0(arg1);
+  MPVCONCEAL_StartTask(arg1);
   do {
     MPVSL_DecSliceOne(arg1,(longlong *)arg2,&loc_28);
     arg3[1] = arg3[1] + loc_24;
@@ -8367,7 +8367,7 @@ int seq2dctfsir(int arg1)
   i_v2 = arg1 / 8;
   i_v1 = ((arg1 % 8) + (i_v2 / 4) * 8) * 4 + i_v2 % 4;
   if ((i_v1 < 0) || (i_v1 >= 0x100)) {
-    FUN_140095450(0xff040003);
+    DCTVER_Error(0xff040003);
   }
   return i_v1;
 }

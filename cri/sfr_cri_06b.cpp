@@ -505,7 +505,6 @@ DWORD mpvmulti_GetNumberOfProcessors();   // sfr_cri_05b
 void MPVMULTI_Init();   // sfr_cri_05b
 void MPVMULTI_Finish();   // sfr_cri_05b
 void m2vidct_InitIdctTbls();   // sfr_cri_05b
-void FUN_140050310(cri_any = cri_any());
 longlong MPVMULTI_Create();   // sfr_cri_05b
 cri_u4 FUN_140051d90(cri_any = cri_any());
 cri_u4 FUN_140051ec0(cri_any = cri_any(), cri_any = cri_any());
@@ -651,9 +650,6 @@ void DCT_FsriInitScanTbl(const cri_u1 *, cri_u1 *);
 void initB0Tbl();
 void DCT_FsriTransCore(cri_any = cri_any(), cri_any = cri_any());
 void FUN_140066320(cri_any = cri_any());
-void FUN_140066370(cri_any = cri_any());
-void FUN_1400663b0(cri_any = cri_any());
-void FUN_1400663d0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_1400677f0(cri_any = cri_any());
 void FUN_140067840(cri_any = cri_any());
 cri_u8 FUN_140067890(cri_any = cri_any(), cri_any = cri_any());
@@ -668,11 +664,8 @@ longlong FUN_140073c80(cri_any = cri_any());
 longlong FUN_14007ba60(cri_any = cri_any());
 longlong FUN_140083350(cri_any = cri_any());
 void FUN_140089fe0(cri_any = cri_any(), cri_any = cri_any());
-void FUN_14008a3c0(cri_any = cri_any());
-void FUN_14008a970(cri_any = cri_any(), cri_any = cri_any());
 void FUN_14008ab40(cri_any = cri_any());
 void FUN_14008c780(cri_any = cri_any());
-void FUN_14008c820(cri_any = cri_any());
 void FUN_14008d2a0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_14008e570(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_14008fa50(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
@@ -683,7 +676,6 @@ void FUN_140092850(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any()
 void FUN_1400928e0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void CFT_Ycc420plnToRgb555Init();
 void CFT_Ycc420plnToRgb565Init();
-void FUN_140095450(cri_any = cri_any());
 void FUN_142ccb4f0(cri_any = cri_any());
 void FUN_142ccb500(cri_any = cri_any());
 

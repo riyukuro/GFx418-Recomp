@@ -292,7 +292,7 @@ void CRIDLG_Finish();
 cri_u8 CRIDLG_Create(cri_u8, cri_u4);
 cri_u8 cridlg_Create(longlong, uint);
 void CRIDLG_Destroy(cri_u8);
-void FUN_140067ac0(void *);
+extern "C" void FUN_140067ac0(void *);
 cri_u4 CRIDLG_GetStat(cri_u8);
 int cridlg_GetStat(int *);
 cri_u4 CRIDLG_TryBeginInvoke(cri_u8, cri_u8, cri_u8);
@@ -309,7 +309,7 @@ void CRIDLG_SetAffinityMask(cri_u8, cri_u4);
 void cridlg_SetAffinityMask(int *, uint);
 cri_u8 FUN_140068190(longlong);
 cri_u8 FUN_140068200(cri_u8);
-cri_u8 FUN_140068210(longlong);
+extern "C" cri_u8 FUN_140068210(longlong);
 void cridlg_assert(const char *);
 void cridlg_lock();
 void cridlg_unlock();
@@ -578,7 +578,7 @@ cri_u8 cridlg_Create(longlong arg1, uint arg2);
 void CRIDLG_Destroy(cri_u8 arg1);
 
 #pragma function(memset)                      // the exe obj calls memset here
-void FUN_140067ac0(void *arg1);
+extern "C" void FUN_140067ac0(void *arg1);
 #pragma intrinsic(memset)
 
 cri_u4 CRIDLG_GetStat(cri_u8 arg1);
@@ -613,7 +613,7 @@ cri_u8 FUN_140068190(longlong arg1);
 
 cri_u8 FUN_140068200(cri_u8 arg1);
 
-cri_u8 FUN_140068210(longlong arg1);
+extern "C" cri_u8 FUN_140068210(longlong arg1);
 
 void cridlg_assert(const char *arg1);
 
