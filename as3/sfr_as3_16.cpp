@@ -758,7 +758,6 @@ extern "C" void* Sfr16ScalarDeletingDtor_1424e1f80(void* self, unsigned int flag
 // @0x1424e1fe0
 extern "C" void* Sfr16ScalarDeletingDtor_1424e1fe0(void* self, unsigned int flags) { return Sfr16ScalarDeletingDtorNts(self, flags); }
 
-extern "C" void FUN_142521f00(void*);
 extern void FUN_14257eb30(void*);
 struct Sfr36StateAccess : Scaleform::Render::StateData
 {

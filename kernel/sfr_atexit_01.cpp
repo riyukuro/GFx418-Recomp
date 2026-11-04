@@ -19,6 +19,7 @@
 #include "ms2/scaleform/include/render/render_scale9grid.h"
 #include "ms2/scaleform/include/gfx/as2/as2_pointobject.h"
 #include "ms2/scaleform/include/gfx/as2/as2_rectangleobject.h"
+#include "ms2/scaleform/include/gfx/as3/as3_value.h"
 
 namespace Scaleform { namespace Render {
 // The VertexXY16* formats render headers do not declare (Render_Vertex.cpp statics, 0x143a2fb88..0x143a2fc18).
@@ -93,7 +94,17 @@ extern "C" char DAT_143a2fd28[];
 extern "C" char DAT_143a2fd38[];
 extern "C" char DAT_143a2fd50[];
 
-extern "C" void FUN_142521f00(void*);       // AS3::Value::ReleaseInternal
+}}
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+// Value's friend, as in sfr_as3_19: the out-of-line Value::ReleaseInternal (0x142521f00) is private.
+struct ValueAssignCopies
+{
+    static void ReleaseInternal(Value& v) { v.ReleaseInternal(); }
+};
+}}}
+
+namespace Scaleform { namespace GFx {
 
 // The Ptr<SystemVertexFormat> slot of a VertexFormat static, released as raw storage like the other Ptr<>s.
 static inline char* FormatSysSlot(Render::VertexFormat& format)
@@ -137,7 +148,7 @@ static inline void RawAs3ValueDtor(char* v)
             RawField<U>(v, 0x18) = 0;
         }
         else
-            FUN_142521f00(v);
+            AS3::ValueAssignCopies::ReleaseInternal(*reinterpret_cast<AS3::Value*>(v));
     }
 }
 
