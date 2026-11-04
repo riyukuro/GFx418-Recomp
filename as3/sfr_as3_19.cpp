@@ -2211,8 +2211,9 @@ void AvmButton::SetHitStateObject(DisplayObject* ch) { Scaleform::GFx::AS3::Sfr3
 
 // Two bounds with -1 meaning the default (0 and 1000); the second is stored twice.
 // @0x1425287c0
-void Sfr31SetDefaultedBounds(char* self, int lo, int hi)
+void ASRefCountCollector::SetParams(unsigned lo, unsigned hi)
 {
+    char* const self = reinterpret_cast<char*>(this);
     if (lo != -1)
         *reinterpret_cast<int*>(self + 0xac) = lo;
     else
@@ -2453,25 +2454,28 @@ void Sfr31ShutdownRegistered(UPInt self)
 }
 
 // Runs the slot (kind bits 5..9 are not a getter unless the caller asked for one) through the invoke helper.
+// The store stays the free Sfr31StoreSlotValue (VTable::SetMethod): with SetMethod's const ASString& parameter this
+// caller reloads the name node after the call, where the exe keeps it in rbx.
 // @0x1425311c0
-__declspec(noinline) void Sfr31InvokeSlot(UPInt self, const SlotInfo* si, UPInt arg, int argc)
+__declspec(noinline) void Traits::UpdateVT(const SlotInfo& si, const Value& v, SlotInfo::BindingType argc)
 {
-    const UPInt traits = FUN_14250fa80(self);
-    const SPInt index = si->ValueInd;
-    const SInt32 bt = si->BindType;
+    const UPInt traits = FUN_14250fa80(reinterpret_cast<UPInt>(this));
+    const SPInt index = si.ValueInd;
+    const SInt32 bt = si.BindType;
     if (bt != SlotInfo::BT_Code || argc == bt)
     {
-        ASString name(si->Name.GetPtr());
-        Sfr31StoreSlotValue(traits, index, reinterpret_cast<const Value*>(arg), argc, reinterpret_cast<const UPInt*>(&name));
+        ASString name(si.Name.GetPtr());
+        Sfr31StoreSlotValue(traits, index, &v, argc, reinterpret_cast<const UPInt*>(&name));
     }
 }
 
 // Looks the name up in the own slots and invokes the newest one whose namespace is an interface namespace. The
 // slot comes from the inline Slots::GetSlotInfo (ExecSlotInfo); the previous index from GetPrevSlotIndex one level in.
 // @0x1425310e0
-void Sfr31InvokeNamedSlot(UPInt self, const ASString& name, UPInt target, UPInt arg, int argc)
+void Traits::UpdateVT4IM(const ASString& name, const Instances::Namespace& ns, const Value& v, SlotInfo::BindingType argc)
 {
-    if (target != *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(self + 0x78) + 0x1d0))
+    const UPInt self = reinterpret_cast<UPInt>(this);
+    if (reinterpret_cast<UPInt>(&ns) != *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(self + 0x78) + 0x1d0))
         return;
     const Slots& slots = *reinterpret_cast<const Slots*>(self + 0x20);
     SPInt i = *slots.FindSlotValues(name);
@@ -2480,7 +2484,7 @@ void Sfr31InvokeNamedSlot(UPInt self, const ASString& name, UPInt target, UPInt 
         const SlotInfo* si = &ExecSlotInfo(slots, AbsoluteIndex(i));
         if (reinterpret_cast<const Instances::Namespace* const*>(si)[1]->GetIsInterface())   // pNs
         {
-            Sfr31InvokeSlot(self, si, arg, argc);
+            UpdateVT(*si, v, argc);
             return;
         }
         if (static_cast<UPInt>(i) < slots.FirstOwnSlotNum)
@@ -2530,8 +2534,9 @@ void Sfr31SwitchAS3ObjPtrType(UPInt self, int type)
 // AvmButton::SwitchState: unless the owner is being destroyed or already removed, the mouse state is
 // translated and handed to SwitchStateIntl.
 // @0x14252e980
-void Sfr31ButtonSwitchState(UPInt self, int mouseState)
+void AvmButton::SwitchState(ButtonRecord::MouseState mouseState)
 {
+    const UPInt self = reinterpret_cast<UPInt>(this) + 0x40;
     const DisplayObjectBase* owner = *reinterpret_cast<DisplayObjectBase**>(self - 0x28);
     if (!owner->IsUnloaded() && !owner->IsUnloading())
     {
