@@ -1493,8 +1493,7 @@ void Vector_String::AS3reverse(SPtr<Vector_String>& result)
 }}}}} // namespace Scaleform::GFx::AS3::Instances::fl_vec
 
 // VectorBase<T>::Concat/Filter/Map<I>: one body per element type, written once below and forced inline into each.
-// VM::GetValueTraits / VM::GetClassTraits(const Value&) / ClassTraits::Traits::IsParentTypeOf
-const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
+// VM::GetClassTraits(const Value&) / ClassTraits::Traits::IsParentTypeOf
 bool FUN_1425149a0(const Scaleform::GFx::AS3::ClassTraits::Traits& tr, const Scaleform::GFx::AS3::ClassTraits::Traits& other);
 
 namespace Scaleform {
@@ -1597,7 +1596,7 @@ static __forceinline void VectorConcat(VectorBase<T>& self, Value& result, unsig
     for (unsigned i = 0; i < argc; ++i)
     {
         const Value& value = argv[i];
-        const Traits& argTraits = FUN_14250ffc0(vm, value);
+        const Traits& argTraits = vm.GetValueTraits(value);
         const ClassTraits::Traits& argClassTR = vm.GetClassTraits(value);
 
         if (argTraits.IsArrayLike())
@@ -1674,7 +1673,7 @@ static __forceinline void VectorMap(VectorBase<T>& self, SPtr<I>& result, const 
         if (!tr.Coerce(res, coerced))
         {
             VM& vm = self.VMRef;
-            const Traits& vtr = FUN_14250ffc0(vm, res);
+            const Traits& vtr = vm.GetValueTraits(res);
             vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, vtr.GetName().ToCStr(), tr.GetName().ToCStr()));
             break;
         }
@@ -1979,14 +1978,14 @@ static __forceinline void VectorSort(VectorBase<T>& self, Value& result, unsigne
         else if (!argv[0].Convert2Int32(flags))
         {
             self.VMRef.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, self.VMRef,
-                FUN_14250ffc0(self.VMRef, argv[0]).GetName().ToCStr(), MapClassTraits(owner).GetName().ToCStr()));
+                self.VMRef.GetValueTraits(argv[0]).GetName().ToCStr(), MapClassTraits(owner).GetName().ToCStr()));
             return;
         }
     }
     if (argc > 1 && !argv[1].Convert2Int32(flags))
     {
         self.VMRef.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, self.VMRef,
-            FUN_14250ffc0(self.VMRef, argv[1]).GetName().ToCStr(), MapClassTraits(owner).GetName().ToCStr()));
+            self.VMRef.GetValueTraits(argv[1]).GetName().ToCStr(), MapClassTraits(owner).GetName().ToCStr()));
         return;
     }
 
