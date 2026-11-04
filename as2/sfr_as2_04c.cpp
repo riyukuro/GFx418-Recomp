@@ -119,54 +119,56 @@ void FUN_142606690(void* pthis);
 void FUN_142925e70(void* pthis);
 void FUN_142925fb0(void* pthis);
 
+// The Prototype<X> destructors called by name emit these vftables here as well.
+// MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143215f60
+// MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215fa8
+// MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143216050
+// MS2-PIN: ??_7?$Prototype@VMovieClipLoader@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216b68
+// MS2-PIN: ??_7?$Prototype@VMovieClipLoader@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216bd8
+// MS2-PIN: ??_7?$Prototype@VMovieClipLoader@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143216c80
+// MS2-PIN: ??_7?$Prototype@VLoadVarsObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216fc8
+// MS2-PIN: ??_7?$Prototype@VLoadVarsObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143217010
+// MS2-PIN: ??_7?$Prototype@VLoadVarsObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x1432170b8
+// MS2-PIN: ??_7?$Prototype@VMatrixObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218da0
+// MS2-PIN: ??_7?$Prototype@VMatrixObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143218de8
+// MS2-PIN: ??_7?$Prototype@VMatrixObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143218e90
+// MS2-PIN: ??_7?$Prototype@VRectangleObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432195c0
+// MS2-PIN: ??_7?$Prototype@VRectangleObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219608
+// MS2-PIN: ??_7?$Prototype@VRectangleObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x1432196b0
+// MS2-PIN: ??_7?$Prototype@VTransformObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432199d0
+// MS2-PIN: ??_7?$Prototype@VTransformObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219a18
+// MS2-PIN: ??_7?$Prototype@VTransformObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143219ac0
+// MS2-PIN: ??_7?$Prototype@VPointObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321a1f0
+// MS2-PIN: ??_7?$Prototype@VPointObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321a238
+// MS2-PIN: ??_7?$Prototype@VPointObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321a2e0
+// MS2-PIN: ??_7?$Prototype@VStageObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321a600
+// MS2-PIN: ??_7?$Prototype@VStageObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321a648
+// MS2-PIN: ??_7?$Prototype@VStageObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321a6f0
+// MS2-PIN: ??_7?$Prototype@VMath@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321ba50
+// MS2-PIN: ??_7?$Prototype@VMath@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ba98
+// MS2-PIN: ??_7?$Prototype@VMath@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321bb40
+// MS2-PIN: ??_7?$Prototype@VKeyObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321c6d8
+// MS2-PIN: ??_7?$Prototype@VKeyObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321c720
+// MS2-PIN: ??_7?$Prototype@VKeyObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321c7c8
+// MS2-PIN: ??_7?$Prototype@VMouseObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321cb08
+// MS2-PIN: ??_7?$Prototype@VMouseObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321cb50
+// MS2-PIN: ??_7?$Prototype@VMouseObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321cbf8
+// MS2-PIN: ??_7?$Prototype@VSelection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321d368
+// MS2-PIN: ??_7?$Prototype@VSelection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321d3b0
+// MS2-PIN: ??_7?$Prototype@VSelection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321d458
+// MS2-PIN: ??_7?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321db88
+// MS2-PIN: ??_7?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321dbd0
+// MS2-PIN: ??_7?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321dc78
+
 // The base vftables the inlined destructors store.
 extern const void* DAT_1432155c0[];
 extern const void* DAT_143215648[];
-extern const void* DAT_143215f60[];
-extern const void* DAT_143215fa8[];
-extern const void* DAT_143216050[];
-extern const void* DAT_143216b68[];
-extern const void* DAT_143216bd8[];
-extern const void* DAT_143216c80[];
-extern const void* DAT_143216fc8[];
-extern const void* DAT_143217010[];
-extern const void* DAT_1432170b8[];
 extern const void* DAT_1432173f8[];
 extern const void* DAT_143217440[];
 extern const void* DAT_1432174e8[];
-extern const void* DAT_143218da0[];
-extern const void* DAT_143218de8[];
-extern const void* DAT_143218e90[];
-extern const void* DAT_1432195c0[];
-extern const void* DAT_143219608[];
-extern const void* DAT_1432196b0[];
-extern const void* DAT_1432199d0[];
-extern const void* DAT_143219a18[];
-extern const void* DAT_143219ac0[];
-extern const void* DAT_14321a1f0[];
-extern const void* DAT_14321a238[];
-extern const void* DAT_14321a2e0[];
-extern const void* DAT_14321a600[];
-extern const void* DAT_14321a648[];
-extern const void* DAT_14321a6f0[];
-extern const void* DAT_14321ba50[];
-extern const void* DAT_14321ba98[];
-extern const void* DAT_14321bb40[];
-extern const void* DAT_14321c6d8[];
-extern const void* DAT_14321c720[];
-extern const void* DAT_14321c7c8[];
-extern const void* DAT_14321cb08[];
-extern const void* DAT_14321cb50[];
-extern const void* DAT_14321cbf8[];
-extern const void* DAT_14321d368[];
-extern const void* DAT_14321d3b0[];
-extern const void* DAT_14321d458[];
 extern const void* DAT_14321d778[];
 extern const void* DAT_14321d7c0[];
 extern const void* DAT_14321d868[];
-extern const void* DAT_14321db88[];
-extern const void* DAT_14321dbd0[];
-extern const void* DAT_14321dc78[];
 extern const void* DAT_14321e2c8[];
 extern const void* DAT_14321e310[];
 extern const void* DAT_14321e3b8[];
@@ -190,11 +192,7 @@ void* DeleteAs2_14292b820(void* p, unsigned flags)
 // @0x14292b880
 void* DeleteAs2_14292b880(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321c6d8;
-    *(const void**)((char*)p+0x20) = DAT_14321c720;
-    *(const void**)((char*)p+0x68) = DAT_14321c7c8;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0x68)->GASPrototypeBase::~GASPrototypeBase();
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<Prototype<KeyObject, Environment>*>(p)->Prototype<KeyObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -222,11 +220,7 @@ void* DeleteAs2_14292b910(void* p, unsigned flags)
 // @0x14292b970
 void* DeleteAs2_14292b970(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_143216fc8;
-    *(const void**)((char*)p+0x20) = DAT_143217010;
-    *(const void**)((char*)p+0x78) = DAT_1432170b8;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0x78)->GASPrototypeBase::~GASPrototypeBase();
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<Prototype<LoadVarsObject, Environment>*>(p)->Prototype<LoadVarsObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -270,11 +264,7 @@ void* DeleteAs2_14292bb70(void* p, unsigned flags)
 // @0x14292bbe0
 void* DeleteAs2_14292bbe0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321ba50;
-    *(const void**)((char*)p+0x20) = DAT_14321ba98;
-    *(const void**)((char*)p+0x68) = DAT_14321bb40;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0x68)->GASPrototypeBase::~GASPrototypeBase();
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<Prototype<Math, Environment>*>(p)->Prototype<Math, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -302,11 +292,7 @@ void* DeleteAs2_14292bc70(void* p, unsigned flags)
 // @0x14292bcd0
 void* DeleteAs2_14292bcd0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_143218da0;
-    *(const void**)((char*)p+0x20) = DAT_143218de8;
-    *(const void**)((char*)p+0x68) = DAT_143218e90;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0x68)->GASPrototypeBase::~GASPrototypeBase();
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<Prototype<MatrixObject, Environment>*>(p)->Prototype<MatrixObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -334,11 +320,7 @@ void* DeleteAs2_14292bff0(void* p, unsigned flags)
 // @0x14292c050
 void* DeleteAs2_14292c050(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321cb08;
-    *(const void**)((char*)p+0x20) = DAT_14321cb50;
-    *(const void**)((char*)p+0x68) = DAT_14321cbf8;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0x68)->GASPrototypeBase::~GASPrototypeBase();
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<Prototype<MouseObject, Environment>*>(p)->Prototype<MouseObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -399,12 +381,7 @@ void* DeleteAs2_14292c1c0(void* p, unsigned flags)
 // @0x14292c230
 void* DeleteAs2_14292c230(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_143216b68;
-    *(const void**)((char*)p+0x20) = DAT_143216bd8;
-    *(const void**)((char*)p+0x70) = DAT_143216c80;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0x70)->GASPrototypeBase::~GASPrototypeBase();
-    reinterpret_cast<Sfr04cHashProgress*>((char*)p+0x68)->~Sfr04cHashProgress();
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<Prototype<MovieClipLoader, Environment>*>(p)->Prototype<MovieClipLoader, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -478,11 +455,7 @@ void* DeleteAs2_14292c6e0(void* p, unsigned flags)
 // @0x14292c790
 void* DeleteAs2_14292c790(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_143215f60;
-    *(const void**)((char*)p+0x20) = DAT_143215fa8;
-    *(const void**)((char*)p+0x68) = DAT_143216050;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0x68)->GASPrototypeBase::~GASPrototypeBase();
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<Prototype<Object, Environment>*>(p)->Prototype<Object, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -526,11 +499,7 @@ void* DeleteAs2_14292c890(void* p, unsigned flags)
 // @0x14292c8f0
 void* DeleteAs2_14292c8f0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321a1f0;
-    *(const void**)((char*)p+0x20) = DAT_14321a238;
-    *(const void**)((char*)p+0x68) = DAT_14321a2e0;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0x68)->GASPrototypeBase::~GASPrototypeBase();
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<Prototype<PointObject, Environment>*>(p)->Prototype<PointObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -574,11 +543,7 @@ void* DeleteAs2_14292c9f0(void* p, unsigned flags)
 // @0x14292ca50
 void* DeleteAs2_14292ca50(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432195c0;
-    *(const void**)((char*)p+0x20) = DAT_143219608;
-    *(const void**)((char*)p+0x68) = DAT_1432196b0;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0x68)->GASPrototypeBase::~GASPrototypeBase();
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<Prototype<RectangleObject, Environment>*>(p)->Prototype<RectangleObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -622,11 +587,7 @@ void* DeleteAs2_14292cb90(void* p, unsigned flags)
 // @0x14292cc00
 void* DeleteAs2_14292cc00(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321d368;
-    *(const void**)((char*)p+0x20) = DAT_14321d3b0;
-    *(const void**)((char*)p+0x68) = DAT_14321d458;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0x68)->GASPrototypeBase::~GASPrototypeBase();
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<Prototype<Selection, Environment>*>(p)->Prototype<Selection, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -671,11 +632,7 @@ void* DeleteAs2_14292ccf0(void* p, unsigned flags)
 // @0x14292cd70
 void* DeleteAs2_14292cd70(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321db88;
-    *(const void**)((char*)p+0x20) = DAT_14321dbd0;
-    *(const void**)((char*)p+0x78) = DAT_14321dc78;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0x78)->GASPrototypeBase::~GASPrototypeBase();
-    FUN_142925e70(p);
+    static_cast<Prototype<SharedObject, Environment>*>(p)->Prototype<SharedObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -719,11 +676,7 @@ void* DeleteAs2_14292ced0(void* p, unsigned flags)
 // @0x14292cf30
 void* DeleteAs2_14292cf30(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321a600;
-    *(const void**)((char*)p+0x20) = DAT_14321a648;
-    *(const void**)((char*)p+0x68) = DAT_14321a6f0;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0x68)->GASPrototypeBase::~GASPrototypeBase();
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<Prototype<StageObject, Environment>*>(p)->Prototype<StageObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -969,11 +922,7 @@ void* DeleteAs2_14292d950(void* p, unsigned flags)
 // @0x14292d9b0
 void* DeleteAs2_14292d9b0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432199d0;
-    *(const void**)((char*)p+0x20) = DAT_143219a18;
-    *(const void**)((char*)p+0x90) = DAT_143219ac0;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0x90)->GASPrototypeBase::~GASPrototypeBase();
-    FUN_142925fb0(p);
+    static_cast<Prototype<TransformObject, Environment>*>(p)->Prototype<TransformObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
