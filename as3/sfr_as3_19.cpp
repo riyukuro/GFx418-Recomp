@@ -2142,13 +2142,21 @@ char* Sfr27ObjectSetSlotValue(Object* obj, char* ret, UInt32 slot, Value* v)
     return ret;
 }
 
+}}} // namespace Scaleform::GFx::AS3
+namespace Scaleform { namespace GFx {
+
 // AS3 Array object: sets its length (GFx::Value::ObjectInterface::SetArraySize).
 // @0x1425265d0
-bool Sfr27ObjectInterfaceSetArraySize(void* self, UPInt obj, UInt32 size)
+bool AS3ValueObjectInterface::SetArraySize(void* pdata, unsigned size)
 {
+    using namespace AS3;
+    const UPInt obj = reinterpret_cast<UPInt>(pdata);
     reinterpret_cast<Instances::fl::Array*>(obj)->Resize(size);
     return true;
 }
+
+}} // namespace Scaleform::GFx
+namespace Scaleform { namespace GFx { namespace AS3 {
 
 // The tag bits an object address carries for this value (no exe address of its own: inlined everywhere).
 Value::ObjectTag Value::GetObjectTag() const
@@ -2532,30 +2540,48 @@ void Sfr31ButtonSwitchState(UPInt self, int mouseState)
     }
 }
 
+}}} // namespace Scaleform::GFx::AS3
+namespace Scaleform { namespace GFx {
+
 // AS3ValueObjectInterface::SetElement: stores the converted value at the array index.
 // Raw-offset model.
 // @0x142527300
-bool Sfr31SetElement(UPInt self, UPInt array, UInt32 ind, const void* gfxValue)
+bool AS3ValueObjectInterface::SetElement(void* pdata, unsigned ind, const Value& value)
 {
+    using namespace AS3;
+    const UPInt self = reinterpret_cast<UPInt>(this);
+    const UPInt array = reinterpret_cast<UPInt>(pdata);
+    const void* gfxValue = &value;
     const UPInt root = *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(self + 8) + 0x18);
-    Value v;
+    AS3::Value v;
     FUN_1425048d0(root, gfxValue, &v);
     FUN_1424213b0(array + 0x38, ind, &v);
     return true;
 }
 
+}} // namespace Scaleform::GFx
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+}}} // namespace Scaleform::GFx::AS3
+namespace Scaleform { namespace GFx {
+
 // AS3ValueObjectInterface::ToString: the value's string form is copied into out.
 // Raw-offset model.
 // @0x14252fd40
-void Sfr31ToString(UPInt self, String* out, const void* gfxValue)
+void AS3ValueObjectInterface::ToString(String* out, const Value& thisVal) const
 {
+    using namespace AS3;
+    const UPInt self = reinterpret_cast<UPInt>(this);
     const UPInt root = *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(self + 8) + 0x18);
-    Value v;
-    FUN_1425048d0(root, gfxValue, &v);
+    AS3::Value v;
+    FUN_1425048d0(root, &thisVal, &v);
     ASString s(reinterpret_cast<ASStringNode*>(*reinterpret_cast<UPInt*>(root + 0x348) + 0x40));
     v.Convert2String(s);
     out->AssignString(s.ToCStr(), s.GetSize());
 }
+
+}} // namespace Scaleform::GFx
+namespace Scaleform { namespace GFx { namespace AS3 {
 
 }}} // namespace Scaleform::GFx::AS3
 
@@ -2610,9 +2636,15 @@ void Sfr31AvmDisplayObjSetAS3Obj(UPInt self, UPInt obj)
     }
 }
 
+}}} // namespace Scaleform::GFx::AS3
+namespace Scaleform { namespace GFx {
+
 // @0x1425266c0
-bool Sfr31SetCxform(UPInt self, UPInt obj, const Render::Cxform* cx)
+bool AS3ValueObjectInterface::SetCxform(void* pdata, const Render::Cxform& cxform)
 {
+    using namespace AS3;
+    const UPInt obj = reinterpret_cast<UPInt>(pdata);
+    const Render::Cxform* cx = &cxform;
     UPInt a = Sfr31Rd(obj, 0x20);
     if ((*reinterpret_cast<SInt32*>(a + 0x70) - 0x11U < 0xc) && ((static_cast<UInt8>(~static_cast<UInt8>(*reinterpret_cast<UInt8*>(a + 0x68) >> 5)) & 1) != 0))
     {
@@ -2624,6 +2656,9 @@ bool Sfr31SetCxform(UPInt self, UPInt obj, const Render::Cxform* cx)
     }
     return false;
 }
+
+}} // namespace Scaleform::GFx
+namespace Scaleform { namespace GFx { namespace AS3 {
 
 // TR::State::PushOp (OpStack.PushBack). Going through the inline call puts the OpStack address in rcx before the
 // pushed value's in rdx, as in the exe.
@@ -2977,10 +3012,16 @@ const MovieRoot::ActionEntry* MovieRoot::ActionQueueIterator::getNext()
     return pentry;
 }
 
+}}} // namespace Scaleform::GFx::AS3
+namespace Scaleform { namespace GFx {
+
 // A text assignment through the host interface: TextFields take it directly, anything else gets text/htmlText.
 // @0x14252a360
-bool Sfr31SetTextOnObject(UPInt* self, UPInt obj, const wchar_t* text, bool html)
+bool AS3ValueObjectInterface::SetText(void* pdata, const wchar_t* text, bool html)
 {
+    using namespace AS3;
+    UPInt* self = reinterpret_cast<UPInt*>(this);
+    const UPInt obj = reinterpret_cast<UPInt>(pdata);
     UPInt a = Sfr31Rd(obj, 0x20);
     if ((*reinterpret_cast<SInt32*>(a + 0x70) - 0x11U < 0xc) && ((static_cast<UInt8>(~static_cast<UInt8>(*reinterpret_cast<UInt8*>(a + 0x68) >> 5)) & 1) != 0))
     {
@@ -3003,6 +3044,9 @@ bool Sfr31SetTextOnObject(UPInt* self, UPInt obj, const wchar_t* text, bool html
     }
     return false;
 }
+
+}} // namespace Scaleform::GFx
+namespace Scaleform { namespace GFx { namespace AS3 {
 
 // The alias table is a HashSet of (ASString, Value) pairs; the lookup is the SDK's findIndexCore.
 struct Sfr31AliasEntry
@@ -3231,10 +3275,16 @@ void Sfr27ExecNextName(VM* vm) { Sfr31ExecNextCommon(vm, false); }
 // @0x14253d440
 void Sfr27ExecNextValue(VM* vm) { Sfr31ExecNextCommon(vm, true); }
 
-// As Sfr31SetTextOnObject, for a UTF-8 string; a TextField also has its html flag (+0xfc bit 1) synced to the request.
+}}} // namespace Scaleform::GFx::AS3
+namespace Scaleform { namespace GFx {
+
+// As the wchar_t SetText, for a UTF-8 string; a TextField also has its html flag (+0xfc bit 1) synced to the request.
 // @0x14252a230
-bool Sfr31SetTextOnObjectUtf8(UPInt* self, UPInt obj, const char* text, bool html)
+bool AS3ValueObjectInterface::SetText(void* pdata, const char* text, bool html)
 {
+    using namespace AS3;
+    UPInt* self = reinterpret_cast<UPInt*>(this);
+    const UPInt obj = reinterpret_cast<UPInt>(pdata);
     UPInt a = Sfr31Rd(obj, 0x20);
     if ((*reinterpret_cast<SInt32*>(a + 0x70) - 0x11U < 0xc) && ((static_cast<UInt8>(~static_cast<UInt8>(*reinterpret_cast<UInt8*>(a + 0x68) >> 5)) & 1) != 0))
     {
@@ -3266,6 +3316,9 @@ bool Sfr31SetTextOnObjectUtf8(UPInt* self, UPInt obj, const char* text, bool htm
     }
     return false;
 }
+
+}} // namespace Scaleform::GFx
+namespace Scaleform { namespace GFx { namespace AS3 {
 
 // newarray: a new Array filled from the n values on the operand stack, pushed.
 // MS2-FUNCTIONAL 0x14253c0f0: behavior-equivalent recovery; codegen differs from exe
@@ -3490,11 +3543,18 @@ void Sfr31ExecCheckFilter(UPInt vm)
         v.GetValueTraits(*reinterpret_cast<const Value*>(top)).GetName().ToCStr()));
 }
 
+}}} // namespace Scaleform::GFx::AS3
+namespace Scaleform { namespace GFx {
+
 // Push the elements [start, start + count) of the array storage (clamped to its length) into an interface object,
 // each converted into one GFx::Value.
 // @0x142531550
-void Sfr31ArrayToGfxValues(UPInt self, UPInt arr, UPInt out, UInt32 start, int count)
+void AS3ValueObjectInterface::VisitElements(void* pdata, ArrVisitor* visitor, unsigned start, int count) const
 {
+    using namespace AS3;
+    const UPInt self = reinterpret_cast<UPInt>(this);
+    const UPInt arr = reinterpret_cast<UPInt>(pdata);
+    const UPInt out = reinterpret_cast<UPInt>(visitor);
     SparseArray* sa = reinterpret_cast<SparseArray*>(arr + 0x38);
     const UInt32 len = static_cast<UInt32>(sa->GetSize());
     const UPInt root = Sfr31Rd(Sfr31Rd(self, 8), 0x18);
@@ -3506,12 +3566,15 @@ void Sfr31ArrayToGfxValues(UPInt self, UPInt arr, UPInt out, UInt32 start, int c
     const UInt32 end = Alg::Min(len, start + static_cast<UInt32>(count));
     for (UInt32 i = start; i < end; ++i)
     {
-        const Value& v = sa->At(i);
+        const AS3::Value& v = sa->At(i);
         FUN_1424e42c0(root, &v, &gv);
         typedef void (*Set)(UPInt, UInt32, const GFx::Value&);   // the interface's element setter (slot 1)
         reinterpret_cast<Set>(Sfr31Rd(Sfr31Rd(out, 0), 8))(out, i, gv);
     }
 }
+
+}} // namespace Scaleform::GFx
+namespace Scaleform { namespace GFx { namespace AS3 {
 
 // VMAbcFile::GetInternedString: the pool string through the VM's StringManager (the exe reloads the tracer from
 // the State for each chain).
@@ -5884,18 +5947,22 @@ void Sfr31ButtonSetStateObject(UPInt self, int state, UPInt obj)
     if (FUN_1425de200(*reinterpret_cast<const int*>(btn + 0x168)) == state)
         Sfr31ButtonSwitchStateIntl(self, state);
 }
+}}} // namespace Scaleform::GFx::AS3
+namespace Scaleform { namespace GFx {
+
 // ---- batch 51
 // Applies a 2x4 matrix to the display object behind a value (movie-clip-like kinds only): the matrix goes to the object with its
 // translation in twips, and the position, scale and rotation properties are re-derived from it.
 // SDK: AS3ValueObjectInterface::SetDisplayMatrix (AS3_GFxValueImpl.cpp).
 // @0x1425270e0
-bool Sfr31SetDisplayMatrix(UPInt self, UPInt valueObj, const float* m)
+bool AS3ValueObjectInterface::SetDisplayMatrix(void* pdata, const Render::Matrix2F& mat)
 {
+    using namespace AS3;
+    const UPInt valueObj = reinterpret_cast<UPInt>(pdata);
     const UPInt info = Sfr31Rd(valueObj, 0x20);
     if (!((*reinterpret_cast<const SInt32*>(info + 0x70) - 0x11U < 0xc) && ((static_cast<UInt8>(~static_cast<UInt8>(*reinterpret_cast<const UInt8*>(info + 0x68) >> 5)) & 1) != 0)))
         return false;
     DisplayObjectBase* obj = reinterpret_cast<DisplayObjectBase*>(Sfr31Rd(valueObj, 0x58));
-    const Render::Matrix2F& mat = *reinterpret_cast<const Render::Matrix2F*>(m);
     if (!mat.IsValid())
         return false;
     Render::Matrix2F tm = mat;
@@ -5912,6 +5979,9 @@ bool Sfr31SetDisplayMatrix(UPInt self, UPInt valueObj, const float* m)
     obj->SetGeomData(gd);
     return true;
 }
+
+}} // namespace Scaleform::GFx
+namespace Scaleform { namespace GFx { namespace AS3 {
 // ---- batch 52
 // call-style opcode on the popped value: a null operand is a TypeError; an object kind is dispatched through its own call slot with the
 // remaining arguments; class kinds and everything else raise TypeErrors naming the offender.
@@ -6642,16 +6712,19 @@ static SF_INLINE bool Sfr31Matrix3FIsValid(const Render::Matrix3F& m)
         && Sfr31FiniteF(m.M[1][0]) && Sfr31FiniteF(m.M[1][1]) && Sfr31FiniteF(m.M[1][2]) && Sfr31FiniteF(m.M[1][3])
         && Sfr31FiniteF(m.M[2][0]) && Sfr31FiniteF(m.M[2][1]) && Sfr31FiniteF(m.M[2][2]) && Sfr31FiniteF(m.M[2][3]);
 }
+}}} // namespace Scaleform::GFx::AS3
+namespace Scaleform { namespace GFx {
+
 // SDK: AS3ValueObjectInterface::SetMatrix3D (AS3_GFxValueImpl.cpp).
 // @0x1425278d0
-bool Sfr31SetDisplayMatrix3D(UPInt self, UPInt valueObj, const float* m)
+bool AS3ValueObjectInterface::SetMatrix3D(void* pdata, const Render::Matrix3F& mat)
 {
-    (void)self;
+    using namespace AS3;
+    const UPInt valueObj = reinterpret_cast<UPInt>(pdata);
     const UPInt info = Sfr31Rd(valueObj, 0x20);
     if (!((*reinterpret_cast<const SInt32*>(info + 0x70) - 0x11U < 0xc) && ((static_cast<UInt8>(~static_cast<UInt8>(*reinterpret_cast<const UInt8*>(info + 0x68) >> 5)) & 1) != 0)))
         return false;
     DisplayObjectBase* pd = reinterpret_cast<DisplayObjectBase*>(Sfr31Rd(valueObj, 0x58));
-    const Render::Matrix3F& mat = *reinterpret_cast<const Render::Matrix3F*>(m);
     if (!Sfr31Matrix3FIsValid(mat))
         return false;
     Render::Matrix3F tm = mat;
@@ -6670,6 +6743,9 @@ bool Sfr31SetDisplayMatrix3D(UPInt self, UPInt valueObj, const float* m)
     pd->SetGeomData(gd);
     return true;
 }
+
+}} // namespace Scaleform::GFx
+namespace Scaleform { namespace GFx { namespace AS3 {
 // ---- batch 63
 // Super-property getter-and-call opcode: pops the receiver, resolves the frame's parent-slot accessor, runs it to get a function and
 // calls that with the popped arguments.
@@ -7099,24 +7175,31 @@ void Sfr31ExecNewFunction(UPInt vmAddr, UPInt frame, UInt32 methodInd)
         *reinterpret_cast<VMAbcFile*>(Sfr31Rd(frame, 0x28)), methodInd, ss, *reinterpret_cast<Instances::fl::GlobalObjectScript*>(gos)));
     ExecPushCopy(&vm, v);
 }
+}}} // namespace Scaleform::GFx::AS3
+namespace Scaleform { namespace GFx {
+
 // ---- batch 69
 // AS3ValueObjectInterface::SetMember: sets the named member of an object from a GFx value. "*" is the any-name and a leading "@" makes
 // the name an attribute. A name that is already a child of a display object is refused with a log message.
 // MS2-FUNCTIONAL 0x142527d60: raw-offset model; the abort message is composed with String instead of MsgFormat
 // @0x142527d60
-bool Sfr31ValueSetMember(UPInt self, Object* obj, const char* name, const void* gfxValue)
+bool AS3ValueObjectInterface::SetMember(void* pdata, const char* name, const Value& value, bool)
 {
+    using namespace AS3;
+    const UPInt self = reinterpret_cast<UPInt>(this);
+    Object* obj = static_cast<Object*>(pdata);
+    const void* gfxValue = &value;
     const UPInt root = Sfr31Rd(Sfr31Rd(self, 8), 0x18);
     VM& vm = *reinterpret_cast<VM*>(Sfr31Rd(root, 0x48));
     ASStringManager* mgr = reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348));
     ASString nameStr(mgr->CreateStringNode(name));
-    Value nm;
+    AS3::Value nm;
     if (nameStr.GetNode() == reinterpret_cast<ASStringNode*>(reinterpret_cast<UPInt>(mgr) + 0x68))
         nm.SetNull();
     else
         nm.Assign(nameStr);
     Multiname mn(*reinterpret_cast<Instances::Namespace*>(Sfr31Rd(reinterpret_cast<UPInt>(&vm), 0x1d0)), nm);
-    if (mn.Name.GetKind() == Value::kString)
+    if (mn.Name.GetKind() == AS3::Value::kString)
     {
         ASStringNode* node = reinterpret_cast<ASStringNode*>(mn.Name.GetGASRefCountBase());
         node->AddRef();
@@ -7177,7 +7260,7 @@ bool Sfr31ValueSetMember(UPInt self, Object* obj, const char* name, const void* 
             }
         }
     }
-    Value val;
+    AS3::Value val;
     FUN_1425048d0(root, gfxValue, &val);
     if (!obj->SetProperty(mn, val))
     {
@@ -7185,13 +7268,16 @@ bool Sfr31ValueSetMember(UPInt self, Object* obj, const char* name, const void* 
         if (*reinterpret_cast<UByte*>(vmAddr + 0x180) != 0)
         {
             *reinterpret_cast<UByte*>(vmAddr + 0x180) = 0;
-            vm.OutputError(*reinterpret_cast<Value*>(vmAddr + 0x188));
-            reinterpret_cast<Value*>(vmAddr + 0x188)->SetUndefined();
+            vm.OutputError(*reinterpret_cast<AS3::Value*>(vmAddr + 0x188));
+            reinterpret_cast<AS3::Value*>(vmAddr + 0x188)->SetUndefined();
         }
         return false;
     }
     return true;
 }
+
+}} // namespace Scaleform::GFx
+namespace Scaleform { namespace GFx { namespace AS3 {
 // ---- batch 70
 // The AS3 object the display object part of an interface object (at dobj) carries; created on first use.
 static UPInt Sfr31AvmObjOfDisplay(UPInt dobj)
@@ -7207,12 +7293,19 @@ static UPInt Sfr31AvmObjOfDisplay(UPInt dobj)
     return avmObj;
 }
 
+}}} // namespace Scaleform::GFx::AS3
+namespace Scaleform { namespace GFx {
+
 // AS3ValueObjectInterface::VisitMembers: the visitor receives the dynamic members, the public non-method slots (when it asks for them)
 // and, for a display object container, its children by name.
 // MS2-FUNCTIONAL 0x142531630: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
 // @0x142531630
-void Sfr31ValueVisitMembers(UPInt self, Object* obj, UPInt visitor)
+void AS3ValueObjectInterface::VisitMembers(void* pdata, ObjVisitor* pvisitor, bool) const
 {
+    using namespace AS3;
+    const UPInt self = reinterpret_cast<UPInt>(this);
+    Object* obj = static_cast<Object*>(pdata);
+    const UPInt visitor = reinterpret_cast<UPInt>(pvisitor);
     typedef void (*VisitFn)(UPInt, const char*, const void*);
     typedef bool (*WantFn)(UPInt);
     const UPInt root = Sfr31Rd(Sfr31Rd(self, 8), 0x18);
@@ -7235,7 +7328,7 @@ void Sfr31ValueVisitMembers(UPInt self, Object* obj, UPInt visitor)
             const int bt = static_cast<int>(si.BindType);
             if (bt == 0xb || bt > 0xc || static_cast<int>(si.pNs->GetKind()) != 0)
                 continue;
-            Value v;
+            AS3::Value v;
             char ok;
             FUN_14250e770(&si, &ok, &v, obj);
             GFx::Value gv;
@@ -7267,12 +7360,15 @@ void Sfr31ValueVisitMembers(UPInt self, Object* obj, UPInt visitor)
         if (avmObj == 0)
             continue;
         ASString name = reinterpret_cast<DisplayObject*>(Sfr31Rd(avmObj, 0x58))->GetName();
-        Value v(reinterpret_cast<Object*>(avmObj));
+        AS3::Value v(reinterpret_cast<Object*>(avmObj));
         GFx::Value gv;
         FUN_1424e42c0(root, &v, &gv);
         visit(visitor, name.ToCStr(), &gv);
     }
 }
+
+}} // namespace Scaleform::GFx
+namespace Scaleform { namespace GFx { namespace AS3 {
 // ---- batch 71
 // callpropvoid opcode: the receiver is popped, the property looked up on it (a missing one is an error unless the object is dynamic) and
 // the value found called with the popped arguments, the result dropped.
