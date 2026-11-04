@@ -1224,7 +1224,6 @@ CriSint32 FUN_1400532e0(CriSint32 count);
 CriSint32 criMvPlyAmng_CalcAudioDecoderWorkSize(const void* decoder, const CriUint32* config);
 #pragma optimize("", on)
 
-void FUN_14257da20(void*, void*);
 CriUint32 FUN_14257c0c0(void*);
 void FUN_14257c050(void*, CriUint32, void*);
 

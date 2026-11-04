@@ -113,6 +113,7 @@ extern "C" void FUN_1400534d0(void*);
 extern "C" void criAdec_SetInputSj(__int64, unsigned __int64); // C3: the definition's signature
 extern "C" void criAdec_SetOutputSj(__int64, unsigned int, unsigned __int64); // C3: the definition's signature
 void criMvPlyAmng_DestroyAudioDecoder(void*, void*, CriSint32);
+void* FUN_140041910(void** decoderObject, void** mediaInterface);
 // Scaleform runtime calls of the CRI glue, through views of the Scaleform classes (no Scaleform header here)
 namespace Scaleform {
 class MemoryHeap { public: void ReleaseOnFree(void* ptr); };
@@ -122,6 +123,9 @@ class RefCountNTSImplCore { protected: mutable int RefCount; public: virtual ~Re
 namespace Render {
 struct ImagePlane;
 class ImageData { public: void GetPlane(unsigned index, ImagePlane* plane) const; unsigned GetPlaneCount() const; };
+class Texture;
+class Image { protected: void initTexture_NoAddRef(Texture* texture); // 0x14257da20, the decoder's cached-instance store folds with it
+    friend void* ::FUN_140041910(void**, void**); };
 }
 }
 void FUN_140054040(__int64, unsigned __int64, unsigned __int64);  // C3: the definition's signature
@@ -1277,8 +1281,6 @@ CriSint32 criMvPlyAmng_CalcAudioDecoderWorkSize(const void* decoder, const CriUi
 }
 #pragma optimize("", on)
 
-void FUN_14257da20(void*, void*);
-
 // resolve and cache the decoder instance from its media interface and owner state.
 // @0x140041910
 void* FUN_140041910(void** decoderObject, void** mediaInterface)
@@ -1296,7 +1298,7 @@ void* FUN_140041910(void** decoderObject, void** mediaInterface)
     void* instance = ((void* (*)(void*, CriUint32, CriUint32, CriUint64, CriUint32,
                                   void*, void*))mediaVtable[1])(
         mediaInterface, format, channels, output, codec, decoderObject, NULL);
-    FUN_14257da20(decoderObject, instance);
+    ((Scaleform::Render::Image*)decoderObject)->initTexture_NoAddRef((Scaleform::Render::Texture*)instance);
     return instance;
 }
 
