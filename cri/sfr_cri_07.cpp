@@ -688,9 +688,9 @@ void SVM_DelCbSvr(uint, uint);
 void SVM_SetCbSvrIdWithString(uint, uint, cri_u8, cri_u8, char *);
 void SVM_SetCbSvrId(uint, uint, cri_u8, cri_u8);
 void CRIERR_CallErr(const char *);
-void cft_sse_Ycc420plnToArgb8888Int1smp(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), ...);
-void cft_sse_Ycc420plnToArgb8888Prg1smp(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), ...);
-void FUN_1400b1e50(cri_any = cri_any(), cri_any = cri_any(), ...);
+void cft_sse_Ycc420plnToArgb8888Int1smp(cri_u8 *arg1, longlong *arg2, longlong arg3, cri_u8 arg4);
+void cft_sse_Ycc420plnToArgb8888Prg1smp(cri_u8 *arg1, longlong *arg2, longlong arg3, cri_u8 arg4);
+void FUN_1400b1e50(cri_u8 *arg1, longlong *arg2, cri_u8 arg3, cri_u8 arg4);
 int FUN_14029dd60(const char *, const char *, ...);   // game code's legacy inline sscanf
 cri_u8 * FUN_142096410(cri_any = cri_any());
 
@@ -33804,7 +33804,7 @@ void CFT_Ycc420plnToArgb8888Int1smp(byte *arg1, byte *arg2, cri_u8 arg3, cri_u8 
   
   if (UTY_SupportSse() != 0 && ((arg1[0x10] | arg1[8] | arg1[0] | arg2[0]) & 0xf) == 0 && (arg2[0xc] & 3) == 0 &&
       ((w = *(uint *)&arg2[8]) & 0xf) == 0 && abs(*(int *)&arg2[0x10]) >= (int)((w + 0xf) & ~0xfu) * 4) {
-    cft_sse_Ycc420plnToArgb8888Int1smp(arg1,arg2,arg3,arg4);
+    cft_sse_Ycc420plnToArgb8888Int1smp((cri_u8 *)arg1,(longlong *)arg2,arg3,arg4);
   }
   else {
     cft_c_Ycc420plnToArgb8888Int1smp((cri_u8 *)arg1,(cri_u8 *)arg2);
@@ -33818,7 +33818,7 @@ void CFT_Ycc420plnToArgb8888Prg1smp(byte *arg1, byte *arg2, cri_u8 arg3, cri_u8 
   
   if (UTY_SupportSse() != 0 && ((arg1[0x10] | arg1[8] | arg1[0] | arg2[0]) & 0xf) == 0 && (arg2[0xc] & 3) == 0 &&
       ((w = *(uint *)&arg2[8]) & 0xf) == 0 && abs(*(int *)&arg2[0x10]) >= (int)((w + 0xf) & ~0xfu) * 4) {
-    cft_sse_Ycc420plnToArgb8888Prg1smp(arg1,arg2,arg3,arg4);
+    cft_sse_Ycc420plnToArgb8888Prg1smp((cri_u8 *)arg1,(longlong *)arg2,arg3,arg4);
   }
   else {
     cft_c_Ycc420plnToArgb8888Prg1smp((cri_u8 *)arg1,(longlong *)arg2);
@@ -33832,7 +33832,7 @@ void CFT_Ycc420plnToYcc422pix2Int1smp(byte *arg1, byte *arg2, cri_u8 arg3, cri_u
   
   if (UTY_SupportSse() != 0 && ((arg1[0x10] | arg1[8] | arg1[0] | arg2[0]) & 0xf) == 0 && (arg2[0xc] & 3) == 0 &&
       ((w = *(uint *)&arg2[8]) & 0xf) == 0 && abs(*(int *)&arg2[0x10]) >= (int)((w + 0xf) & ~0xfu) * 2) {
-    FUN_1400b1e50(arg1,arg2,arg3,arg4);
+    FUN_1400b1e50((cri_u8 *)arg1,(longlong *)arg2,arg3,arg4);
   }
   else {
     cft_c_Ycc420plnToYcc422pix2Int1smp((cri_u8 *)arg1,(longlong *)arg2);
@@ -53163,11 +53163,8 @@ void SVM_SetCbSvrId(uint arg1, uint arg2, cri_u8 arg3, cri_u8 arg4)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400b0a10
-void cft_sse_Ycc420plnToArgb8888Int1smp(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
+void cft_sse_Ycc420plnToArgb8888Int1smp(cri_u8 *arg1, longlong *arg2, longlong arg3, cri_u8 arg4)
 {
-  cri_u8 *arg1 = cri_p0;
-  longlong *arg2 = cri_p1;
-  longlong arg3 = cri_p2;
   cri_u8 u_v1;
   cri_u8 u_v2;
   cri_u8 u_v3;
@@ -53993,11 +53990,8 @@ void cft_sse_Ycc420plnToArgb8888Int1smp(cri_any cri_p0, cri_any cri_p1, cri_any 
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400b1720
-void cft_sse_Ycc420plnToArgb8888Prg1smp(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
+void cft_sse_Ycc420plnToArgb8888Prg1smp(cri_u8 *arg1, longlong *arg2, longlong arg3, cri_u8 arg4)
 {
-  cri_u8 *arg1 = cri_p0;
-  longlong *arg2 = cri_p1;
-  longlong arg3 = cri_p2;
   cri_u8 u_v1;
   cri_u8 u_v2;
   cri_u8 u_v3;
@@ -54439,10 +54433,8 @@ void cft_sse_Ycc420plnToArgb8888Prg1smp(cri_any cri_p0, cri_any cri_p1, cri_any 
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400b1e50
-void FUN_1400b1e50(cri_any cri_p0, cri_any cri_p1, ...)
+void FUN_1400b1e50(cri_u8 *arg1, longlong *arg2, cri_u8 arg3, cri_u8 arg4)
 {
-  cri_u8 *arg1 = cri_p0;
-  longlong *arg2 = cri_p1;
   cri_u8 u_v1;
   ulonglong u_v2;
   ulonglong u_v3;
