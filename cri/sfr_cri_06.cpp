@@ -548,19 +548,19 @@ void M2VIDCT_SetFunction(cri_u8);
 void FUN_1400544b0();
 void FUN_1400544e0(cri_any = cri_any());
 void m2vhdec_SetPicAtr(cri_any = cri_any());
-void resetQuantiserMatrix(cri_any = cri_any());
+void resetQuantiserMatrix(longlong arg1);
 void calcHvSize(cri_any = cri_any());
 void calcNumberOfFrameCentreOffsets(cri_any = cri_any());
 void calcPictureCodingExt(cri_any = cri_any());
-void calcQuantMatrix(cri_any = cri_any());
+void calcQuantMatrix(longlong arg1);
 longlong parseShc(cri_any = cri_any(), cri_any = cri_any());
-longlong parseSec(cri_any = cri_any(), cri_any = cri_any());
+longlong parseSec(longlong arg1, ulonglong arg2);
 void appendUd(longlong, void *, int);
 longlong parseEsc(cri_any = cri_any(), cri_any = cri_any());
 longlong parseGsc(cri_any = cri_any(), cri_any = cri_any());
 longlong parsePsc(cri_any = cri_any(), cri_any = cri_any());
 void m2vhdec_AnalyUd(longlong, void *, int);
-longlong parseUdsc(cri_any = cri_any(), cri_any = cri_any());
+longlong parseUdsc(longlong arg1, ulonglong arg2);
 uint m2vhdec_ParseSj(cri_any = cri_any(), cri_any = cri_any());
 cri_u4 FUN_140059030(cri_u8, cri_u8);
 void M2VAMC_Init();
@@ -610,7 +610,7 @@ void resetDcDctPred(cri_any = cri_any());
 void resetVector(cri_any = cri_any());
 void calcFrameMotionType(cri_any = cri_any());
 void calcFieldMotionType(cri_any = cri_any());
-void calcVector(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+void calcVector(longlong arg1, int arg2, int arg3, int arg4);
 void calcPatternCode(cri_any = cri_any());
 void FUN_14005b860(longlong);
 void calcMotionType(longlong);
@@ -956,43 +956,19 @@ void m2vhdec_SetPicAtr(cri_any cri_p0)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140054820
-void resetQuantiserMatrix(cri_any cri_p0)
+void resetQuantiserMatrix(longlong arg1)
 {
-  longlong arg1 = cri_p0;
   longlong l_v1;
-  longlong l_v2;
   
-  l_v1 = 0;
-  do {
-    l_v2 = l_v1 + 4;
+  for (l_v1 = 0; l_v1 < 0x40; l_v1++) {
     *(int *)(arg1 + 0x28 + (longlong)(char)(&DAT_1431baa30)[l_v1] * 4) =
          (int)(char)(&DAT_1431baaf0)[l_v1];
     *(int *)(arg1 + 0x35c + (longlong)(char)(&DAT_1431baa30)[l_v1] * 4) =
          (int)(char)(&DAT_1431baaf0)[l_v1];
     *(cri_u4 *)(arg1 + 300 + (longlong)(char)(&DAT_1431baa30)[l_v1] * 4) = 0x10;
     *(cri_u4 *)(arg1 + 0x460 + (longlong)(char)(&DAT_1431baa30)[l_v1] * 4) = 0x10;
-    *(int *)(arg1 + 0x28 + (longlong)(char)(&DAT_1431baa31)[l_v1] * 4) =
-         (int)(char)(&DAT_1431baaf1)[l_v1];
-    *(int *)(arg1 + 0x35c + (longlong)(char)(&DAT_1431baa31)[l_v1] * 4) =
-         (int)(char)(&DAT_1431baaf1)[l_v1];
-    *(cri_u4 *)(arg1 + 300 + (longlong)(char)(&DAT_1431baa31)[l_v1] * 4) = 0x10;
-    *(cri_u4 *)(arg1 + 0x460 + (longlong)(char)(&DAT_1431baa31)[l_v1] * 4) = 0x10;
-    *(int *)(arg1 + 0x28 + (longlong)(char)(&DAT_1431baa32)[l_v1] * 4) =
-         (int)(char)(&DAT_1431baaf2)[l_v1];
-    *(int *)(arg1 + 0x35c + (longlong)(char)(&DAT_1431baa32)[l_v1] * 4) =
-         (int)(char)(&DAT_1431baaf2)[l_v1];
-    *(cri_u4 *)(arg1 + 300 + (longlong)(char)(&DAT_1431baa32)[l_v1] * 4) = 0x10;
-    *(cri_u4 *)(arg1 + 0x460 + (longlong)(char)(&DAT_1431baa32)[l_v1] * 4) = 0x10;
-    *(int *)(arg1 + 0x28 + (longlong)(char)(&DAT_1431baa33)[l_v1] * 4) =
-         (int)(char)(&DAT_1431baaf3)[l_v1];
-    *(int *)(arg1 + 0x35c + (longlong)(char)(&DAT_1431baa33)[l_v1] * 4) =
-         (int)(char)(&DAT_1431baaf3)[l_v1];
-    *(cri_u4 *)(arg1 + 300 + (longlong)(char)(&DAT_1431baa33)[l_v1] * 4) = 0x10;
-    *(cri_u4 *)(arg1 + 0x460 + (longlong)(char)(&DAT_1431baa33)[l_v1] * 4) = 0x10;
-    l_v1 = l_v2;
-  } while (l_v2 < 0x40);
+  }
   return;
 }
 
@@ -1077,9 +1053,8 @@ void calcPictureCodingExt(cri_any cri_p0)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140054b60
-void calcQuantMatrix(cri_any cri_p0)
+void calcQuantMatrix(longlong arg1)
 {
-  longlong arg1 = cri_p0;
   longlong l_v2;
   
   /* the exe's x4-unrolled body is the compiler's: one byte of each of four int tables, scattered by DAT_143fe8260 */
@@ -1113,7 +1088,7 @@ longlong parseShc(cri_any cri_p0, cri_any cri_p1)
   if (((arg1[0x1c2] != 0) && (arg1[0x1c2] != 0x40)) || (arg1[0x1c3] != 0)) {
     arg1[0x343] = arg1[0x343] + 1;
   }
-  resetQuantiserMatrix(arg1);  // the exe passes rcx through
+  resetQuantiserMatrix((longlong)arg1);  // the exe passes rcx through
   p = (cri_u1 *)(arg2 & 0xfffffffffffffffc);
   pos = ((int)arg2 << 3) - ((int)p << 3);
   buf = CRI06_BE32(p[0],p[1],p[2],p[3]) << pos;
@@ -1149,7 +1124,7 @@ longlong parseShc(cri_any cri_p0, cri_any cri_p1)
     }
   }
   calcHvSize(arg1);
-  calcQuantMatrix(arg1);  // calcHvSize keeps rcx
+  calcQuantMatrix((longlong)arg1);  // calcHvSize keeps rcx
   if (arg1[0x1b1] == 0) {
     arg1[0x343] = arg1[0x343] + 1;
   }
@@ -1171,10 +1146,8 @@ longlong parseShc(cri_any cri_p0, cri_any cri_p1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140055410
-longlong parseSec(cri_any cri_p0, cri_any cri_p1)
+longlong parseSec(longlong arg1, ulonglong arg2)
 {
-  longlong arg1 = cri_p0;
-  ulonglong arg2 = cri_p1;
   int i_v1;
   cri_u1 *pu_v2;
   uint u_v3;
@@ -1349,7 +1322,7 @@ longlong parseEsc(cri_any cri_p0, cri_any cri_p1)
         l = l - 1;
       } while (l != 0);
     }
-    calcQuantMatrix(arg1);
+    calcQuantMatrix((longlong)arg1);
     break;
   case 4:
     CRI06_GETBITS(*(uint *)((char *)arg1 + 0x59c), 1)
@@ -1616,10 +1589,8 @@ void m2vhdec_AnalyUd(longlong arg1, void *arg2, int arg3)
 // MS2-FUNCTIONAL: written as a bit reader that peeks 24 bits per byte step (VS2008 build, our toolset differs).
 // What is left is register choice: the exe keeps p in rbx and pos in edi, ours the other way round.
 // @0x140058c50
-longlong parseUdsc(cri_any cri_p0, cri_any cri_p1)
+longlong parseUdsc(longlong arg1, ulonglong arg2)
 {
-  longlong arg1 = cri_p0;
-  ulonglong arg2 = cri_p1;
   cri_u1 *p;
   int pos;
   uint buf;
@@ -3014,12 +2985,8 @@ void calcFieldMotionType(cri_any cri_p0)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b6d0
-void calcVector(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p3)
+void calcVector(longlong arg1, int arg2, int arg3, int arg4)
 {
-  longlong arg1 = cri_p0;
-  int arg2 = cri_p1;
-  int arg3 = cri_p2;
-  int arg4 = cri_p3;
   longlong l_v1;
   longlong l_v2;
   int b_v3;
