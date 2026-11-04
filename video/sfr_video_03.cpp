@@ -143,7 +143,7 @@ ExeDecl<void*()>::type FUN_14257e080;
 ExeDecl<void(void*, void*, void*)>::type FUN_1425cd370;   // LoadTaskData::AddResource(ResourceId, Resource*)
 ExeDecl<int(void*, void*)>::type FUN_1428d8f14;
 ExeDecl<int(void*, void*)>::type FUN_1428d8efc;
-ExeDecl<void(void*)>::type FUN_1427443c0;
+namespace Scaleform { namespace GFx { int FUN_1427443c0(void* channel, int type, void* commanddata1, void* commanddata2); }}   // FMOD channel callback (sfr_as2_01g)
 ExeDecl<uint64_t()>::type FUN_1425e3480;
 ExeDecl<int(void*, bool*)>::type FUN_142303a6b;
 namespace Scaleform { unsigned FUN_142745f50(void*); }
@@ -1894,7 +1894,7 @@ uint64_t* FUN_142742fb0(uint64_t* object, void* player, uint64_t userData, void*
     *reinterpret_cast<void***>(node) = &VideoAudioSubVtable;
     object[8] = 0; object[5] = reinterpret_cast<uintptr_t>(player); object[6] = userData; object[7] = reinterpret_cast<uintptr_t>(channel);
     FUN_1428d8f14(reinterpret_cast<void*>(object[7]), object);
-    FUN_1428d8efc(reinterpret_cast<void*>(object[7]), reinterpret_cast<void*>(&FUN_1427443c0));
+    FUN_1428d8efc(reinterpret_cast<void*>(object[7]), reinterpret_cast<void*>(&Scaleform::GFx::FUN_1427443c0));
     return object;
 }
 namespace {

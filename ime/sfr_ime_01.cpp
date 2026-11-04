@@ -161,7 +161,6 @@ extern "C" __declspec(noinline) void FUN_1423d9690(void*, void*, unsigned long l
 unsigned HashFunction(const char*, unsigned long long);
 void FUN_14257dcd0(void*);
 extern void FUN_14257dcb0(void*);
-extern "C" void FUN_1422fd480(void*, void*);
 extern "C" unsigned long long* FUN_1423cabb0(unsigned long long*, unsigned long long);
 extern "C" const unsigned long long DAT_14313b410;
 extern "C" const unsigned long long DAT_14313b418;
@@ -205,7 +204,10 @@ extern "C" void FUN_1423ca030(void*, const char*, const char*, ...);
 void FUN_14257dc30(void*);
 extern "C" void FUN_1423c9330(unsigned long long, unsigned long long);
 namespace Scaleform { namespace GFx { void FUN_1423ca2b0(void* array, const void*, UPInt newCapacity); } }
+// ~ArrayLH<String> (0x1422fbf60). Not the real dtor: called as ~ArrayLH it inlines and the two dtor bodies
+// below no longer match.
 extern "C" void FUN_1422fbf60(void*);
+typedef Scaleform::ArrayLH<Scaleform::String> Ime01StringArray;   // PushBack 0x1422fd480
 
 struct HWND__;
 
@@ -3305,10 +3307,10 @@ selected_entry:
         const unsigned mask = reinterpret_cast<unsigned(*)(void*, unsigned)>(
             (*reinterpret_cast<void***>(manager))[3])(manager,
                 *reinterpret_cast<unsigned*>(entries + index * 0x30 + 0x20));
-        if (mask & 0xf00) FUN_1422fd480(manager + 2, &selected);
-        if (mask & 0xf000) FUN_1422fd480(manager + 5, &selected);
-        if (mask & 0xf0000) FUN_1422fd480(manager + 8, &selected);
-        if (mask & 0xf) FUN_1422fd480(manager + 0xb, &selected);
+        if (mask & 0xf00) reinterpret_cast<Ime01StringArray*>(manager + 2)->PushBack(selected);
+        if (mask & 0xf000) reinterpret_cast<Ime01StringArray*>(manager + 5)->PushBack(selected);
+        if (mask & 0xf0000) reinterpret_cast<Ime01StringArray*>(manager + 8)->PushBack(selected);
+        if (mask & 0xf) reinterpret_cast<Ime01StringArray*>(manager + 0xb)->PushBack(selected);
     }
     return index;
 }
@@ -3548,8 +3550,8 @@ void FUN_1423d8f20(unsigned long long* map, void* source)
 
 static __forceinline void Ime01AddModeName(void* list, const Scaleform::String& name)
 {
-    // FUN_1422fd480 takes the name as const String&; the exe passes it a temporary copy.
-    reinterpret_cast<void(*)(void*, const Scaleform::String&)>(&FUN_1422fd480)(list, Scaleform::String(name));
+    // PushBack takes the name as const String&; the exe passes it a temporary copy.
+    static_cast<Ime01StringArray*>(list)->PushBack(Scaleform::String(name));
 }
 
 // Stores a copy of the supplied 0x58-byte IME value in every layout entry whose language name and mode match, and
@@ -4814,10 +4816,10 @@ addToLists:
         Record* record = reinterpret_cast<Record*>(manager[0x17]) + i;
         const unsigned mode = reinterpret_cast<ModeOf>((*reinterpret_cast<void***>(manager))[3])(manager,
             record->code);
-        if (mode & 0xf00) FUN_1422fd480(manager + 2, &selected);
-        if (mode & 0xf000) FUN_1422fd480(manager + 5, &selected);
-        if (mode & 0xf0000) FUN_1422fd480(manager + 8, &selected);
-        if (mode & 0xf) FUN_1422fd480(manager + 0xb, &selected);
+        if (mode & 0xf00) reinterpret_cast<Ime01StringArray*>(manager + 2)->PushBack(selected);
+        if (mode & 0xf000) reinterpret_cast<Ime01StringArray*>(manager + 5)->PushBack(selected);
+        if (mode & 0xf0000) reinterpret_cast<Ime01StringArray*>(manager + 8)->PushBack(selected);
+        if (mode & 0xf) reinterpret_cast<Ime01StringArray*>(manager + 0xb)->PushBack(selected);
     }
     return result;
 }

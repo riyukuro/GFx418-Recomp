@@ -33,7 +33,7 @@ void FUN_14004b120(cri_u64 *a1,longlong *a2,longlong a3,int a4,int a5);
 int FUN_14004bef0(byte *a1,byte *a2);
 void FUN_14004bf40(cri_u64 a1,longlong a2,cri_u64 a3);
 void FUN_14004bff0(cri_u64 a1,longlong a2,cri_u64 a3);
-void FUN_1400627f0(const char *a1);
+void CFTCOM_SetCftFunctionName(cri_any name);   // sfr_cri_06b
 int UTY_SupportSse(void);    // sfr_cri_06 (the exe tests eax)
 int FUN_140062890(void);
 
@@ -528,7 +528,7 @@ void CFT_Ycc420plnToRgb888(longlong a1,longlong a2)
   cri_u8 *local_res20;
   ulonglong loc_60;
   
-  FUN_1400627f0("CFT_Ycc420plnToRgb888");
+  CFTCOM_SetCftFunctionName("CFT_Ycc420plnToRgb888");
   pu_v20 = CriAt<uint *>(a1, 0x8);
   pu_v21 = CriAt<uint *>(a1, 0x20);
   pu_v22 = CriAt<uint *>(a1, 0x38);
@@ -792,7 +792,7 @@ void CFT_Ycc420plnToRgb888(longlong a1,longlong a2)
 // @0x140049e60
 void FUN_140049e60(longlong *a1,longlong *a2,longlong a3,int a4,int a5)
 {
-  FUN_1400627f0("cft_sse_Ycc420plnToArgb8888UserTable");
+  CFTCOM_SetCftFunctionName("cft_sse_Ycc420plnToArgb8888UserTable");
   longlong o0 = *a2;
   longlong o1 = o0 + a4;
   int ys = *(int *)(a1 + 3);
@@ -854,7 +854,7 @@ void FUN_140049e60(longlong *a1,longlong *a2,longlong a3,int a4,int a5)
 // @0x14004a7c0
 void FUN_14004a7c0(longlong *a1,longlong *a2,longlong a3,int a4,int a5)
 {
-  FUN_1400627f0("cft_mmx_Ycc420plnToArgb8888UserTable");
+  CFTCOM_SetCftFunctionName("cft_mmx_Ycc420plnToArgb8888UserTable");
   longlong o0 = *a2;
   longlong o1 = o0 + a4;
   int ys = *(int *)(a1 + 3);
@@ -960,7 +960,7 @@ void FUN_14004b120(cri_u64 *a1,longlong *a2,longlong a3,int a4,int a5)
   int loc_7c;
   ulonglong loc_68;
   
-  FUN_1400627f0("cft_c_Ycc420plnToArgb8888UserTable");
+  CFTCOM_SetCftFunctionName("cft_c_Ycc420plnToArgb8888UserTable");
   loc_a0 = (uint *)*a2;
   pb_v12 = (byte *)*a1;
   loc_b0 = (byte *)a1[1];
