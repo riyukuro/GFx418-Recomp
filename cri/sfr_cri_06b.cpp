@@ -523,23 +523,14 @@ void M2VIDCT_SetFunction(cri_u8);
 void FUN_1400544b0();
 void FUN_1400544e0(cri_any = cri_any());
 void m2vhdec_SetPicAtr(cri_any = cri_any());
-void resetQuantiserMatrix(cri_any = cri_any());
 void calcHvSize(cri_any = cri_any());
 void calcNumberOfFrameCentreOffsets(cri_any = cri_any());
 void calcPictureCodingExt(cri_any = cri_any());
-void calcQuantMatrix(cri_any = cri_any());
-longlong parseShc(cri_any = cri_any(), cri_any = cri_any());
-longlong parseSec(cri_any = cri_any(), cri_any = cri_any());
 void appendUd(longlong, void *, int);
-longlong parseEsc(cri_any = cri_any(), cri_any = cri_any());
-longlong parseGsc(cri_any = cri_any(), cri_any = cri_any());
-longlong parsePsc(cri_any = cri_any(), cri_any = cri_any());
 void m2vhdec_AnalyUd(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
-longlong parseUdsc(cri_any = cri_any(), cri_any = cri_any());
 uint m2vhdec_ParseSj(cri_any = cri_any(), cri_any = cri_any());
 cri_u4 FUN_140059030(cri_u8, cri_u8);
 void M2VAMC_Init();
-void FUN_140059170(cri_any = cri_any());
 void M2VAPRD_Init();
 void FUN_1400593f0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_140059810(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
@@ -585,11 +576,9 @@ void resetDcDctPred(cri_any = cri_any());
 void resetVector(cri_any = cri_any());
 void calcFrameMotionType(cri_any = cri_any());
 void calcFieldMotionType(cri_any = cri_any());
-void calcVector(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void calcPatternCode(cri_any = cri_any());
 void FUN_14005b860(longlong);
 void calcMotionType(longlong);
-cri_u8 parseMb(cri_any = cri_any());
 void M2VFRM_ParseSsc(cri_any = cri_any(), cri_any = cri_any());
 void FUN_14005e5b0(longlong, void *);
 void FUN_14005e600(longlong, cri_u4 *);
@@ -597,11 +586,6 @@ void FUN_14005e650(longlong, int *, cri_u4 *, cri_u4 *);
 void FUN_14005e6c0(longlong, cri_u4 *, cri_u4 *);
 void CFT_Ycc420plnToArgb8888IntInit();
 void CFT_Ycc420plnToArgb8888PrgInit();
-void cft_c_Ycc420plnToArgb8888Int2smp(cri_any = cri_any(), cri_any = cri_any());
-void cft_c_Ycc420plnToRgb888Int2smp(cri_any = cri_any(), cri_any = cri_any());
-void cft_c_Ycc420plnToArgb8888Prg(cri_any = cri_any(), cri_any = cri_any());
-void cft_c_Ycc420plnToRgb888Prg(cri_any = cri_any(), cri_any = cri_any());
-void cft_c_Ycc420plnToYcc422pix2Int2smp(cri_any = cri_any(), cri_any = cri_any());
 void CFT_Ycc420plnToArgb8888Int(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void CFT_Ycc420plnToRgb888Int(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void CFT_Ycc420plnToArgb8888Prg(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
@@ -622,7 +606,6 @@ int MPVM2V_DecodeFrm(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any
 void MPVM2V_RequestStop(cri_any = cri_any());
 int MPVM2V_DecodePicAtr(cri_any = cri_any(), cri_any = cri_any());
 int MPVDEC_CheckVersion(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
-void MPVDEC_DecDpicMb(cri_any = cri_any(), cri_any = cri_any());
 cri_u8 MPVVLC_IsVlcSizErr();
 void mpvvlc_InitMbaiIpic();
 void mpvvlc_InitMbaiPpic();
@@ -648,7 +631,7 @@ void mpvvlc_InitCbp();
 void mpvvlc_InitDcSiz();
 void mpvvlc_SetupVlc(longlong);
 void MPVVLC_Init(cri_any = cri_any());
-void UTY_MemcpyDword(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+void UTY_MemcpyDword(void *dst, const void *src, ulonglong n);
 void * MEM_Copy(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void * FUN_140064ed0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void * FUN_140064ef0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
@@ -659,8 +642,6 @@ void MPVSL_Destroy(cri_any = cri_any());
 void MPVSL_DecSliceOne(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void * mpvsl_DuplicateObj(cri_any = cri_any(), cri_any = cri_any());
 void FUN_140065410(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
-cri_u8 MPVSL_DecPicture(cri_any = cri_any(), cri_any = cri_any());
-void mpvsl_DecTaskOne(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void MPVUMC_Init();
 void MPVUMC_Finish();
 void MPVUMC_InitOutRfb(cri_any = cri_any());
@@ -670,7 +651,6 @@ void DCT_FsriInitPa(void *);
 int seq2dctfsir(int);
 void DCT_FsriInitScanTbl(const cri_u1 *, cri_u1 *);
 void initB0Tbl();
-void DCT_FsriTrans(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void DCT_FsriTransCore(cri_any = cri_any(), cri_any = cri_any());
 void FUN_140066180(cri_any = cri_any());
 void FUN_140066320(cri_any = cri_any());
@@ -739,7 +719,6 @@ void FUN_1400545d0(void* pCtx, cri_u8* pOut, cri_u4* pCount);
 
 void m2vhdec_SetPicAtr(cri_any cri_p0);
 
-void resetQuantiserMatrix(cri_any cri_p0);
 
 void calcHvSize(cri_any cri_p0);
 
@@ -747,23 +726,16 @@ void calcNumberOfFrameCentreOffsets(cri_any cri_p0);
 
 void calcPictureCodingExt(cri_any cri_p0);
 
-void calcQuantMatrix(cri_any cri_p0);
 
-longlong parseShc(cri_any cri_p0, cri_any cri_p1);
 
-longlong parseSec(cri_any cri_p0, cri_any cri_p1);
 
 void appendUd(longlong arg1, void *arg2, int arg3);
 
-longlong parseEsc(cri_any cri_p0, cri_any cri_p1);
 
-longlong parseGsc(cri_any cri_p0, cri_any cri_p1);
 
-longlong parsePsc(cri_any cri_p0, cri_any cri_p1);
 
 void m2vhdec_AnalyUd(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
 
-longlong parseUdsc(cri_any cri_p0, cri_any cri_p1);
 
 uint m2vhdec_ParseSj(cri_any cri_p0, cri_any cri_p1);
 
@@ -773,7 +745,6 @@ void M2VAMC_Init();
 
 struct cri06_block { const short* coef; cri_u1* dst; int stride; };
 
-void FUN_140059170(cri_any cri_p0);
 
 void M2VAPRD_Init();
 
@@ -865,7 +836,6 @@ void calcFrameMotionType(cri_any cri_p0);
 
 void calcFieldMotionType(cri_any cri_p0);
 
-void calcVector(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p3);
 
 void calcPatternCode(cri_any cri_p0);
 
@@ -873,7 +843,6 @@ void FUN_14005b860(longlong arg1);
 
 void calcMotionType(longlong arg1);
 
-cri_u8 parseMb(cri_any cri_p0);
 
 void M2VFRM_ParseSsc(cri_any cri_p0, cri_any cri_p1);
 
@@ -889,15 +858,10 @@ void CFT_Ycc420plnToArgb8888IntInit();
 
 void CFT_Ycc420plnToArgb8888PrgInit();
 
-void cft_c_Ycc420plnToArgb8888Int2smp(cri_any cri_p0, cri_any cri_p1);
 
-void cft_c_Ycc420plnToRgb888Int2smp(cri_any cri_p0, cri_any cri_p1);
 
-void cft_c_Ycc420plnToArgb8888Prg(cri_any cri_p0, cri_any cri_p1);
 
-void cft_c_Ycc420plnToRgb888Prg(cri_any cri_p0, cri_any cri_p1);
 
-void cft_c_Ycc420plnToYcc422pix2Int2smp(cri_any cri_p0, cri_any cri_p1);
 
 void CFT_Ycc420plnToArgb8888Int(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
 
@@ -1110,7 +1074,6 @@ int MPVDEC_CheckVersion(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   return (0x80 == arg3) ? 0 : -1;
 }
 
-void MPVDEC_DecDpicMb(cri_any cri_p0, cri_any cri_p1);
 
 cri_u8 MPVVLC_IsVlcSizErr();
 
@@ -1159,7 +1122,6 @@ void mpvvlc_SetupVlc(longlong arg1);
 
 void MPVVLC_Init(cri_any cri_p0);
 
-void UTY_MemcpyDword(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
 void * MEM_Copy(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
 
 void * FUN_140064ed0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
@@ -1186,9 +1148,7 @@ void FUN_1400653f0(cri_any cri_p0);
 
 void FUN_140065410(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
 
-cri_u8 MPVSL_DecPicture(cri_any cri_p0, cri_any cri_p1);
 
-void mpvsl_DecTaskOne(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
 
 void MPVUMC_Init();
 
@@ -1211,7 +1171,6 @@ void initB0Tbl();
 // cvtps2dq: float to int under the current MXCSR rounding (round to nearest by default), not a truncating cast.
 static inline int cri06_cvtps(float f) { return _mm_cvtss_si32(_mm_set_ss(f)); }
 
-void DCT_FsriTrans(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
 
 void DCT_FsriTransCore(cri_any cri_p0, cri_any cri_p1);
 

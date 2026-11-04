@@ -266,7 +266,7 @@ cri_u64 FUN_140062ae0(Any a0,Any a1);
 int MPVDEC_CheckVersion(cri_any, cri_any, cri_any);  // C3: the definition's signature
 unsigned __int64 FUN_1400630c0(void);  // C3: the definition's signature
 void MPVVLC_Init(cri_any);  // C3: the definition's signature
-void UTY_MemcpyDword(cri_any, cri_any, cri_any);  // C3: the definition's signature
+void UTY_MemcpyDword(void *dst, const void *src, ulonglong n);  // C3: the definition's signature
 void * MEM_Copy(cri_any, cri_any, cri_any);  // C3: the definition's signature
 void UTY_MemsetDword(cri_any, cri_any, cri_any);  // C3: the definition's signature
 void MPVSL_Create(cri_any);  // C3: the definition's signature
@@ -696,7 +696,7 @@ void FUN_14004e0c0(longlong a1)
 {
   mpvlib_InitClip0255();
   if (a1 != 0) {
-    UTY_MemcpyDword(a1,&DAT_143bad6b0,0x100);
+    UTY_MemcpyDword((void *)a1,&DAT_143bad6b0,0x100);
     DAT_143ffd4e8 = a1 + 0x180;
   }
   return;

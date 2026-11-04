@@ -674,7 +674,7 @@ void mpvvlc_InitCbp();
 void mpvvlc_InitDcSiz();
 void mpvvlc_SetupVlc(longlong);
 void MPVVLC_Init(cri_any = cri_any());
-void UTY_MemcpyDword(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+void UTY_MemcpyDword(void *dst, const void *src, ulonglong n);
 void * MEM_Copy(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void * FUN_140064ed0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void * FUN_140064ef0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
@@ -7713,25 +7713,25 @@ longlong mpvvlc_SetVlcRunLevel(cri_any cri_p0)
   longlong arg1 = cri_p0;
   arg1 = arg1 + -0x200;
   DAT_143d74a60 = arg1;
-  UTY_MemcpyDword(arg1,&DAT_143d49d80,0x80);
+  UTY_MemcpyDword((void *)arg1,&DAT_143d49d80,0x80);
   arg1 = arg1 + -0x10;
   DAT_143d74a40 = arg1;
-  UTY_MemcpyDword(arg1,&DAT_1431bbc78,4);
+  UTY_MemcpyDword((void *)arg1,&DAT_1431bbc78,4);
   arg1 = arg1 + -0x20;
   DAT_143d74a10 = arg1;
-  UTY_MemcpyDword(arg1,&DAT_1431bbc58,8);
+  UTY_MemcpyDword((void *)arg1,&DAT_1431bbc58,8);
   arg1 = arg1 + -0x20;
   DAT_143d74a58 = arg1;
-  UTY_MemcpyDword(arg1,&DAT_1431bbc38,8);
+  UTY_MemcpyDword((void *)arg1,&DAT_1431bbc38,8);
   arg1 = arg1 + -0x20;
   DAT_143d749b8 = arg1;
-  UTY_MemcpyDword(arg1,&DAT_1431bbc18,8);
+  UTY_MemcpyDword((void *)arg1,&DAT_1431bbc18,8);
   arg1 = arg1 + -0x20;
   DAT_143d749c0 = arg1;
-  UTY_MemcpyDword(arg1,&DAT_1431bbbf8,8);
+  UTY_MemcpyDword((void *)arg1,&DAT_1431bbbf8,8);
   arg1 = arg1 + -0x20;
   DAT_143d74a50 = arg1;
-  UTY_MemcpyDword(arg1,&DAT_1431bbbd8,8);
+  UTY_MemcpyDword((void *)arg1,&DAT_1431bbbd8,8);
   return arg1;
 }
 
@@ -7741,10 +7741,10 @@ longlong mpvvlc_SetVlcDcSiz(cri_any cri_p0)
   longlong arg1 = cri_p0;
   arg1 = arg1 + -0x80;
   DAT_143d749e8 = arg1;
-  UTY_MemcpyDword(arg1,&DAT_143d4a340,0x20);
+  UTY_MemcpyDword((void *)arg1,&DAT_143d4a340,0x20);
   arg1 = arg1 + -0x80;
   DAT_143d74a28 = arg1;
-  UTY_MemcpyDword(arg1,&DAT_143d4a400,0x20);
+  UTY_MemcpyDword((void *)arg1,&DAT_143d4a400,0x20);
   return arg1;
 }
 
@@ -7754,10 +7754,10 @@ longlong mpvvlc_SetVlcMotion(cri_any cri_p0)
   longlong arg1 = cri_p0;
   arg1 = arg1 + -0x100;
   DAT_143d74a38 = arg1;
-  UTY_MemcpyDword(arg1,&DAT_143d4a100,0x40);
+  UTY_MemcpyDword((void *)arg1,&DAT_143d4a100,0x40);
   arg1 = arg1 + -0x40;
   DAT_143d749c8 = arg1;
-  UTY_MemcpyDword(arg1,&DAT_143d4a2c0,0x10);
+  UTY_MemcpyDword((void *)arg1,&DAT_143d4a2c0,0x10);
   return arg1;
 }
 
@@ -7767,10 +7767,10 @@ longlong mpvvlc_SetVlcMbType(cri_any cri_p0)
   longlong arg1 = cri_p0;
   arg1 = arg1 + -0x40;
   DAT_143d749d0 = arg1;
-  UTY_MemcpyDword(arg1,&DAT_143d4a300,0x10);
+  UTY_MemcpyDword((void *)arg1,&DAT_143d4a300,0x10);
   arg1 = arg1 + -0x80;
   DAT_143d74a08 = arg1;
-  UTY_MemcpyDword(arg1,&DAT_143d4a080,0x20);
+  UTY_MemcpyDword((void *)arg1,&DAT_143d4a080,0x20);
   return arg1;
 }
 
@@ -7842,11 +7842,10 @@ void MPVVLC_Init(cri_any cri_p0)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064dd0
-void UTY_MemcpyDword(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
+void UTY_MemcpyDword(void *cri_p0, const void *cri_p1, ulonglong n)
 {
-  cri_u4 *src = cri_p1;
-  cri_u4 *dst = cri_p0;
-  ulonglong n = cri_p2;
+  const cri_u4 *src = (const cri_u4 *)cri_p1;
+  cri_u4 *dst = (cri_u4 *)cri_p0;
   ulonglong k;
   cri_u4 a;
   cri_u4 b;

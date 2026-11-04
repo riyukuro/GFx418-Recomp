@@ -471,7 +471,7 @@ void M2VFRM_ParseSsc(cri_any = cri_any(), cri_any = cri_any());
 void CFTCOM_SetCftFunctionName(cri_any = cri_any());
 int UTY_SupportSse2(void);  // C3: the definition's signature
 int UTY_SupportSse();
-void UTY_MemcpyDword(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+void UTY_MemcpyDword(void *dst, const void *src, ulonglong n);
 void FUN_140065800();
 int seq2dctfsir(int);
 void DCT_FsriInitScanTbl(const cri_u1 *, cri_u1 *);
@@ -1144,7 +1144,7 @@ void mpvbdec_SetupIxa(longlong arg1)
 {
   longlong l_v1;
   
-  UTY_MemcpyDword(arg1 + 0x1100,&DAT_1431bbd60,8);
+  UTY_MemcpyDword((char *)arg1 + 0x1100,&DAT_1431bbd60,8);
   *(cri07_tbl32 *)((char *)arg1 + 0x12a0) = *(const cri07_tbl32 *)((const cri_u1 *)CRI_FILL_ADDR(DAT_1431bbdc1) + 0x3f);
   l_v1 = DAT_143d74a40;
   *(cri_u4 *)((char *)arg1 + 0x12c8) = 0x15;

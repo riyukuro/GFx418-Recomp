@@ -242,7 +242,7 @@ void M2VFRM_ParseSsc(cri_any = cri_any(), cri_any = cri_any());
 void CFTCOM_SetCftFunctionName(cri_any = cri_any());
 cri_u8 FUN_140062830();
 int UTY_SupportSse();
-void UTY_MemcpyDword(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+void UTY_MemcpyDword(void *dst, const void *src, ulonglong n);
 void FUN_140065800();
 int seq2dctfsir(int);
 void DCT_FsriInitScanTbl(const cri_u1 *, cri_u1 *);

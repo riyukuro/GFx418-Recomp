@@ -284,7 +284,7 @@ unsigned __int64 FUN_140062ae0(cri_any, cri_any);  // C3: the definition's signa
 int FUN_140062bc0(Any a0,Any a1,Any a2);
 int FUN_1400630c0();
 void FUN_140064d90(Any a0,Any a1);
-void UTY_MemcpyDword(cri_any, cri_any, cri_any);  // C3: the definition's signature
+void UTY_MemcpyDword(void *dst, const void *src, ulonglong n);  // C3: the definition's signature
 void * FUN_140064eb0(Any a0,Any a1,Any a2);
 void UTY_MemsetDword(cri_any,cri_any,cri_any);  // C3: the definition's signature
 void * FUN_140064eb0(void *dst,const void *src,cri_u64 size);
