@@ -696,7 +696,7 @@ void DCT_FsriInitPa(void *);
 int seq2dctfsir(int);
 void DCT_FsriInitScanTbl(const cri_u1 *, cri_u1 *);
 void initB0Tbl();
-void DCT_FsriTrans(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+void DCT_FsriTrans(longlong arg1, longlong arg2, longlong arg3);
 void DCT_FsriTransCore(char *, int);
 void FUN_140066180(cri_any = cri_any());
 void FUN_140066320(cri_any = cri_any());
@@ -8405,11 +8405,8 @@ static inline int cri06_cvtps(float f) { return _mm_cvtss_si32(_mm_set_ss(f)); }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140065a20
-void DCT_FsriTrans(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
+void DCT_FsriTrans(longlong arg1, longlong arg2, longlong arg3)
 {
-  longlong arg1 = cri_p0;
-  longlong arg2 = cri_p1;
-  longlong arg3 = cri_p2;
   V16 au_v1;
   V16 au_v2;
   float *pf_v3;
@@ -8771,7 +8768,7 @@ void DCT_FsriTransCore(char *arg1, int arg2)
         *pu_v2 = u_v3;
       }
       else {
-        DCT_FsriTrans(pf_v4,*pl_v5,u_v1);
+        DCT_FsriTrans((longlong)pf_v4,*pl_v5,u_v1);
       }
     }
     arg2 = arg2 * 2;
