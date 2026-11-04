@@ -116,24 +116,26 @@ extern const void* DAT_143216050[];
 extern const void* DAT_143217750[];
 extern const void* DAT_143217780[];
 extern const void* DAT_1432177b0[];
-extern const void* DAT_1432191b0[];
-extern const void* DAT_1432191f8[];
-extern const void* DAT_1432192a0[];
 extern const void* DAT_143219cf0[];
 extern const void* DAT_143219d38[];
-extern const void* DAT_14321b640[];
-extern const void* DAT_14321b688[];
-extern const void* DAT_14321b730[];
-extern const void* DAT_14321c2c8[];
-extern const void* DAT_14321c310[];
-extern const void* DAT_14321c3b8[];
-extern const void* DAT_14321cf58[];
-extern const void* DAT_14321cfa0[];
-extern const void* DAT_14321d048[];
 extern const void* DAT_14321e808[];
 extern const void* DAT_14321e850[];
 extern const void* DAT_143220278[];
 extern const void* DAT_1432202c0[];
+
+// The Prototype<X> destructors called by name emit these vftables here as well.
+// MS2-PIN: ??_7?$Prototype@VBooleanObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321b730
+// MS2-PIN: ??_7?$Prototype@VBooleanObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321b640
+// MS2-PIN: ??_7?$Prototype@VBooleanObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321b688
+// MS2-PIN: ??_7?$Prototype@VColorTransformObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x1432192a0
+// MS2-PIN: ??_7?$Prototype@VColorTransformObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432191b0
+// MS2-PIN: ??_7?$Prototype@VColorTransformObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432191f8
+// MS2-PIN: ??_7?$Prototype@VDateObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321c3b8
+// MS2-PIN: ??_7?$Prototype@VDateObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321c2c8
+// MS2-PIN: ??_7?$Prototype@VDateObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321c310
+// MS2-PIN: ??_7?$Prototype@VExternalInterface@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321d048
+// MS2-PIN: ??_7?$Prototype@VExternalInterface@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321cf58
+// MS2-PIN: ??_7?$Prototype@VExternalInterface@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321cfa0
 
 // @0x1429297a0
 void* DeleteAs2_1429297a0(void* p, unsigned flags)
@@ -357,11 +359,7 @@ void* DeleteAs2_142929d60(void* p, unsigned flags)
 // @0x142929dc0
 void* DeleteAs2_142929dc0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321b640;
-    *(const void**)((char*)p+0x20) = DAT_14321b688;
-    *(const void**)((char*)p+0x70) = DAT_14321b730;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0x70)->GASPrototypeBase::~GASPrototypeBase();
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<Prototype<BooleanObject, Environment>*>(p)->Prototype<BooleanObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -516,11 +514,7 @@ void* DeleteAs2_14292a590(void* p, unsigned flags)
 // @0x14292a5f0
 void* DeleteAs2_14292a5f0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432191b0;
-    *(const void**)((char*)p+0x20) = DAT_1432191f8;
-    *(const void**)((char*)p+0x90) = DAT_1432192a0;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0x90)->GASPrototypeBase::~GASPrototypeBase();
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<Prototype<ColorTransformObject, Environment>*>(p)->Prototype<ColorTransformObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -564,11 +558,7 @@ void* DeleteAs2_14292a770(void* p, unsigned flags)
 // @0x14292a7d0
 void* DeleteAs2_14292a7d0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321c2c8;
-    *(const void**)((char*)p+0x20) = DAT_14321c310;
-    *(const void**)((char*)p+0x98) = DAT_14321c3b8;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0x98)->GASPrototypeBase::~GASPrototypeBase();
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<Prototype<DateObject, Environment>*>(p)->Prototype<DateObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -673,11 +663,7 @@ void* DeleteAs2_14292aaa0(void* p, unsigned flags)
 // @0x14292ab10
 void* DeleteAs2_14292ab10(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321cf58;
-    *(const void**)((char*)p+0x20) = DAT_14321cfa0;
-    *(const void**)((char*)p+0x68) = DAT_14321d048;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0x68)->GASPrototypeBase::~GASPrototypeBase();
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<Prototype<ExternalInterface, Environment>*>(p)->Prototype<ExternalInterface, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))

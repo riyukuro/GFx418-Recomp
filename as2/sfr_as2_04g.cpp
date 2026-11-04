@@ -31,6 +31,8 @@
 #include "../include/gfx/as2/as2_objectproto.h"
 #include "../include/gfx/gfx_displayobject.h"
 #include "../include/gfx/gfx_asstring.h"
+#include "../include/gfx/as2/as2_builtinobjects.h"
+#include "../include/gfx/as2/as2_stringobject.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -63,24 +65,26 @@ extern const void* DAT_143215370[];
 extern const void* DAT_1432153b8[];
 extern const void* DAT_1432155c0[];
 extern const void* DAT_143215648[];
-extern const void* DAT_143216730[];
-extern const void* DAT_143216778[];
-extern const void* DAT_143216820[];
 extern const void* DAT_1432172f0[];
 extern const void* DAT_143217718[];
-extern const void* DAT_143217d38[];
-extern const void* DAT_143217d80[];
-extern const void* DAT_143217e28[];
 extern const void* DAT_143218490[];
 extern const void* DAT_1432184d8[];
-extern const void* DAT_143218990[];
-extern const void* DAT_1432189d8[];
-extern const void* DAT_143218a80[];
-extern const void* DAT_14321aa10[];
-extern const void* DAT_14321aa58[];
-extern const void* DAT_14321ab00[];
 extern const void* DAT_14321dd78[];
 extern const void* DAT_143222848[];
+
+// The Prototype<X> destructors called by name emit these vftables here as well.
+// MS2-PIN: ??_7?$Prototype@VButtonObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143217e28
+// MS2-PIN: ??_7?$Prototype@VButtonObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143217d38
+// MS2-PIN: ??_7?$Prototype@VButtonObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143217d80
+// MS2-PIN: ??_7?$Prototype@VColorObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143218a80
+// MS2-PIN: ??_7?$Prototype@VColorObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218990
+// MS2-PIN: ??_7?$Prototype@VColorObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432189d8
+// MS2-PIN: ??_7?$Prototype@VMovieClipObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143216820
+// MS2-PIN: ??_7?$Prototype@VMovieClipObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216730
+// MS2-PIN: ??_7?$Prototype@VMovieClipObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216778
+// MS2-PIN: ??_7?$Prototype@VStringObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321ab00
+// MS2-PIN: ??_7?$Prototype@VStringObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321aa10
+// MS2-PIN: ??_7?$Prototype@VStringObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321aa58
 
 // @0x142928f30
 void* DeleteAs2_142928f30(void* p, unsigned flags)
@@ -146,12 +150,7 @@ void* DeleteAs2_14292c2c0(void* p, unsigned flags)
 // @0x142929f40
 void* DeleteAs2_142929f40(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_143217d38;
-    *(const void**)((char*)p+0x20) = DAT_143217d80;
-    *(const void**)((char*)p+0x70) = DAT_143217e28;
-    static_cast<GASPrototypeBase*>((void*)((char*)p+0x70))->GASPrototypeBase::~GASPrototypeBase();
-    { int* r=*(int**)((char*)p+0x68); if (r && --*r==0) Memory::Free(r); }
-    static_cast<Object*>((void*)(p))->Object::~Object();
+    static_cast<Prototype<ButtonObject, Environment>*>(p)->Prototype<ButtonObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -165,12 +164,7 @@ void* DeleteAs2_142929f40(void* p, unsigned flags)
 // @0x14292a480
 void* DeleteAs2_14292a480(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_143218990;
-    *(const void**)((char*)p+0x20) = DAT_1432189d8;
-    *(const void**)((char*)p+0x70) = DAT_143218a80;
-    static_cast<GASPrototypeBase*>((void*)((char*)p+0x70))->GASPrototypeBase::~GASPrototypeBase();
-    { int* r=*(int**)((char*)p+0x68); if (r && --*r==0) Memory::Free(r); }
-    static_cast<Object*>((void*)(p))->Object::~Object();
+    static_cast<Prototype<ColorObject, Environment>*>(p)->Prototype<ColorObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -184,12 +178,7 @@ void* DeleteAs2_14292a480(void* p, unsigned flags)
 // @0x14292c340
 void* DeleteAs2_14292c340(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_143216730;
-    *(const void**)((char*)p+0x20) = DAT_143216778;
-    *(const void**)((char*)p+0x78) = DAT_143216820;
-    static_cast<GASPrototypeBase*>((void*)((char*)p+0x78))->GASPrototypeBase::~GASPrototypeBase();
-    { int* r=*(int**)((char*)p+0x68); if (r && --*r==0) Memory::Free(r); }
-    static_cast<Object*>((void*)(p))->Object::~Object();
+    static_cast<Prototype<MovieClipObject, Environment>*>(p)->Prototype<MovieClipObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -203,12 +192,7 @@ void* DeleteAs2_14292c340(void* p, unsigned flags)
 // @0x14292d120
 void* DeleteAs2_14292d120(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321aa10;
-    *(const void**)((char*)p+0x20) = DAT_14321aa58;
-    *(const void**)((char*)p+0x70) = DAT_14321ab00;
-    static_cast<GASPrototypeBase*>((void*)((char*)p+0x70))->GASPrototypeBase::~GASPrototypeBase();
-    rs(*(void**)((char*)p+0x68));
-    static_cast<Object*>((void*)(p))->Object::~Object();
+    static_cast<Prototype<StringObject, Environment>*>(p)->Prototype<StringObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))

@@ -57,22 +57,20 @@ void FUN_142925cf0(void* pthis);
 
 // The base vftables the inlined destructors store.
 extern const void* DAT_14317bc90[];
-extern const void* DAT_143215f60[];
-extern const void* DAT_143215fa8[];
-extern const void* DAT_143216050[];
 extern const void* DAT_1432172f0[];
 extern const void* DAT_1432173f8[];
 extern const void* DAT_143217440[];
 extern const void* DAT_1432174e8[];
 
+// The Prototype<X> destructors called by name emit these vftables here as well.
+// MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143216050
+// MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143215f60
+// MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215fa8
+
 // @0x142928370
 void* DeleteAs2_142928370(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_143215f60;
-    *(const void**)((char*)p+0x20) = DAT_143215fa8;
-    *(const void**)((char*)p+0x68) = DAT_143216050;
-    FUN_142925750((void*)((char*)p+0x68));
-    FUN_142925cf0(p);
+    static_cast<Prototype<Object, Environment>*>(p)->Prototype<Object, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
