@@ -78,8 +78,22 @@ struct Video02FinalizeAccess : Scaleform::GFx::AS2::Object
 extern void FUN_14257dc30(void*);
 extern void FUN_14257dcb0(void*);
 extern void FUN_14257dcd0(void*);
-extern void FUN_1425eec50(void*, void*, unsigned __int64);
-extern void FUN_142522c70(void*, const void*, unsigned __int64);   // ArrayDataBase<UByte, AllocatorGH>::Reserve
+// ArrayDataBase<UByte, AllocatorGH>::Reserve (0x142522c70) and ArrayDataBase<FillStyleType, AllocatorLH>::ResizeNoConstruct
+// (0x1425eec50) through member pointers: the exe calls the out-of-line copies; a direct call inlines the header bodies.
+typedef Scaleform::ArrayDataBase<Scaleform::UByte, Scaleform::AllocatorGH<Scaleform::UByte, 2>,
+                                 Scaleform::ArrayDefaultPolicy> Video02ByteData;
+typedef Scaleform::ArrayDataBase<Scaleform::Render::FillStyleType, Scaleform::AllocatorLH<Scaleform::Render::FillStyleType, 2>,
+                                 Scaleform::ArrayDefaultPolicy> Video02FillData;
+static __forceinline void Video02ReserveBytes(void* array, const void* heapAddr, unsigned __int64 newCapacity)
+{
+    void (Video02ByteData::*reserve)(const void*, Scaleform::UPInt) = &Video02ByteData::Reserve;
+    (static_cast<Video02ByteData*>(array)->*reserve)(heapAddr, newCapacity);
+}
+static __forceinline void Video02ResizeFills(void* array, const void* heapAddr, unsigned __int64 newSize)
+{
+    void (Video02FillData::*resize)(const void*, Scaleform::UPInt) = &Video02FillData::ResizeNoConstruct;
+    (static_cast<Video02FillData*>(array)->*resize)(heapAddr, newSize);
+}
 extern void FUN_14257eb30(void*);
 extern void* FUN_142581520(void*, void*);
 #define DAT_143b15f60 (static_cast<void*>(Scaleform::Memory::pGlobalHeap))
@@ -777,7 +791,7 @@ struct Video02RetainedItem
 // @0x1400110c0
 void FUN_1400110c0(unsigned __int64* array, const UInt32* item)
 {
-    FUN_1425eec50(array, array, array[1] + 1);
+    Video02ResizeFills(array, array, array[1] + 1);
     ::new (reinterpret_cast<void*>(array[0] - 0x10 + array[1] * 0x10))
         Video02RetainedItem(*reinterpret_cast<const Video02RetainedItem*>(item));
 }
@@ -785,7 +799,7 @@ void FUN_1400110c0(unsigned __int64* array, const UInt32* item)
 // @0x140011240
 void FUN_140011240(unsigned __int64* array, const UInt32* item)
 {
-    FUN_1425eec50(array, array, array[1] + 1);
+    Video02ResizeFills(array, array, array[1] + 1);
     ::new (reinterpret_cast<void*>(array[0] - 0x10 + array[1] * 0x10))
         Video02RetainedItem(*reinterpret_cast<const Video02RetainedItem*>(item));
 }
@@ -800,10 +814,10 @@ static __forceinline void Video02ResizeBytes(unsigned __int64* array, unsigned _
     if (newSize < array[1])
     {
         if (newSize < (array[2] >> 1))
-            FUN_142522c70(array, array, newSize);
+            Video02ReserveBytes(array, array, newSize);
     }
     else if (newSize >= array[2])
-        FUN_142522c70(array, array, newSize + (newSize >> 2));
+        Video02ReserveBytes(array, array, newSize + (newSize >> 2));
     array[1] = newSize;
 }
 
@@ -835,10 +849,10 @@ void FUN_140010390(unsigned __int64* array, void* reserveSource, unsigned __int6
     if (newSize < array[1])
     {
         if (newSize < (array[2] >> 1))
-            FUN_142522c70(array, reserveSource, newSize);
+            Video02ReserveBytes(array, reserveSource, newSize);
     }
     else if (newSize >= array[2])
-        FUN_142522c70(array, reserveSource, newSize + (newSize >> 2));
+        Video02ReserveBytes(array, reserveSource, newSize + (newSize >> 2));
     array[1] = newSize;
 }
 
@@ -3136,7 +3150,7 @@ unsigned FUN_1400113a0(void* array, const unsigned* source)
 {
     char* bytes = static_cast<char*>(array);
     unsigned __int64 length = *reinterpret_cast<unsigned __int64*>(bytes + 0x20);
-    FUN_1425eec50(bytes + 0x18, bytes + 0x18, length + 1);
+    Video02ResizeFills(bytes + 0x18, bytes + 0x18, length + 1);
     // the new last entry, at the resized count; the exe returns that count
     unsigned __int64 size = *reinterpret_cast<unsigned __int64*>(bytes + 0x20);
     char* item = *reinterpret_cast<char**>(bytes + 0x18) + size * 0x10 - 0x10;
@@ -3155,7 +3169,7 @@ unsigned FUN_1400113a0(void* array, const unsigned* source)
 unsigned FUN_140011450(void* object, const unsigned* source)
 {
     char* outer = static_cast<char*>(*reinterpret_cast<void**>(static_cast<char*>(object) + 0x88));
-    FUN_1425eec50(outer + 0x18, outer + 0x18, *reinterpret_cast<unsigned __int64*>(outer + 0x20) + 1);
+    Video02ResizeFills(outer + 0x18, outer + 0x18, *reinterpret_cast<unsigned __int64*>(outer + 0x20) + 1);
     // the new last entry, at the resized count; the exe returns that count
     char* item = *reinterpret_cast<char**>(outer + 0x18) + *reinterpret_cast<unsigned __int64*>(outer + 0x20) * 0x10 - 0x10;
     if (item)   // the exe's placement copy construction of the entry
@@ -3529,7 +3543,7 @@ void* FUN_140011610(void* object, void** result, void* context)
             unsigned char* pathBytes = static_cast<unsigned char*>(path);
             Scaleform::UPInt* fillCount = reinterpret_cast<Scaleform::UPInt*>(pathBytes + 0x20);
             const Scaleform::UPInt oldFillCount = *fillCount;
-            FUN_1425eec50(pathBytes + 0x18, pathBytes + 0x18, oldFillCount + 1);
+            Video02ResizeFills(pathBytes + 0x18, pathBytes + 0x18, oldFillCount + 1);
             unsigned char* fillArray = *reinterpret_cast<unsigned char**>(pathBytes + 0x18);
             // the new last entry: the exe indexes with the count after the resize (0x1400118cb)
             unsigned* fill = reinterpret_cast<unsigned*>(fillArray - 0x10 + *fillCount * 0x10);
