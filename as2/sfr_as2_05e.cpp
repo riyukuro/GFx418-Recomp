@@ -20,16 +20,15 @@ Scaleform::UPInt FUN_1425b7e60(Scaleform::UPInt textField);
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-// The style manager of the text field's style sheet, 0 without one. The exe tags this with AvmTextField's vftable
-// slot; the TextField lies 0x10 bytes before the part it is called on.
-// HasStyleSheet (AvmTextFieldBase_HasStyleSheet) is the part's vftable slot 24.
+// The style manager of the text field's style sheet, 0 without one. The body runs on the AvmTextFieldBase part
+// (+0x30); HasStyleSheet is that part's vftable slot 24.
 // @0x1429561e0
-const void* AvmTextFieldBase_GetStyleSheet(const void* self)
+const Text::StyleManager* AvmTextField::GetStyleSheet() const
 {
-    typedef bool (*HasStyleSheetFn)(const void*);
-    UPInt sheet = FUN_1425b7e60(*reinterpret_cast<const UPInt*>(static_cast<const UByte*>(self) - 0x10));
-    if ((*reinterpret_cast<const HasStyleSheetFn*>(*reinterpret_cast<const UPInt*>(self) + 0xc0))(self))
-        return reinterpret_cast<const UByte*>(*reinterpret_cast<const UPInt*>(sheet + 0x40)) + 0x68;
+    UPInt sheet = FUN_1425b7e60(reinterpret_cast<UPInt>(pDispObj));
+    if (HasStyleSheet())
+        return reinterpret_cast<const Text::StyleManager*>(
+            reinterpret_cast<const UByte*>(*reinterpret_cast<const UPInt*>(sheet + 0x40)) + 0x68);
     return 0;
 }
 
