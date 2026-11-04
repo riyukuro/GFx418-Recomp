@@ -681,7 +681,7 @@ void * FUN_140064f10(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any
 void UTY_MemsetDword(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void MPVSL_Create(cri_any = cri_any());
 void MPVSL_Destroy(cri_any = cri_any());
-void MPVSL_DecSliceOne(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+void MPVSL_DecSliceOne(longlong arg1, longlong *arg2, int *arg3);
 void * mpvsl_DuplicateObj(cri_any = cri_any(), cri_any = cri_any());
 void FUN_140065410(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 cri_u8 MPVSL_DecPicture(cri_any = cri_any(), cri_any = cri_any());
@@ -8066,11 +8066,8 @@ void MPVSL_Destroy(cri_any cri_p0)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140065060
-void MPVSL_DecSliceOne(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
+void MPVSL_DecSliceOne(longlong arg1, longlong *arg2, int *arg3)
 {
-  longlong arg1 = cri_p0;
-  longlong *arg2 = cri_p1;
-  int *arg3 = cri_p2;
   int mbx;
   int mby;
   int row;
@@ -8279,7 +8276,7 @@ cri_u8 MPVSL_DecPicture(cri_any cri_p0, cri_any cri_p1)
       break;
     }
     *(short *)((char *)arg1 + 0x16a8) = *(short *)((char *)arg1 + 0x16a8) + 1;
-    MPVSL_DecSliceOne(arg1,arg2,loc_58);
+    MPVSL_DecSliceOne(arg1,arg2,(int *)loc_58);
     i_v6 = i_v6 + loc_50;
     if (loc_44 != 0) break;
     i_v2 = *(int *)((char *)arg1 + 0x18f0);
@@ -8332,7 +8329,7 @@ void mpvsl_DecTaskOne(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   }
   FUN_1400663b0(arg1);
   do {
-    MPVSL_DecSliceOne(arg1,arg2,&loc_28);
+    MPVSL_DecSliceOne(arg1,(longlong *)arg2,&loc_28);
     arg3[1] = arg3[1] + loc_24;
     *arg3 = *arg3 + loc_28;
     arg3[2] = arg3[2] + loc_20;
