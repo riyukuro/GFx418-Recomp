@@ -299,6 +299,10 @@ void FUN_140002ab0(void* stream)
     reinterpret_cast<Scaleform::RefCountNTSImplCore*>(stream)->RefCountNTSImplCore::~RefCountNTSImplCore();
 }
 
+// the stream's sound channel.
+// @0x140002b00
+Scaleform::Sound::SoundChannel* Scaleform::GFx::Video::VideoSoundStream::GetSoundChannel() { return pChannel.GetPtr(); }
+
 // initializes the refcounted stream and allocates its SoundChannelSystem back-reference; the inlined
 // channel ctor keeps the RefCountImplCore base vftable store, so that store is volatile here.
 // @0x140002e80

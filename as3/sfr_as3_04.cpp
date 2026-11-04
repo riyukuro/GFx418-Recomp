@@ -5151,9 +5151,6 @@ void FUN_14241bcd0(AS3::Object* self, Scaleform::StringBuffer& buf, const Instan
     }
 }
 
-// ArrayDataBase<SPtr<Namespace>, AllocatorDH>::ResizeNoConstruct, called out of line by the exe's inlined PushBack.
-void FUN_14241ff20(void* self, const void* pheapAddr, Scaleform::UPInt newSize);
-
 namespace Scaleform { namespace GFx { namespace AS3
 {
 namespace Instances { namespace fl
@@ -5200,7 +5197,7 @@ namespace Instances { namespace fl
         typedef Scaleform::ArrayDataDH<NsPtr, Scaleform::AllocatorDH<NsPtr>, Scaleform::ArrayDefaultPolicy> NsPtrData;
         const NsPtr v(&ns);
         NsPtrData* d = reinterpret_cast<NsPtrData*>(&nsa.Namespaces);
-        ::FUN_14241ff20(d, d->pHeap, d->Size + 1);
+        d->ResizeNoConstruct(d->pHeap, d->Size + 1);
         NsPtrData::AllocatorType::Construct(d->Data + d->Size - 1, v);
     }
 
@@ -5848,7 +5845,7 @@ namespace Scaleform { namespace GFx { namespace AS3
                 typedef Scaleform::ArrayDataDH<NsPtr, Scaleform::AllocatorDH<NsPtr>, Scaleform::ArrayDefaultPolicy>
                     NsPtrData;
                 NsPtrData* d = reinterpret_cast<NsPtrData*>(&namespaces);
-                ::FUN_14241ff20(d, d->pHeap, d->Size + 1);
+                d->ResizeNoConstruct(d->pHeap, d->Size + 1);
                 NsPtrData::AllocatorType::Construct(d->Data + d->Size - 1, ns);
             }
         }

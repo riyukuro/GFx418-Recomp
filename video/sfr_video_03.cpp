@@ -129,7 +129,6 @@ ExeDecl<void(void*)>::type FUN_142519860;
 ExeDecl<bool(const void*, const void*)>::type FUN_142510dc0;
 ExeDecl<bool(const void*)>::type FUN_142514f70;
 ExeDecl<const char*(void*, void*)>::type FUN_142506e10;
-ExeDecl<void(void*)>::type FUN_1424ddc20;
 ExeDecl<void(void*, void*, const void*)>::type FUN_1424d6750;
 namespace Scaleform { namespace GFx { class InteractiveObject; }}
 ExeDecl<void(void*, Scaleform::GFx::InteractiveObject*)>::type FUN_1424d6480;   // the AVM interactive-object base constructor
@@ -1241,13 +1240,18 @@ __declspec(noinline) void FUN_14001b0e0(void* object, uint32_t event, void* targ
     reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(static_cast<unsigned char*>(object) - 0x30)->Scaleform::GFx::AS3::AvmInteractiveObj::OnFocus(static_cast<Scaleform::GFx::InteractiveObject::FocusEventType>(event), static_cast<Scaleform::GFx::InteractiveObject*>(target), controller, static_cast<Scaleform::GFx::FocusMovedType>(moved));
 }
 // restores the executable's AvmInteractiveObj vtable and destroys the base object.
+#pragma inline_depth(0) // the exe calls the AvmInteractiveObj destructor out of line
 // @0x14001b3a0
 __declspec(noinline) void* FUN_14001b3a0(void* object)
 {
     *reinterpret_cast<void***>(static_cast<unsigned char*>(object) + 0x40) = &AvmInteractiveVtable;
-    FUN_1424ddc20(object);
+    reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(object)->Scaleform::GFx::AS3::AvmInteractiveObj::~AvmInteractiveObj();
     return object;
 }
+#pragma inline_depth()
+// the out-of-line AvmInteractiveObj destructor emits these vftables (pinned as in sfr_as3_15; Scaleform has no RTTI).
+// MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
+// MS2-PIN: ??_7AvmInteractiveObj@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ca60
 // replaces the pointer only after releasing the previously stored value.
 // @0x14001bac0
 uint64_t* FUN_14001bac0(uint64_t* holder, uint64_t replacement)

@@ -118,12 +118,12 @@ namespace Scaleform {
 class MemoryHeap { public: void ReleaseOnFree(void* ptr); };
 class Memory { public: static MemoryHeap* pGlobalHeap; };
 class Timer { public: static unsigned __int64 GetRawTicks(); static unsigned __int64 GetRawFrequency(); };
+class RefCountNTSImplCore { protected: mutable int RefCount; public: virtual ~RefCountNTSImplCore(); }; // 0x14257db50
 namespace Render {
 struct ImagePlane;
 class ImageData { public: void GetPlane(unsigned index, ImagePlane* plane) const; unsigned GetPlaneCount() const; };
 }
 }
-void FUN_14257db50(void* object);
 void FUN_140054040(__int64, unsigned __int64, unsigned __int64);  // C3: the definition's signature
 void FUN_140053540(__int64);  // C3: the definition's signature
 extern "C" void crimvply_occurFatalError(void*, const CriChar8*, CriSint32);
@@ -2425,7 +2425,7 @@ void* FUN_140041c00(void* context)
 void* FUN_140041c60(void* manager, CriUint32 flags)
 {
     *(const void**)manager = &PTR_FUN_1431b4f78;
-    FUN_14257db50(manager);
+    static_cast<Scaleform::RefCountNTSImplCore*>(manager)->Scaleform::RefCountNTSImplCore::~RefCountNTSImplCore();
     if (flags & 1)
     {
         void* globalManager = Scaleform::Memory::pGlobalHeap;
