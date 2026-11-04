@@ -61,6 +61,7 @@
 #include "../include/gfx/gfx_imageresource.h"
 #include "../include/video/video_characterdef.h"
 #include "../include/gfx/gfx_placeobject.h"
+#include "../include/render/render_shapedata.h"
 #include "../include/render/render_twips.h"
 #include "../include/kernel/sf_file.h"
 #include "../include/kernel/sf_memory.h"
@@ -104,7 +105,8 @@ public:
     void InitEmptyTextDef(); // exe 0x14258e070
 };
 
-class ShapeDataBase : public RefCountBase<ShapeDataBase, StatMD_ShapeData_Mem>
+// The virtuals are gfx_shapeswf.h's, so the ConstShapeNoStyles vftable cl emits here has all 14 slots.
+class ShapeDataBase : public Render::ShapeDataInterface
 {
     UByte Data[0x20 - 0x10];
 
@@ -114,6 +116,14 @@ public:
         Empty_Shape
     };
     ShapeDataBase(EmptyShape); // exe 0x142659740
+
+    virtual unsigned              GetStartingPos() const { return 0; }
+    virtual Render::ShapePathType ReadPathInfo(Render::ShapePosInfo* pos, float* coord, unsigned* styles) const;
+    virtual Render::PathEdgeType  ReadEdge(Render::ShapePosInfo* pos, float* coord) const;
+
+    virtual bool           Read(LoadProcess* p, TagType tagType, unsigned lenInBytes, bool withStyle) = 0;
+    virtual ShapeDataBase* Clone() const                                                              = 0;
+    virtual void           BindResourcesInStyles(const ResourceBinding&) {}
 };
 
 class SwfShapeCharacterDef : public CharacterDef
@@ -125,15 +135,20 @@ public:
     virtual CharacterDefType GetType() const;
 };
 
-extern "C" const void* const MS2_SF_ConstShapeNoStyles_vftable[]; // ??_7ConstShapeNoStyles@GFx@Scaleform@@6B@ 0x14318b708
 extern "C" void FUN_14015b310(void*, unsigned long long);
 
-// The shape data without styles of the empty shape (GFx_ShapeSwf): the base with the exe's vtable.
+// The shape data without styles of the empty shape (GFx_ShapeSwf). Read and Clone are defined in sfr_gfx_08j.
 class ConstShapeNoStyles : public ShapeDataBase
 {
 public:
-    ConstShapeNoStyles() : ShapeDataBase(Empty_Shape) { *(const void* const**)this = MS2_SF_ConstShapeNoStyles_vftable; }
+    ConstShapeNoStyles() : ShapeDataBase(Empty_Shape) {}
     virtual ~ConstShapeNoStyles() {} // inline, as gfx_shapeswf.h has it (sfr_gfx_08j / 08s1 instantiate it too)
+    virtual unsigned GetFillStyleCount() const { return 0; }
+    virtual unsigned GetStrokeStyleCount() const { return 0; }
+    virtual void     GetFillStyle(unsigned, Render::FillStyleType*) const {}
+    virtual void     GetStrokeStyle(unsigned, Render::StrokeStyleType*) const {}
+    virtual bool           Read(LoadProcess* p, TagType tagType, unsigned lenInBytes, bool withStyle);
+    virtual ShapeDataBase* Clone() const;
 };
 
 // The empty video definition uses VideoCharacterDef's recovered 0x30-byte interface and executable vtable.
@@ -168,7 +183,7 @@ void* FUN_1425cd140(void* object, unsigned flags)
     return object;
 }
 
-// ConstShapeNoStyles' scalar deleting destructor (its vftable is the exe's, so the compiler emits none): the
+// ConstShapeNoStyles' scalar deleting destructor at its exe VA (the vftable cl emits names its own ??_E): the
 // RefCountImplCore destructor, then the scalar-delete branches.
 // @0x1425ccac0
 void* FUN_1425ccac0(void* object, unsigned flags)
