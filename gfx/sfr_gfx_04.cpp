@@ -125,13 +125,14 @@ public:
     virtual CharacterDefType GetType() const;
 };
 
+extern "C" const void* const MS2_SF_ConstShapeNoStyles_vftable[]; // ??_7ConstShapeNoStyles@GFx@Scaleform@@6B@ 0x14318b708
 extern "C" void FUN_14015b310(void*, unsigned long long);
 
 // The shape data without styles of the empty shape (GFx_ShapeSwf): the base with the exe's vtable.
 class ConstShapeNoStyles : public ShapeDataBase
 {
 public:
-    ConstShapeNoStyles() : ShapeDataBase(Empty_Shape) {}
+    ConstShapeNoStyles() : ShapeDataBase(Empty_Shape) { *(const void* const**)this = MS2_SF_ConstShapeNoStyles_vftable; }
     virtual ~ConstShapeNoStyles() {} // inline, as gfx_shapeswf.h has it (sfr_gfx_08j / 08s1 instantiate it too)
 };
 
