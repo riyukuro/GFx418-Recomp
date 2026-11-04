@@ -290,8 +290,8 @@ __declspec(noinline) UInt32 FUN_1425c8c20(LoadProcess* p); // LoadProcess::ReadU
 enum { Tag_DefineBitsJpeg4 = 90 };
 
 // DefineBitsJPEG3 / 4: a JPEG followed by its zlib-compressed alpha plane, kept compressed in memory.
-// MS2-FUNCTIONAL 0x1425c48e0: same reads, checks, log text and objects; register allocation and the null-heap
-// fallback differ.
+// MS2-FUNCTIONAL 0x1425c48e0: same reads, checks, log text and objects; register allocation, the length width and
+// the null-heap fallback differ.
 // @0x1425c48e0
 void SF_STDCALL GFx_DefineBitsJpeg3Loader(LoadProcess* p, const TagInfo& tagInfo)
 {
@@ -306,33 +306,35 @@ void SF_STDCALL GFx_DefineBitsJpeg3Loader(LoadProcess* p, const TagInfo& tagInfo
     else
         p->LogParse("  GFx_DefineBitsJpeg3Loader: charid = %d pos = %d\n", rid.GetIdIndex(), p->Tell());
 
-    Render::ImageSource*          psource   = 0;
-    Ptr<ImageFileHandlerRegistry> pregistry = p->GetLoadStates()->GetImageFileHandlerRegistry();
-    if (!pregistry)
-        p->LogError("Image file handler registry is not installed - can't load jpeg image data");
-    else
+    Render::ImageSource* psource = 0;
     {
-        ZlibSupportBase* pzlib = p->GetLoadStates()->pZlibSupport;
-        if (!pzlib)
-            p->LogError("ZlibState is not set - can't load zipped image data");
+        Ptr<ImageFileHandlerRegistry> pregistry = p->GetLoadStates()->GetImageFileHandlerRegistry();
+        if (!pregistry)
+            p->LogError("Image file handler registry is not installed - can't load jpeg image data");
         else
         {
-            Render::JPEG::AbstractReader* preader = static_cast<Render::JPEG::AbstractReader*>(
-                static_cast<Render::ImageFileHandlerRegistry*>(pregistry)->GetReader(Render::ImageFile_JPEG));
-            if (!preader)
-                p->LogError("Jpeg System is not installed - can't load jpeg image data");
+            ZlibSupportBase* pzlib = p->GetLoadStates()->pZlibSupport;
+            if (!pzlib)
+                p->LogError("ZlibState is not set - can't load zipped image data");
             else
             {
-                UPInt       length = tagInfo.TagLength + tagInfo.TagDataOffset - p->Tell();
-                File*       pfile  = p->GetUnderlyingFile();
-                MemoryHeap* pheap  = p->GetLoadHeap();
-                if (!pheap)
-                    pheap = Memory::pGlobalHeap;
-                MemoryBufferJpegImageWithZlibAlphas* pimage = SF_HEAP_NEW(pheap) MemoryBufferJpegImageWithZlibAlphas(
-                    pzlib, preader, alphaOffset, Render::Image_R8G8B8A8, Render::ImageSize(), 0, 0, pfile, length);
-                psource = preader->CreateWrapperImageSource(pimage ? pimage->GetImage() : 0);
-                if (pimage)
-                    pimage->GetImage()->Release();
+                Render::JPEG::AbstractReader* preader = static_cast<Render::JPEG::AbstractReader*>(
+                    static_cast<Render::ImageFileHandlerRegistry*>(pregistry)->GetReader(Render::ImageFile_JPEG));
+                if (!preader)
+                    p->LogError("Jpeg System is not installed - can't load jpeg image data");
+                else
+                {
+                    UPInt       length = tagInfo.TagLength + tagInfo.TagDataOffset - p->Tell();
+                    File*       pfile  = p->GetUnderlyingFile();
+                    MemoryHeap* pheap  = p->GetLoadHeap();
+                    if (!pheap)
+                        pheap = Memory::pGlobalHeap;
+                    MemoryBufferJpegImageWithZlibAlphas* pimage =
+                        SF_HEAP_NEW(pheap) MemoryBufferJpegImageWithZlibAlphas(pzlib, preader, alphaOffset, Render::Image_R8G8B8A8, Render::ImageSize(), 0, 0, pfile, length);
+                    psource = preader->CreateWrapperImageSource(pimage ? pimage->GetImage() : 0);
+                    if (pimage)
+                        pimage->GetImage()->Release();
+                }
             }
         }
     }
@@ -407,8 +409,8 @@ enum
 };
 
 // DefineBitsLossless / DefineBitsLossless2: a color-mapped or direct bitmap, zlib-compressed; decompressed when used.
-// MS2-FUNCTIONAL 0x1425c5340: same reads, formats, log text and objects; the exe duplicates the source creation per
-// format.
+// MS2-FUNCTIONAL 0x1425c5340: same reads, formats, log text and objects; register allocation and the ResourceId
+// slot differ.
 // @0x1425c5340
 void SF_STDCALL GFx_DefineBitsLossless2Loader(LoadProcess* p, const TagInfo& tagInfo)
 {
@@ -423,47 +425,56 @@ void SF_STDCALL GFx_DefineBitsLossless2Loader(LoadProcess* p, const TagInfo& tag
     ZlibSupportBase*     pzlib   = p->GetLoadStates()->pZlibSupport;
     if (!pzlib)
         p->LogError("Error: GFxZlibState is not set - can't load zipped image data\n");
+    else if (tagInfo.TagType == Tag_DefineBitsLossless)
+    {
+        if (bitmapFormat == 3)
+        {
+            UInt16 colorTableSize = (UInt16)(p->ReadU8() + 1);
+            int    length         = tagInfo.TagLength + tagInfo.TagDataOffset - p->Tell();
+            psource = (SF_NEW ZlibImageSource(pzlib, p->GetUnderlyingFile(), Render::Size<unsigned long>(width, height),
+                                              ZlibImageSource::ColorMappedRGB, Render::Image_R8G8B8, colorTableSize,
+                                              length))
+                          ->GetSource();
+        }
+        else if (bitmapFormat == 4)
+        {
+            int length = tagInfo.TagLength + tagInfo.TagDataOffset - p->Tell();
+            psource    = (SF_NEW ZlibImageSource(pzlib, p->GetUnderlyingFile(), Render::Size<unsigned long>(width, height),
+                                                 ZlibImageSource::RGB16, Render::Image_R8G8B8, 0, length))
+                          ->GetSource();
+        }
+        else if (bitmapFormat == 5)
+        {
+            int length = tagInfo.TagLength + tagInfo.TagDataOffset - p->Tell();
+            psource    = (SF_NEW ZlibImageSource(pzlib, p->GetUnderlyingFile(), Render::Size<unsigned long>(width, height),
+                                                 ZlibImageSource::RGB24, Render::Image_R8G8B8, 0, length))
+                          ->GetSource();
+        }
+    }
     else
     {
-        ZlibImageSource::SourceBitmapDataFormat sourceFormat;
-        Render::ImageFormat                     format;
-        UInt16                                  colorTableSize = 0;
-        bool                                    known          = true;
-        if (tagInfo.TagType == Tag_DefineBitsLossless)
+        if (bitmapFormat == 3)
         {
-            format = Render::Image_R8G8B8;
-            switch (bitmapFormat)
-            {
-            case 3:
-                colorTableSize = (UInt16)(p->ReadU8() + 1);
-                sourceFormat   = ZlibImageSource::ColorMappedRGB;
-                break;
-            case 4: sourceFormat = ZlibImageSource::RGB16; break;
-            case 5: sourceFormat = ZlibImageSource::RGB24; break;
-            default: known = false; break;
-            }
+            UInt16 colorTableSize = (UInt16)(p->ReadU8() + 1);
+            int    length         = tagInfo.TagLength + tagInfo.TagDataOffset - p->Tell();
+            psource = (SF_NEW ZlibImageSource(pzlib, p->GetUnderlyingFile(), Render::Size<unsigned long>(width, height),
+                                              ZlibImageSource::ColorMappedRGBA, Render::Image_R8G8B8A8, colorTableSize,
+                                              length))
+                          ->GetSource();
         }
-        else
+        else if (bitmapFormat == 4)
         {
-            format = Render::Image_R8G8B8A8;
-            switch (bitmapFormat)
-            {
-            case 3:
-                colorTableSize = (UInt16)(p->ReadU8() + 1);
-                sourceFormat   = ZlibImageSource::ColorMappedRGBA;
-                break;
-            case 4: sourceFormat = ZlibImageSource::RGB16; break;
-            case 5: sourceFormat = ZlibImageSource::RGBA; break;
-            default: known = false; break;
-            }
+            int length = tagInfo.TagLength + tagInfo.TagDataOffset - p->Tell();
+            psource    = (SF_NEW ZlibImageSource(pzlib, p->GetUnderlyingFile(), Render::Size<unsigned long>(width, height),
+                                                 ZlibImageSource::RGB16, Render::Image_R8G8B8A8, 0, length))
+                          ->GetSource();
         }
-        if (known)
+        else if (bitmapFormat == 5)
         {
-            UPInt length = tagInfo.TagLength + tagInfo.TagDataOffset - p->Tell();
-            Render::Size<unsigned long> size(width, height);
-            ZlibImageSource* psrc = SF_NEW ZlibImageSource(pzlib, p->GetUnderlyingFile(), size, sourceFormat, format,
-                                                           colorTableSize, length);
-            psource = psrc ? psrc->GetSource() : 0;
+            int length = tagInfo.TagLength + tagInfo.TagDataOffset - p->Tell();
+            psource    = (SF_NEW ZlibImageSource(pzlib, p->GetUnderlyingFile(), Render::Size<unsigned long>(width, height),
+                                                 ZlibImageSource::RGBA, Render::Image_R8G8B8A8, 0, length))
+                          ->GetSource();
         }
     }
     p->AddImageResource(rid, psource);
