@@ -1131,6 +1131,22 @@ void* Sfr33MovieRootCreateEventObject(MovieRoot* self, void* ret, const ASString
 }
 }}}
 
+namespace Scaleform { namespace GFx {
+// The host side of AS3 values (GFx::Value object calls); only the members recovered so far. pdata is the
+// AS3 object; the display object calls apply to instances of the display object classes.
+class AS3ValueObjectInterface : public Value::ObjectInterface
+{
+private:
+    virtual bool GetCxform(void* pdata, Render::Cxform* pcx) const;
+    virtual bool GetDisplayMatrix(void* pdata, Render::Matrix2F* pmat) const;
+    virtual unsigned GetArraySize(void* pdata) const;
+    virtual AMP::ViewStats* GetAdvanceStats() const;
+    virtual bool GetElement(void* pdata, unsigned idx, Value* pval) const;
+    virtual bool DeleteMember(void* pdata, const char* name, bool isdobj);
+    virtual bool CreateObjectValue(Value* pval, void* pdata, bool isdobj);
+};
+}} // namespace Scaleform::GFx
+
 // VM: runs the queued class constructors (unrecovered).
 // the AS3 ObjectInterface (AS3ValueObjectInterface) vftable
 extern "C" const void* DAT_14317eff8;
@@ -3126,19 +3142,27 @@ void Sfr33QueueOwnerObject(UByte* self)
                            *reinterpret_cast<RefCountImpl**>(*reinterpret_cast<UByte**>(self + 0x10) + 0x30));
 }
 
-// ObjectInterface::GetElement of an Array: pval receives element idx of the array pdata (false past its end).
+}}}
+
+namespace Scaleform { namespace GFx {
+// AS3ValueObjectInterface::GetElement of an Array: pval receives element idx of the array pdata (false past its end).
 // @0x142509ad0
-bool Sfr33ArrayGetElement(const UByte* self, UByte* pdata, unsigned idx, GFx::Value* pval)
+bool AS3ValueObjectInterface::GetElement(void* pobj, unsigned idx, Value* pval) const
 {
+    const UByte* self = reinterpret_cast<const UByte*>(this);
+    UByte* pdata = static_cast<UByte*>(pobj);
     pval->SetUndefined();
-    SparseArray& sa = *reinterpret_cast<SparseArray*>(pdata + 0x38);
+    AS3::SparseArray& sa = *reinterpret_cast<AS3::SparseArray*>(pdata + 0x38);
     if (idx >= static_cast<UInt32>(sa.GetSize()))
         return false;
-    const MovieRoot* root = *reinterpret_cast<MovieRoot* const*>(*reinterpret_cast<UByte* const*>(self + 8) + 0x18);
-    const Value& v = sa.At(idx);
+    const AS3::MovieRoot* root = *reinterpret_cast<AS3::MovieRoot* const*>(*reinterpret_cast<UByte* const*>(self + 8) + 0x18);
+    const AS3::Value& v = sa.At(idx);
     root->ASValue2GFxValue(v, pval);
     return true;
 }
+}} // namespace Scaleform::GFx
+
+namespace Scaleform { namespace GFx { namespace AS3 {
 
 // The message of AS3 error id (NULL when it has none).
 // @0x142509b60
@@ -5644,18 +5668,28 @@ Value VMAbcFile::GetDetailValue(const Abc::ValueDetail& d)
     return Value::GetUndefined();
 }
 
-// Deletes the public property name (a leading '@' names an attribute) of obj; true when it was deleted.
-// self+8 is the movie whose +0x18 is the MovieRoot (pAVM +0x48, string manager +0x348).
-// MS2-FUNCTIONAL 0x1424f4780: raw self/MovieRoot offsets (the owning interface is not recovered)
+}}}
+
+namespace Scaleform { namespace GFx {
+// AS3ValueObjectInterface::DeleteMember: deletes the public property name (a leading '@' names an attribute) of
+// the object pdata; true when it was deleted. this+8 is the movie whose +0x18 is the MovieRoot (pAVM +0x48,
+// string manager +0x348).
+// MS2-FUNCTIONAL 0x1424f4780: raw self/MovieRoot offsets
 // @0x1424f4780
-bool Sfr33DeleteNamedProperty(void* self, Object* obj, const char* name)
+bool AS3ValueObjectInterface::DeleteMember(void* pdata, const char* name, bool isdobj)
 {
+    SF_UNUSED(isdobj);
+    void* self = this;
+    AS3::Object* obj = static_cast<AS3::Object*>(pdata);
     const UByte* root = *reinterpret_cast<UByte* const*>(*reinterpret_cast<UByte* const*>(static_cast<UByte*>(self) + 8) + 0x18);
-    VM& vm = **reinterpret_cast<VM* const*>(root + 0x48);
+    AS3::VM& vm = **reinterpret_cast<AS3::VM* const*>(root + 0x48);
     const ASString str((*reinterpret_cast<ASStringManager* const*>(root + 0x348))->CreateStringNode(name));
-    const Multiname mn(vm.GetPublicNamespace(), Value(str));
+    const AS3::Multiname mn(vm.GetPublicNamespace(), AS3::Value(str));
     return obj->DeleteProperty(mn);
 }
+}} // namespace Scaleform::GFx
+
+namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace InstanceTraits { class Activation { public: Activation(VMAbcFile& file, VM& vm, const Abc::MethodBodyInfo& mbi, const ASString& name); }; }
 // VMAbcFile::ActivationTraitsCacheTable (+0x90); its add (0x1424d4430) is instantiated in sfr_as3_15.
@@ -6139,13 +6173,19 @@ static SF_INLINE bool Sfr33SetObjectValue(GFx::Value::ObjectInterface* iface, GF
     return true;
 }
 
-// The AS3 value object interface: pval refers to obj.
-// MS2-FUNCTIONAL 0x1424f3d20: the exe allocates registers differently; same results
+}}}
+
+namespace Scaleform { namespace GFx {
+// AS3ValueObjectInterface::CreateObjectValue: pval refers to the AS3 object pdata.
 // @0x1424f3d20
-bool Sfr33ObjectInterfaceSetObject(GFx::Value::ObjectInterface* self, GFx::Value* pval, Object* obj)
+bool AS3ValueObjectInterface::CreateObjectValue(Value* pval, void* pdata, bool isdobj)
 {
-    return Sfr33SetObjectValue(self, pval, obj);
+    SF_UNUSED(isdobj);
+    return AS3::Sfr33SetObjectValue(this, pval, static_cast<AS3::Object*>(pdata));
 }
+}} // namespace Scaleform::GFx
+
+namespace Scaleform { namespace GFx { namespace AS3 {
 
 // The same with the interface passed in (the first argument is unused).
 // @0x1424f3dc0
@@ -6548,17 +6588,6 @@ template void ConstructorMov<GFx::AS3::Value>::ConstructArray(void*, UPInt, cons
 }
 
 namespace Scaleform { namespace GFx {
-
-// The host side of AS3 values (GFx::Value object calls); only the members recovered so far. pdata is the
-// AS3 object; the display object calls apply to instances of the display object classes.
-class AS3ValueObjectInterface : public Value::ObjectInterface
-{
-private:
-    virtual bool GetCxform(void* pdata, Render::Cxform* pcx) const;
-    virtual bool GetDisplayMatrix(void* pdata, Render::Matrix2F* pmat) const;
-    virtual unsigned GetArraySize(void* pdata) const;
-    virtual AMP::ViewStats* GetAdvanceStats() const;
-};
 
 // The color transform of the display object pdata scripts.
 // @0x142508560
