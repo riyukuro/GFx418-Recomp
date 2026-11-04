@@ -188,7 +188,9 @@ inline Scaleform::GFx::AS3::ClassTraits::Traits* FUN_1425085b0(const Scaleform::
 inline void FUN_142508720(const Scaleform::GFx::AS3::SlotInfo* si, Scaleform::GFx::ASString* name, Scaleform::GFx::AS3::VM* vm) { ::new (static_cast<void*>(name)) Scaleform::GFx::ASString(si->GetDataTypeName(*vm)); }   // its name
 char* FUN_14250e770(const Scaleform::GFx::AS3::SlotInfo*, char*, Scaleform::GFx::AS3::Value*, Scaleform::GFx::AS3::Object*);
 inline void FUN_14250e770(const void* si, void* ok, Scaleform::GFx::AS3::Value* result, Scaleform::GFx::AS3::Object* obj) { ::FUN_14250e770(static_cast<const Scaleform::GFx::AS3::SlotInfo*>(si), static_cast<char*>(ok), result, obj); }
-void FUN_14251f710(Scaleform::UPInt arr, const Scaleform::UPInt* pos);   // Tracer: OrigOpcodePos.PushBack(*pos)
+// Tracer: OrigOpcodePos.PushBack(*pos), through the real ArrayDataDH<UPInt>::PushBack (0x14251f710, called out of line)
+typedef Scaleform::ArrayDataDH<Scaleform::UPInt, Scaleform::AllocatorDH_POD<Scaleform::UPInt, 328>, Scaleform::ArrayDefaultPolicy> Sfr19OpcodePosData;
+#define FUN_14251f710(arr, pos) ((reinterpret_cast<Sfr19OpcodePosData*>(arr)->*static_cast<void (Sfr19OpcodePosData::*)(const Scaleform::UPInt&)>(&Sfr19OpcodePosData::PushBack))(*(pos)))
 inline void FUN_1424e0b80(void* dst, const void* src) { *static_cast<Scaleform::GFx::AS3::SlotInfo*>(dst) = *static_cast<const Scaleform::GFx::AS3::SlotInfo*>(src); }   // SlotInfo::operator=
 inline void FUN_1426150b0(Scaleform::UPInt doc) { reinterpret_cast<Scaleform::Render::Text::DocView*>(doc)->SetAutoSizeX(); }   // DocView::SetAutoSizeX
 inline void FUN_1426150d0(Scaleform::UPInt doc) { reinterpret_cast<Scaleform::Render::Text::DocView*>(doc)->SetAutoSizeY(); }   // DocView::SetAutoSizeY
@@ -198,7 +200,9 @@ inline char* FUN_142516c40(Scaleform::UPInt tracer, void* buf, Scaleform::UPInt*
 namespace Scaleform { namespace GFx { namespace AS3 { void Sfr31ClassTraitsCleanup(unsigned long long); } } }
 namespace Scaleform { namespace GFx { void ASUserData_SetLastObjectValue(ASUserData* puserData, void* pobjIfc, void* pdata, bool isdobj); } }
 inline void FUN_1425303b0(Scaleform::UPInt entry) { Scaleform::GFx::AS3::Sfr31ClassTraitsCleanup(entry); }
-void FUN_1424ef2a0(Scaleform::UPInt array);   // ArrayDH::Clear
+// ArrayBase<ArrayData<VMAbcFile*>>::Clear. Kept as an extern alias: with the real member's COMDAT in this TU,
+// cl regallocs Sfr31ShutdownRegistered without the exe's r14 save (matched -> functional).
+void FUN_1424ef2a0(Scaleform::UPInt array);
 inline int FUN_1425de200(int mouseState) { return Scaleform::GFx::Button::GetButtonState(static_cast<Scaleform::GFx::ButtonRecord::MouseState>(mouseState)); }   // MouseState -> ButtonState
 inline void FUN_1425048d0(Scaleform::UPInt movieRoot, const void* gfxValue, Scaleform::GFx::AS3::Value* out) { reinterpret_cast<Scaleform::GFx::AS3::MovieRoot*>(movieRoot)->GFxValue2ASValue(*static_cast<const Scaleform::GFx::Value*>(gfxValue), out); }   // MovieRoot::GFxValue2ASValue
 inline void FUN_1424213b0(Scaleform::UPInt sparseArray, Scaleform::UInt32 ind, const Scaleform::GFx::AS3::Value* v) { reinterpret_cast<Scaleform::GFx::AS3::SparseArray*>(sparseArray)->Set(ind, *v); }   // SparseArray::Set
@@ -212,7 +216,9 @@ inline bool* FUN_1424f1390(Scaleform::GFx::AS3::Value* v, void* tmpNode, void* s
 Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str);   // Value::operator=(const ASString&), out of line in the exe
 unsigned long long* FUN_1424e0860(unsigned long long*, unsigned long long);
 inline void FUN_1424e0860(void* out, unsigned long long value) { ::FUN_1424e0860(static_cast<unsigned long long*>(out), value); }
-void FUN_1424201a0(void* arr, void* heap, Scaleform::UPInt n);                      // ArrayDH<Value>::Resize growth
+// ArrayDH<Value>::Resize growth, through the real ArrayDataBase<Value, AllocatorDH>::ResizeNoConstruct (0x1424201a0, called out of line)
+typedef Scaleform::ArrayDataBase<Scaleform::GFx::AS3::Value, Scaleform::AllocatorDH<Scaleform::GFx::AS3::Value, 2>, Scaleform::ArrayDefaultPolicy> Sfr19ValueArrayData;
+#define FUN_1424201a0(arr, heap, n) ((static_cast<Sfr19ValueArrayData*>(static_cast<void*>(arr))->*static_cast<void (Sfr19ValueArrayData::*)(const void*, Scaleform::UPInt)>(&Sfr19ValueArrayData::ResizeNoConstruct))((heap), (n)))
 inline void FUN_142521f00(void* value) { Scaleform::GFx::AS3::ValueAssignCopies::ReleaseInternal(*static_cast<Scaleform::GFx::AS3::Value*>(value)); }                                                    // Value::ReleaseInternal
 inline Scaleform::SPInt FUN_1425f9200(void* list, void* obj) { return static_cast<const Scaleform::GFx::DisplayList*>(list)->FindDisplayIndex(static_cast<const Scaleform::GFx::DisplayObjectBase*>(obj)); }                          // DisplayList::FindDisplayIndex(const DisplayObjectBase*)
 inline bool FUN_1425fb480(void* list, void* owner, Scaleform::UPInt i1, Scaleform::UPInt i2) { return static_cast<Scaleform::GFx::DisplayList*>(list)->SwapEntriesAtIndexes(static_cast<Scaleform::GFx::DisplayObjectBase*>(owner), i1, i2); }   // DisplayList::SwapEntriesAtIndexes
@@ -234,7 +240,9 @@ void* FUN_1423edb60(void* mem, Scaleform::UPInt vm, Scaleform::UPInt factory, in
 void FUN_142522350(void* hash, void* key);                                         // MultinameHash::Remove
 bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot*, Scaleform::GFx::AS3::Value*, const char*);
 inline bool FUN_142506000(Scaleform::UPInt root, void* valueOut, Scaleform::UPInt path) { return ::FUN_142506000(reinterpret_cast<const Scaleform::GFx::AS3::MovieRoot*>(root), static_cast<Scaleform::GFx::AS3::Value*>(valueOut), reinterpret_cast<const char*>(path)); }
-void FUN_14241e430(void* arr, const Scaleform::GFx::AS3::Value* v);   // ValueArray::PushBack
+// ValueArray::PushBack, through the real ArrayBase<ArrayDataDH<Value>>::PushBack (0x14241e430, called out of line)
+typedef Scaleform::ArrayBase<Scaleform::ArrayDataDH<Scaleform::GFx::AS3::Value, Scaleform::AllocatorDH<Scaleform::GFx::AS3::Value, 2>, Scaleform::ArrayDefaultPolicy> > Sfr19ValueArray;
+#define FUN_14241e430(arr, v) ((static_cast<Sfr19ValueArray*>(static_cast<void*>(arr))->*static_cast<void (Sfr19ValueArray::*)(const Scaleform::GFx::AS3::Value&)>(&Sfr19ValueArray::PushBack))(*(v)))
 extern "C" const Scaleform::StringDataPtr DAT_143a2dd40;   // "scaleform.gfx", the namespace of the GFx extension classes
 namespace Scaleform { namespace GFx { namespace AS3 { ClassTraits::Traits* FUN_14250f9a0(VM&, VMAbcFile&, const Abc::ClassInfo&); } } }
 inline Scaleform::UPInt FUN_14250f9a0(Scaleform::UPInt vm, Scaleform::UPInt link, Scaleform::UPInt entry) { return reinterpret_cast<Scaleform::UPInt>(Scaleform::GFx::AS3::FUN_14250f9a0(*reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm), *reinterpret_cast<Scaleform::GFx::AS3::VMAbcFile*>(link), *reinterpret_cast<const Scaleform::GFx::AS3::Abc::ClassInfo*>(entry))); }
@@ -315,7 +323,9 @@ inline void FUN_1425a3850(void* resource) { static_cast<Scaleform::GFx::Resource
 namespace Scaleform { namespace GFx { namespace AS3 { void* Sfr33IdWordHashGet(const unsigned char*, const unsigned long long&); } } }
 inline void* FUN_1425059f0(void* map, const Scaleform::UPInt* key) { return Scaleform::GFx::AS3::Sfr33IdWordHashGet(static_cast<const unsigned char*>(map), *key); }
 void FUN_1424d54f0(void* dst, void* src);   // hash entry copy (key, value ref, count)
-void FUN_1425224f0(void* arr, Scaleform::UPInt idx);   // ArrayBase::RemoveAt
+// through the real ArrayBase<ArrayData<WeakPtr<DisplayObject>>>::RemoveAt (0x1425224f0, called out of line)
+typedef Scaleform::ArrayBase<Scaleform::ArrayData<Scaleform::WeakPtr<Scaleform::GFx::DisplayObject>, Scaleform::AllocatorLH<Scaleform::WeakPtr<Scaleform::GFx::DisplayObject>, 2>, Scaleform::ArrayDefaultPolicy> > Sfr19WeakDispArray;
+#define FUN_1425224f0(arr, idx) ((static_cast<Sfr19WeakDispArray*>(static_cast<void*>(arr))->*static_cast<void (Sfr19WeakDispArray::*)(Scaleform::UPInt)>(&Sfr19WeakDispArray::RemoveAt))(idx))
 inline void FUN_14261d270(void* node, int mode) { static_cast<Scaleform::Render::TreeNode*>(node)->SetEdgeAAMode(static_cast<Scaleform::Render::EdgeAAMode>(mode)); }   // TreeNode::SetEdgeAAMode
 inline const void* FUN_1425f1d00(void* dispObj) { return &static_cast<const Scaleform::GFx::DisplayObjectBase*>(dispObj)->GetCxform(); }   // DisplayObjectBase::GetCxform
 inline void FUN_1425f4060(void* dispObj, const void* cx) { static_cast<Scaleform::GFx::DisplayObjectBase*>(dispObj)->SetCxform(*static_cast<const Scaleform::Render::Cxform*>(cx)); }   // DisplayObjectBase::SetCxform
