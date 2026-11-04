@@ -18,6 +18,8 @@ namespace Scaleform {
 // The kernel's Lock and Event, as far as these destructors call them.
 class Lock { public: ~Lock(); };
 class Event { public: virtual ~Event(); };
+// ArrayData<VideoPlayerImpl*>::Reserve (sfr_as3_22).
+void ReserveVideoPlayerArray(void** array, void* heap, UPInt requested);
 }
 
 namespace Scaleform { namespace GFx {
@@ -45,7 +47,6 @@ extern "C" char DAT_1431b80b8[];
 
 extern "C" void FUN_142746d70(void*);       // audio channel: stop
 extern "C" void FUN_142747b30(void*);       // audio event listener: shut down
-extern "C" void FUN_1427463e0(U*, void*, U); // ArrayData<VideoPlayerImpl*>::Reserve
 
 // The RefCount base calls, made directly as the exe makes them.
 static inline void RawRefCountRelease(void* p)
@@ -235,10 +236,10 @@ U* FUN_142743900(U* self, const U* source)
     if (n < self[1])
     {
         if (n < (self[2] >> 1))
-            FUN_1427463e0(self, self, n);
+            ReserveVideoPlayerArray(reinterpret_cast<void**>(self), self, n);
     }
     else if (n > self[2])
-        FUN_1427463e0(self, self, n + (n >> 2));
+        ReserveVideoPlayerArray(reinterpret_cast<void**>(self), self, n + (n >> 2));
     self[1] = n;
     for (U i = 0; i < self[1]; i++)
         ((U*)self[0])[i] = ((const U*)source[0])[i];
