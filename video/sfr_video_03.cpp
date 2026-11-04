@@ -127,11 +127,8 @@ ExeDecl<bool(void*, void*)>::type FUN_142518c70;
 namespace Scaleform { namespace GFx { namespace AS3 { void Sfr31SetGcRefClearNext(uint64_t value, uint64_t atom); }}}
 ExeDecl<void(void*)>::type FUN_142519860;
 ExeDecl<bool(const void*, const void*)>::type FUN_142510dc0;
-ExeDecl<void(void*, const void*)>::type FUN_1424efe00;
-ExeDecl<void(void*, const void*)>::type FUN_1424f1f70;
 ExeDecl<bool(const void*)>::type FUN_142514f70;
 ExeDecl<const char*(void*, void*)>::type FUN_142506e10;
-ExeDecl<void(void*, uint32_t, void*, uint32_t, uint32_t)>::type FUN_142519d50;
 ExeDecl<void(void*)>::type FUN_1424ddc20;
 ExeDecl<void(void*, void*, const void*)>::type FUN_1424d6750;
 namespace Scaleform { namespace GFx { class InteractiveObject; }}
@@ -739,12 +736,13 @@ __declspec(noinline) bool thunk_FUN_142510dc0(const void* object, const void* id
 __declspec(noinline) uint8_t FUN_14001b090(void*) { return 1; }
 // @0x14001b0b0
 __declspec(noinline) uint64_t FUN_14001b0b0(void*) { return 0; }
-// AvmInteractiveObj::CloneInternalData
+// AvmInteractiveObj::CloneInternalData. These three overrides come from AvmInteractiveObjBase, so their this is that base
+// (+0x30) and `object` already points at it; the -0x30 cancels the compiler's adjustment (a downcast would add a null test).
 // @0x14001b0c0
-__declspec(noinline) void thunk_FUN_1424efe00(void* object, const void* source) { FUN_1424efe00(object, source); }
+__declspec(noinline) void thunk_FUN_1424efe00(void* object, const void* source) { reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(static_cast<unsigned char*>(object) - 0x30)->Scaleform::GFx::AS3::AvmInteractiveObj::CloneInternalData(static_cast<const Scaleform::GFx::InteractiveObject*>(source)); }
 // AvmInteractiveObj::CopyPhysicalProperties
 // @0x14001b0d0
-__declspec(noinline) void thunk_FUN_1424f1f70(void* object, const void* source) { FUN_1424f1f70(object, source); }
+__declspec(noinline) void thunk_FUN_1424f1f70(void* object, const void* source) { reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(static_cast<unsigned char*>(object) - 0x30)->Scaleform::GFx::AS3::AvmInteractiveObj::CopyPhysicalProperties(static_cast<const Scaleform::GFx::InteractiveObject*>(source)); }
 // 0x1431b7ea0 [18..22]
 // @0x14001b100
 __declspec(noinline) void FUN_14001b100(void*) {}
@@ -1240,7 +1238,7 @@ __declspec(noinline) const char* thunk_FUN_142506e10(void* object, void* path) {
 // @0x14001b0e0
 __declspec(noinline) void FUN_14001b0e0(void* object, uint32_t event, void* target, uint32_t controller, uint32_t moved)
 {
-    FUN_142519d50(object, event, target, controller, moved);
+    reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(static_cast<unsigned char*>(object) - 0x30)->Scaleform::GFx::AS3::AvmInteractiveObj::OnFocus(static_cast<Scaleform::GFx::InteractiveObject::FocusEventType>(event), static_cast<Scaleform::GFx::InteractiveObject*>(target), controller, static_cast<Scaleform::GFx::FocusMovedType>(moved));
 }
 // restores the executable's AvmInteractiveObj vtable and destroys the base object.
 // @0x14001b3a0
