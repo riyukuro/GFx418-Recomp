@@ -288,7 +288,7 @@ void UTY_MemsetDword(cri_any,cri_any,cri_any);  // C3: the definition's signatur
 void * FUN_140064eb0(void *dst,const void *src,cri_u64 size);
 void FUN_140065000(Any a0);
 void FUN_140065030(longlong a0);
-cri_u64 MPVSL_DecPicture(cri_any,cri_any); // C3: the definition's signature
+cri_u64 MPVSL_DecPicture(longlong,longlong *); // C3: the definition's signature
 // sfr_cri_06 defines 0x140062a40 and 0x140065450 with cri_any; 0x140050bd0 keeps only the low 32 bits of their results.
 void MPVUMC_Init();
 void MPVUMC_Finish();

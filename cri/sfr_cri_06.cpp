@@ -564,7 +564,8 @@ longlong parseUdsc(longlong arg1, ulonglong arg2);
 uint m2vhdec_ParseSj(cri_any = cri_any(), cri_any = cri_any());
 cri_u4 FUN_140059030(cri_u8, cri_u8);
 void M2VAMC_Init();
-void FUN_140059170(cri_any = cri_any());
+struct cri06_block;
+void FUN_140059170(const cri06_block* rec);
 void M2VAPRD_Init();
 void FUN_1400593f0(const cri_u1* src, cri_u1* dst, int off, int stride, int h);
 void FUN_140059810(const cri_u1* src, cri_u1* dst, int off, int stride, int h);
@@ -647,7 +648,7 @@ cri_u8 MPVM2V_DecodeFrm(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_
 void MPVM2V_RequestStop(cri_any = cri_any());
 int MPVM2V_DecodePicAtr(cri_any = cri_any(), cri_any = cri_any());
 int MPVDEC_CheckVersion(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
-void MPVDEC_DecDpicMb(cri_any = cri_any(), cri_any = cri_any());
+void MPVDEC_DecDpicMb(longlong arg1, longlong *arg2);
 cri_u8 MPVVLC_IsVlcSizErr();
 void mpvvlc_InitMbaiIpic();
 void mpvvlc_InitMbaiPpic();
@@ -684,8 +685,8 @@ void MPVSL_Destroy(cri_any = cri_any());
 void MPVSL_DecSliceOne(longlong arg1, longlong *arg2, int *arg3);
 void * mpvsl_DuplicateObj(cri_any = cri_any(), cri_any = cri_any());
 void FUN_140065410(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
-cri_u8 MPVSL_DecPicture(cri_any = cri_any(), cri_any = cri_any());
-void mpvsl_DecTaskOne(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+cri_u8 MPVSL_DecPicture(longlong arg1, longlong *arg2);
+void mpvsl_DecTaskOne(longlong arg1, cri_u8 arg2, int *arg3);
 void MPVUMC_Init();
 void MPVUMC_Finish();
 void MPVUMC_InitOutRfb(cri_any = cri_any());
@@ -1733,9 +1734,8 @@ struct cri06_block { const short* coef; cri_u1* dst; int stride; };
 // Each 8x8 block of shorts is added to its destination pixels with unsigned saturation, two rows per
 // packuswb; the list ends at a NULL coefficient pointer.
 // @0x140059170
-void FUN_140059170(cri_any cri_p0)
+void FUN_140059170(const cri06_block* rec)
 {
-  const cri06_block* rec = cri_p0;
   const __m128i* c = (const __m128i*)rec->coef;
   __m128i x0, x1, x2, x3, x4;
   do {
@@ -6725,10 +6725,8 @@ int MPVDEC_CheckVersion(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs). The bit buffer and VLC index are 32-bit, shift counts plain int, refill arms pos >= 32 first; left: the init refills' schedule, register choice, and the closing call (the exe tail-jumps to FUN_140051d90, our cl does not once &loc_28 escapes).
 // @0x140062c10
-void MPVDEC_DecDpicMb(cri_any cri_p0, cri_any cri_p1)
+void MPVDEC_DecDpicMb(longlong arg1, longlong *arg2)
 {
-  longlong arg1 = cri_p0;
-  longlong *arg2 = cri_p1;
   short s_v4;
   int i_v5;
   uint u_v6;
@@ -8159,10 +8157,8 @@ void FUN_140065410(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140065450
-cri_u8 MPVSL_DecPicture(cri_any cri_p0, cri_any cri_p1)
+cri_u8 MPVSL_DecPicture(longlong arg1, longlong *arg2)
 {
-  longlong arg1 = cri_p0;
-  longlong *arg2 = cri_p1;
   uint u_v1;
   int i_v2;
   cri_u8 u_v3;
@@ -8247,11 +8243,8 @@ cri_u8 MPVSL_DecPicture(cri_any cri_p0, cri_any cri_p1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140065660
-void mpvsl_DecTaskOne(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
+void mpvsl_DecTaskOne(longlong arg1, cri_u8 arg2, int *arg3)
 {
-  longlong arg1 = cri_p0;
-  cri_u8 arg2 = cri_p1;
-  int *arg3 = cri_p2;
   int i_v1;
   ulonglong u_v2;
   int local_res8 [2];
