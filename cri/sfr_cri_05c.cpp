@@ -343,11 +343,9 @@ void criAdxDecCore_SetDlyVal(longlong, uint, short, short);
 void criAdxDecCore_SetCutoffFreqency(longlong, uint, uint);
 uint FUN_14006a7f8(cri_u64, uint, longlong);
 void DCT_Isse2Init();
-void FUN_142ccc860(void *,long);  // C3: the definition's signature
 void FUN_142ccca50(void *);  // C3: the definition's signature
 void FUN_142ccca90(void *);  // C3: the definition's signature
 void MPVUMC_BiDirect(void *);  // C3: the definition's signature
-void FUN_142cccb30(void *,long);  // C3: the definition's signature
 void thunk_FUN_140050520();
 void thunk_FUN_140050670();
 cri_u32 thunk_FUN_14005b040();

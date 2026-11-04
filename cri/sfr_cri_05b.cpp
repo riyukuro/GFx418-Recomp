@@ -339,11 +339,11 @@ void criAdxDecCore_SetDlyVal(longlong, uint, short, short);
 void criAdxDecCore_SetCutoffFreqency(longlong, uint, uint);
 uint FUN_14006a7f8(cri_u64, uint, longlong);
 void DCT_Isse2Init();
-void FUN_142ccc860(void *,long);  // C3: the definition's signature
+void MPVUMC_BpicSkipped(void *,long);  // sfr_cri_03, 0x142ccc860
 void FUN_142ccca50(void *);  // C3: the definition's signature
 void FUN_142ccca90(void *);  // C3: the definition's signature
 void MPVUMC_BiDirect(void *);  // C3: the definition's signature
-void FUN_142cccb30(void *,long);  // C3: the definition's signature
+void MPVUMC_PpicSkipped(void *,long);  // sfr_cri_03, 0x142cccb30
 void thunk_FUN_140050520();
 void thunk_FUN_140050670();
 cri_u32 thunk_FUN_14005b040();
@@ -2300,8 +2300,8 @@ void MPVHDEC_Init(void)
   FUN_140050f90(DAT_143c49350,0x50);
   FUN_140050f90(DAT_143c49300,0x50);
   FUN_140050f90(DAT_143c49160,0x50);
-  _DAT_143c493a8 = cri_conv(FUN_142cccb30);
-  _DAT_143c493b8 = cri_conv(FUN_142ccc860);
+  _DAT_143c493a8 = cri_conv(MPVUMC_PpicSkipped);
+  _DAT_143c493b8 = cri_conv(MPVUMC_BpicSkipped);
   _DAT_143c491b8 = cri_conv(&FUN_142ccc850);
   _DAT_143c491c0 = cri_conv(&FUN_142ccc850);
   _DAT_143c491c8 = cri_conv(&FUN_142ccc850);
@@ -2313,7 +2313,7 @@ void MPVHDEC_Init(void)
   _DAT_143c49260 = cri_conv(FUN_142ccca50);
   _DAT_143c49268 = cri_conv(FUN_142ccca50);
   _DAT_143c492c8 = cri_conv(FUN_142ccca90);
-  _DAT_143c493b0 = cri_conv(FUN_142cccb30);
+  _DAT_143c493b0 = cri_conv(MPVUMC_PpicSkipped);
   _DAT_143c49408 = cri_conv(MPVUMC_BiDirect);
   _DAT_143c49118 = cri_conv(MPVUMCT_PpicSkipped);
   _DAT_143c49120 = cri_conv(MPVUMCT_PpicSkipped);
