@@ -265,7 +265,7 @@ extern "C" cri_u1 UINT_1400afc20[0x100] = {
 
 // the block writer in sfr_cri_06 (defined there with cri_any parameters; it reads the mask as an int, and the exe passes
 // a 32-bit mask, as to its sibling)
-void FUN_140065e70(char *ctx, int mask);
+void DCT_FsriTransCore(char *ctx, int mask);
 void FUN_140065fc0(char *ctx, int mask);
 uint FUN_14004ff50(longlong a1, uint a2);
 extern "C" cri_u1* PTR_FUN_143a4a5a0;
@@ -735,17 +735,17 @@ void FUN_1400661e0()
   return;
 }
 // The four block-writer callbacks mpvcdec_SetDctFunc stores at +0x1738/+0x1740 (Ghidra made no functions here): all blocks
-// (mask -1) or the decoder's block mask at +0x30, into FUN_140065e70 or its sibling FUN_140065fc0.
+// (mask -1) or the decoder's block mask at +0x30, into DCT_FsriTransCore or its sibling FUN_140065fc0.
 // @0x1400662e0
 void FUN_1400662e0(char *ctx)
 {
-  FUN_140065e70(ctx, -1);
+  DCT_FsriTransCore(ctx, -1);
 }
 
 // @0x1400662f0
 void FUN_1400662f0(char *ctx)
 {
-  FUN_140065e70(ctx, *(int *)((char *)ctx + 0x30));
+  DCT_FsriTransCore(ctx, *(int *)((char *)ctx + 0x30));
 }
 
 // @0x140066300
