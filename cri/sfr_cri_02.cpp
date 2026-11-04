@@ -236,7 +236,6 @@ void     FUN_140044fb0(void* output, CriUint32 index, void* value, CriUint32 typ
 void     FUN_140044680(void* decoder);
 void     criAlphaDec_Execute(void* decoder);
 extern "C" CriBool  FUN_1400467b8(void* queue, CriSint32 operation);
-void     FUN_1400467a0(void* queue, CriSint32 operation, CriSint32 timeout, void* item);
 void     FUN_140044d20(void* decoder, CriUint32 count);
 void     FUN_140044270(void* decoder, CriUint32 count);
 void     FUN_140044d70(void* decoder, CriUint32 count, void* streamInfo, void* outputInfo);

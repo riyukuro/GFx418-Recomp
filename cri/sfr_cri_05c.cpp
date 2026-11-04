@@ -155,12 +155,11 @@ extern "C" void* criHeap_AllocFix(void* heap, int size, const char* name, int al
 extern "C" int criHeap_Free(void* heap, void* ptr);
 long FUN_140039180(CriMvEasyPlayer *, long, unsigned long *);  // C3: the definition's signature
 longlong FUN_14003b674(Any a0,Any a1,Any a2);
-void FUN_1400467a0(Any a0,Any a1,Any a2,Any a3);
 void FUN_1400467a8(Any a0,Any a1,Any a2);
 void FUN_1400467b0(Any a0,Any a1,Any a2);
 cri_u64 FUN_1400467b8(Any a0,Any a1 = 0);
 // sfr_cri_03's definitions; the /Od criAdec code calls them with these types
-void FUN_1400467a0(void* object, long operation, unsigned long limit, void* output);
+void criSj_GetChunk(void* object, long operation, unsigned long limit, void* output);   // 0x1400467a0
 void FUN_1400467a8(void* object, long operation, void* chunk);
 void FUN_1400467b0(void* object, long operation, void* chunk);
 extern "C" long FUN_1400467b8(void* object, long query);
@@ -997,7 +996,7 @@ void FUN_1400536d0(longlong a1)
   data = *(void**)((char*)a1 + 0x18);
   sj = (AdxHdr*)((char*)a1 + 0x28);
   hdr = a1 + 0x9c;
-  FUN_1400467a0(data,1,0xffffffff,&usfh);
+  criSj_GetChunk(data,1,0xffffffff,&usfh);
   if (usfh.Size == 0) {
     return;
   }
@@ -1057,7 +1056,7 @@ void FUN_140053880(longlong a1)
   nchans = (int)*(char*)((char*)a1 + 0x2d);
   ctx = a1 + 0x9c;
   nsamp = 0;
-  FUN_1400467a0(sj,1,0xffffffff,&chunk);
+  criSj_GetChunk(sj,1,0xffffffff,&chunk);
   if (chunk.Size == 0) {
     return;
   }
@@ -1082,7 +1081,7 @@ void FUN_140053880(longlong a1)
     }
   }
   for (i = 0; i < nchans; i = i + 1) {
-    FUN_1400467a0(chans[i],0,room,&bufs[i]);
+    criSj_GetChunk(chans[i],0,room,&bufs[i]);
     if (bufs[i].Size < room) {
       FUN_1400467a8(chans[i],0,&bufs[i]);
       FUN_1400467a8(sj,1,&chunk);
