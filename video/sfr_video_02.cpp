@@ -81,7 +81,6 @@ extern void FUN_14257dcd0(void*);
 extern void FUN_1425eec50(void*, void*, unsigned __int64);
 extern void FUN_142522c70(void*, const void*, unsigned __int64);   // ArrayDataBase<UByte, AllocatorGH>::Reserve
 extern void FUN_14257eb30(void*);
-extern void FUN_1425ef130(void*);
 extern void* FUN_142581520(void*, void*);
 #define DAT_143b15f60 (static_cast<void*>(Scaleform::Memory::pGlobalHeap))
 // MS2's ComplexFill vtable is referenced by the reconstructed temporary video fill object below.
@@ -175,8 +174,24 @@ extern void* FUN_1400105b0(void*);
 // The RefCount base destructors, called directly as the exe calls them (0x14257db50 / 0x14257db40).
 static inline void RawRefCountNTSCoreDtor(void* p) { static_cast<Scaleform::RefCountNTSImplCore*>(p)->Scaleform::RefCountNTSImplCore::~RefCountNTSImplCore(); }
 static inline void RawRefCountCoreDtor(void* p) { static_cast<Scaleform::RefCountImplCore*>(p)->Scaleform::RefCountImplCore::~RefCountImplCore(); }
-extern void FUN_142518040(void*, float, float);
-extern void FUN_142515a20(void*, float, float);
+// ShapeDataFloatTempl<Array<UByte> >::MoveTo/LineTo/StartLayer (0x142518040/0x142515a20/0x1425ef130) through member
+// pointers: the exe calls the out-of-line copies; a direct call inlines the header bodies.
+typedef Scaleform::Render::ShapeDataFloatTempl<Scaleform::Array<Scaleform::UByte> > Video02ShapeData;
+static __forceinline void Video02MoveTo(void* path, float x, float y)
+{
+    void (Video02ShapeData::*moveTo)(float, float) = &Video02ShapeData::MoveTo;
+    (static_cast<Video02ShapeData*>(path)->*moveTo)(x, y);
+}
+static __forceinline void Video02LineTo(void* path, float x, float y)
+{
+    void (Video02ShapeData::*lineTo)(float, float) = &Video02ShapeData::LineTo;
+    (static_cast<Video02ShapeData*>(path)->*lineTo)(x, y);
+}
+static __forceinline void Video02StartLayer(void* path)
+{
+    void (Video02ShapeData::*startLayer)() = &Video02ShapeData::StartLayer;
+    (static_cast<Video02ShapeData*>(path)->*startLayer)();
+}
 extern void FUN_14000d330(void*);                                  // Video.clear (sfr_video_01)
 
 // NetConnection.connect (exe 0x140011b00) is an empty native method.
@@ -1761,7 +1776,7 @@ void FUN_140011410(void* path)
     const float lastY = *reinterpret_cast<float*>(bytes + 0x60);
     if (lastX != *reinterpret_cast<float*>(bytes + 0x54) ||
         lastY != *reinterpret_cast<float*>(bytes + 0x58))
-        FUN_142515a20(path, *reinterpret_cast<float*>(bytes + 0x54), *reinterpret_cast<float*>(bytes + 0x58));
+        Video02LineTo(path, *reinterpret_cast<float*>(bytes + 0x54), *reinterpret_cast<float*>(bytes + 0x58));
 }
 
 // MS2-FUNCTIONAL: rebuilds a path from its control points, closes it at the current endpoint, and finalizes it.
@@ -1769,10 +1784,10 @@ void FUN_140011410(void* path)
 void FUN_140011500(void* object, float x1, float y1, float x2, float y2)
 {
     void** path = reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x88);   // reloaded for each step
-    FUN_142518040(*path, x1, y1);
-    FUN_142515a20(*path, x2, y1);
-    FUN_142515a20(*path, x2, y2);
-    FUN_142515a20(*path, x1, y2);
+    Video02MoveTo(*path, x1, y1);
+    Video02LineTo(*path, x2, y1);
+    Video02LineTo(*path, x2, y2);
+    Video02LineTo(*path, x1, y2);
     FUN_140011410(*path);
     Scaleform::GFx::AS3::Sfr33PathEndRun(static_cast<Scaleform::UByte*>(*path));
 }
@@ -3482,8 +3497,8 @@ void* FUN_140011610(void* object, void** result, void* context)
     void* provider = *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x100);
     if (!provider) {
         Scaleform::GFx::AS3::Sfr31WriteRecord3(reinterpret_cast<Scaleform::UPInt>(path), 0, 0, 0);
-        FUN_142518040(path, 0.0f, 0.0f);
-        FUN_142515a20(path, 1.0f, 1.0f);
+        Video02MoveTo(path, 0.0f, 0.0f);
+        Video02LineTo(path, 1.0f, 1.0f);
         FUN_140011410(path);
         Scaleform::GFx::AS3::Sfr33PathEndRun(static_cast<Scaleform::UByte*>(path));
     } else {
@@ -3521,7 +3536,7 @@ void* FUN_140011610(void* object, void** result, void* context)
             *fill = 0;
             FUN_14257dc30(transform);
             *reinterpret_cast<void**>(fill + 2) = transform;
-            FUN_1425ef130(path);
+            Video02StartLayer(path);
             void** pathVtable = *reinterpret_cast<void***>(path);
             unsigned fillStyles = reinterpret_cast<unsigned (*)(void*)>(pathVtable[2])(path);
             Scaleform::GFx::AS3::Sfr31WriteRecord3(reinterpret_cast<Scaleform::UPInt>(path), fillStyles, 0, 0);
