@@ -262,73 +262,77 @@ void SF_STDCALL GFx_JpegTablesLoader(LoadProcess* p, const TagInfo& tagInfo)
 }
 
 // Defines a JPEG image whose stream relies on the tables from the preceding JPEGTables tag.
-// MS2-FUNCTIONAL: image data and shared JPEG tables are passed to the reader; exact stream setup is still being refined.
+// MS2-FUNCTIONAL 0x1425c4500: same reads, checks, log text and reader calls; register allocation and the scheduling
+// of the ImageCreateArgs stores differ.
 // @0x1425c4500
 void SF_STDCALL GFx_DefineBitsJpegLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
-    ResourceId rid(p->ReadU16());
-    Stream* stream = p->GetStream();
-    Render::ImageSource* source = 0;
-    LoadStates* states = p->GetLoadStates();
-    Render::ImageFileHandlerRegistry* registry = states
-        ? static_cast<Render::ImageFileHandlerRegistry*>(states->GetImageFileHandlerRegistry()) : 0;
-    if (!registry)
+    UInt16 characterId = p->GetStream()->ReadU16();
+    Render::ImageSource* psource = 0;
     {
-        p->LogError("Image file handler registry is not installed - can't load jpeg image data");
+        Ptr<ImageFileHandlerRegistry> pregistry = p->GetLoadStates()->GetImageFileHandlerRegistry();
+        if (!pregistry)
+            p->LogError("Image file handler registry is not installed - can't load jpeg image data");
+        else
+        {
+            Render::JPEG::AbstractReader* preader = static_cast<Render::JPEG::AbstractReader*>(
+                static_cast<Render::ImageFileHandlerRegistry*>(pregistry)->GetReader(Render::ImageFile_JPEG));
+            if (!preader)
+                p->LogError("Jpeg System is not installed - can't load jpeg image data");
+            else
+            {
+                p->GetStream()->SyncFileStream();
+                // LoadProcess::pJpegTables (+0x360) is private.
+                RefCountImpl* ptables = reinterpret_cast<Ptr<RefCountImpl>*>(reinterpret_cast<UByte*>(p) + 0x360)->GetPtr();
+                if (ptables)
+                {
+                    Render::ImageCreateArgs args(Render::Image_None, 0, p->GetLoadHeap());
+                    psource = preader->CreateImageSource(p->GetStream()->GetUnderlyingFile(), args,
+                        reinterpret_cast<Render::JPEG::ExtraData*>(ptables), tagInfo.TagLength - 2, false);
+                }
+                else
+                {
+                    Render::ImageCreateArgs args(Render::Image_None, 0, p->GetLoadHeap());
+                    psource = preader->CreateImageSource(p->GetStream()->GetUnderlyingFile(), args, 0,
+                        tagInfo.TagLength - 2, false);
+                }
+            }
+        }
     }
-    else if (!registry->GetReader(Render::ImageFile_JPEG))
-    {
-        p->LogError("Jpeg System is not installed - can't load jpeg image data");
-    }
-    else
-    {
-        Render::JPEG::AbstractReader* reader = static_cast<Render::JPEG::AbstractReader*>(
-            registry->GetReader(Render::ImageFile_JPEG));
-        Render::ImageCreateArgs args(Render::Image_None, 0, p->GetLoadHeap());
-        stream->SyncFileStream();
-        // The reader moves the file position: GetUnderlyingFile marks the stream for a resync.
-        File* file = stream->GetUnderlyingFile();
-        Ptr<RefCountImpl>* tableSlot = reinterpret_cast<Ptr<RefCountImpl>*>(reinterpret_cast<UByte*>(p) + 0x360);
-        Render::JPEG::ExtraData* tables = reinterpret_cast<Render::JPEG::ExtraData*>(tableSlot->GetPtr());
-        source = reader->CreateImageSource(file, args, tables, tagInfo.TagLength - 2, false);
-    }
-    p->AddImageResource(rid, source);
-    if (source)
-        source->Release();
+    p->AddImageResource(ResourceId(characterId), psource);
+    if (psource)
+        psource->Release();
 }
 
 // Defines a self-contained JPEG image (SWF DefineBitsJPEG2).
-// MS2-FUNCTIONAL: preserves the tag id, payload length and reader ownership; exact stream setup is still being refined.
+// MS2-FUNCTIONAL 0x1425c4740: only the ImageCreateArgs heap load is scheduled before the args store.
 // @0x1425c4740
 void SF_STDCALL GFx_DefineBitsJpeg2Loader(LoadProcess* p, const TagInfo& tagInfo)
 {
-    const UInt16 charId = p->ReadU16();
-    ResourceId rid(charId);
-    Stream* stream = p->GetStream();
-    p->LogParse("  GFx_DefineBitsJpeg2Loader: charid = %d pos = 0x%x\n", charId, stream->Tell());
-    Render::ImageSource* source = 0;
-    LoadStates* states = p->GetLoadStates();
-    Render::ImageFileHandlerRegistry* registry = states
-        ? static_cast<Render::ImageFileHandlerRegistry*>(states->GetImageFileHandlerRegistry()) : 0;
-    if (!registry)
+    UInt16 characterId = p->ReadU16();
+    p->LogParse("  GFx_DefineBitsJpeg2Loader: charid = %d pos = 0x%x\n", characterId, p->GetStream()->Tell());
+    Render::ImageSource* psource = 0;
     {
-        p->LogError("Image file handler registry is not installed - can't load jpeg image data");
+        Ptr<ImageFileHandlerRegistry> pregistry = p->GetLoadStates()->GetImageFileHandlerRegistry();
+        if (!pregistry)
+            p->LogError("Image file handler registry is not installed - can't load jpeg image data");
+        else
+        {
+            Render::JPEG::AbstractReader* preader = static_cast<Render::JPEG::AbstractReader*>(
+                static_cast<Render::ImageFileHandlerRegistry*>(pregistry)->GetReader(Render::ImageFile_JPEG));
+            if (!preader)
+                p->LogError("Jpeg System is not installed - can't load jpeg image data");
+            else
+            {
+                Render::ImageCreateArgs args(Render::Image_None, 0, p->GetLoadHeap());
+                psource = preader->CreateImageSource(p->GetStream()->GetUnderlyingFile(), args, 0,
+                    tagInfo.TagLength - 2, true);
+            }
+        }
     }
-    else if (!registry->GetReader(Render::ImageFile_JPEG))
-    {
-        p->LogError("Jpeg System is not installed - can't load jpeg image data");
-    }
-    else
-    {
-        Render::JPEG::AbstractReader* reader = static_cast<Render::JPEG::AbstractReader*>(
-            registry->GetReader(Render::ImageFile_JPEG));
-        Render::ImageCreateArgs args(Render::Image_None, 0, p->GetLoadHeap());
-        File* file = stream->GetUnderlyingFile();
-        source = reader->CreateImageSource(file, args, 0, tagInfo.TagLength - 2, true);
-    }
-    p->AddImageResource(rid, source);
-    if (source)
-        source->Release();
+    p->AddImageResource(ResourceId(characterId), psource);
+    if (psource)
+        psource->Release();
 }
 
 // The audio state owns the reader that interprets the five SWF sound tags.
