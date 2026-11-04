@@ -301,7 +301,7 @@ typedef struct CriMvHeaderAnalysisView
     CriSint32 ReadBytes;                    // 0xdb8
 } CriMvHeaderAnalysisView;
 typedef struct CriMvVideoDecoderView { CriUint8 Reserved[0xe08]; void* VideoDecoder; } CriMvVideoDecoderView;
-typedef struct CriUsfChunkHeader            // FUN_14003b3fc fills 0x24 bytes
+typedef struct CriUsfChunkHeader            // criUsfCmn_ParseUsfHeaderStd fills 0x24 bytes
 {
     CriUint32 Reserved0[3];
     CriUint8  Reserved0C, Reserved0D, Reserved0E;
@@ -316,7 +316,6 @@ typedef struct CriMvSubtitleItemInfo        // analyzeSubtitleInfo fills 0x38 by
 } CriMvSubtitleItemInfo;
 typedef struct CriMvSubtitleFrameCounter { CriUint8 Reserved[0xe30]; CriUint32 Value; } CriMvSubtitleFrameCounter;
 
-void FUN_140028074(void* heap);
 // the C++ units define these with C linkage (extern "C"), so the clang-cl C++ compile declares them so too
 #ifdef __cplusplus
 #define CRI_C_LINKAGE extern "C"
@@ -350,7 +349,6 @@ void criMvPly_AddInputMemory(void* player, void* chunk, CriUint32 type);
 void FUN_140046814(void* streamJoint, const void* chunk, CriUint32 size);
 CRI_C_LINKAGE void crimvply_occurFatalError(void* owner, const char* message, CriSint32 value);
 CRI_C_LINKAGE void criSj_PutChunk(void* queue, CriSint32 operation, void* chunk);
-CriUint32 FUN_14003b3fc(const CriUint8* data, CriUint32 size, void* output);
 const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
 typedef struct CriUsfStandardHeader CriUsfStandardHeader;
 CriBool criMvPly_IsSetDefaultDecryptionKey(void);
@@ -1327,7 +1325,7 @@ void FUN_140030cb0(void* player)
     memset(dst, 0, 0x288);
     if (*(void**)((CriUint8*)player + 0xee0))
     {
-        FUN_140028074(*(void**)((CriUint8*)player + 0xee0));
+        criHeap_Destroy(*(CriHeap*)((CriUint8*)player + 0xee0));
         *(void**)((CriUint8*)player + 0xee0) = 0;
     }
     *(CriUint32*)((CriUint8*)player + 0xad4) = 0;
@@ -1426,7 +1424,7 @@ CriSint32 FUN_140032090(void* player)
         criSj_GetChunk(queue, 1, -1, &usfHead);
         if (usfHead.Type >= 0x20)
         {
-            FUN_14003b3fc((const CriUint8*)usfHead.Chunk, usfHead.Type, &hdr);
+            criUsfCmn_ParseUsfHeaderStd((const CriUint8*)usfHead.Chunk, usfHead.Type, (CriUsfStandardHeader*)&hdr);
             contentsInfo.Data = criUsfCmn_GetContents((const CriUint8*)usfHead.Chunk, usfHead.Type, &contentsInfo.Size);
             if (((CriMvHeaderAnalysisView*)player)->HeaderCount == 0)
             {
@@ -1552,7 +1550,7 @@ CriBool decodeMetaData(void* player)
     void* sj;
     CriBool end;
     CriMovieInputChunk ck;
-    CriUint32 hdr[9];                       // FUN_14003b3fc fills 0x24 bytes; the record type is byte 15
+    CriUint32 hdr[9];                       // criUsfCmn_ParseUsfHeaderStd fills 0x24 bytes; the record type is byte 15
     sj = ((CriMvMetaPlayerView*)player)->MetaSj;
     end = 0;
     while ((CriUint32)FUN_1400467b8(sj, 1) > 0)
@@ -1560,7 +1558,7 @@ CriBool decodeMetaData(void* player)
         criSj_GetChunk(sj, 1, -1, &ck);
         if (ck.Size >= 0x20)
         {
-            FUN_14003b3fc(ck.Data, ck.Size, hdr);
+            criUsfCmn_ParseUsfHeaderStd(ck.Data, ck.Size, (CriUsfStandardHeader*)hdr);
             payload = criUsfCmn_GetContents(ck.Data, ck.Size, &clen);
             if (((CriUint8*)hdr)[15] == 0)
             {
@@ -2015,7 +2013,7 @@ void executeHeaderServer(void* player)
     void* stream;
     CriMovieInputChunk chunk;
     CriMvHeaderStreamEntry* target;
-    CriUint32 info[12];                     // FUN_14003b3fc fills 0x24 bytes; 12 dwords give the exe 0x98 frame
+    CriUint32 info[12];                     // criUsfCmn_ParseUsfHeaderStd fills 0x24 bytes; 12 dwords give the exe 0x98 frame
     CriMovieParsedChunk payload;
     CriUint32 phase;
     if (player == 0 || ((CriMvHeaderQueueView*)player)->Queue == 0)
@@ -2035,7 +2033,7 @@ void executeHeaderServer(void* player)
         criSj_GetChunk(stream, 1, -1, &chunk);
         if (chunk.Size >= 0x20)
         {
-            FUN_14003b3fc(chunk.Data, chunk.Size, info);
+            criUsfCmn_ParseUsfHeaderStd(chunk.Data, chunk.Size, (CriUsfStandardHeader*)info);
             payload.Data = criUsfCmn_GetContents(chunk.Data, chunk.Size, &payload.Size);
             if (info[0] == 0x43524944)
             {
@@ -2076,7 +2074,7 @@ CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* output, CriSint32 chan
         criSj_GetChunk(sj, 1, -1, &record);
         if (record.Chunk == NULL || record.Type < 0x20)
             break;
-        FUN_14003b3fc((const CriUint8*)record.Chunk, record.Type, &headerInfo);
+        criUsfCmn_ParseUsfHeaderStd((const CriUint8*)record.Chunk, record.Type, (CriUsfStandardHeader*)&headerInfo);
         if (headerInfo.Type == 1 || headerInfo.Type == 2)
         {
             if (headerInfo.Type == 1)
