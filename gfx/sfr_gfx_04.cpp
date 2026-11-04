@@ -126,7 +126,6 @@ public:
 };
 
 extern "C" const void* const MS2_SF_ConstShapeNoStyles_vftable[]; // ??_7ConstShapeNoStyles@GFx@Scaleform@@6B@ 0x14318b708
-extern "C" const void* DAT_143149880[]; // Resource base vftable
 extern "C" const void* DAT_143183208[]; // StateBag base vftable
 extern "C" void FUN_14015b310(void*, unsigned long long);
 
@@ -150,7 +149,7 @@ Video::VideoCharacterDef::~VideoCharacterDef() {}
 void* FUN_1425ccf60(void* object, unsigned flags)
 {
     *reinterpret_cast<const void***>(static_cast<unsigned char*>(object) + 0x18) = DAT_143183208;
-    *reinterpret_cast<const void***>(object) = DAT_143149880;
+    static_cast<Resource*>(object)->Resource::~Resource();
     if (flags & 1) {
         if (!(flags & 4)) Memory::Free(object);
         else FUN_14015b310(object, 0x20);
@@ -162,7 +161,7 @@ void* FUN_1425ccf60(void* object, unsigned flags)
 // @0x1425cd140
 void* FUN_1425cd140(void* object, unsigned flags)
 {
-    *reinterpret_cast<const void***>(object) = DAT_143149880;
+    static_cast<Resource*>(object)->Resource::~Resource();
     if (flags & 1) {
         if (!(flags & 4)) Memory::Free(object);
         else FUN_14015b310(object, 0x20);
