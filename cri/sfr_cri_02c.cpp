@@ -64,7 +64,6 @@ extern const void* DAT_143b27a40;
 extern CriUint16 DAT_143b2794c;
 extern CriSint32 DAT_143b27948;
 extern CriUint8 DAT_143b27950[];
-extern const void* DAT_1431b95e8[];
 extern const void* DAT_1431b91b0[];
 extern const void* DAT_1431b91d8[];
 extern const void* DAT_1431b9170[];

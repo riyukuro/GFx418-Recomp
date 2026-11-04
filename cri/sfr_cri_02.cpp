@@ -44,7 +44,6 @@ extern const void* DAT_143b27a40;
 extern CriUint16 DAT_143b2794c;
 extern CriSint32 DAT_143b27948;
 extern CriUint8 DAT_143b27950[];
-extern const void* DAT_1431b95e8[];
 extern const void* DAT_1431b91b0[];
 extern const void* DAT_1431b91d8[];
 extern const void* DAT_1431b9170[];
@@ -1880,11 +1879,12 @@ void* FUN_14002d1a0(void* guard, void* lock)
     return guard;
 }
 
+// MS2-PIN: ??_7CriMvFileReaderInterface@@6B@ 0x1431b95e8
 // Restore the abstract reader interface vtable and run its scalar delete path when requested.
 // @0x14002d170
 void* FUN_14002d170(CriMvFileReaderInterface* reader, CriUint8 flags)
 {
-    *(const void***)reader = DAT_1431b95e8;
+    reader->CriMvFileReaderInterface::~CriMvFileReaderInterface();
     if (flags & 1)
         ::operator delete(reader);
     return reader;
