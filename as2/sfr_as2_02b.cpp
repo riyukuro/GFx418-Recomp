@@ -50,8 +50,6 @@ void FUN_14257dcb0(void* pobj);   // RefCountBase release (a global, as defined)
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The text allocator of the movie a character belongs to (the exe reads it through the character's movie pointers).
-// Render::Text::DocView is built by address (a placement new would add the null test the exe does not have).
-void  FUN_14260cc10(void* pdoc, Render::Text::Allocator* palloc, Render::Text::FontManagerBase* pfontMgr, void* plog);  // DocView::DocView
 void* FUN_142936510(TextField* ptf);                  // TextField::CreateImageSubstitutor
 
 // The movie context the text allocator hangs off: the character's movie, +0x10 of its +0x20 member.
@@ -127,8 +125,9 @@ void TextFormatProto::GetTextExtent(const FnCall& fn)
     ASString    text = fn.Arg(0).ToString(fn.Env);
 
     void* pdoc = SF_HEAP_AUTO_ALLOC(ptarget, 0x150);
-    FUN_14260cc10(pdoc, MS2_AS2_TextAllocatorOwner(ptarget)->GetTextAllocator(), reinterpret_cast<Render::Text::FontManagerBase*>(ptarget->GetFontManager()), 0);
+    // Built by an explicit ctor call: a placement new adds a null test the exe does not have.
     Render::Text::DocView* pdv = static_cast<Render::Text::DocView*>(pdoc);
+    pdv->Render::Text::DocView::DocView(MS2_AS2_TextAllocatorOwner(ptarget)->GetTextAllocator(), reinterpret_cast<Render::Text::FontManagerBase*>(ptarget->GetFontManager()), 0);
     DocView_SetFlag(pdoc, 0x40, 2);
     pdv->SetAutoSizeX();
     pdv->SetAutoSizeY();
