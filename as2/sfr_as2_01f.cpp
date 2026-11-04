@@ -10,7 +10,14 @@
 #include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
 
 // Bodies of the exe called here (not recovered yet), by their addresses.
-void FUN_1424dd110(void* paliases);                                       // ~ASStringHash<Value> (the invoke aliases)
+namespace Scaleform {
+// The invoke aliases' table: its destructor is out of line in the exe (0x1424dd110, sfr_as3_16).
+typedef HashNode<GFx::ASString, GFx::AS3::Value, GFx::ASStringHashFunctor> Sfr01fInvokeAliasNode;
+typedef HashSetBase<Sfr01fInvokeAliasNode, Sfr01fInvokeAliasNode::NodeHashF, Sfr01fInvokeAliasNode::NodeAltHashF,
+    AllocatorLH<GFx::ASString, 324>, HashsetNodeEntry<Sfr01fInvokeAliasNode, Sfr01fInvokeAliasNode::NodeHashF> >
+    Sfr01fInvokeAliasSet;
+template<> SF_NOINLINE Sfr01fInvokeAliasSet::~HashSetBase();  // 0x1424dd110
+}
 namespace Scaleform { namespace GFx { namespace AS3 {
 void Sfr31ShutdownRegistered(UPInt self);  // ASVM: drops the loaded ABC files
 } } }
@@ -54,7 +61,7 @@ void MovieRoot::Shutdown()
     (*reinterpret_cast<CollectFn const* const*>(this))[9](this);
     if (void* p = pInvokeAliases)
     {
-        FUN_1424dd110(p);
+        static_cast<Sfr01fInvokeAliasSet*>(p)->~HashSetBase();
         Memory::pGlobalHeap->Free(p);
     }
     pInvokeAliases = NULL;
