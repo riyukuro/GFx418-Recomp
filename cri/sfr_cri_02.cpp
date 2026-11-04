@@ -159,7 +159,6 @@ void     criUsfDmx_Execute(void* demux);
 void*    FUN_14003b348(void* heap, const void* data, CriUint32 size);
 CriUint32 FUN_14003a85c(void* object, CriSint32 index, const char* key);
 CriSint32 FUN_14003a3e0(void* object, const char* key);
-CriSint32 FUN_14003a45c(void* object);
 CriSint32 FUN_14003a894(void* object, CriSint32 index, const char* key);
 void*    FUN_14003a648(void* object, CriSint32 index, CriSint32 value);
 void     FUN_14003af50(void* object, CriSint32 row, CriSint32 field, CriUtfRtvCell* cell);
