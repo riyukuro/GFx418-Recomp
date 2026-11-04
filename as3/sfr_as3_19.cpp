@@ -237,7 +237,11 @@ inline Scaleform::UPInt FUN_1425081f0(Scaleform::UPInt vm) { return reinterpret_
 inline Scaleform::UPInt FUN_142563380(Scaleform::UPInt factory, Scaleform::UPInt traits) { return reinterpret_cast<Scaleform::UPInt>(&reinterpret_cast<Scaleform::GFx::AS3::Classes::fl_vec::Vector*>(factory)->Resolve2Vector(*reinterpret_cast<const Scaleform::GFx::AS3::ClassTraits::Traits*>(traits))); }   // class traits for traits
 inline void FUN_1423f1840(void* slot, Scaleform::UPInt obj) { *static_cast<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>*>(slot) = reinterpret_cast<Scaleform::GFx::AS3::Instances::Namespace*>(obj); }   // assign a refcounted object into a slot
 void* FUN_1423edb60(void* mem, Scaleform::UPInt vm, Scaleform::UPInt factory, int kind, void* uri, const void* prefix);           // Instances::Namespace ctor
-void FUN_142522350(void* hash, void* key);                                         // MultinameHash::Remove
+// the class-traits cache's Remove, through the real Hash<MultinameHash<ClassTraits::Traits*>::Key, .., AllocatorDH>::Remove
+// (0x142522350, called out of line; the exe's cache is the DH hash)
+typedef Scaleform::GFx::AS3::MultinameHash<Scaleform::GFx::AS3::ClassTraits::Traits*, Scaleform::GFx::AS3::StatMV_VM_VM_Mem>::Key Sfr19CtKey;
+typedef Scaleform::HashDH<Sfr19CtKey, Scaleform::GFx::AS3::ClassTraits::Traits*, Sfr19CtKey::HashFunctor, Scaleform::GFx::AS3::StatMV_VM_VM_Mem>::BaseType Sfr19CtHash;
+#define FUN_142522350(hash, key) ((static_cast<Sfr19CtHash*>(static_cast<void*>(hash))->*static_cast<void (Sfr19CtHash::*)(const Sfr19CtKey&)>(&Sfr19CtHash::Remove))(*static_cast<const Sfr19CtKey*>(static_cast<void*>(key))))
 bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot*, Scaleform::GFx::AS3::Value*, const char*);
 inline bool FUN_142506000(Scaleform::UPInt root, void* valueOut, Scaleform::UPInt path) { return ::FUN_142506000(reinterpret_cast<const Scaleform::GFx::AS3::MovieRoot*>(root), static_cast<Scaleform::GFx::AS3::Value*>(valueOut), reinterpret_cast<const char*>(path)); }
 // ValueArray::PushBack, through the real ArrayBase<ArrayDataDH<Value>>::PushBack (0x14241e430, called out of line)
