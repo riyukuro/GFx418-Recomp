@@ -78,7 +78,6 @@ extern unsigned char DAT_143a51b50[];
 
 namespace Scaleform { namespace GFx {
 
-extern "C" char DAT_14318f548[];
 extern "C" char DAT_143191990[];
 extern "C" char DAT_1431927c8[];
 extern "C" char DAT_143a2fe60[];
@@ -195,7 +194,7 @@ void FUN_142cc9370()
 // @0x142cc9520
 void FUN_142cc9520()
 {
-    RawSetVtable(RawObj(GFx::FontResourceCreator_Static), DAT_14318f548);
+    reinterpret_cast<ResourceData::DataInterface*>(RawObj(GFx::FontResourceCreator_Static))->ResourceData::DataInterface::~DataInterface();
 }
 
 // static ResourceKey::KeyInterface at 0x143a2f690: back to its interface base vftable.
@@ -441,6 +440,7 @@ void FUN_142cc9870()
 
 // MS2-PIN: ??_7ImageFileHandler@Render@Scaleform@@6B@ 0x143184f20
 // MS2-PIN: ??_7KeyInterface@ResourceKey@GFx@Scaleform@@6B@ 0x14318b240
+// MS2-PIN: ??_7DataInterface@ResourceData@GFx@Scaleform@@6B@ 0x14318f548
 // AmpGlyphImageWriter::Instance (Render::ImageFileHandler): back to its interface base vftable.
 // @0x142cc9890
 void FUN_142cc9890()
