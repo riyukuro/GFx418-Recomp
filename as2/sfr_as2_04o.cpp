@@ -340,18 +340,17 @@ void InvokeContext::Cleanup()
 // becomes the button's prototype and its constructor is queued, otherwise the lookup is queued for later.
 class AvmButton : public AvmCharacter
 {
-public:
-    void ConstructCharacter(InteractiveObject* pchar, const ButtonRecord* prec);
+    void ConstructCharacter(InteractiveObject* pchar, const ButtonRecord& rec);
 };
 
 // MS2-FUNCTIONAL: the queued entries are filled member by member in the exe's order
 // @0x142935820
-void AvmButton::ConstructCharacter(InteractiveObject* pchar, const ButtonRecord* prec)
+void AvmButton::ConstructCharacter(InteractiveObject* pchar, const ButtonRecord& rec)
 {
     if (!(*reinterpret_cast<UInt16*>(reinterpret_cast<UByte*>(pchar) + 0x6a) & 0x400))
         return;
     GlobalContext* pcontext = GetASEnvironment()->StringContext.pContext;
-    const String*  pname    = pchar->GetResourceMovieDef()->GetNameOfExportedResource(prec->CharacterId);
+    const String*  pname    = pchar->GetResourceMovieDef()->GetNameOfExportedResource(rec.CharacterId);
     if (!pname)
         return;
     ASString         name = GetASEnvironment()->GetSC()->CreateString(pname->ToCStr(), pname->GetSize());
