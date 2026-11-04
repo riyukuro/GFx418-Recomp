@@ -511,7 +511,6 @@ void FontData::ReadFontInfo(Stream* in, TagType tagType)
     ReadCodeTable(in);
 }
 
-// MS2-FUNCTIONAL 0x142655fe0: register allocation and frame (0x118 vs 0xf8); the exe calls 0x142657480 out of line in the DefineFont branch
 // @0x142655fe0
 void FontData::Read(LoadProcess* p, const TagInfo& tagInfo)
 {
@@ -814,7 +813,7 @@ void FontData::Read(LoadProcess* p, const TagInfo& tagInfo)
             for (int i = 0; i < kerningCount; i++)
             {
                 int off = pin->Tell();
-                if (off >= tagInfo.TagDataOffset + tagInfo.TagLength)
+                if (off >= (int)(tagInfo.TagDataOffset + tagInfo.TagLength))
                 {
                     pin->LogError("Corrupted file %s, kerning table of the font '%s' is longer than tagLength.",
                                   pin->GetFileName().ToCStr(), (Name) ? Name : "<noname>");
@@ -1222,5 +1221,8 @@ void* FUN_142654af0(RefCountImplCore* p, unsigned flags)
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0BAF@@Scaleform@@6B@ 0x14318a2b8
 // MS2-PIN: ??_7?$RefCountBaseNTS@VTextureGlyphData@GFx@Scaleform@@$0BAF@@Scaleform@@6B@ 0x14318a2c0
 // MS2-PIN: ??_7TextureGlyphData@GFx@Scaleform@@6B@ 0x14318a2c8
+// MS2-PIN: ??_7?$RefCountBase@VShapeDataInterface@Render@Scaleform@@$01@Scaleform@@6B@ 0x14318f130
+// MS2-PIN: ??_7ShapeDataInterface@Render@Scaleform@@6B@ 0x14317b678
+// MS2-PIN: ??_7ShapeDataBase@GFx@Scaleform@@6B@ 0x14318a3b0
 // MS2-PIN: ??_7ConstShapeNoStyles@GFx@Scaleform@@6B@ 0x14318b708
 // MS2-PIN: ??_7?$RefCountBase@VGFxSystemFontResourceKey@GFx@Scaleform@@$01@Scaleform@@6B@ 0x143190fc8

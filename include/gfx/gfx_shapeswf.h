@@ -96,7 +96,8 @@ protected:
 class ConstShapeNoStyles : public ShapeDataBase
 {
 public:
-    ConstShapeNoStyles() : ShapeDataBase(Empty_Shape) {}
+    // The base's inline default ctor (Paths 0): FontData::Read (exe 0x142655fe0) inlines it.
+    ConstShapeNoStyles() {}
     // Inlined into the deleting destructor (exe 0x1425ccac0, pinned in sfr_gfx_04).
     virtual ~ConstShapeNoStyles() {}
 
