@@ -20,7 +20,6 @@
 namespace Scaleform { namespace GFx {
 
 extern char DAT_142dc9d48[];
-extern char DAT_143109420[];
 extern char DAT_143184be8[];
 extern char DAT_143184c18[];
 
@@ -300,8 +299,7 @@ void FUN_142591c90(void* self)
         FUN_14257dcd0(RawField<void*>(self, 0x30));
     if (RawField<void*>(self, 0x28))
         FUN_14257dcb0(RawField<void*>(self, 0x28));
-    RawField<void*>(self, 0) = DAT_143109420;
-    RawRefCountCoreDtor(self);
+    static_cast<State*>(self)->State::~State();
 }
 
 // @0x14259d950

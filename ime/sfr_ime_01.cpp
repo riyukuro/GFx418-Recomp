@@ -154,7 +154,6 @@ extern "C" const void* DAT_14313b9c8[];
 extern "C" const void* DAT_14313a238[];
 extern "C" const void* DAT_14313a450[];
 extern "C" const void* DAT_14313a5f8[];
-extern "C" char DAT_143109420[];     // ??_7State@GFx@Scaleform@@6B@
 extern "C" const void* DAT_14313a200[];
 extern "C" const void* DAT_143138360[];
 extern "C" void FUN_1423d9090(void*, void*, unsigned long long);
@@ -1796,8 +1795,7 @@ void* FUN_1423ce2f0(unsigned long long* object, unsigned flags)
 // @0x1423dba40
 void* FUN_1423dba40(void* object, unsigned flags)
 {
-    *static_cast<void**>(object) = DAT_143109420;   // State vftable
-    RawRefCountCoreDtor(object);
+    static_cast<Scaleform::GFx::State*>(object)->Scaleform::GFx::State::~State();
     if (flags & 1) {
         if (!(flags & 4)) Memory::Free(object);
         else FUN_14015b310(object, 0x18);

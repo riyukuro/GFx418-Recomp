@@ -31,7 +31,6 @@ namespace Scaleform { namespace GFx {
 
 void FUN_14015b310(void*, UPInt);    // sized delete
 extern "C" char DAT_143184be8[];     // ??_7Audio@GFx@Scaleform@@6B@
-extern "C" char DAT_143109420[];     // ??_7State@GFx@Scaleform@@6B@
 
 // RefCountBase<T, Stat> scalar deleting destructor (folded for the 0x10-byte classes, three copies here).
 // MS2-FUNCTIONAL: raw-layout COMDAT (folded identical bodies of many RefCountBase instances)
@@ -74,8 +73,7 @@ void* FUN_142591ed0(void* self, unsigned flags)
         FUN_14257dcd0(RawField<void*>(self, 0x30));
     if (RawField<void*>(self, 0x28))
         FUN_14257dcb0(RawField<void*>(self, 0x28));
-    RawField<void*>(self, 0) = DAT_143109420;
-    RawRefCountCoreDtor(self);
+    static_cast<State*>(self)->State::~State();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -91,8 +89,7 @@ void* FUN_142591ed0(void* self, unsigned flags)
 // @0x142591f60
 void* FUN_142591f60(void* self, unsigned flags)
 {
-    RawField<void*>(self, 0) = DAT_143109420;
-    RawRefCountCoreDtor(self);
+    static_cast<State*>(self)->State::~State();
     if (flags & 1)
     {
         if (!(flags & 4))
