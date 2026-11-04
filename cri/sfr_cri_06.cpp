@@ -553,12 +553,12 @@ void calcHvSize(cri_any = cri_any());
 void calcNumberOfFrameCentreOffsets(cri_any = cri_any());
 void calcPictureCodingExt(cri_any = cri_any());
 void calcQuantMatrix(longlong arg1);
-longlong parseShc(cri_any = cri_any(), cri_any = cri_any());
+longlong parseShc(uint *arg1, ulonglong arg2);
 longlong parseSec(longlong arg1, ulonglong arg2);
 void appendUd(longlong, void *, int);
-longlong parseEsc(cri_any = cri_any(), cri_any = cri_any());
-longlong parseGsc(cri_any = cri_any(), cri_any = cri_any());
-longlong parsePsc(cri_any = cri_any(), cri_any = cri_any());
+longlong parseEsc(longlong arg1, ulonglong arg2);
+longlong parseGsc(longlong arg1, ulonglong arg2);
+longlong parsePsc(longlong arg1, ulonglong arg2);
 void m2vhdec_AnalyUd(longlong, void *, int);
 longlong parseUdsc(longlong arg1, ulonglong arg2);
 uint m2vhdec_ParseSj(cri_any = cri_any(), cri_any = cri_any());
@@ -614,7 +614,7 @@ void calcVector(longlong arg1, int arg2, int arg3, int arg4);
 void calcPatternCode(cri_any = cri_any());
 void FUN_14005b860(longlong);
 void calcMotionType(longlong);
-cri_u8 parseMb(cri_any = cri_any());
+cri_u8 parseMb(longlong arg1);
 void M2VFRM_ParseSsc(cri_any = cri_any(), cri_any = cri_any());
 void FUN_14005e5b0(longlong, void *);
 void FUN_14005e600(longlong, cri_u4 *);
@@ -1070,10 +1070,8 @@ void calcQuantMatrix(longlong arg1)
 // MS2-FUNCTIONAL: written as CRI06_GETBITS steps (VS2008 build, our toolset differs). What is left is register
 // choice (the exe keeps pos in edi and p in rbx, ours pos in ebx and p in rdi) and a loop-alignment nop of ours.
 // @0x140054cf0
-longlong parseShc(cri_any cri_p0, cri_any cri_p1)
+longlong parseShc(uint *arg1, ulonglong arg2)
 {
-  uint *arg1 = cri_p0;
-  ulonglong arg2 = cri_p1;
   cri_u1 *p;
   int pos;
   uint buf;
@@ -1201,10 +1199,8 @@ void appendUd(longlong arg1, void *arg2, int arg3)
 // compares the start-code type field in memory for each test of the 0xc94 check, and register choice (the exe
 // keeps pos in edi, ours in ebx).
 // @0x140055550
-longlong parseEsc(cri_any cri_p0, cri_any cri_p1)
+longlong parseEsc(longlong arg1, ulonglong arg2)
 {
-  longlong arg1 = cri_p0;
-  ulonglong arg2 = cri_p1;
   cri_u1 *p;
   int pos;
   uint buf;
@@ -1433,10 +1429,8 @@ longlong parseEsc(cri_any cri_p0, cri_any cri_p1)
 // MS2-FUNCTIONAL: written as CRI06_GETBITS steps (VS2008 build, our toolset differs). What is left is register
 // choice: the exe keeps p in r10 and arg1 in rbx, ours p in rbx and arg1 in r11.
 // @0x140057fe0
-longlong parseGsc(cri_any cri_p0, cri_any cri_p1)
+longlong parseGsc(longlong arg1, ulonglong arg2)
 {
-  longlong arg1 = cri_p0;
-  ulonglong arg2 = cri_p1;
   cri_u1 *p;
   int pos;
   uint buf;
@@ -1479,10 +1473,8 @@ longlong parseGsc(cri_any cri_p0, cri_any cri_p1)
 // MS2-FUNCTIONAL: written as CRI06_GETBITS steps (VS2008 build, our toolset differs). What is left is register
 // choice: the exe keeps arg1 in rbx and p in r10, ours arg1 in r11 and p in rbx.
 // @0x1400584e0
-longlong parsePsc(cri_any cri_p0, cri_any cri_p1)
+longlong parsePsc(longlong arg1, ulonglong arg2)
 {
-  longlong arg1 = cri_p0;
-  ulonglong arg2 = cri_p1;
   cri_u1 *p;
   int pos;
   uint buf;
@@ -1667,7 +1659,7 @@ uint m2vhdec_ParseSj(cri_any cri_p0, cri_any cri_p1)
       (**(cri_code **)(*arg2 + 0x30))(arg2,1,0x7fffffff,&head);
       switch(i_v1) {
       case 0x40:
-        l_v2 = parseShc(arg1,head.Data);
+        l_v2 = parseShc((uint *)arg1,head.Data);
         break;
       case 0x80:
         l_v2 = parseSec(arg1,head.Data);
@@ -3098,9 +3090,8 @@ void calcMotionType(longlong arg1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs). Shift counts are plain int and the pos >= limit refill arms come first, as in the exe; left: block placement inside the 0x5e8 motion-vector blocks and register choice.
 // @0x14005b8c0
-cri_u8 parseMb(cri_any cri_p0)
+cri_u8 parseMb(longlong arg1)
 {
-  longlong arg1 = cri_p0;
   int *pi_v1;
   char c_v2;
   int i_v3;
