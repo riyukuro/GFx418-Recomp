@@ -69,10 +69,10 @@ extern const void* DAT_1432172f0[];
 extern const void* DAT_143217718[];
 extern const void* DAT_143218490[];
 extern const void* DAT_1432184d8[];
-extern const void* DAT_14321dd78[];
 extern const void* DAT_143222848[];
 
-// The Prototype<X> destructors called by name emit these vftables here as well.
+// The Prototype<X> and SharedObjectPtr destructors called by name emit these vftables here as well.
+// MS2-PIN: ??_7SharedObjectPtr@AS2@GFx@Scaleform@@6B@ 0x14321dd78
 // MS2-PIN: ??_7?$Prototype@VButtonObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143217e28
 // MS2-PIN: ??_7?$Prototype@VButtonObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143217d38
 // MS2-PIN: ??_7?$Prototype@VButtonObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143217d80
@@ -418,8 +418,7 @@ void* DeleteAs2_14292c750(void* p, unsigned flags)
 // @0x14292ce00
 void* DeleteAs2_14292ce00(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321dd78;
-    rg(*(void**)((char*)p+0x8));
+    static_cast<SharedObjectPtr*>(p)->SharedObjectPtr::~SharedObjectPtr();
     if (flags & 1)
         ::operator delete(p, 0x10);
     return p;
