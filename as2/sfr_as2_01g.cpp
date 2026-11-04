@@ -14,6 +14,23 @@
 void __empty_global_delete(void*, size_t);   // the sized operator delete the compiler pairs with ::new
 
 namespace Scaleform { class Event { public: virtual ~Event(); void PulseEvent(); }; }
+// Only Thread's ctor (exe 0x14258a490) and its CreateParams, which the update thread is made from.
+namespace Scaleform {
+class Thread
+{
+public:
+    struct CreateParams
+    {
+        int (*Func)(void*, void*);
+        void*    UserHandle;
+        size_t   StackSize;
+        int      Processor;
+        int      InitialState;
+        int      Priority;
+    };
+    explicit Thread(const CreateParams& params);
+};
+}
 namespace Scaleform {
 void* FindAudioRequestEntry(void** set, const unsigned char* key);                  // sfr_as3_22.cpp; sync-point set: the value at key
 void ReserveVideoPlayerArray(void** array, void* heap, std::size_t requested);     // sfr_as3_22.cpp; ArrayData<VideoPlayerImpl*>::Reserve
@@ -38,10 +55,8 @@ struct RawArrayPOD
 };
 
 void FUN_142743730(void* self);             // sound dtor
-extern "C" int FUN_142303a3b(void*);        // FMOD::Sound::release
 U* FUN_142743900(U* self, const U* source);                                // ArrayPOD<VideoPlayerImpl*> assign
 void FUN_142742d10(U** self, void* heap, const NodeRef* node, U hash);     // array-valued set add
-void* FUN_14258a490(void* mem, void* createParams);                         // Thread::Thread(const CreateParams&)
 int FUN_142747310(void* thread, void* renderer);                            // the FMOD update thread's body
 void FUN_1427474d0(void* channel, const void* syncinfo);                          // audio channel: sync point reached
 
@@ -143,7 +158,7 @@ void* FUN_142743fa0(void* self, unsigned flags)
     RawField<void*>(self, 0) = DAT_1431bee50;
     RawField<void*>(self, 0x10) = DAT_1431bee68;
     if (RawField<void*>(self, 0x30))
-        FUN_142303a3b(RawField<void*>(self, 0x30));
+        RawField<FMOD::Sound*>(self, 0x30)->release();
     RawField<void*>(self, 0x30) = 0;
     RawUnlinkNode(self);
     if (RawField<void*>(self, 0x28))
@@ -155,15 +170,6 @@ void* FUN_142743fa0(void* self, unsigned flags)
 }
 
 // Thread::CreateParams.
-struct Sfr01gThreadParams
-{
-    int (*Func)(void*, void*);
-    void*    UserHandle;
-    UPInt    StackSize;
-    int      Processor;
-    int      InitialState;
-    int      Priority;
-};
 
 // The renderer takes on a sound: under its lock (+0x80) the sound joins the list kept for its FMOD sound's key
 // (+0x40 of the sound data, in the set at +0xa8); with updates on (+0xf1) and no update thread yet (+0x18) one is
@@ -234,9 +240,9 @@ __declspec(safebuffers) void FUN_142744070(char* self, void* psound)
     if (RawField<char>(self, 0xf1) && !RawField<void*>(self, 0x18))
     {
         RawField<char>(self, 0x78) = 0;
-        Sfr01gThreadParams params = { FUN_142747310, self, 0x8000, -1, 0, 1 };
+        Thread::CreateParams params = { FUN_142747310, self, 0x8000, -1, 0, 1 };
         void* mem = Memory::Alloc(0x60);
-        void* pthread = mem ? FUN_14258a490(mem, &params) : NULL;
+        void* pthread = mem ? new (mem) Thread(params) : NULL;
         if (RawField<void*>(self, 0x18))
             RawRefCountRelease(RawField<void*>(self, 0x18));
         RawField<void*>(self, 0x18) = pthread;
