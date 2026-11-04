@@ -20,6 +20,8 @@
 #include "ms2/scaleform/include/gfx/as2/as2_pointobject.h"
 #include "ms2/scaleform/include/gfx/as2/as2_rectangleobject.h"
 #include "ms2/scaleform/include/gfx/as3/as3_value.h"
+#include "ms2/scaleform/include/gfx/gfx_resource.h"
+#include "ms2/scaleform/include/render/render_imagefile.h"
 
 namespace Scaleform { namespace Render {
 // The VertexXY16* formats render headers do not declare (Render_Vertex.cpp statics, 0x143a2fb88..0x143a2fc18).
@@ -76,8 +78,6 @@ extern unsigned char DAT_143a51b50[];
 
 namespace Scaleform { namespace GFx {
 
-extern "C" char DAT_143184f20[];
-extern "C" char DAT_14318b240[];
 extern "C" char DAT_14318f548[];
 extern "C" char DAT_143191990[];
 extern "C" char DAT_1431927c8[];
@@ -202,7 +202,7 @@ void FUN_142cc9520()
 // @0x142cc9530
 void FUN_142cc9530()
 {
-    RawSetVtable(RawObj(GFx::GFxSystemFontResourceKeyInterface_Instance), DAT_14318b240);
+    reinterpret_cast<ResourceKey::KeyInterface*>(RawObj(GFx::GFxSystemFontResourceKeyInterface_Instance))->ResourceKey::KeyInterface::~KeyInterface();
 }
 
 // The member's interface, as far as the destructor uses it (slot 2 lets it go).
@@ -415,7 +415,7 @@ void FUN_142cc9820()
 // @0x142cc9830
 void FUN_142cc9830()
 {
-    RawSetVtable(RawObj(GFx::ImageFileKeyInterface_Instance), DAT_14318b240);
+    reinterpret_cast<ResourceKey::KeyInterface*>(RawObj(GFx::ImageFileKeyInterface_Instance))->ResourceKey::KeyInterface::~KeyInterface();
 }
 
 // HALBeginDisplayItem::Instance (Render::RenderQueueItem::Interface): back to its interface base vftable.
@@ -439,18 +439,20 @@ void FUN_142cc9870()
     RawReleasePtr(DAT_143a2fe60);
 }
 
+// MS2-PIN: ??_7ImageFileHandler@Render@Scaleform@@6B@ 0x143184f20
+// MS2-PIN: ??_7KeyInterface@ResourceKey@GFx@Scaleform@@6B@ 0x14318b240
 // AmpGlyphImageWriter::Instance (Render::ImageFileHandler): back to its interface base vftable.
 // @0x142cc9890
 void FUN_142cc9890()
 {
-    RawSetVtable(RawObj(Render::AmpGlyphImageWriter::Instance), DAT_143184f20);
+    reinterpret_cast<Render::ImageFileHandler*>(RawObj(Render::AmpGlyphImageWriter::Instance))->Render::ImageFileHandler::~ImageFileHandler();
 }
 
 // static ResourceKey::KeyInterface at 0x143a2fef8: back to its interface base vftable.
 // @0x142cc98a0
 void FUN_142cc98a0()
 {
-    RawSetVtable(RawObj(GFx::SoundFileKeyInterface_Instance), DAT_14318b240);
+    reinterpret_cast<ResourceKey::KeyInterface*>(RawObj(GFx::SoundFileKeyInterface_Instance))->ResourceKey::KeyInterface::~KeyInterface();
 }
 
 // static Ptr<> at 0x143a30338.

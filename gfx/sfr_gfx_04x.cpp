@@ -57,7 +57,6 @@
 #include "../kernel/sf_sysalloc.h"
 
 extern "C" void  FUN_14015b310(void*, unsigned long long);
-extern "C" char  DAT_14318b240[]; // the ICF-shared vftable of the empty interface bases
 
 namespace Scaleform {
 
@@ -232,10 +231,11 @@ void* FUN_1425c8770(TablesHeader* p, unsigned flags)
 
 }} // namespace Render::JPEG
 
+// MS2-PIN: ??_7KeyInterface@ResourceKey@GFx@Scaleform@@6B@ 0x14318b240
 // The empty interface bases: back to the shared base vftable, then the sized delete.
 static SF_FORCEINLINE void* Sfr04xDeleteInterface(void* p, unsigned flags)
 {
-    *(void**)p = DAT_14318b240;
+    static_cast<Scaleform::GFx::ResourceKey::KeyInterface*>(p)->Scaleform::GFx::ResourceKey::KeyInterface::~KeyInterface();
     if (flags & 1)
         ::operator delete(p, 8);
     return p;

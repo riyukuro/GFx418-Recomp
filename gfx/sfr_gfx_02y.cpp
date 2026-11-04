@@ -22,8 +22,6 @@
 
 namespace Scaleform { namespace GFx {
 
-extern "C" char DAT_143184f20[];          // ??_7ImageFileHandler@Render@Scaleform@@6B@
-
 // XML::Support::ParseString: hands the text to the installed parser.
 // @0x14259d960
 bool XML::Support::ParseString(const char* pdata, UPInt len, XML::ParserHandler* pdb)
@@ -31,12 +29,12 @@ bool XML::Support::ParseString(const char* pdata, UPInt len, XML::ParserHandler*
     return pParser->ParseString(pdata, len, pdb);
 }
 
+// MS2-PIN: ??_7ImageFileHandler@Render@Scaleform@@6B@ 0x143184f20
 // Render::ImageFileHandler scalar deleting destructor (8 bytes, vftable only).
-// MS2-FUNCTIONAL: raw-layout COMDAT (the handler's destructor is implicit in our headers)
 // @0x14259dc90
 void* FUN_14259dc90(void* self, unsigned flags)
 {
-    RawField<void*>(self, 0) = DAT_143184f20;
+    static_cast<Render::ImageFileHandler*>(self)->Render::ImageFileHandler::~ImageFileHandler();
     if (flags & 1)
         ::operator delete(self, 8);             // the CRT sized delete (0x142749444)
     return self;
