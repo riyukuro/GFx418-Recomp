@@ -12,10 +12,17 @@
 #include "../include/kernel/sf_std.h"
 #include "../include/render/text_core.h"
 
-namespace Scaleform { namespace GFx { namespace AS2 {
+// The render tree entry, only its destroyHelper (render_context.h is not usable in this unit; as in sfr_as2_04h).
+namespace Scaleform { namespace Render { namespace ContextImpl {
+class Entry
+{
+protected:
+    void destroyHelper();
+};
+struct EntryAccess : Entry { using Entry::destroyHelper; };
+} } }
 
-// The render tree entry's destroyHelper (Render::ContextImpl::Entry is not usable in this unit).
-void FUN_142581700(void* pentry);
+namespace Scaleform { namespace GFx { namespace AS2 {
 
 // MS2-FUNCTIONAL: the raw members are released by hand; the exe drops +0x58/+0x50 before them and inlines
 // ASMovieRootBase's destructor, here a call
@@ -37,7 +44,7 @@ MovieRoot::~MovieRoot()
         pAS2Support->Release();
     UPInt* pentry = *reinterpret_cast<UPInt**>(Unrecovered_28);
     if (pentry && --pentry[1] == 0)
-        FUN_142581700(pentry);
+        reinterpret_cast<Render::ContextImpl::EntryAccess*>(pentry)->destroyHelper();
 }
 
 }}} // namespace Scaleform::GFx::AS2
