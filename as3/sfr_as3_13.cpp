@@ -1525,7 +1525,6 @@ namespace Instances { namespace fl_text
 // ---- fl_text: TextFormat string properties, TextField text and settings ----
 void* FUN_1425b91e0(void* ptf, void* ptext, bool html);    // TextField::GetText (builds an ASString in *ptext)
 static inline void FUN_1425bd9a0(void* ptf, const char* ptext, bool html, bool notifyVariable) { static_cast<Scaleform::GFx::TextField*>(ptf)->SetTextValue(ptext, html, notifyVariable); }  // TextField::SetTextValue
-bool  FUN_1425b9b10(void* ptf);                             // TextField::IsReadOnly
 static inline bool FUN_1425b9730(void * p0) { return (bool)(((const Scaleform::GFx::TextField*)(p0))->HasStyleSheet()); }                             // TextField::HasStyleSheet
 static inline Scaleform::String const & FUN_142606750(void const * p0) { return (Scaleform::String const &)(((const Scaleform::Render::Text::TextFormat*)(p0))->GetFontList()); }              // Render::Text::TextFormat::GetFontList
 static inline unsigned int const * FUN_142606b20(void const * p0, unsigned int * p1) { return (unsigned int const *)(((const Scaleform::Render::Text::ParagraphFormat*)(p0))->GetTabStops(p1)); }    // Render::Text::ParagraphFormat::GetTabStops

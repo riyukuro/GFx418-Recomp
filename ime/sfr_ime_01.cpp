@@ -25,6 +25,7 @@
 #include "../include/gfx/gfx_value.h"
 #include "../include/gfx/gfx_imemanager.h"
 #include "../include/gfx/gfx_event.h"
+#include "../include/gfx/gfx_textfield.h"
 #include "../include/gfx/as3/as3_support.h"
 #include "../include/gfx/xml/xml_object.h"
 #include "ms2/scaleform/kernel/sf_wstring.h"
@@ -161,7 +162,6 @@ extern "C" __declspec(noinline) void FUN_1423d9690(void*, void*, unsigned long l
 unsigned HashFunction(const char*, unsigned long long);
 void FUN_14257dcd0(void*);
 extern void FUN_14257dcb0(void*);
-extern bool FUN_1425b9b10(void*);
 extern "C" void FUN_1422fd480(void*, void*);
 extern "C" unsigned long long* FUN_1423cabb0(unsigned long long*, unsigned long long);
 extern "C" const unsigned long long DAT_14313b410;
@@ -765,7 +765,7 @@ void FUN_1423d5fd0(void* self)
 
 // Whether the movie's focused character accepts IME input: it locks the focus group's WeakPtr (dropping a dead proxy),
 // and accepts only a TextField (type 4) whose flag bits 11 and 2 are clear and that is not read-only
-// (FUN_1425b9b10 = TextField::IsReadOnly).
+// (TextField::IsReadOnly, 0x1425b9b10, called out of line).
 // The exe increments the inner reference before it loads the flag word; the compiler barrier keeps that order.
 // @0x1423cf570
 unsigned char FUN_1423cf570(void*, void* rawMovie)
@@ -788,7 +788,7 @@ unsigned char FUN_1423cf570(void*, void* rawMovie)
                         _ReadWriteBarrier();
                         // the TextField flag word at +0xfc: bit 11 and bit 2 block IME input
                         if (!(static_cast<unsigned char>(*reinterpret_cast<unsigned*>(field + 0xfc) >> 11) & 1) &&
-                            !FUN_1425b9b10(field))
+                            !reinterpret_cast<Scaleform::GFx::TextField*>(field)->IsReadOnly())
                             if (!(static_cast<unsigned char>(*reinterpret_cast<unsigned*>(field + 0xfc) >> 2) & 1))
                                 accepted = 1;
                         FUN_14257dcd0(field);
