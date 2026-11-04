@@ -66,7 +66,6 @@ TextFormatProto::TextFormatProto(ASStringContext* psc, Object* pprototype, const
     InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
 }
 
-void FUN_142606690(void* pthis);
 extern const void* DAT_14321d778[];
 extern const void* DAT_14321d7c0[];
 extern const void* DAT_14321d868[];
@@ -81,7 +80,7 @@ void* DeleteTextFormatProto(TextFormatProto* pthis, unsigned flags)
     *(const void**)((char*)p+0x20) = DAT_14321d7c0;
     *(const void**)((char*)p+0xd0) = DAT_14321d868;
     reinterpret_cast<GASPrototypeBase*>((char*)p+0xd0)->GASPrototypeBase::~GASPrototypeBase();
-    FUN_142606690((void*)((char*)p+0xb0));
+    reinterpret_cast<Render::Text::ParagraphFormat*>((char*)p+0xb0)->Render::Text::ParagraphFormat::~ParagraphFormat();
     ::FUN_1424aa0f0((void*)((char*)p+0x68));
     static_cast<Object*>(pthis)->Object::~Object();
     if (flags & 1)

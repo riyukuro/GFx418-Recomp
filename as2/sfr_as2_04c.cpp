@@ -115,9 +115,6 @@ template<> SF_NOINLINE Sfr04cHashProgress::~HashSetBase();  // 0x142924ab0
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-void FUN_142606690(void* pthis);
-void FUN_142925e70(void* pthis);
-void FUN_142925fb0(void* pthis);
 
 // The Prototype<X> destructors called by name emit these vftables here as well.
 // MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143215f60
@@ -601,7 +598,7 @@ void* DeleteAs2_14292cc00(void* p, unsigned flags)
 // @0x14292cc90
 void* DeleteAs2_14292cc90(void* p, unsigned flags)
 {
-    FUN_142925e70(p);
+    static_cast<SharedObject*>(p)->SharedObject::~SharedObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -802,7 +799,7 @@ void* DeleteAs2_14292d5b0(void* p, unsigned flags)
 // @0x14292d620
 void* DeleteAs2_14292d620(void* p, unsigned flags)
 {
-    FUN_142606690((void*)((char*)p+0xb0));
+    reinterpret_cast<Render::Text::ParagraphFormat*>((char*)p+0xb0)->Render::Text::ParagraphFormat::~ParagraphFormat();
     ::FUN_1424aa0f0((void*)((char*)p+0x68));
     static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
@@ -822,7 +819,7 @@ void* DeleteAs2_14292d6a0(void* p, unsigned flags)
     *(const void**)((char*)p+0x20) = DAT_14321d7c0;
     *(const void**)((char*)p+0xd0) = DAT_14321d868;
     reinterpret_cast<GASPrototypeBase*>((char*)p+0xd0)->GASPrototypeBase::~GASPrototypeBase();
-    FUN_142606690((void*)((char*)p+0xb0));
+    reinterpret_cast<Render::Text::ParagraphFormat*>((char*)p+0xb0)->Render::Text::ParagraphFormat::~ParagraphFormat();
     ::FUN_1424aa0f0((void*)((char*)p+0x68));
     static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
@@ -908,7 +905,7 @@ void* DeleteAs2_14292d8e0(void* p, unsigned flags)
 // @0x14292d950
 void* DeleteAs2_14292d950(void* p, unsigned flags)
 {
-    FUN_142925fb0(p);
+    static_cast<TransformObject*>(p)->TransformObject::~TransformObject();
     if (flags & 1)
     {
         if (!(flags & 4))

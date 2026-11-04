@@ -52,7 +52,7 @@ namespace Scaleform { class Range; } // gfx_textfield.h (WIP header) names Range
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The Prototype<TextFieldObject> dtor, called out of line (the real dtor inlines here: 9 -> 8 matched).
-void FUN_1429250a0(void* pthis);
+template<> SF_NOINLINE Prototype<TextFieldObject, Environment>::~Prototype();  // 0x1429250a0
 
 // The base vftables the inlined destructors store.
 extern const void* DAT_14317bc90[];
@@ -102,7 +102,7 @@ void* DeleteAs2_142928770(void* p, unsigned flags)
 // @0x142928800
 void* DeleteAs2_142928800(void* p, unsigned flags)
 {
-    FUN_1429250a0(p);
+    static_cast<Prototype<TextFieldObject, Environment>*>(p)->Prototype<TextFieldObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
