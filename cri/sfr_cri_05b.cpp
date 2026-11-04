@@ -308,7 +308,6 @@ void MPVCMC_InitMcOiRt(__int64); // C3: the definition's signature
 void MPVCMC_SetCcnt(__int64); // C3: the definition's signature
 char * CRICRW_Strcpy(char *dst,cri_u64 size,const char *src);  // C3: the definition's signature
 char * CRICRW_Strcat(char *dst,cri_u64 size,const char *src);  // C3: the definition's signature
-void FUN_1400674a0(const char *msg);
 void SJCRS_Init();
 void SJCRS_Finish();
 void SJCRS_Lock();
@@ -354,7 +353,7 @@ void thunk_FUN_140050670();
 cri_u32 thunk_FUN_14005b040();
 void thunk_FUN_14005b0b0();
 void thunk_FUN_140067390(Any a0);
-void thunk_FUN_1400afe60(Any a0);
+void thunk_FUN_1400afe60(const char *msg);  // C3: the definition's signature (sfr_cri_07)
 
 static __forceinline cri_u64 FUN_14004ddb0(Any a0) { return FUN_14004ddb0((cri_u64)a0.v); }
 static __forceinline void FUN_14004de60(Any a0) { FUN_14004de60((longlong)a0.v); }
@@ -451,7 +450,7 @@ void FUN_14004e5b0(cri_u64 a1,cri_u64 a2)
   char msg[64];
   CRICRW_Strcpy(msg,0x40,(const char *)a1);
   CRICRW_Strcat(msg,0x40,(const char *)a2);
-  FUN_1400674a0(msg);
+  thunk_FUN_1400afe60(msg);
 }
 
 // @0x14004e610
@@ -905,7 +904,7 @@ void FUN_14004ef20(cri_u64 a1,cri_u64 a2)
   char msg[64];
   CRICRW_Strcpy(msg,0x40,(const char *)a1);
   CRICRW_Strcat(msg,0x40,(const char *)a2);
-  FUN_1400674a0(msg);
+  thunk_FUN_1400afe60(msg);
 }
 
 // @0x14004ef80
