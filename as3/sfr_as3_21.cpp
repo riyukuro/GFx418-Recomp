@@ -1586,8 +1586,13 @@ void FUN_142551cb0(Scaleform::GFx::AS3::VectorBase<Scaleform::SInt32>& v, Scalef
 void FUN_1425526f0(Scaleform::GFx::AS3::VectorBase<Scaleform::GFx::AS3::Value>& v, Scaleform::GFx::AS3::Value& result, unsigned argc,
     const Scaleform::GFx::AS3::Value* argv,
     Scaleform::GFx::AS3::Instances::fl_vec::Vector_object& owner);
-// Traits::GetConstructor, out of line in the exe.
-const Scaleform::GFx::AS3::Class& FUN_142508490(const Scaleform::GFx::AS3::Traits* tr);
+// Traits::GetConstructor (0x142508490) through a member pointer: the exe calls the out-of-line copy.
+static __forceinline const Scaleform::GFx::AS3::Class& Sfr21GetConstructor(const Scaleform::GFx::AS3::Traits* tr)
+{
+    Scaleform::GFx::AS3::Class& (Scaleform::GFx::AS3::Traits::*getConstructor)() const =
+        &Scaleform::GFx::AS3::Traits::GetConstructor;
+    return (tr->*getConstructor)();
+}
 void FUN_142553170(Scaleform::GFx::AS3::VectorBase<Scaleform::UInt32>& v, Scaleform::GFx::AS3::Value& result, unsigned argc,
     const Scaleform::GFx::AS3::Value* argv,
     Scaleform::GFx::AS3::Instances::fl_vec::Vector_uint& owner);
@@ -1629,7 +1634,7 @@ void Vector_object::AS3sort(Value& result, unsigned argc, const Value* argv)
     vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm,
         argc ? vm.GetValueTraits(argv[0]).GetName().ToCStr() : "undefined",
         (*reinterpret_cast<ClassTraits::Traits* const*>(
-            reinterpret_cast<const char*>(&FUN_142508490(&GetTraits()).GetClassTraits()) + 0xc8))
+            reinterpret_cast<const char*>(&Sfr21GetConstructor(&GetTraits()).GetClassTraits()) + 0xc8))
             ->GetName().ToCStr()));
 }
 // @0x142559180
@@ -2865,7 +2870,7 @@ CheckResult Vector_object::SetProperty(const Multiname& prop_name, const Value& 
     UInt32 ind;
     if (GetVectorInd(prop_name, ind))
         return V.Set(ind, value, static_cast<const ClassTraits::fl_vec::Vector_object&>(
-            FUN_142508490(&GetTraits()).GetClassTraits()).GetEnclosedClassTraits());
+            Sfr21GetConstructor(&GetTraits()).GetClassTraits()).GetEnclosedClassTraits());
     VM& vm = GetVM();
     vm.ThrowReferenceError(VM::Error(VM::eWriteSealedError, vm, prop_name.Name, GetTraits().GetName().ToCStr()));
     return false;
@@ -2875,7 +2880,7 @@ CheckResult Vector_object::SetProperty(const Multiname& prop_name, const Value& 
 void Vector_object::AS3unshift(Value& result, unsigned argc, const Value* argv)
 {
     V.Unshift(argc, argv, static_cast<const ClassTraits::fl_vec::Vector_object&>(
-        FUN_142508490(&GetTraits()).GetClassTraits()).GetEnclosedClassTraits());
+        Sfr21GetConstructor(&GetTraits()).GetClassTraits()).GetEnclosedClassTraits());
     result.SetUInt32((UInt32)V.V.GetSize());
 }
 
@@ -3202,7 +3207,7 @@ MS2_VEC_CALL(Vector_double, p->GetVM().GetClassTraitsNumber())
 MS2_VEC_CALL(Vector_int, p->GetVM().GetClassTraitsSInt())
 // @0x14255abe0
 MS2_VEC_CALL(Vector_object, static_cast<const ClassTraits::fl_vec::Vector_object&>(
-    FUN_142508490(&p->GetTraits()).GetClassTraits()).GetEnclosedClassTraits())
+    Sfr21GetConstructor(&p->GetTraits()).GetClassTraits()).GetEnclosedClassTraits())
 // @0x14255ad80
 MS2_VEC_CALL(Vector_uint, p->GetVM().GetClassTraitsUInt())
 

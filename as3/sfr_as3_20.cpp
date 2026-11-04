@@ -920,15 +920,20 @@ void FUN_14254d380(Scaleform::GFx::AS3::VectorBase<Scaleform::UInt32>& v,
     Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_vec::Vector_uint>& result,
     const Scaleform::GFx::AS3::Value& callback, const Scaleform::GFx::AS3::Value& thisObject, Scaleform::GFx::AS3::Instances::fl_vec::Vector_uint& owner);
 
-// Traits::GetConstructor, out of line in the exe.
-const Scaleform::GFx::AS3::Class& FUN_142508490(const Scaleform::GFx::AS3::Traits* tr);
+// Traits::GetConstructor (0x142508490) through a member pointer: the exe calls the out-of-line copy.
+static __forceinline const Scaleform::GFx::AS3::Class& Sfr20GetConstructor(const Scaleform::GFx::AS3::Traits* tr)
+{
+    Scaleform::GFx::AS3::Class& (Scaleform::GFx::AS3::Traits::*getConstructor)() const =
+        &Scaleform::GFx::AS3::Traits::GetConstructor;
+    return (tr->*getConstructor)();
+}
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_vec {
 
 // The element type of a Vector.<T> of objects: ClassTraits::fl_vec::Vector_object keeps it at +0xc8.
 static const ClassTraits::Traits& GetEnclosedClassTraits(const Vector_object& v)
 {
-    const ClassTraits::Traits& ctr = FUN_142508490(&v.GetTraits()).GetClassTraits();
+    const ClassTraits::Traits& ctr = Sfr20GetConstructor(&v.GetTraits()).GetClassTraits();
     return **reinterpret_cast<ClassTraits::Traits* const*>(reinterpret_cast<const char*>(&ctr) + 0xc8);
 }
 
@@ -1583,7 +1588,7 @@ template <class I, class TR, typename T>
 static __forceinline void VectorConcat(VectorBase<T>& self, Value& result, unsigned argc, const Value* argv, I& owner)
 {
     VM& vm = self.VMRef;
-    const ClassTraits::Traits& currClassTR = FUN_142508490(&owner.GetTraits()).GetClassTraits();
+    const ClassTraits::Traits& currClassTR = Sfr20GetConstructor(&owner.GetTraits()).GetClassTraits();
     Pickable<I> pr = TR::MakeInstance(static_cast<TR&>(owner.GetTraits()));
     I& r = *pr.GetPtr();
     result.Pick(pr);
