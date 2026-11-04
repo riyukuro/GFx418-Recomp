@@ -28,6 +28,7 @@
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/as2/as2_loadqueueentry.h"
 #include "../include/gfx/gfx_assupport.h"
+#include "../include/gfx/gfx_playertasks.h"
 
 void FUN_14257dc30(void* p);  // RefCountImpl::AddRef (a global FUN_ in the exe)
 void FUN_14257dcb0(void* p);  // RefCountImpl::Release (a global FUN_ in the exe)
@@ -44,8 +45,6 @@ extern const void* DAT_143217768[]; // XML file task
 extern const void* DAT_143217780[]; // GFxAS2LoadQueueEntryMT_LoadXML
 extern const void* DAT_143217798[]; // CSS file task
 extern const void* DAT_1432177b0[]; // GFxAS2LoadQueueEntryMT_LoadCSS
-
-void FUN_1426396b0(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie); // LoadQueueEntryMT::LoadQueueEntryMT
 
 typedef GFxAS2LoadQueueEntry::HolderType HolderType;
 
@@ -124,7 +123,7 @@ static void* ConstructFileEntry(void* self, const void** pvftable, LoadQueueEntr
                                 const void** ptaskVftable, UPInt taskSize, const HolderType& holder)
 {
     UPInt* w = static_cast<UPInt*>(self);
-    FUN_1426396b0(self, pentry, proot->pMovieImpl);
+    static_cast<LoadQueueEntryMT*>(self)->LoadQueueEntryMT::LoadQueueEntryMT(pentry, proot->pMovieImpl);
     w[0] = reinterpret_cast<UPInt>(pvftable);
     w[5] = 0;
     w[6] = 0;
@@ -140,7 +139,7 @@ void* FUN_14291c400(void* self, LoadQueueEntry* pentry, MovieRoot* proot)
 {
     UPInt*           w     = static_cast<UPInt*>(self);
     GFxAS2LoadQueueEntry* pas2 = static_cast<GFxAS2LoadQueueEntry*>(pentry);
-    FUN_1426396b0(self, pentry, proot->pMovieImpl);
+    static_cast<LoadQueueEntryMT*>(self)->LoadQueueEntryMT::LoadQueueEntryMT(pentry, proot->pMovieImpl);
     w[0] = reinterpret_cast<UPInt>(DAT_1432177b0);
     w[5] = 0;
     w[6] = 0;
@@ -170,7 +169,7 @@ void* FUN_14291c910(void* self, LoadQueueEntry* pentry, MovieRoot* proot)
 {
     UPInt*           w     = static_cast<UPInt*>(self);
     GFxAS2LoadQueueEntry* pas2 = static_cast<GFxAS2LoadQueueEntry*>(pentry);
-    FUN_1426396b0(self, pentry, proot->pMovieImpl);
+    static_cast<LoadQueueEntryMT*>(self)->LoadQueueEntryMT::LoadQueueEntryMT(pentry, proot->pMovieImpl);
     w[0] = reinterpret_cast<UPInt>(DAT_143217780);
     w[5] = 0;
     w[6] = 0;
@@ -211,7 +210,7 @@ void* FUN_14291c690(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie)
 {
     UPInt*                w    = static_cast<UPInt*>(self);
     UByte*                b    = static_cast<UByte*>(self);
-    FUN_1426396b0(self, pentry, pmovie);
+    static_cast<LoadQueueEntryMT*>(self)->LoadQueueEntryMT::LoadQueueEntryMT(pentry, pmovie);
     w[0]                                    = reinterpret_cast<UPInt>(DAT_143217750);
     w[5]                                    = 0;
     w[6]                                    = 0;
