@@ -3378,7 +3378,6 @@ namespace Instances { namespace fl_display
         result = pContextMenu;
     }
 
-    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<Object>::operator= instance (0x14243d870); ours inlines it
     // @0x142449140
     void InteractiveObject::contextMenuSet(const Value& result, const Value& value)
     {
@@ -4089,14 +4088,12 @@ namespace Instances { namespace fl_display
         return result;
     }
 
-    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<LoaderInfo>::operator= instance (0x14243d800); ours inlines it
     // @0x142449020
     void Loader::contentLoaderInfoGet(SPtr<Instances::fl_display::LoaderInfo>& result)
     {
         result = pContentLoaderInfo;
     }
 
-    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<LoaderInfo>::operator= instance (0x14243d800); ours inlines it
     // @0x142448ff0
     SPtr<Instances::fl_display::LoaderInfo> Loader::contentLoaderInfoGet()
     {
@@ -4105,14 +4102,12 @@ namespace Instances { namespace fl_display
         return result;
     }
 
-    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<DisplayObject>::operator= instance (0x14243d5d0); ours inlines it
     // @0x142448fe0
     void LoaderInfo::contentGet(SPtr<Instances::fl_display::DisplayObject>& result)
     {
         result = Content;
     }
 
-    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<DisplayObject>::operator= instance (0x14243d5d0); ours inlines it
     // @0x142448fb0
     SPtr<Instances::fl_display::DisplayObject> LoaderInfo::contentGet()
     {
@@ -4294,7 +4289,7 @@ namespace Instances { namespace fl_display
         }
     }
 
-    // MS2-FUNCTIONAL: exe strips the collectible tag of the child's AS3 object with branches; ours with cmov
+    // MS2-FUNCTIONAL: register allocation (exe keeps this in rbp and the index in r14; ours swaps them)
     // @0x142451ef0
     SF_NOINLINE void DisplayObjectContainer::removeChildAt(SPtr<Instances::fl_display::DisplayObject>& result, SInt32 index)
     {
@@ -4708,7 +4703,6 @@ namespace Instances { namespace fl_display
 #pragma strict_gs_check(pop)
 
     // The difference of two equally sized bitmaps as a new BitmapData; -3 / -4 when the widths / heights differ.
-    // MS2-FUNCTIONAL: register assignment (exe keeps this in rdi and result in rsi; ours rsi / rbp)
     // @0x142448d10
     void BitmapData::compare(Value& result, Instances::fl_display::BitmapData* otherBitmapData)
     {

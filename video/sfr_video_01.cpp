@@ -2428,41 +2428,6 @@ void FUN_14000d680(Scaleform::GFx::AS2::Object* object)
     object->Object::~Object();
 }
 
-// Prototype<>::GetMemberRaw (as sfr_as2_07b's Prototype<SoundObject>): "__constructor__" and "constructor" go to
-// the prototype part at `protoOffset`, other names to Object. The builtin names come through
-// GlobalContext::GetStringManager (out of line) and compare case-insensitively for SWF 6 and older.
-// `subobject` is the ObjectInterface subobject (the vtable slot's this); the complete Object starts 0x20 before it.
-// Force-inlined into the void views; the template offset folds as a constant.
-template<Scaleform::UPInt protoOffset>
-static __forceinline bool PrototypeGetMemberRaw(Scaleform::GFx::AS2::Object* subobject,
-                                                Scaleform::GFx::AS2::ASStringContext* psc,
-                                                const Scaleform::GFx::ASString& name,
-                                                Scaleform::GFx::AS2::Value* val)
-{
-    using namespace Scaleform::GFx::AS2;
-    bool isConstructor2 = psc->pContext->GetStringManager()->GetBuiltin(ASBuiltin___constructor__)
-                              .CompareBuiltIn_CaseCheck(name, psc->IsCaseSensitive());
-    if (isConstructor2 || psc->pContext->GetStringManager()->GetBuiltin(ASBuiltin_constructor)
-                              .CompareBuiltIn_CaseCheck(name, psc->IsCaseSensitive()))
-    {
-        return reinterpret_cast<GASPrototypeBase*>(reinterpret_cast<unsigned char*>(subobject) + protoOffset)
-            ->GetMemberRawConstructor(reinterpret_cast<Object*>(reinterpret_cast<unsigned char*>(subobject) - 0x20),
-                                      psc, name, val, isConstructor2);
-    }
-    return reinterpret_cast<Object*>(reinterpret_cast<unsigned char*>(subobject) - 0x20)->Object::GetMemberRaw(psc, name, val);
-}
-
-// MS2-FUNCTIONAL: resolves constructor and prototype properties from the embedded video prototype. Only the
-// registers of the first lowercase compare differ (exe rcx/rax, ours rdx/rcx).
-// @0x14000d760
-void FUN_14000d760(Scaleform::GFx::AS2::Object* subobject,
-                   Scaleform::GFx::AS2::ASStringContext* context,
-                   const Scaleform::GFx::ASString* name,
-                   Scaleform::GFx::AS2::Value* result)
-{
-    PrototypeGetMemberRaw<0x50>(subobject, context, *name, result);
-}
-
 struct VideoObjectGcAccess : Scaleform::GFx::AS2::Object
 {
     using Object::ForEachChild_GC;
@@ -2807,17 +2772,6 @@ void FUN_14000afd0(void* owner)
     Scaleform::String::DataDesc* data = reinterpret_cast<Scaleform::String::DataDesc*>(
         (*reinterpret_cast<Scaleform::UPInt*>(bytes + 8)) & ~Scaleform::UPInt(3));
     data->Release();   // a String's data is never null
-}
-
-// MS2-FUNCTIONAL: routes prototype constructor names to GASPrototypeBase and delegates other names. Only the
-// registers of the first lowercase compare differ (exe rcx/rax, ours rdx/rcx).
-// @0x14000a110
-void FUN_14000a110(Scaleform::GFx::AS2::Object* subobject,
-                   Scaleform::GFx::AS2::ASStringContext* context,
-                   const Scaleform::GFx::ASString* name,
-                   Scaleform::GFx::AS2::Value* result)
-{
-    PrototypeGetMemberRaw<0xb8>(subobject, context, *name, result);
 }
 
 namespace Scaleform { namespace GFx { namespace Video {
@@ -4015,6 +3969,38 @@ protected:
 
     WeakPtr<InteractiveObject> pCharacter;   // +0x68
 };
+
+// "constructor" and "__constructor__" are answered by the prototype part (as sfr_as2_07b's Prototype<SoundObject>).
+// @0x14000a110
+template<>
+bool Prototype<NetStream>::GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val)
+{
+    // The builtins come through GlobalContext::GetStringManager here (not inlined into this file).
+    bool isConstructor2 = psc->pContext->GetStringManager()->GetBuiltin(ASBuiltin___constructor__)
+                              .CompareBuiltIn_CaseCheck(name, psc->IsCaseSensitive());
+    if (isConstructor2 || psc->pContext->GetStringManager()->GetBuiltin(ASBuiltin_constructor)
+                              .CompareBuiltIn_CaseCheck(name, psc->IsCaseSensitive()))
+    {
+        return GetMemberRawConstructor(this, psc, name, val, isConstructor2);
+    }
+    return NetStream::GetMemberRaw(psc, name, val);
+}
+
+// "constructor" and "__constructor__" are answered by the prototype part.
+// @0x14000d760
+template<>
+bool Prototype<VideoObject>::GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val)
+{
+    // The builtins come through GlobalContext::GetStringManager here (not inlined into this file).
+    bool isConstructor2 = psc->pContext->GetStringManager()->GetBuiltin(ASBuiltin___constructor__)
+                              .CompareBuiltIn_CaseCheck(name, psc->IsCaseSensitive());
+    if (isConstructor2 || psc->pContext->GetStringManager()->GetBuiltin(ASBuiltin_constructor)
+                              .CompareBuiltIn_CaseCheck(name, psc->IsCaseSensitive()))
+    {
+        return GetMemberRawConstructor(this, psc, name, val, isConstructor2);
+    }
+    return VideoObject::GetMemberRaw(psc, name, val);
+}
 
 // The Video class (constructor function).
 class VideoCtorFunction : public CFunctionObject
