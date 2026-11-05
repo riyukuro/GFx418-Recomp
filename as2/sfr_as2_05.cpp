@@ -1057,8 +1057,12 @@ void ObjectProto::GlobalCtor(const FnCall& fn)
     fn.Result->SetAsObject(pobj.GetPtr());
 }
 
+inline FunctionObject::FunctionObject(Environment* penv, ObjectInlineCtorTag) : Object(penv) {}
+inline CFunctionObject::CFunctionObject(Environment* penv, ObjectInlineCtorTag)
+    : FunctionObject(penv, ObjectInlineCtorTag()), pFunction(0) {}
+
 // @0x14295ae40
-// MS2-FUNCTIONAL the exe inlines CFunctionObject(Environment*) (0x142919db0, out of line in as2_object.h); ours calls it
+// The exe inlines CFunctionObject(Environment*) (0x142919db0) here: the ObjectInlineCtorTag variant.
 void FunctionProto::GlobalCtor(const FnCall& fn)
 {
     if (fn.NArgs == 1)
@@ -1071,7 +1075,7 @@ void FunctionProto::GlobalCtor(const FnCall& fn)
     }
     else
     {
-        Ptr<CFunctionObject> pfunc = *SF_HEAP_NEW(fn.Env->GetHeap()) CFunctionObject(fn.Env);
+        Ptr<CFunctionObject> pfunc = *SF_HEAP_NEW(fn.Env->GetHeap()) CFunctionObject(fn.Env, ObjectInlineCtorTag());
         fn.Result->SetAsObject(pfunc.GetPtr());
     }
 }

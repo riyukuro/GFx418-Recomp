@@ -388,6 +388,7 @@ protected:
     FunctionObject(ASStringContext* psc); // exe 0x14291c090
     FunctionObject(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_04
     FunctionObject(Environment* penv); // exe 0x14291c0c0
+    FunctionObject(Environment* penv, ObjectInlineCtorTag); // inline in sfr_as2_05
 };
 
 // Native function. 0x70 bytes.
@@ -416,6 +417,7 @@ protected:
     CFunctionObject(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_04
     // A function object without a native (new Function()).
     CFunctionObject(Environment* penv); // exe 0x142919db0
+    CFunctionObject(Environment* penv, ObjectInlineCtorTag); // inline in sfr_as2_05 (FunctionProto::GlobalCtor)
 
 public:
     // A native function object (exe 0x142919df0).
