@@ -2868,8 +2868,8 @@ void AvmTextField::ReplaceTextA(const FnCall& fn)
     UPInt       textLen  = reinterpret_cast<Render::Text::StyledText*>(DocView_GetStyledText(ptf->GetDocument()))->GetLength();
     UPInt       newLen   = UPInt(len) - UPInt(endPos - startPos) + textLen;
     void*       pdoc = ptf->GetDocument();
-    const void* ptextFmt = 0;
-    const void* pparaFmt = 0;
+    const void* ptextFmt; // both branches set them (the exe has no zero init)
+    const void* pparaFmt;
     if (startPos >= textLen)
     {
         ptextFmt = StyledText_GetDefaultTextFormat(DocView_GetStyledText(pdoc));
