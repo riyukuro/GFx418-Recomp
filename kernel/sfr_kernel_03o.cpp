@@ -10,6 +10,7 @@
 
 #include "../gfx/sfr_gfx_07raw.h"
 #include "ms2/scaleform/include/kernel/sf_refcount.h"
+#include "ms2/scaleform/include/sound/sound_renderer.h"
 #include <windows.h>
 #include <intrin.h>
 #include "fmod44464/api/inc/fmod.hpp"
@@ -43,7 +44,6 @@ extern "C" char DAT_1431bef00[];   // buffered sound
 extern "C" char DAT_1431bef38[];
 extern "C" char DAT_1431bee50[];   // streamed sound
 extern "C" char DAT_1431bee68[];
-extern "C" char DAT_1431b80b8[];
 
 extern "C" void FUN_142746d70(void*);       // audio channel: stop
 extern "C" void FUN_142747b30(void*);       // audio event listener: shut down
@@ -224,8 +224,7 @@ void FUN_142743870(void* self)
     if (RawField<void*>(self, 0x28))
         RawRefCountNTSRelease(RawField<void*>(self, 0x28));
     RawField<void*>(self, 0x10) = DAT_1431bec40;
-    RawField<void*>(self, 0) = DAT_1431b80b8;
-    RawRefCountCoreDtor(self);
+    reinterpret_cast<Sound::SoundRenderer::AuxStreamer*>(self)->Sound::SoundRenderer::AuxStreamer::~AuxStreamer();
 }
 
 // ArrayBase<ArrayData<VideoPlayerImpl*>>::operator=: shrinks below half capacity, grows by a quarter, then copies.
@@ -313,3 +312,4 @@ void* FUN_1427439c4(void* self, unsigned flags)
 }
 
 }} // namespace Scaleform::GFx
+// MS2-PIN: ??_7AuxStreamer@SoundRenderer@Sound@Scaleform@@6B@ 0x1431b80b8
