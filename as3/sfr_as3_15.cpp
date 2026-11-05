@@ -135,7 +135,7 @@ struct MS2_ImageSubstElement                // 0x38 bytes
     wchar_t              SubString[20];
     Ptr<RefCountNTSImpl> pImageDesc;        // +0x28
     UByte                SubStringLen;
-};
+}; template<> ArrayDataBase<MS2_ImageSubstElement, AllocatorLH<MS2_ImageSubstElement, 2>, ArrayDefaultPolicy>::~ArrayDataBase();   // exe 0x1424c7090, out of line (sfr_as3_14 owns it)
 // Text::ImageDesc (a RefCountBaseNTS): only its image is touched here.
 struct MS2_TextImageDesc : public RefCountNTSImpl
 {
@@ -143,7 +143,7 @@ struct MS2_TextImageDesc : public RefCountNTSImpl
 };
 struct MS2_ImageSubstitutor : public NewOverrideBase<Stat_Default_Mem>
 {
-    ~MS2_ImageSubstitutor();                // out of line in the exe: the Elements destructor 0x1424c7090
+    // (C3) implicit dtor: the exe ~MS2_ImageSubstitutor is the Elements destructor 0x1424c7090 itself
     ArrayLH<MS2_ImageSubstElement> Elements;
 };
 // StyledText::HTMLImageTagInfo: the render Text headers do not mix with this kernel tree, so the same stand-in as
