@@ -989,20 +989,16 @@ void FUN_1424df380(void* p);            // VM::~VM
 static inline char* Sfr21At(void* p, UPInt off) { return static_cast<char*>(p) + off; }
 static inline void* Sfr21Mem(void* p, UPInt off) { return *reinterpret_cast<void**>(Sfr21At(p, off)); }
 // The base vftables the inlined base destructors store before the out-of-line base destructor runs.
-extern const void* DAT_14313f368[];     // RefCountBaseGC<323>
 extern const void* DAT_14317c9f8[];     // RefCountBase<ASIntervalTimerIntf, 323>
-extern const void* DAT_14317b798[];     // FileLoader
 extern const void* DAT_14317c9e0[];     // GFx::MovieDefRootNode
 extern const void* DAT_14317b7b8[];     // XMLSupport
 extern const void* DAT_14317afe8[];     // empty interface (0x1424e2e70)
-extern const void* DAT_14317b040[];     // RefCountCollector<323>
 extern const void* DAT_14317b750[];     // VMAbcFile
 extern const void* DAT_14317bc40[];     // TreeShape::NodeData
 extern const void* DAT_14317bde0[];     // ASMovieRootBase
 // ShapeObject (79 slots, data_rdata_sf_b). Not a DAT_14317c210 extern: that name binds to sfr_as3_15's one-slot
 // ??_7ShapeObject view table in the fullexe.
 extern void* const ShapeObject_vftable[];
-extern const void* DAT_14317c9d0[];     // Text::Allocator
 extern const void* DAT_14317d220[];     // Stage
 extern const void* DAT_14317d5f0[];     // Stage +0x18
 extern const void* DAT_14317d8a8[];     // ASVM::AbcFileWithMovieDef
@@ -1054,15 +1050,6 @@ static void Sfr21GValue(void* p, UPInt off)
 {
     reinterpret_cast<Value*>(Sfr21At(p, off))->~Value();
 }
-static void Sfr21GCollector(void* p)
-{
-    static_cast<Scaleform::GFx::AS3::ASRefCountCollector*>(p)->Collect(0);
-    Sfr21GPtr(p, 0x80);
-    FUN_1424dcce0(Sfr21At(p, 0x70));
-    Sfr21GVft(p, 0x48, DAT_14313f368);
-    static_cast<Scaleform::GFx::AS3::ASRefCountCollector*>(p)->Roots.ClearAndRelease();
-    static_cast<Scaleform::RefCountImplCore*>(p)->Scaleform::RefCountImplCore::~RefCountImplCore();
-}
 static void Sfr21GShapeData(void* p)
 {
     FUN_1424dc350(Sfr21At(p, 0x30));
@@ -1083,7 +1070,7 @@ static void Sfr21GNodeData(void* p)
 
 // ASRefCountCollector
 // @0x1424e2290
-void* DeleteAs3_1424e2290(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317b040); Sfr21GCollector(p); Sfr21GFree(p, flags, 0xb8); return p; }
+void* DeleteAs3_1424e2290(void* p, unsigned flags) { static_cast<Scaleform::GFx::AS3::RefCountCollector<323>*>(p)->Scaleform::GFx::AS3::RefCountCollector<323>::~RefCountCollector(); Sfr21GFree(p, flags, 0xb8); return p; }
 
 // @0x1424e2420
 void* DeleteAs3_1424e2420(void* p, unsigned flags)
@@ -1100,11 +1087,7 @@ void* DeleteAs3_1424e2420(void* p, unsigned flags)
 // @0x1424e2520
 void* DeleteAs3_1424e2520(void* p, unsigned flags)
 {
-    Sfr21GVft(p, 0, DAT_14317c9d0);
-    FUN_1424aa0f0(Sfr21At(p, 0x38));
-    reinterpret_cast<Scaleform::SfrHsPf*>(Sfr21At(p, 0x18))->~HashSetBase();
-    reinterpret_cast<Scaleform::SfrHsTf*>(Sfr21At(p, 0x10))->~HashSetBase();
-    static_cast<Scaleform::RefCountNTSImplCore*>(p)->Scaleform::RefCountNTSImplCore::~RefCountNTSImplCore();
+    static_cast<Scaleform::Render::Text::Allocator*>(p)->Scaleform::Render::Text::Allocator::~Allocator();
     Sfr21GFree(p, flags, 0x88);
     return p;
 }
@@ -1167,7 +1150,7 @@ void* DeleteAs3_1424e2ce0(void* p, unsigned flags)
 
 // an empty interface (8 bytes), operator delete
 // @0x1424e2d80
-void* DeleteAs3_1424e2d80(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317b798); if (flags & 1) ::operator delete(p, 8); return p; }
+void* DeleteAs3_1424e2d80(void* p, unsigned flags) { static_cast<FileLoader*>(p)->FileLoader::~FileLoader(); if (flags & 1) ::operator delete(p, 8); return p; }
 
 // @0x1424e2e70
 void* DeleteAs3_1424e2e70(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317afe8); if (flags & 1) ::operator delete(p, 8); return p; }
@@ -1199,7 +1182,7 @@ void* DeleteAs3_1424e2f10(void* p, unsigned flags)
 // @0x1424e3260
 void* DeleteAs3_1424e3260(void* p, unsigned flags)
 {
-    Sfr21GVft(p, 0, DAT_14317b798);
+    static_cast<FileLoader*>(p)->FileLoader::~FileLoader();
     if (flags & 1)
         ::operator delete(p, 8);
     return p;
@@ -1703,6 +1686,8 @@ Unk_As3_16zTimerIntfProbe::Unk_As3_16zTimerIntfProbe() {}
 
 }} // namespace Scaleform::GFx
 
+// MS2-PIN: ??_7FileLoader@AS3@GFx@Scaleform@@6B@ 0x14317b798
+// MS2-PIN: ??_7Allocator@Text@Render@Scaleform@@6B@ 0x14317c9d0
 // MS2-PIN: ??_GFrameCounter@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2de0
 // MS2-FUNCTIONAL 0x1424e3ac0: the exe's ??_G inlines the weak-reference release of mValue, ours calls it.
 // MS2-PIN: ??_GStickyVarNode@MovieRoot@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3ac0
