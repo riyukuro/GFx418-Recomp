@@ -4114,18 +4114,18 @@ void DateCtorFunction::GlobalCtor(const FnCall& fn)
         pdate->SetDate((SInt64)fn.Arg(0).ToNumber(fn.Env));
     else if (fn.NArgs >= 2)
     {
+        int time = 0;
         int year = (int)fn.Arg(0).ToNumber(fn.Env);
         // The exe tests the year unsigned (cmova), so a negative year is left as is.
         if ((unsigned)year <= 99)
             year += 1900;
-        int start = Date_StartOfYear(year);
-        int date  = start;
+        int date = Date_StartOfYear(year);
+        // LJDate below takes Date_StartOfYear(year) again (the exe keeps its terms, not one start value)
         int month = (int)fn.Arg(1).ToNumber(fn.Env);
         if (month)
             date += DateMonthEnds[IsLeapYear(year)][month - 1];
         if (fn.NArgs >= 3)
             date += (int)fn.Arg(2).ToNumber(fn.Env) - 1;
-        int time = 0;
         if (fn.NArgs >= 4)
             time = (int)fn.Arg(3).ToNumber(fn.Env) * 3600000;
         if (fn.NArgs >= 5)
@@ -4136,7 +4136,7 @@ void DateCtorFunction::GlobalCtor(const FnCall& fn)
             time += (int)fn.Arg(6).ToNumber(fn.Env);
         pdate->LYear  = year;
         pdate->LTime  = time;
-        pdate->LJDate = date - start;
+        pdate->LJDate = date - Date_StartOfYear(year);
         pdate->LDate  = (SInt64)date * 86400000 + time;
         pdate->UpdateGMT();
         pdate->SetDate(pdate->Date);
