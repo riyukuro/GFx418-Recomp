@@ -546,7 +546,7 @@ void m2vidct_SetFunctionPtr(cri_any = cri_any());
 void M2VIDCT_SetWork(cri_any = cri_any());
 void M2VIDCT_SetFunction(cri_u8);
 void FUN_1400544b0();
-void FUN_1400544e0(cri_any = cri_any());
+void FUN_1400544e0(void* = 0);
 void m2vhdec_SetPicAtr(cri_any = cri_any());
 void resetQuantiserMatrix(longlong arg1);
 void calcHvSize(cri_any = cri_any());
@@ -852,9 +852,8 @@ void FUN_1400544b0()
 }
 
 // @0x1400544e0
-void FUN_1400544e0(cri_any cri_p0)
+void FUN_1400544e0(void* arg1)
 {
-  void *arg1 = cri_p0;
   memset(arg1,0,0xd58);
   *(cri_u4 *)((longlong)arg1 + 0x24c) = 1;
   *(cri_u4 *)((longlong)arg1 + 0x270) = 0;

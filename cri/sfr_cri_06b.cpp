@@ -518,7 +518,7 @@ void m2vidct_SetFunctionPtr(cri_any = cri_any());
 void M2VIDCT_SetWork(cri_any = cri_any());
 void M2VIDCT_SetFunction(cri_u8);
 void FUN_1400544b0();
-void FUN_1400544e0(cri_any = cri_any());
+void FUN_1400544e0(void* = 0);
 void m2vhdec_SetPicAtr(cri_any = cri_any());
 void calcHvSize(cri_any = cri_any());
 void calcNumberOfFrameCentreOffsets(cri_any = cri_any());
@@ -697,7 +697,7 @@ void M2VIDCT_SetFunction(cri_u8 arg1);
 
 void FUN_1400544b0();
 
-void FUN_1400544e0(cri_any cri_p0);
+void FUN_1400544e0(void* arg1);
 
 void FUN_140054590(void* pCtx, int nIndex, cri_u8 a3, cri_u8 a4, cri_u8 a5);
 
