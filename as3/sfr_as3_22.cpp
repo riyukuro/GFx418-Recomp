@@ -2466,13 +2466,13 @@ static void ReserveHeapArray(void** array, void* heapOwner, std::size_t requeste
 
 
 static SF_INLINE void Sfr22ReserveGH(void** array, const void* pheapAddr, std::size_t requested);
-
-// MS2-FUNCTIONAL: the exe builds the AllocInfo in the fourth parameter's home slot (0x48), ours in the third's (0x40)
-// @0x142678170
-void ReserveGlobalPointerArray(void** array, void* heap, std::size_t requested)
-{
-    Sfr22ReserveGH(array, heap, requested);
-}
+struct Sfr22GlobalPtrSlot { void* p; }; struct Sfr22VideoPlayerSlot { void* p; };
+// 0x142678170 is the SDK ArrayDataBase<T, AllocatorGH<T, 2>, ArrayDefaultPolicy>::Reserve for an 8-byte T (local stand-in
+// Sfr22GlobalPtrSlot); the exe has one copy per element type. It has no callers outside the exe vtables.
+template void Scaleform::ArrayDataBase<Sfr22GlobalPtrSlot, Scaleform::AllocatorGH<Sfr22GlobalPtrSlot, 2>, Scaleform::ArrayDefaultPolicy>::Reserve(const void* pheapAddr, Scaleform::UPInt newCapacity);
+// MS2-PIN: ?Reserve@?$ArrayDataBase@USfr22GlobalPtrSlot@Scaleform@@U?$AllocatorGH@USfr22GlobalPtrSlot@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x142678170 ; unique
+//
+//
 
 
 
@@ -2719,12 +2719,12 @@ static SF_INLINE void Sfr22ReserveGH(void** array, const void* pheapAddr, std::s
     }
 }
 
-// MS2-FUNCTIONAL: the exe builds the AllocInfo in the fourth parameter's home slot (0x48), ours in the third's (0x40)
-// @0x1427463e0
-void ReserveVideoPlayerArray(void** array, void* heap, std::size_t requested)
-{
-    Sfr22ReserveGH(array, heap, requested);
-}
+// 0x1427463e0 is Reserve for the VideoPlayerImpl* array (stand-in Sfr22VideoPlayerSlot). sfr_as2_01g / sfr_kernel_03o
+// call it through this out-of-line wrapper.
+#pragma inline_depth(0)
+void ReserveVideoPlayerArray(void** array, void* heap, std::size_t requested) { reinterpret_cast<Scaleform::ArrayDataBase<Sfr22VideoPlayerSlot, Scaleform::AllocatorGH<Sfr22VideoPlayerSlot, 2>, Scaleform::ArrayDefaultPolicy>*>(array)->Reserve(heap, requested); }
+#pragma inline_depth()
+// MS2-PIN: ?Reserve@?$ArrayDataBase@USfr22VideoPlayerSlot@Scaleform@@U?$AllocatorGH@USfr22VideoPlayerSlot@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1427463e0 ; unique
 
 // Initializes an empty hash table at eight slots and doubles it when live entries exceed its 80 percent load threshold.
 // @0x142689ec0
