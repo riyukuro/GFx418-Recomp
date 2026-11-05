@@ -4255,8 +4255,8 @@ namespace Scaleform { namespace Render {
 template<class T>
 void Matrix2x4<T>::TransformByInverse(Point<T>* result, const Point<T>& p) const
 {
-    Matrix2x4 m(*this);
-    m.Invert();
+    Matrix2x4 c(*this), m; T det = c.M[0][0] * c.M[1][1] - c.M[0][1] * c.M[1][0];   // m.Invert() written out: the exe inlines Invert + SetInverse
+    if (det == 0) { m.SetIdentity(); m.M[0][3] = -c.M[0][3]; m.M[1][3] = -c.M[1][3]; } else { T inv = 1 / det; m.M[0][0] = c.M[1][1] * inv; m.M[1][1] = c.M[0][0] * inv; m.M[0][1] = -c.M[0][1] * inv; m.M[1][0] = -c.M[1][0] * inv; m.M[0][3] = -(m.M[0][0] * c.M[0][3] + m.M[0][1] * c.M[1][3]); m.M[1][3] = -(m.M[1][0] * c.M[0][3] + m.M[1][1] * c.M[1][3]); }
     result->x = m.M[0][0] * p.x + m.M[0][1] * p.y + m.M[0][3];
     result->y = m.M[1][0] * p.x + m.M[1][1] * p.y + m.M[1][3];
 }
