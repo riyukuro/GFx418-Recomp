@@ -30,8 +30,6 @@ extern ExeDecl<void*>::type DAT_1431b5938;
 #define VideoProtoBaseVtable DAT_1431b5938
 extern ExeDecl<void*>::type DAT_1431b4be0;
 #define VideoSoundStreamVtable DAT_1431b4be0
-extern ExeDecl<void*>::type DAT_1431b4b80;
-#define VideoSoundVtable DAT_1431b4b80
 extern ExeDecl<void*>::type DAT_1431b4ce0;
 #define VideoSoundChannelSystemVtable DAT_1431b4ce0
 extern ExeDecl<void*>::type DAT_1431b5cb0;
@@ -294,8 +292,7 @@ void FUN_140002ab0(void* stream)
     void** channelSlot = reinterpret_cast<void**>(bytes + 0x10);
     *reinterpret_cast<void**>(static_cast<unsigned char*>(*channelSlot) + 0x10) = 0;
     if (*channelSlot) FUN_14257dcb0(*channelSlot);
-    *reinterpret_cast<void***>(bytes) = &VideoSoundVtable;
-    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(stream)->RefCountNTSImplCore::~RefCountNTSImplCore();
+    static_cast<Scaleform::GFx::Video::VideoSound*>(stream)->Scaleform::GFx::Video::VideoSound::~VideoSound();
 }
 
 // the stream's sound channel.
@@ -1183,8 +1180,7 @@ void* FUN_140006240(void** weakSlot)
 // @0x140002a60
 void* FUN_140002a60(void* object, unsigned flags)
 {
-    *static_cast<void***>(object) = &VideoSoundVtable;
-    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
+    static_cast<Scaleform::GFx::Video::VideoSound*>(object)->Scaleform::GFx::Video::VideoSound::~VideoSound();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -1216,8 +1212,7 @@ void* FUN_140002c10(void* object, unsigned flags)
     fields[0] = &VideoSoundStreamVtable;
     *reinterpret_cast<void**>(static_cast<unsigned char*>(fields[2]) + 0x10) = 0;
     if (fields[2]) FUN_14257dcb0(fields[2]);
-    fields[0] = &VideoSoundVtable;
-    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
+    static_cast<Scaleform::GFx::Video::VideoSound*>(object)->Scaleform::GFx::Video::VideoSound::~VideoSound();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -4380,3 +4375,4 @@ const char* ObjectInterface::GetTextValue(Environment*) const { return 0; }
 // MS2-PIN: ?GetNumArgs@CFunctionObject@AS2@GFx@Scaleform@@UEBAHXZ 0x14000ceb0
 // MS2-PIN: ?GetTextValue@ObjectInterface@AS2@GFx@Scaleform@@UEBAPEBDPEAVEnvironment@234@@Z 0x14000e370
 // MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
+// MS2-PIN: ??_7VideoSound@Video@GFx@Scaleform@@6B@ 0x1431b4b80
