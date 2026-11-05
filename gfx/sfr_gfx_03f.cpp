@@ -18,7 +18,7 @@
 // MS2-PIN: ?Reserve@?$ArrayDataBase@V?$RangeData@UUrlZone@CSSHolderBase@TextField@GFx@Scaleform@@@Scaleform@@U?$AllocatorGH@V?$RangeData@UUrlZone@CSSHolderBase@TextField@GFx@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1425bb990
 // MS2-PIN: ?Resize@?$ArrayData@V?$RangeData@UUrlZone@CSSHolderBase@TextField@GFx@Scaleform@@@Scaleform@@U?$AllocatorGH@V?$RangeData@UUrlZone@CSSHolderBase@TextField@GFx@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAX_K@Z 0x1425bbab0
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$StringLH_HashNode@V?$Ptr@UImageDesc@Text@Render@Scaleform@@@Scaleform@@UNoCaseHashFunctor@String@2@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@V?$Ptr@UImageDesc@Text@Render@Scaleform@@@Scaleform@@$01@2@V?$HashsetCachedNodeEntry@U?$StringLH_HashNode@V?$Ptr@UImageDesc@Text@Render@Scaleform@@@Scaleform@@UNoCaseHashFunctor@String@2@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x1425bf1a0
-
+#define ReplaceText ReplaceTextA   // commdlg.h's macro, as in the exe: the definer (sfr_render_03b) sees windows.h first
 #include "../include/gfx/gfx_textfield.h"
 #include "../include/gfx/gfx_movieimpl.h"
 #include "../include/gfx/gfx_fontmanager.h"
