@@ -3685,7 +3685,7 @@ void ColorMatrixFilterCtorFunction::GlobalCtor(const FnCall& fn)
     pfilter->SetMemberRaw(psc, psc->CreateConstString("matrix"), unset);
 }
 
-// MS2-FUNCTIONAL the exe inlines the BlurFilterObject(Environment*) ctor (sfr_as2_03)
+// the BlurFilterObject ctor is the inline ObjectInlineCtorTag one, as in the exe
 // @0x1429591e0
 void BlurFilterCtorFunction::GlobalCtor(const FnCall& fn)
 {
@@ -3693,7 +3693,7 @@ void BlurFilterCtorFunction::GlobalCtor(const FnCall& fn)
     if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_BlurFilter)
         pfilter = static_cast<BlurFilterObject*>(fn.ThisPtr);
     else
-        pfilter = *SF_HEAP_NEW(fn.Env->GetHeap()) BlurFilterObject(fn.Env);
+        pfilter = *SF_HEAP_NEW(fn.Env->GetHeap()) BlurFilterObject(fn.Env, ObjectInlineCtorTag());
     fn.Result->SetAsObject(pfilter.GetPtr());
 
     pfilter->writableFilterParams().Colors[0].SetAlpha(0xFF);
@@ -3711,9 +3711,9 @@ void BlurFilterCtorFunction::GlobalCtor(const FnCall& fn)
         }
     }
     ASStringContext* psc = fn.Env->GetSC();
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("blurX"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("blurY"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("quality"), Value(Value::UNSET));
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("blurX"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("blurY"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("quality"), v, flags); }
 }
 
 // The RGB part of a filter color, keeping its alpha.
@@ -3724,7 +3724,7 @@ static inline void SetFilterRGB(Render::Color& c, UInt32 rgb)
     c.SetAlpha(alpha);
 }
 
-// MS2-FUNCTIONAL the exe inlines the DropShadowFilterObject(Environment*) ctor (sfr_as2_03)
+// the DropShadowFilterObject ctor is the inline ObjectInlineCtorTag one, as in the exe
 // @0x14295a4b0
 void DropShadowFilterCtorFunction::GlobalCtor(const FnCall& fn)
 {
@@ -3732,7 +3732,7 @@ void DropShadowFilterCtorFunction::GlobalCtor(const FnCall& fn)
     if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_DropShadowFilter)
         pfilter = static_cast<DropShadowFilterObject*>(fn.ThisPtr);
     else
-        pfilter = *SF_HEAP_NEW(fn.Env->GetHeap()) DropShadowFilterObject(fn.Env);
+        pfilter = *SF_HEAP_NEW(fn.Env->GetHeap()) DropShadowFilterObject(fn.Env, ObjectInlineCtorTag());
     fn.Result->SetAsObject(pfilter.GetPtr());
 
     pfilter->writableFilterParams().Passes = 1;
@@ -3805,20 +3805,20 @@ void DropShadowFilterCtorFunction::GlobalCtor(const FnCall& fn)
         }
     }
     ASStringContext* psc = fn.Env->GetSC();
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("distance"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("angle"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("color"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("alpha"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("blurX"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("blurY"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("strength"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("knockout"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("hideObject"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("inner"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("quality"), Value(Value::UNSET));
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("distance"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("angle"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("color"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("alpha"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("blurX"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("blurY"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("strength"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("knockout"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("hideObject"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("inner"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("quality"), v, flags); }
 }
 
-// MS2-FUNCTIONAL the exe inlines the GlowFilterObject(Environment*) ctor (sfr_as2_03)
+// the GlowFilterObject ctor is the inline ObjectInlineCtorTag one, as in the exe
 // @0x14295b480
 void GlowFilterCtorFunction::GlobalCtor(const FnCall& fn)
 {
@@ -3826,7 +3826,7 @@ void GlowFilterCtorFunction::GlobalCtor(const FnCall& fn)
     if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_GlowFilter)
         pfilter = static_cast<GlowFilterObject*>(fn.ThisPtr);
     else
-        pfilter = *SF_HEAP_NEW(fn.Env->GetHeap()) GlowFilterObject(fn.Env);
+        pfilter = *SF_HEAP_NEW(fn.Env->GetHeap()) GlowFilterObject(fn.Env, ObjectInlineCtorTag());
     fn.Result->SetAsObject(pfilter.GetPtr());
 
     pfilter->SetDistance(0.0f);
@@ -3883,17 +3883,17 @@ void GlowFilterCtorFunction::GlobalCtor(const FnCall& fn)
         }
     }
     ASStringContext* psc = fn.Env->GetSC();
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("color"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("alpha"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("blurX"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("blurY"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("strength"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("knockout"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("inner"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("quality"), Value(Value::UNSET));
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("color"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("alpha"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("blurX"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("blurY"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("strength"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("knockout"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("inner"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("quality"), v, flags); }
 }
 
-// MS2-FUNCTIONAL the exe inlines the BevelFilterObject(Environment*) ctor (sfr_as2_03)
+// MS2-FUNCTIONAL inline ObjectInlineCtorTag ctor as in the exe; the rest is regalloc (r12 vs r15)
 // @0x142958720
 void BevelFilterCtorFunction::GlobalCtor(const FnCall& fn)
 {
@@ -3901,7 +3901,7 @@ void BevelFilterCtorFunction::GlobalCtor(const FnCall& fn)
     if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_BevelFilter)
         pfilter = static_cast<BevelFilterObject*>(fn.ThisPtr);
     else
-        pfilter = *SF_HEAP_NEW(fn.Env->GetHeap()) BevelFilterObject(fn.Env);
+        pfilter = *SF_HEAP_NEW(fn.Env->GetHeap()) BevelFilterObject(fn.Env, ObjectInlineCtorTag());
     fn.Result->SetAsObject(pfilter.GetPtr());
 
     pfilter->writableFilterParams().Passes = 1;
@@ -3980,17 +3980,17 @@ void BevelFilterCtorFunction::GlobalCtor(const FnCall& fn)
         }
     }
     ASStringContext* psc = fn.Env->GetSC();
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("shadowColor"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("shadowAlpha"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("highlightColor"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("highlightAlpha"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("blurX"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("blurY"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("strength"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("knockout"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("inner"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("type"), Value(Value::UNSET));
-    pfilter->SetMemberRaw(psc, psc->CreateConstString("quality"), Value(Value::UNSET));
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("shadowColor"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("shadowAlpha"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("highlightColor"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("highlightAlpha"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("blurX"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("blurY"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("strength"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("knockout"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("inner"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("type"), v, flags); }
+    { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("quality"), v, flags); }
 }
 
 // @0x142959bc0
@@ -4579,3 +4579,11 @@ Value StringObject::GetValue() const { return Value(sValue); }
 // MS2-PIN: ??_7Allocator@Text@Render@Scaleform@@6B@ 0x14317c9d0
 // MS2-PIN: ??_7?$RefCountBaseNTS@VAllocator@Text@Render@Scaleform@@$0EO@@Scaleform@@6B@ 0x143184c98
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0EO@@Scaleform@@6B@ 0x143184c98
+// MS2-PIN: ??_7BevelFilterObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321f848
+// MS2-PIN: ??_7BevelFilterObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321f890
+// MS2-PIN: ??_7BlurFilterObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321f438
+// MS2-PIN: ??_7BlurFilterObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321f480
+// MS2-PIN: ??_7DropShadowFilterObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321ec18
+// MS2-PIN: ??_7DropShadowFilterObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ec60
+// MS2-PIN: ??_7GlowFilterObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321f028
+// MS2-PIN: ??_7GlowFilterObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321f070
