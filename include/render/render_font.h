@@ -77,21 +77,21 @@ public:
     virtual ~Font() {}
     virtual const char* GetName() const = 0;
 
-    // glyph metrics, shapes and texture glyphs (vslots 2..17); declared only (pure in the SDK) so the
-    // placeholder subclasses of the recovered units stay concrete
-    virtual int    GetGlyphIndex(UInt16 code);
-    virtual float  GetAdvance(unsigned glyphIndex) const;
-    virtual float  GetKerningAdjustment(unsigned lastCode, unsigned thisCode) const;
-    virtual float  GetGlyphWidth(unsigned glyphIndex) const;
-    virtual float  GetGlyphHeight(unsigned glyphIndex) const;
-    virtual RectF& GetGlyphBounds(unsigned glyphIndex, RectF* prect) const;
+    // glyph metrics, shapes and texture glyphs (vslots 2..17). The seven `= 0` ones are pure in the SDK and the exe
+    // (_purecall slots in Font's vftable); the rest are declared only so the recovered subclasses stay concrete
+    virtual int    GetGlyphIndex(UInt16 code) = 0;
+    virtual float  GetAdvance(unsigned glyphIndex) const = 0;
+    virtual float  GetKerningAdjustment(unsigned lastCode, unsigned thisCode) const = 0;
+    virtual float  GetGlyphWidth(unsigned glyphIndex) const = 0;
+    virtual float  GetGlyphHeight(unsigned glyphIndex) const = 0;
+    virtual RectF& GetGlyphBounds(unsigned glyphIndex, RectF* prect) const = 0;
     virtual bool   IsHintedVectorGlyph(unsigned glyphIndex, unsigned hintedSize) const;
     virtual bool   IsHintedRasterGlyph(unsigned glyphIndex, unsigned hintedSize) const;
     virtual const TextureGlyph* GetTextureGlyph(unsigned glyphIndex) const;
     virtual void*  GetTextureGlyphData() const;
     virtual void   SetTextureGlyphData(void*);
     virtual float  GetTextureGlyphHeight() const;
-    virtual const ShapeDataInterface* GetPermanentGlyphShape(unsigned glyphIndex) const;
+    virtual const ShapeDataInterface* GetPermanentGlyphShape(unsigned glyphIndex) const = 0;
     virtual bool   GetTemporaryGlyphShape(unsigned glyphIndex, unsigned hintedSize, GlyphShape* shape);
     virtual bool   GetGlyphRaster(unsigned glyphIndex, unsigned hintedSize, GlyphRaster* raster);
     virtual int    GetCharValue(unsigned glyphIndex) const;
