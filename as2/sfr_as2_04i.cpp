@@ -9,6 +9,7 @@
 // MS2-RANGE: 0x142925850-0x14292588b .text$mn
 // MS2-RANGE: 0x1429258e0-0x14292591b .text$mn
 // MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS2@GFx@Scaleform@@6B@ 0x143215370
+// MS2-PIN: ??_7?$LogBase@VEnvironment@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x143215ad0
 
 #include <intrin.h>
 #include "../include/gfx/as2/as2_action.h"
@@ -72,7 +73,6 @@ struct Sfr_RcgcDtor : RefCountBaseGC<323>
     static void Destroy(void* p) { static_cast<Sfr_RcgcDtor*>(p)->RefCountBaseGC<323>::~RefCountBaseGC(); }
 };
 extern const void* DAT_143215ab0[];
-extern const void* DAT_143215ad0[];
 extern const void* DAT_1432177b0[]; // GFxAS2LoadQueueEntryMT_LoadCSS
 extern const void* DAT_143217780[]; // GFxAS2LoadQueueEntryMT_LoadXML
 
@@ -103,7 +103,7 @@ void* DeleteAs2_1429276e0(void* p, unsigned flags)
 // @0x142927710
 void* DeleteAs2_142927710(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_143215ad0;
+    static_cast<LogBase<Environment>*>(p)->LogBase<Environment>::~LogBase();
     if (flags & 1)
         ::operator delete(p, 8);
     return p;
