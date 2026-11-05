@@ -19,7 +19,7 @@
 #include "../include/kernel/sf_hash.h"
 
 unsigned long long FUN_1425e3560();             // performance counter
-
+namespace Scaleform { namespace Render { struct FillStyleType; } typedef ArrayDataBase<Render::FillStyleType, AllocatorLH<Render::FillStyleType, 2>, ArrayDefaultPolicy> Sfr07iFillArr; template<> void Sfr07iFillArr::Reserve(const void*, UPInt); } // (C3) FUN_142623c60 = its Reserve (definer out of line)
 namespace Scaleform { namespace GFx {
 
 using ::FUN_1425e3560;
@@ -52,7 +52,7 @@ void FUN_1426255e0(U**, void*, U);
 U* FUN_1426223c0(U**, U*, const String*);   // NoCase String set Find(iterator out, key)
 void FUN_1426240f0(U*, void*, U);             // Array<Ptr>::Resize
 void FUN_142623bc0(U*, void*, U);             // Array<0x20-byte record>::Reserve
-void FUN_142623c60(U*, void*, U);             // Array<0x10-byte record>::Reserve
+//void FUN_142623c60(U*, void*, U);           // (C3) = Sfr07iFillArr::Reserve
 void FUN_142623e40(U*, void*, U);             // Array<Ptr>::Reserve
 void FUN_142623d00(U*, void*, U);             // Array<0x18-byte record>::Reserve
 void FUN_142623da0(U*, void*, U);             // Array<Ptr>::Reserve
@@ -374,7 +374,7 @@ void FUN_1426214b0(char* self, char* snap)
             RawField<int>(obj, 0x18) = (int)bins;
             U* recs = RawFieldPtr<U>(obj, 0x20);
             if (recs[2] <= used)
-                FUN_142623c60(recs, recs, used + (used >> 2));
+                reinterpret_cast<Sfr07iFillArr*>(recs)->Reserve(recs, used + (used >> 2));
             recs[1] = used;
             U n = 0;
             for (U j = 0; j < RawField<U>(hist, 0x18); j++)
