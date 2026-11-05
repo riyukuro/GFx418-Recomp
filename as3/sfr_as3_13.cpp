@@ -1542,7 +1542,7 @@ struct Sfr33ParaFmtAccess : Scaleform::Render::Text::ParagraphFormat
 static inline void FUN_1426084b0(void * p0, unsigned int p1, unsigned int p2) { ((Scaleform::Render::Text::ParagraphFormat*)(p0))->SetTabStopsElement(p1, p2); }              // Render::Text::ParagraphFormat::SetTabStopsElement
 void  FUN_142584fc0(void* pstr, void* pheap);                          // StringDH::StringDH(MemoryHeap*)
 void  FUN_1424aa0f0(void* pfmt);                                       // Render::Text::TextFormat destructor
-void  FUN_142606690(void* ppara);                                      // Render::Text::ParagraphFormat destructor (FreeTabStops)
+// FUN_142606690 = Render::Text::ParagraphFormat::~ParagraphFormat (header inline: FreeTabStops), called as the dtor below
 void* FUN_142607870(const void* pfmt, void* presult, const void* pother);   // Render::Text::TextFormat::Merge
 void* FUN_1426076a0(const void* ppara, void* presult, const void* pother);  // Render::Text::ParagraphFormat::Merge
 static inline void FUN_14259c250(void * p0, void const * p1) { ((Scaleform::Render::Text::StyledText*)(p0))->SetDefaultTextFormat(*(Scaleform::Render::Text::TextFormat const*)(p1)); }                     // StyledText::SetDefaultTextFormat
@@ -1904,7 +1904,7 @@ namespace Instances { namespace fl_text
 
         if (!tabStops)
         {
-            FUN_142606690(parafmt);
+            parafmt->~ParagraphFormat();
             para.PresentMask &= ~Para_TabStops;
         }
         else
@@ -2043,7 +2043,7 @@ namespace Instances { namespace fl_text
         const Render::Text::ParagraphFormat* pparaFmt = reinterpret_cast<const Render::Text::ParagraphFormat*>(DefaultParaFormat(pdoc));
         SetDefaultTextFormatOf(ptf, ptextFmt->Merge(*reinterpret_cast<const Render::Text::TextFormat*>(&fmt)));
         SetDefaultParaFormatOf(ptf, pparaFmt->Merge(reinterpret_cast<const Render::Text::ParagraphFormat&>(para)));
-        FUN_142606690(&para);
+        reinterpret_cast<Render::Text::ParagraphFormat&>(para).~ParagraphFormat();
         DestroyTextFormat(fmt);
     }
 
