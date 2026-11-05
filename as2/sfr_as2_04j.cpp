@@ -34,12 +34,12 @@ void FUN_14257dc30(void* p);  // RefCountImpl::AddRef (a global FUN_ in the exe)
 void FUN_14257dcb0(void* p);  // RefCountImpl::Release (a global FUN_ in the exe)
 
 extern "C" void __cdecl __report_rangecheckfailure(void);
-extern char DAT_142dc9d48[]; // RefCountImplCore vftable
+// MS2-PIN: ??_7?$RefCountBase@VTask@GFx@Scaleform@@$01@Scaleform@@6B@ 0x143188dc8
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // Vftables of the loader-thread entries and file tasks (their members are only reached as raw words here).
-extern const void* DAT_143188d98[]; // Task
+// MS2-PIN: ??_7Task@GFx@Scaleform@@6B@ 0x143188d98
 extern const void* DAT_143217750[]; // GFxAS2LoadQueueEntryMT_LoadMovie
 extern const void* DAT_143217768[]; // XML file task
 extern const void* DAT_143217780[]; // GFxAS2LoadQueueEntryMT_LoadXML
@@ -55,12 +55,12 @@ static SF_FORCEINLINE void* ConstructFileTask(void* self, const void** pvftable,
 {
     UPInt*          w  = static_cast<UPInt*>(self);
     volatile UPInt* vw = w;
-    vw[0]                                        = reinterpret_cast<UPInt>(DAT_142dc9d48);
-    vw[0]                                        = reinterpret_cast<UPInt>(DAT_143188d98);
-    *reinterpret_cast<volatile unsigned*>(w + 1) = 1; // RefCount
-    *reinterpret_cast<unsigned*>(w + 2)          = 0x20001;
-    vw[0]                                        = reinterpret_cast<UPInt>(pvftable);
-    *reinterpret_cast<volatile unsigned*>(reinterpret_cast<UByte*>(w) + 0x14) = 0; // CurrentState
+    static_cast<Task*>(self)->Task::Task(Task::Id_MovieDataLoad);   // RefCount 1, TaskId 0x20001, CurrentState 0
+    *reinterpret_cast<const void***>(self) = pvftable;
+    (void)vw;
+    //
+    //
+    //
     if (pls)
         FUN_14257dc30(pls);
     w[3] = reinterpret_cast<UPInt>(pls);
