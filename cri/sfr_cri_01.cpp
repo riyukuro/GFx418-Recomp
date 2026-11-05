@@ -34,7 +34,6 @@ extern const void* const DAT_1431b8fd0[];
 extern const void* const DAT_1431b8db0[];
 extern const void* const DAT_1431b8f18[];
 extern const void* const DAT_1431b8f30[];
-extern "C" const void* const DAT_1431b8e30[];
 void** FUN_1425b38b0(const void* stateBag, void** ret);                          // StateBag::GetLog (Ptr<Log> by value)
 
 CriMvSoundInterface::~CriMvSoundInterface() {}
@@ -2221,7 +2220,7 @@ void* FUN_1400284b0(void* object, CriUint8 flags)
 // @0x140029160
 void* FUN_140029160(void* object, unsigned flags)
 {
-    *(const void***)object = (const void**)DAT_1431b8e30;
+    static_cast<Scaleform::GFx::Video::VideoPlayer*>(object)->Scaleform::GFx::Video::VideoPlayer::~VideoPlayer();
     if (flags & 1)
     {
         void* heap = Scaleform::Memory::pGlobalHeap;
@@ -2542,6 +2541,7 @@ void* FUN_140029ab0(void* object, unsigned flags) { return CriRefCountDeletingDt
 // MS2-PIN: ??_7VideoProviderNetStream@AS3@GFx@Scaleform@@6B@ 0x1431b8a90
 // MS2-PIN: ??_7VideoProvider@Video@GFx@Scaleform@@6B@ 0x1431b4f30
 // MS2-PIN: ??_7SyncObject@VideoPlayer@Video@GFx@Scaleform@@6B@ 0x1431b4f78
+// MS2-PIN: ??_7VideoPlayer@Video@GFx@Scaleform@@6B@ 0x1431b8e30
 // MS2-FUNCTIONAL ??_GVideo@0GFx@Scaleform@@UEAAPEAXI@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): the exe's copy calls the out-of-line dtor and has no sized-delete flag-4 path; ours inlines the dtor and adds it, same effect
 // MS2-PIN: ??_GVideo@0GFx@Scaleform@@UEAAPEAXI@Z 0x14001c720
 // MS2-FUNCTIONAL ??_GAuxStreamer@SoundRenderer@Sound@Scaleform@@UEAAPEAXI@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): the exe's copy calls the out-of-line dtor and has no sized-delete flag-4 path; ours inlines the dtor and adds it, same effect
