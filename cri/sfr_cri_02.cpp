@@ -280,7 +280,7 @@ void     FUN_14002afe0(CriUint64* array);
 void     FUN_14002d3f0(void* allocation);
 void     FUN_14002a4a0(CriUint64* array, const CriUint64* source, CriUint64 count);
 void     FUN_140006f50(void** array, void* source, CriUint64 capacity);
-void     FUN_1400051c0(void** array, void* source, CriUint64 capacity);
+typedef Scaleform::ArrayDataBase<Scaleform::GFx::Video::VideoPlayer::AudioTrackInfo, Scaleform::AllocatorGH<Scaleform::GFx::Video::VideoPlayer::AudioTrackInfo, Scaleform::Stat_Default_Mem>, Scaleform::ArrayDefaultPolicy> CriAudioTrackArrayBase; // (C3) FUN_1400051c0 = its Reserve
 CriUint64* FUN_14002ba30(CriUint64* destination, const CriUint64* source);
 CriUint64* FUN_14002c550(CriUint64* destination, const CriUint64* source);
 void     FUN_14002aa30(CriUint64* array, CriUint64 length);
@@ -1830,7 +1830,7 @@ void FUN_14002a900(CriUint64* array, const CriUint32* value)
 // @0x14002a6f0
 void FUN_14002a6f0(CriUint64* array, const CriUint32* value)
 {
-    CriArrayResizeNoConstruct(array, (void (*)(void*, void*, CriUint64))FUN_1400051c0, array[1] + 1);
+    CriArrayResizeNoConstruct<CriAudioTrackArrayBase>(array, array[1] + 1);
     CriUint32* destination = (CriUint32*)(array[0] - 16 + array[1] * 16);
     if (destination)
     {
