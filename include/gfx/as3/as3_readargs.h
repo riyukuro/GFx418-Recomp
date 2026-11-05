@@ -219,7 +219,7 @@ public:
     enum ScopeType { stScopeStack, stStoredScope, stGlobalObject };
 
 private:
-    State();
+    State(); friend struct Sfr33TRStateAccess17; friend struct Sfr33TRStateAccess19; // (appended, ua11) the flat tracer bodies of sfr_as3_17/19 call the private members below
     void MarkChanged(UInt32 ind) { RegChanged[ind >> 3] = static_cast<UInt8>(RegChanged[ind >> 3] | (1u << (ind & 7))); }
 
     // (appended, sfr24) private in the exe (A-mangled). The traits of a traced value.

@@ -2615,7 +2615,7 @@ void* Sfr33LazyGet80b(void** self);
 }}}
 // The type of the slot si of the traits t as a tracer value (result); the return carries false (first byte) when
 // the slot type is not known yet.
-const char* FUN_14250cf20(void* state, char* ret, const void* t, const void* si, Scaleform::GFx::AS3::Value& result);
+namespace Scaleform { namespace GFx { namespace AS3 { namespace TR { struct Sfr33TRStateAccess17 { static SF_FORCEINLINE const char* PropType(void* s, char* ret, const void* t, const void* si, AS3::Value& v) { ::new (ret) CheckResult(static_cast<const State*>(s)->GetPropertyType(static_cast<const AS3::Traits*>(t), *static_cast<const SlotInfo*>(si), v)); return ret; } }; } } } }   // TR::State::GetPropertyType (0x14250cf20, private)
 
 // Tracer: emits the get op (0x66 getproperty, 4 getsuper, ...) of the name mn on a receiver of the traits t and
 // pushes the result type on the state's op stack (+0x38): a class name of a global as its class, a data slot as
@@ -2655,7 +2655,7 @@ bool FUN_1424f8b00(void* tr, int op, void* state, const Scaleform::GFx::AS3::Tra
             if (bt < 11)
             {
                 Value v;
-                if (!*FUN_14250cf20(state, &ok, t, si, v))
+                if (!*Scaleform::GFx::AS3::TR::Sfr33TRStateAccess17::PropType(state, &ok, t, si, v))
                     return false;
                 opstack.PushBack(v);
                 if (mnw & 4)
@@ -2698,7 +2698,7 @@ bool FUN_1424f8b00(void* tr, int op, void* state, const Scaleform::GFx::AS3::Tra
         if (si)
         {
             Value v;
-            if (!*FUN_14250cf20(state, &ok, t, si, v))
+            if (!*Scaleform::GFx::AS3::TR::Sfr33TRStateAccess17::PropType(state, &ok, t, si, v))
                 return false;
             opstack.PushBack(v);
             FUN_14251fb90(self, op, static_cast<UPInt>(static_cast<SPInt>(ind)));
@@ -2861,7 +2861,7 @@ bool FUN_1424f7cc0(Scaleform::UPInt tracer, void* state, int idx, bool get_prop,
             return false;
         Value v;
         char ok;
-        if (!*FUN_14250cf20(state, &ok, Sfr33TracerThisTraits(vm, prop.This), si, v))
+        if (!*Scaleform::GFx::AS3::TR::Sfr33TRStateAccess17::PropType(state, &ok, Sfr33TracerThisTraits(vm, prop.This), si, v))
             return false;
         if (not_null)
             *reinterpret_cast<unsigned*>(&v) |= 0x400;
@@ -2909,7 +2909,7 @@ bool FUN_1424f7cc0(Scaleform::UPInt tracer, void* state, int idx, bool get_prop,
     FUN_14251fb90(self, 0xb6, static_cast<unsigned>(sindex + 1));   // getslot
     Value v;
     char ok;
-    if (!*FUN_14250cf20(state, &ok, t, si, v))
+    if (!*Scaleform::GFx::AS3::TR::Sfr33TRStateAccess17::PropType(state, &ok, t, si, v))
         return false;
     if (not_null)
         *reinterpret_cast<unsigned*>(&v) |= 0x400;

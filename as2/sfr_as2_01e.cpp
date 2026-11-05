@@ -37,7 +37,7 @@ template void TFunc_Classes_fl_Date_UTC::Func(const ThunkInfo&, VM&, const Value
 // ---- fl_display: loader info ----
 // Bodies of the exe called here (not recovered yet), by their addresses.
 // AvmDisplayObj::AssignAS3Obj: makes pinst the AS3 object of pavm.
-void FUN_1424edca0(Scaleform::GFx::AvmDisplayObjBase* pavm, Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* pinst);
+namespace Scaleform { namespace GFx { namespace AS3 { void Sfr33SetValueDropObject(UByte* self, void* value); }}}   // 0x1424edca0 (sfr_as3_17)
 // MovieRoot::AddScriptableMovieClip.
 void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase* proot, Scaleform::GFx::DisplayObject* pcont);
 
@@ -104,7 +104,7 @@ namespace Instances { namespace fl_display
                 if (pDispObj)
                     pDispObj->Release();
                 pDispObj.GetRawRef() = p;
-                FUN_1424edca0(pDispObj ? pDispObj->GetAvmObjImpl() : NULL, this);
+                Scaleform::GFx::AS3::Sfr33SetValueDropObject(reinterpret_cast<UByte*>(pDispObj ? pDispObj->GetAvmObjImpl() : NULL), this);
                 FUN_1424e9380(proot, pDispObj);
             }
         }

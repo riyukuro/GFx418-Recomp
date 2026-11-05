@@ -674,7 +674,7 @@ AvmInteractiveObj* FUN_1424f4000(MovieRoot* proot, MovieDefImpl* pmovieDef)
     AvmInteractiveObj* pavmObj = reinterpret_cast<AvmInteractiveObj*>(static_cast<UByte*>(pmem) + sizeof(Stage));
     if (pavmObj)
     {
-        new (pavmObj) AvmInteractiveObj(pstage);
+        pavmObj->AvmInteractiveObj::AvmInteractiveObj(pstage);   // abstract: explicit ctor call
         UByte* pavm = reinterpret_cast<UByte*>(pavmObj);
         *reinterpret_cast<void* const**>(pavm + 0x00) = AvmStage_vftable;
         *reinterpret_cast<void* const**>(pavm + 0x30) = AvmStage_vftable_30;

@@ -183,7 +183,7 @@ public:
     virtual bool     OnKeyEvent(const EventId& id, int* pkeyMask);
     virtual bool     OnLosingKeyboardFocus(InteractiveObject* newFocusCh, unsigned controllerIdx,
                                            FocusMovedType fmt = GFx_FocusMovedByKeyboard);
-    virtual bool     IsFocusEnabled(FocusMovedType fmt = GFx_FocusMovedByKeyboard) const;
+    virtual bool     IsFocusEnabled(FocusMovedType fmt = GFx_FocusMovedByKeyboard) const = 0;   // pure in the exe (_purecall slot)
     virtual bool     IsTabable() const;                                 // 0x142514f70
 
     virtual bool                IsStage() const { return false; }       // 0x1423dcd60

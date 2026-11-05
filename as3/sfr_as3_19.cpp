@@ -164,7 +164,7 @@ inline bool FUN_142514e10(Scaleform::UPInt tracer, const void* v) { return reint
 inline bool FUN_1425150c0(Scaleform::UPInt tracer, const void* v) { return reinterpret_cast<const Scaleform::GFx::AS3::Tracer*>(tracer)->IsUIntType(*static_cast<const Scaleform::GFx::AS3::Value*>(v)); }   // Tracer::IsUIntType
 inline bool FUN_142514510(Scaleform::UPInt tracer, void* traits) { return reinterpret_cast<const Scaleform::GFx::AS3::Tracer*>(tracer)->IsNumericType(static_cast<const Scaleform::GFx::AS3::Traits*>(traits)); }   // Tracer::IsNumericType
 inline bool FUN_142514a80(Scaleform::UPInt tracer, void* traits) { return reinterpret_cast<const Scaleform::GFx::AS3::Tracer*>(tracer)->IsPrimitiveType(static_cast<const Scaleform::GFx::AS3::Traits*>(traits)); }   // Tracer::IsPrimitiveType
-void* FUN_14250fe80(void* state, const void* v);             // TR::State::GetValueTraits
+// TR::State::GetValueTraits (0x14250fe80, private) is Sfr33TRStateAccess19::ValueTraits below
 namespace Scaleform { namespace GFx { namespace AS3 { void Sfr31VMRaiseError(unsigned long long, const unsigned long*, unsigned long long); } } }
 inline void FUN_14252ecb0(void* vm, const void* error, const void* classInfo) { Scaleform::GFx::AS3::Sfr31VMRaiseError(reinterpret_cast<unsigned long long>(vm), static_cast<const unsigned long*>(error), reinterpret_cast<unsigned long long>(classInfo)); }
 inline char* FUN_1424f1a30(void* v, void* ok, unsigned long* out) { ::new (ok) Scaleform::GFx::AS3::CheckResult(static_cast<const Scaleform::GFx::AS3::Value*>(v)->Convert2UInt32(*out)); return static_cast<char*>(ok); }   // Value::Convert2UInt32
@@ -236,7 +236,7 @@ void FUN_142500260(Scaleform::UPInt vm, unsigned int a, Scaleform::UPInt traits,
 inline Scaleform::UPInt FUN_1425081f0(Scaleform::UPInt vm) { return reinterpret_cast<Scaleform::UPInt>(&reinterpret_cast<const Scaleform::GFx::AS3::VM*>(vm)->GetClassVector()); }   // VM: class-traits factory
 inline Scaleform::UPInt FUN_142563380(Scaleform::UPInt factory, Scaleform::UPInt traits) { return reinterpret_cast<Scaleform::UPInt>(&reinterpret_cast<Scaleform::GFx::AS3::Classes::fl_vec::Vector*>(factory)->Resolve2Vector(*reinterpret_cast<const Scaleform::GFx::AS3::ClassTraits::Traits*>(traits))); }   // class traits for traits
 inline void FUN_1423f1840(void* slot, Scaleform::UPInt obj) { *static_cast<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>*>(slot) = reinterpret_cast<Scaleform::GFx::AS3::Instances::Namespace*>(obj); }   // assign a refcounted object into a slot
-void* FUN_1423edb60(void* mem, Scaleform::UPInt vm, Scaleform::UPInt factory, int kind, void* uri, const void* prefix);           // Instances::Namespace ctor
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { struct Sfr33NsAccess19 { static SF_FORCEINLINE void* Make(void* mem, UPInt vm, UPInt factory, int kind, void* uri, const void* prefix) { return ::new (mem) Namespace(*reinterpret_cast<VM*>(vm), reinterpret_cast<NamespaceInstanceFactory*>(factory), static_cast<Abc::NamespaceKind>(kind), *static_cast<const ASString*>(uri), *static_cast<const Value*>(prefix)); } }; } } } }   // Instances::Namespace ctor (0x1423edb60, protected)
 // the class-traits cache's Remove, through the real Hash<MultinameHash<ClassTraits::Traits*>::Key, .., AllocatorDH>::Remove
 // (0x142522350, called out of line; the exe's cache is the DH hash)
 typedef Scaleform::GFx::AS3::MultinameHash<Scaleform::GFx::AS3::ClassTraits::Traits*, Scaleform::GFx::AS3::StatMV_VM_VM_Mem>::Key Sfr19CtKey;
@@ -344,7 +344,7 @@ bool FUN_1424f92f0(void* tr, int op, const Scaleform::GFx::AS3::Traits* t, void*
 bool FUN_1424f7540(void* tr, int op, void* state, void* pinfo, int ind);   // trace a call on a name
 bool FUN_1424f7cc0(Scaleform::UPInt tracer, void* state, int idx, bool a, int b, bool c);   // trace find/getlex
 inline void FUN_1424f9180(void* tr) { static_cast<Scaleform::GFx::AS3::Tracer*>(tr)->PopPrevValue(); }   // Tracer: drop the code of the last pushed value
-const char* FUN_14250cf20(void* state, char* ret, const void* t, const void* si, Scaleform::GFx::AS3::Value& result);
+// TR::State::GetPropertyType (0x14250cf20, private) is Sfr33TRStateAccess19::PropType below
 namespace Scaleform { namespace GFx { namespace AS3 { int FUN_14250c990(const void*, unsigned long long); } } }
 inline int FUN_14250c990(Scaleform::UPInt tracer, Scaleform::UPInt pos) { return Scaleform::GFx::AS3::FUN_14250c990(reinterpret_cast<const void*>(tracer), pos); }
 namespace Scaleform { namespace GFx { namespace AS3 { using ::FUN_14250c990; } } }
@@ -355,9 +355,9 @@ inline void FUN_1424dee30(void* r) { static_cast<Scaleform::GFx::AS3::TR::ReadVa
 inline void FUN_1424ded40(void* r) { static_cast<Scaleform::GFx::AS3::TR::ReadMnObject*>(r)->~ReadMnObject(); }   // TR::ReadMnObject::~ReadMnObject (0x70 record)
 void FUN_1424debc0(void* r);   // ReadArgsMnObject::~ReadArgsMnObject
 inline void FUN_14251cc80(Scaleform::UPInt tracer) { reinterpret_cast<Scaleform::GFx::AS3::Tracer*>(tracer)->PopNewOpCode(); }   // Tracer: close the block at a label
-void FUN_142520e60(Scaleform::UPInt state, Scaleform::UPInt traits, int op);   // TR::State: unary typed op
-void FUN_142520f30(Scaleform::UPInt state, Scaleform::UPInt traits, int op);   // TR::State: binary typed op
-void FUN_142520d80(Scaleform::UPInt state, Scaleform::UPInt traits, int op, unsigned int idx);   // TR::State: typed op on a register
+// TR::State::RefineOpCodeStack1 / RefineOpCodeStack2 / RefineOpCodeReg1 (0x142520e60 / 0x142520f30 / 0x142520d80, private: as3_readargs.h befriends this accessor)
+namespace Scaleform { namespace GFx { namespace AS3 { namespace TR { struct Sfr33TRStateAccess19 { static SF_FORCEINLINE void Stack1(UPInt s, UPInt t, int op) { reinterpret_cast<State*>(s)->RefineOpCodeStack1(*reinterpret_cast<InstanceTraits::Traits*>(t), static_cast<Abc::Code::OpCode>(op)); }
+    static SF_FORCEINLINE void Stack2(UPInt s, UPInt t, int op) { reinterpret_cast<State*>(s)->RefineOpCodeStack2(*reinterpret_cast<InstanceTraits::Traits*>(t), static_cast<Abc::Code::OpCode>(op)); } static SF_FORCEINLINE void Reg1(UPInt s, UPInt t, int op, unsigned int idx) { reinterpret_cast<State*>(s)->RefineOpCodeReg1(*reinterpret_cast<InstanceTraits::Traits*>(t), static_cast<Abc::Code::OpCode>(op), static_cast<int>(idx)); } static SF_FORCEINLINE void* ValueTraits(const void* s, const void* v) { return const_cast<AS3::Traits*>(static_cast<const State*>(s)->GetValueTraits(*static_cast<const AS3::Value*>(v))); } static SF_FORCEINLINE const char* PropType(void* s, char* ret, const void* t, const void* si, AS3::Value& v) { ::new (ret) CheckResult(static_cast<const State*>(s)->GetPropertyType(static_cast<const AS3::Traits*>(t), *static_cast<const SlotInfo*>(si), v)); return ret; } }; } } } }
 inline void FUN_1424f1ed0(Scaleform::UPInt state, unsigned int ind, Scaleform::UPInt traits, int nullType) { reinterpret_cast<Scaleform::GFx::AS3::TR::State*>(state)->ConvertRegisterTo(ind, *reinterpret_cast<Scaleform::GFx::AS3::InstanceTraits::Traits*>(traits), static_cast<Scaleform::GFx::AS3::Value::TraceNullType>(nullType)); }   // TR::State::ConvertRegisterTo
 inline void FUN_14251bdc0(Scaleform::UPInt vm, void* value) { reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm)->OutputError(*static_cast<const Scaleform::GFx::AS3::Value*>(value)); }   // VM: flush a pending value
 inline Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase) { return reinterpret_cast<Scaleform::UPInt>(static_cast<const Scaleform::GFx::DisplayObjectBase*>(displayObjectBase)->GetRenderNode()); } // DisplayObjectBase::GetRenderNode
@@ -928,7 +928,7 @@ void Sfr27TraceCheckNumericOp(State* st)
 {
     StV s(st);
     const UPInt tracer = s.Tracer();
-    void* tr = FUN_14250fe80(st, &s.OpStack().Back());
+    void* tr = TR::Sfr33TRStateAccess19::ValueTraits(st, &s.OpStack().Back());
     const UPInt vm = TrVM(tracer);
     if (tr != reinterpret_cast<void*>(TrRd(TrRd(vm, 0x210), 0xc0)) &&
         tr != reinterpret_cast<void*>(TrRd(vm, 0x278)) && tr != reinterpret_cast<void*>(TrRd(vm, 0x270)))
@@ -949,7 +949,7 @@ void Sfr27TraceDup2Check(State* st)
 {
     StV s(st);
     const UPInt tracer = s.Tracer();
-    void* tr = FUN_14250fe80(st, &s.OpStack().Back());
+    void* tr = TR::Sfr33TRStateAccess19::ValueTraits(st, &s.OpStack().Back());
     const UPInt vm = TrVM(tracer);
     if (tr == reinterpret_cast<void*>(TrRd(TrRd(vm, 0x210), 0xc0)) ||
         tr == reinterpret_cast<void*>(TrRd(vm, 0x278)) || tr == reinterpret_cast<void*>(TrRd(vm, 0x270)) ||
@@ -4893,7 +4893,7 @@ void Sfr31ExecPushNamespace(UPInt vm, UPInt target)
             void* mem = Memory::pGlobalHeap->AllocAutoHeap(reinterpret_cast<void*>(tr), 0x60, &ai);
             UPInt ns = 0;
             if (mem != 0)
-                ns = reinterpret_cast<UPInt>(FUN_1423edb60(mem, Sfr31Rd(tr, 0x78), Sfr31Rd(tr, 0xe8), 0, &str, &prefix));
+                ns = reinterpret_cast<UPInt>(Instances::Sfr33NsAccess19::Make(mem, Sfr31Rd(tr, 0x78), Sfr31Rd(tr, 0xe8), 0, &str, &prefix));
             const UPInt old = Sfr31Rd(target, 0x58);
             if (ns != old)
             {
@@ -8551,7 +8551,7 @@ char Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state
                         res.w2 = 0;
                         res.w3 = 0;
                         char okb[8];
-                        const char* r = FUN_14250cf20(reinterpret_cast<void*>(state), okb, reinterpret_cast<const void*>(tr),
+                        const char* r = Scaleform::GFx::AS3::TR::Sfr33TRStateAccess19::PropType(reinterpret_cast<void*>(state), okb, reinterpret_cast<const void*>(tr),
                                                       si, res.Get());
                         if (*r == 0)
                         {
@@ -9222,7 +9222,7 @@ void Sfr31StateTraceOp(UPInt state, unsigned char op, UPInt* pos)
         p.Get().~Value();
         return;
     }
-    case 0x90: FUN_142520e60(state, Sfr31VmTr(vmA, 0x218), 0x54); return;
+    case 0x90: TR::Sfr33TRStateAccess19::Stack1(state, Sfr31VmTr(vmA, 0x218), 0x54); return;
     case 0x91:
     case 0x93:
         st->TopNumber();
@@ -9231,11 +9231,11 @@ void Sfr31StateTraceOp(UPInt state, unsigned char op, UPInt* pos)
     case 0x94:
         FUN_1424f1ed0(state, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)), Sfr31VmTr(vmA, 0x218), 0);
         return;
-    case 0x96: FUN_142520e60(state, Sfr31VmTr(vmA, 0x210), 0x22); return;
-    case 0x9b: FUN_142520f30(state, Sfr31VmTr(vmA, 0x218), 0x7c); return;
-    case 0xa1: FUN_142520f30(state, Sfr31VmTr(vmA, 0x218), 0x7d); return;
-    case 0xa2: FUN_142520f30(state, Sfr31VmTr(vmA, 0x218), 0x7e); return;
-    case 0xa3: FUN_142520f30(state, Sfr31VmTr(vmA, 0x218), 0x7f); return;
+    case 0x96: TR::Sfr33TRStateAccess19::Stack1(state, Sfr31VmTr(vmA, 0x210), 0x22); return;
+    case 0x9b: TR::Sfr33TRStateAccess19::Stack2(state, Sfr31VmTr(vmA, 0x218), 0x7c); return;
+    case 0xa1: TR::Sfr33TRStateAccess19::Stack2(state, Sfr31VmTr(vmA, 0x218), 0x7d); return;
+    case 0xa2: TR::Sfr33TRStateAccess19::Stack2(state, Sfr31VmTr(vmA, 0x218), 0x7e); return;
+    case 0xa3: TR::Sfr33TRStateAccess19::Stack2(state, Sfr31VmTr(vmA, 0x218), 0x7f); return;
     case 0xa4:
     case 0xa7:
     {
@@ -9251,18 +9251,18 @@ void Sfr31StateTraceOp(UPInt state, unsigned char op, UPInt* pos)
     case 0xab: case 0xac: case 0xad: case 0xae: case 0xaf: case 0xb0: case 0xb1: case 0xb3: case 0xb4:
         st->Pop2Boolean();
         return;
-    case 0xc0: FUN_142520e60(state, Sfr31VmTr(vmA, 0x220), 0x98); return;
-    case 0xc1: FUN_142520e60(state, Sfr31VmTr(vmA, 0x220), 0x99); return;
+    case 0xc0: TR::Sfr33TRStateAccess19::Stack1(state, Sfr31VmTr(vmA, 0x220), 0x98); return;
+    case 0xc1: TR::Sfr33TRStateAccess19::Stack1(state, Sfr31VmTr(vmA, 0x220), 0x99); return;
     case 0xc2:
-        FUN_142520d80(state, Sfr31VmTr(vmA, 0x220), 10, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        TR::Sfr33TRStateAccess19::Reg1(state, Sfr31VmTr(vmA, 0x220), 10, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
         return;
     case 0xc3:
-        FUN_142520d80(state, Sfr31VmTr(vmA, 0x220), 0xb, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
+        TR::Sfr33TRStateAccess19::Reg1(state, Sfr31VmTr(vmA, 0x220), 0xb, static_cast<UInt32>(Abc::ReadU30<UInt8>(code, *pos)));
         return;
-    case 0xc4: FUN_142520e60(state, Sfr31VmTr(vmA, 0x220), 0x3f); return;
-    case 0xc5: FUN_142520f30(state, Sfr31VmTr(vmA, 0x220), 0x79); return;
-    case 0xc6: FUN_142520f30(state, Sfr31VmTr(vmA, 0x220), 0x7a); return;
-    case 0xc7: FUN_142520f30(state, Sfr31VmTr(vmA, 0x220), 0x7b); return;
+    case 0xc4: TR::Sfr33TRStateAccess19::Stack1(state, Sfr31VmTr(vmA, 0x220), 0x3f); return;
+    case 0xc5: TR::Sfr33TRStateAccess19::Stack2(state, Sfr31VmTr(vmA, 0x220), 0x79); return;
+    case 0xc6: TR::Sfr33TRStateAccess19::Stack2(state, Sfr31VmTr(vmA, 0x220), 0x7a); return;
+    case 0xc7: TR::Sfr33TRStateAccess19::Stack2(state, Sfr31VmTr(vmA, 0x220), 0x7b); return;
     case 0xd0: case 0xd1: case 0xd2: case 0xd3:
         s.OpStack().PushBack(*reinterpret_cast<const Value*>(Sfr31Rd(state, 0x18) + static_cast<UPInt>(op - 0xd0) * 0x20));
         return;

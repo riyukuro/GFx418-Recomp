@@ -2155,7 +2155,7 @@ AvmBitmap::AvmBitmap(ASMovieRootBase* pasRoot, const CharacterCreateInfo& ccinfo
 // @0x1424d63e0
 AvmButton::AvmButton(Button* pbtn)
 {
-    new (this) AvmInteractiveObj(reinterpret_cast<InteractiveObject*>(pbtn));
+    reinterpret_cast<AvmInteractiveObj*>(this)->AvmInteractiveObj::AvmInteractiveObj(reinterpret_cast<InteractiveObject*>(pbtn));   // abstract: explicit ctor call
     *reinterpret_cast<void* const**>(Data + 0x00) = AvmButton_vftable;
     *reinterpret_cast<void* const**>(Data + 0x30) = AvmButton_vftable_30;
     *reinterpret_cast<void* const**>(Data + 0x40) = AvmButton_vftable_40;
@@ -2174,7 +2174,7 @@ AvmStaticText::AvmStaticText(StaticTextCharacter* ptxt)
 // @0x1424d66b0
 AvmTextField::AvmTextField(TextField* ptxt)
 {
-    new (this) AvmInteractiveObj(reinterpret_cast<InteractiveObject*>(ptxt));
+    reinterpret_cast<AvmInteractiveObj*>(this)->AvmInteractiveObj::AvmInteractiveObj(reinterpret_cast<InteractiveObject*>(ptxt));   // abstract: explicit ctor call
     *reinterpret_cast<void* const**>(Data + 0x00) = AvmTextField_vftable;
     *reinterpret_cast<void* const**>(Data + 0x30) = AvmTextField_vftable_30;
     *reinterpret_cast<void* const**>(Data + 0x40) = AvmTextField_vftable_40;
