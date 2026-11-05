@@ -22,12 +22,12 @@
 // hook DLL binds them to the exe, the full exe to the recovered definition at that VA (tools/fullexe/alias.py).
 template <class T> struct ExeDecl { typedef T type; };
 
-extern ExeDecl<void*>::type DAT_1431b59f0;
-#define VideoProtoGCVtable DAT_1431b59f0
-extern ExeDecl<void*>::type DAT_1431b5940;
-#define VideoProtoInterfaceVtable DAT_1431b5940
-extern ExeDecl<void*>::type DAT_1431b5938;
-#define VideoProtoBaseVtable DAT_1431b5938
+// (C3: real Prototype<VideoObject> ctor/dtor) extern ExeDecl<void*>::type DAT_1431b59f0;
+// (C3: real Prototype<VideoObject> ctor/dtor) #define VideoProtoGCVtable DAT_1431b59f0
+// (C3: real Prototype<VideoObject> ctor/dtor) extern ExeDecl<void*>::type DAT_1431b5940;
+// (C3: real Prototype<VideoObject> ctor/dtor) #define VideoProtoInterfaceVtable DAT_1431b5940
+// (C3: real Prototype<VideoObject> ctor/dtor) extern ExeDecl<void*>::type DAT_1431b5938;
+// (C3: real Prototype<VideoObject> ctor/dtor) #define VideoProtoBaseVtable DAT_1431b5938
 extern ExeDecl<void*>::type DAT_1431b4be0;
 #define VideoSoundStreamVtable DAT_1431b4be0
 extern ExeDecl<void*>::type DAT_1431b4ce0;
@@ -2407,19 +2407,19 @@ void* FUN_14000d630(void** proxy, unsigned flags)
     return proxy;
 }
 
+namespace Scaleform { namespace GFx { namespace AS2 { static __forceinline void Video01VideoPrototypeDtor(Object* object); } } }   // (C3) after VideoObject
 // destroys the video prototype extension and its AS2 Object base. The exe's inline Prototype<VideoObject> dtor stores
 // its three vftables first.
 // @0x14000d680
 void FUN_14000d680(Scaleform::GFx::AS2::Object* object)
 {
-    unsigned char* bytes = reinterpret_cast<unsigned char*>(object);
-    *reinterpret_cast<void**>(bytes) = &VideoProtoGCVtable;
-    *reinterpret_cast<void**>(bytes + 0x20) = &VideoProtoInterfaceVtable;
-    *reinterpret_cast<void**>(bytes + 0x70) = &VideoProtoBaseVtable;
-    reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0x70)->GASPrototypeBase::~GASPrototypeBase();
-    void** slot = reinterpret_cast<void**>(bytes + 0x68);
-    if (*slot) static_cast<Scaleform::WeakPtrProxy*>(*slot)->Release();
-    object->Object::~Object();
+    Scaleform::GFx::AS2::Video01VideoPrototypeDtor(object);
+//    *reinterpret_cast<void**>(bytes) = &VideoProtoGCVtable;  (+0x20 / +0x70: the other two)
+//    reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0x70)->GASPrototypeBase::~GASPrototypeBase();
+//    void** slot = reinterpret_cast<void**>(bytes + 0x68);
+//    if (*slot) static_cast<Scaleform::WeakPtrProxy*>(*slot)->Release();
+//    object->Object::~Object();
+//
 }
 
 struct VideoObjectGcAccess : Scaleform::GFx::AS2::Object
@@ -4048,18 +4048,18 @@ VideoObject::VideoObject(Environment* penv)
 Object* FUN_14000e1e0(Object* object, ASStringContext* context, Object* prototype,
                       const FunctionRef& constructor)
 {
-    static_cast<VideoObject*>(object)->VideoObject::VideoObject(context, prototype);
-    unsigned char* bytes = reinterpret_cast<unsigned char*>(object);
-    unsigned char* base = bytes + 0x70;
-    reinterpret_cast<FunctionRef*>(base + 0x08)->FunctionRef::FunctionRef();
-    reinterpret_cast<FunctionRef*>(base + 0x20)->FunctionRef::FunctionRef();
-    *reinterpret_cast<void**>(base + 0x38) = 0;
-    *reinterpret_cast<void***>(bytes) = &VideoProtoGCVtable;
-    *reinterpret_cast<void***>(bytes + 0x20) = &VideoProtoInterfaceVtable;
-    *reinterpret_cast<void***>(base) = &VideoProtoBaseVtable;
-    reinterpret_cast<NetStreamPrototypeInitAccess*>(base)->Init(object, context, constructor);
+    // (C3) the real header-inline ctor, so cl stores the ??_7Prototype<VideoObject> vftables itself
+    static_cast<Prototype<VideoObject>*>(object)->Prototype<VideoObject>::Prototype(context, prototype, constructor, Prototype<VideoObject>::InlineCtorTag());
     return object;
+//    static_cast<VideoObject*>(object)->VideoObject::VideoObject(context, prototype);
+//    unsigned char* base = bytes + 0x70;
+//    reinterpret_cast<FunctionRef*>(base + 0x08)->FunctionRef::FunctionRef();
+//    reinterpret_cast<FunctionRef*>(base + 0x20)->FunctionRef::FunctionRef();
+//    *reinterpret_cast<void**>(base + 0x38) = 0;
+//    *reinterpret_cast<void***>(bytes) = &VideoProtoGCVtable;  (+0x20, base: the other two)
+//    reinterpret_cast<NetStreamPrototypeInitAccess*>(base)->Init(object, context, constructor);
 }
+static __forceinline void Video01VideoPrototypeDtor(Object* object) { static_cast<Prototype<VideoObject>*>(object)->Prototype<VideoObject>::~Prototype(); }   // FUN_14000d680
 
 // No exe row. FUN_14000e1e0 and NetStreamProtoConstruct inline the Prototype<VideoObject> and Prototype<NetStream>
 // ctors by hand, so no other TU instantiates them. This function does: their vftables and virtuals are the targets of
