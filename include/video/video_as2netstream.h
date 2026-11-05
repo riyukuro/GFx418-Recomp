@@ -68,9 +68,9 @@ private:
 };
 
 // NetStream.prototype methods.
-class NetStreamProto
+class NetStreamProto : public Prototype<NetStream>   // vftables 0x1431b5480 / 0x1431b54d0 / 0x1431b5478 (Prototype<NetStream>: 0x1431b53c0 / 0x1431b5310 / 0x1431b5300)
 {
-public:
+public: NetStreamProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor);   // exe 0x14000ae30 (FUN_14000ae30)
     static void Close(const FnCall& fn);                    // exe 0x1400047a0
     static void Pause(const FnCall& fn);                    // exe 0x140004810
     static void Play(const FnCall& fn);                     // exe 0x14000c9f0

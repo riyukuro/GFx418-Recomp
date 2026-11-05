@@ -2287,13 +2287,13 @@ __declspec(noinline) void* FUN_14000a880(void* object, unsigned flags)
 }
 
 // The NetStream prototype's deleting destructor seen through its two secondary bases.
-// The exe thunks are the compiler adjustors (sub rcx,imm; jmp); these free-function forms emit add rcx,-imm.
-// 0x1431b5300 [0]: this adjustor of the +0xd8 base
-// @0x14000a010
-void* FUN_14000a010(void* object, unsigned flags) { return FUN_14000a880(static_cast<unsigned char*>(object) - 0xd8, flags); }
-// 0x1431b5310 [0]: this adjustor of the +0x20 base
-// @0x14000a020
-void* FUN_14000a020(void* object, unsigned flags) { return FUN_14000a880(static_cast<unsigned char*>(object) - 0x20, flags); }
+// The exe thunks are the compiler adjustors (sub rcx,imm; jmp), so they are now the ??_E Prototype<NetStream> adjustors
+// that the compiled vftables 0x1431b5300 [0] / 0x1431b5310 [0] hold (MS2-PIN at the end of the file); the free-function
+// forms FUN_14000a010 / FUN_14000a020 (this adjustors of the +0xd8 / +0x20 base) emitted add rcx,-imm.
+//void* FUN_14000a010(void* object, unsigned flags) { return FUN_14000a880(static_cast<unsigned char*>(object) - 0xd8, flags); }
+//
+//
+//void* FUN_14000a020(void* object, unsigned flags) { return FUN_14000a880(static_cast<unsigned char*>(object) - 0x20, flags); }
 
 // The exe re-stores the three own vftables (0x1431b53c0/0x1431b5310/0x1431b5300) first; nothing reads them before the bases'.
 // destroys the prototype and NetStream base, then optionally frees the object.
@@ -4071,7 +4071,7 @@ void Video01EmitPrototypeVtables(void* netStream, void* video, ASStringContext* 
     ::new (netStream) Prototype<NetStream>(context, prototype, constructor);
     ::new (video) Prototype<VideoObject>(context, prototype, constructor);
 }
-
+NetStreamProto::NetStreamProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor) : Prototype<NetStream>(psc, pprototype, constructor) { InitFunctionMembers(this, psc, &NetStreamCloseFunctionTable, PropFlags(1)); }   // no exe row: FUN_14000ae30 is this ctor as the exe spells it; this one emits the NetStreamProto vftables (0x1431b5478..)
 // Lazily allocates and caches the script VideoObject for its display character. The exe calls GetGC()
 // before it reads the display object.
 // @0x14000e020
@@ -4351,9 +4351,16 @@ const char* ObjectInterface::GetTextValue(Environment*) const { return 0; }
 // MS2-PIN: ??_7?$Prototype@VVideoObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b59f0
 // MS2-PIN: ??_7?$Prototype@VVideoObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b5940
 // MS2-PIN: ??_7?$Prototype@VVideoObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x1431b5938
-// MS2-PIN: ??_7?$Prototype@VNetStream@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b5480
-// MS2-PIN: ??_7?$Prototype@VNetStream@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b54d0
-// MS2-PIN: ??_7?$Prototype@VNetStream@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x1431b5478
+// MS2-PIN: ??_7?$Prototype@VNetStream@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b53c0
+// MS2-PIN: ??_7?$Prototype@VNetStream@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b5310
+// MS2-PIN: ??_7?$Prototype@VNetStream@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x1431b5300
+// MS2-PIN: ??_7NetStreamProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b5480
+// MS2-PIN: ??_7NetStreamProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b54d0
+// MS2-PIN: ??_7NetStreamProto@AS2@GFx@Scaleform@@6B@ 0x1431b5478
+// MS2-PIN: ??_E?$Prototype@VNetStream@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@WNI@EAAPEAXI@Z 0x14000a010
+// MS2-PIN: ??_E?$Prototype@VNetStream@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@WCA@EAAPEAXI@Z 0x14000a020
+// MS2-PIN: ??_ENetStreamProto@AS2@GFx@Scaleform@@WNI@EAAPEAXI@Z 0x14000aeb0
+// MS2-PIN: ??_ENetStreamProto@AS2@GFx@Scaleform@@WCA@EAAPEAXI@Z 0x14000aea0
 // The base table is a distinct address point before the NetStream prototype table.
 // MS2-PIN: ??_7GASPrototypeBase@AS2@GFx@Scaleform@@6B@ 0x1431b5028
 // MS2-PIN: ??_7RefCountWeakSupportImpl@Scaleform@@6B@ 0x143183cf8
