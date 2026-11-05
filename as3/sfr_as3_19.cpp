@@ -134,7 +134,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524870(UPInt* a, UPInt n); }}}
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_1425248e0(UPInt* a, const void* addr, UPInt n); }}}
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524c30(UPInt* a, const void* addr, UPInt n); }}}
-namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524af0(UPInt* a, const void* addr, UPInt n); }}}
+namespace Scaleform { typedef ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>, 340>, ArrayDefaultPolicy> Sfr19TraitsArr; template<> void Sfr19TraitsArr::ResizeNoConstruct(const void*, UPInt); } // (C3) FUN_142524af0
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524680(UPInt* a, UPInt n); }}}
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524710(UPInt* a, UPInt n); }}}
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_1425244e0(UPInt* a, UPInt n); }}}
@@ -378,7 +378,7 @@ void  Sfr31ButtonSwitchStateIntl(UPInt self, int state);
 char  Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state);
 void  Sfr31StateTraceOp(UPInt state, unsigned char op, UPInt* pos);
 UPInt Sfr31ResolveClassTraits(UPInt vmAddr, UPInt link, UPInt entry);
-void  FUN_142524af0(UPInt* a, const void* addr, UPInt n);
+//void  FUN_142524af0(UPInt* a, const void* addr, UPInt n);   // = Sfr19TraitsArr::ResizeNoConstruct
 UPInt Sfr31FindClassTraitsByMn(UPInt vm, UPInt mn);
 void  FUN_1425245c0(UPInt* a, UPInt n);
 }}} // namespace Scaleform::GFx::AS3
@@ -4962,7 +4962,7 @@ void Sfr31UnregisterClassTraits(UPInt self)
         Sfr31ReleaseStr(key[0]);
         Sfr31ReleaseStr(node);
     }
-    FUN_142524af0(reinterpret_cast<UPInt*>(self + 0xa0), reinterpret_cast<const void*>(self + 0xa0), 0);
+    reinterpret_cast<Sfr19TraitsArr*>(self + 0xa0)->ResizeNoConstruct(reinterpret_cast<const void*>(self + 0xa0), 0);
 }
 
 // ---- batch 39
