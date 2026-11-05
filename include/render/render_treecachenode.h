@@ -349,7 +349,7 @@ public:
     virtual void propagate3DFlag(unsigned parent3D);
     virtual void UpdateBundlePattern();
     virtual bool GetPatternChain(BundleEntryRange* range, unsigned flags);
-    virtual bool IsPatternChainValid() const;
+    virtual bool IsPatternChainValid() const { return true; }   // folds with TreeCacheMeshBase's at 0x1426340c0
     virtual void forceUpdateImages();
 
     // (appended for sfr_render_03f)
