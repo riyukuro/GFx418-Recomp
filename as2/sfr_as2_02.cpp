@@ -114,7 +114,7 @@ inline bool  EditorKit_DoesUseRichClipboard(void* pek) { return (*((unsigned cha
 inline void* DocView_GetStyledText(void* pdoc) { return *(void**)((char*)pdoc + 0x10); }
 inline const void* StyledText_GetDefaultParagraphFormat(void* pst) { return *(const void**)((char*)pst + 0x30); }
 inline const void* StyledText_GetDefaultTextFormat(void* pst) { return *(const void**)((char*)pst + 0x38); }
-void     FUN_1424c7090(void* psubst);                                                       // ImageSubstitutor element array dtor
+namespace Scaleform { struct MS2_ImageSubstElement; typedef ArrayDataBase<MS2_ImageSubstElement, AllocatorLH<MS2_ImageSubstElement, 2>, ArrayDefaultPolicy> As202SubstArr; template<> As202SubstArr::~ArrayDataBase(); } // (C3) FUN_1424c7090 = its dtor (sfr_as3_15, out of line)
 inline void* DocView_GetImageSubstitutor(void* pdoc) { return *(void**)((char*)pdoc + 0x30); }
 inline void  DocView_SetImageSubstitutor(void* pdoc, void* psubst) { *(void**)((char*)pdoc + 0x30) = psubst; }
 inline void  DocView_SetReformatReq(void* pdoc) { *((unsigned char*)pdoc + 0x14b) |= 2; }
@@ -3089,7 +3089,7 @@ void AvmTextField::SetImageSubstitutions(const FnCall& fn)
         void* psubst = DocView_GetImageSubstitutor(pdoc);
         if (psubst)
         {
-            FUN_1424c7090(psubst);
+            reinterpret_cast<Scaleform::As202SubstArr*>(psubst)->As202SubstArr::~As202SubstArr();
             SF_FREE(psubst);
         }
         DocView_SetImageSubstitutor(pdoc, 0);
