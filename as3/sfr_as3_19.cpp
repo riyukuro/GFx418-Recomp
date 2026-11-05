@@ -251,7 +251,7 @@ extern "C" const Scaleform::StringDataPtr DAT_143a2dd40;   // "scaleform.gfx", t
 namespace Scaleform { namespace GFx { namespace AS3 { ClassTraits::Traits* FUN_14250f9a0(VM&, VMAbcFile&, const Abc::ClassInfo&); } } }
 inline Scaleform::UPInt FUN_14250f9a0(Scaleform::UPInt vm, Scaleform::UPInt link, Scaleform::UPInt entry) { return reinterpret_cast<Scaleform::UPInt>(Scaleform::GFx::AS3::FUN_14250f9a0(*reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm), *reinterpret_cast<Scaleform::GFx::AS3::VMAbcFile*>(link), *reinterpret_cast<const Scaleform::GFx::AS3::Abc::ClassInfo*>(entry))); }
 namespace Scaleform { namespace GFx { namespace AS3 { using ::FUN_14250f9a0; } } }
-void FUN_1423eb030(void* hash, void* hash2, void* nodeRef, Scaleform::UPInt hashValue);   // MultinameHash::add
+// (0x1423eb030 is HashSetBase<..MultinameHash<ClassTraits::Traits*, 329>..>::add<NodeRef>, reached through TClassTraitsCache::Add)
 namespace Scaleform { namespace GFx { namespace AS3 { InstanceTraits::Traits& FUN_14250a060(VM&, const Value&); } } }
 inline Scaleform::UPInt FUN_14250a060(Scaleform::UPInt vm, void* value) { return reinterpret_cast<Scaleform::UPInt>(&Scaleform::GFx::AS3::FUN_14250a060(*reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm), *static_cast<const Scaleform::GFx::AS3::Value*>(value))); }
 namespace Scaleform { namespace GFx { namespace AS3 { using ::FUN_14250a060; } } }
@@ -5090,23 +5090,23 @@ UPInt Sfr31FindClassTraitsByMn(UPInt vm, UPInt mn)
     found = reinterpret_cast<UPInt>(FUN_142415520(reinterpret_cast<void*>(Sfr31Rd(vm, 0x298)), &str, reinterpret_cast<const Instances::Namespace*>(ns)));
     if (found != 0)
     {
-        UPInt key[2];
-        key[0] = node;
-        ++*reinterpret_cast<int*>(node + 0x18);
-        if (ns != 0)
-            *reinterpret_cast<UInt32*>(ns + 0x10) = (*reinterpret_cast<UInt32*>(ns + 0x10) + 1u) & 0x8fbfffffu;
-        key[1] = ns;
-        UPInt* nodeRef[2] = { key, &found };
-        const UInt32 h = static_cast<UInt32>(static_cast<SPInt>(Sfr31Rd(ns, 0x20) << 60) >> 60) ^
-                         ((*reinterpret_cast<const UInt32*>(Sfr31Rd(ns, 0x30) + 0x1c) & 0xffffffu) << 2) ^
-                         (*reinterpret_cast<const UInt32*>(node + 0x1c) & 0xffffffu);
-        FUN_1423eb030(reinterpret_cast<void*>(vm + 0x1c8), reinterpret_cast<void*>(vm + 0x1c8), nodeRef, h);
-        if (ns != 0 && (ns & 1) == 0 && (*reinterpret_cast<UInt32*>(ns + 0x10) & 0x3fffff) != 0)
-        {
-            --*reinterpret_cast<UInt32*>(ns + 0x10);
-            FUN_1423dfa20(reinterpret_cast<void*>(ns));
-        }
-        Sfr31ReleaseStr(key[0]);
+        // the VM's class traits cache (+0x1c8): MultinameHash::Add copies the key (ASString + SPtr<Namespace>) and calls add<NodeRef> 0x1423eb030
+        reinterpret_cast<TClassTraitsCache*>(vm + 0x1c8)->Add(str, *reinterpret_cast<const Instances::Namespace*>(ns), reinterpret_cast<ClassTraits::Traits* const&>(found));
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
     }
     return found;
 }
