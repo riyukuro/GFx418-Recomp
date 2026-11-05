@@ -25,7 +25,7 @@ extern "C" void FUN_142689aa0(void*, void*, const void*);       // Hash copy (ds
 extern "C" void FUN_14268a450(void*, void*, const void*);       // Hash find (hash, iterator out, key)
 extern "C" void FUN_1426899e0(void*, const void*, const void*); // Hash add (hash, key, value)
 extern "C" void FUN_142686440(void*, void*);                    // visits a child record into the grouping
-extern "C" void FUN_142623bc0(U*, void*, U);                     // ArrayData<0x20-byte entry>::Reserve
+void FUN_142623bc0(U*, void*, U);                                // ArrayData<0x20-byte entry>::Reserve (sfr_gfx_07i, Scaleform::GFx)
 extern "C" void FUN_1426871f0(void*);                           // ~ the grouping hash
 
 // The RefCount base calls, made directly as the exe makes them.
