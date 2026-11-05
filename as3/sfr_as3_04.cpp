@@ -4999,7 +4999,7 @@ void FUN_142420770(AS3::Object* self, Scaleform::GFx::AS3::Value& v)
 }
 
 // ---- objects made by traits: script classes, functions, global objects, catch scopes
-extern const void* const DAT_143144040[];   // Classes::UserDefined vftable
+// MS2-PIN: ??_7UserDefined@Classes@AS3@GFx@Scaleform@@6B@ 0x143144040   (C3: the vptr store of the InlineCtorTag ctor in FUN_142419e50; owner sfr_as3_01c)
 extern const ClassInfo DAT_14313dd00;       // the "Catch" ClassInfo
 // Traits::StoreScopeStack: the scope the traits' methods run in, from the VM scope stack above base
 namespace Scaleform { namespace GFx { namespace AS3 { void Sfr31StoreScopeStack(UPInt self, UPInt start, UPInt* src); }}}
@@ -5028,8 +5028,8 @@ SPtr<Class> ClassTraits::Traits::FUN_142419e50()
     Class* cls = NULL;
     if (mem)
     {
-        static_cast<AS3::Classes::UDBase*>(mem)->UDBase::UDBase(*self);
-        *(const void* const**)mem = DAT_143144040;
+        static_cast<AS3::Classes::UserDefined*>(mem)->UserDefined::UserDefined(*self, AS3::Classes::UserDefined::InlineCtorTag());
+        // the vptr store (??_7UserDefined, 0x143144040) is the inlined ctor's
         cls = (Class*)mem;
         if (self->SetupSlotValues(*cls))
         {

@@ -176,8 +176,8 @@ namespace Classes {
     class UserDefined : public UDBase
     {
     public:
-        // (appended, sfr22) the static slots, then the scope the class methods run in. 0x1423ef700
-        explicit UserDefined(ClassTraits::Traits& t);
+        explicit UserDefined(ClassTraits::Traits& t);   // (appended, sfr22) the static slots, then the scope the class methods run in. 0x1423ef700
+        struct InlineCtorTag {}; __forceinline UserDefined(ClassTraits::Traits& t, InlineCtorTag) : UDBase(t) {}   // (C3) the copy MakeClass 0x142419e50 inlines
         // (appended, sfr22) user-declared: the sdtor (0x1423f4800) re-stores the vftable
         virtual ~UserDefined() {}
         virtual const char* GetAS3ObjectType() const { return "Classes::UserDefined"; }
