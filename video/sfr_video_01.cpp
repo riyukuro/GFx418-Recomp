@@ -846,36 +846,36 @@ void* FUN_140005000(void** weakSlot)
     return object;
 }
 
-// MS2-FUNCTIONAL: grows, resizes, or releases the four-byte-rounded backing array through the Scaleform heap.
-// Only the AllocInfo slot differs: the exe keeps it in the r9 home slot (rsp+0x48), ours in the r8 home slot.
-// @0x1400050c0
-void FUN_1400050c0(void** array, void* heapOwner, Scaleform::UPInt requested)
+// 0x1400050c0 is the SDK ArrayDataBase<T, AllocatorLH<T, 2>, ArrayDefaultPolicy>::Reserve for an 8-byte T. Its exact
+// copy for void* is the separately linked 0x1423d95f0, so this unit instantiates it for a local 8-byte stand-in.
+struct Video01LHSlot { void* p; };
+static __forceinline void Video01ReserveLH(void** array, const void* heapOwner, Scaleform::UPInt requested)
 {
-    // SDK ArrayDataBase::Reserve (AllocatorLH, granularity 4)
-    typedef Scaleform::AllocatorBaseLH<Scaleform::Stat_Default_Mem> Allocator;
-    if (requested == 0) {
-        if (array[0]) {
-            Allocator::Free(array[0]);
-            array[0] = 0;
-        }
-        array[2] = 0;
-    } else {
-        requested = (requested + 3) / 4 * 4;
-        if (array[0])
-            array[0] = Allocator::Realloc(array[0], requested * sizeof(void*), __FILE__, __LINE__);
-        else
-            array[0] = Allocator::Alloc(heapOwner, requested * sizeof(void*), __FILE__, __LINE__);
-        array[2] = reinterpret_cast<void*>(requested);
-    }
+    typedef Video01LHSlot T;
+    reinterpret_cast<Scaleform::ArrayDataBase<T, Scaleform::AllocatorLH<T, 2>, Scaleform::ArrayDefaultPolicy>*>(array)->Reserve(heapOwner, requested);
 }
+// MS2-PIN: ?Reserve@?$ArrayDataBase@UVideo01LHSlot@@U?$AllocatorLH@UVideo01LHSlot@@$01@Scaleform@@UArrayDefaultPolicy@3@@Scaleform@@QEAAXPEBX_K@Z 0x1400050c0 ; unique
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 // @0x140005160
 void FUN_140005160(void** array, void* heapOwner, Scaleform::UPInt size)
 {
     if (size < reinterpret_cast<Scaleform::UPInt>(array[1])) {
-        if (size < (reinterpret_cast<Scaleform::UPInt>(array[2]) >> 1)) FUN_1400050c0(array, heapOwner, size);
+        if (size < (reinterpret_cast<Scaleform::UPInt>(array[2]) >> 1)) Video01ReserveLH(array, heapOwner, size);
     } else if (size >= reinterpret_cast<Scaleform::UPInt>(array[2])) {
-        FUN_1400050c0(array, heapOwner, size + (size >> 2));
+        Video01ReserveLH(array, heapOwner, size + (size >> 2));
     }
     array[1] = reinterpret_cast<void*>(size);
 }
@@ -1019,8 +1019,8 @@ struct Video01ArrayData { void* Data; Scaleform::UPInt Size; Scaleform::UPInt Ca
 static __forceinline void Video01ResizePointers(void** array, Scaleform::UPInt size)
 {
     Video01ArrayData* data = reinterpret_cast<Video01ArrayData*>(array);
-    if (size < data->Size) { if (size < data->Capacity >> 1) FUN_1400050c0(array, array, size); }
-    else if (size >= data->Capacity) FUN_1400050c0(array, array, size + (size >> 2));
+    if (size < data->Size) { if (size < data->Capacity >> 1) Video01ReserveLH(array, array, size); }
+    else if (size >= data->Capacity) Video01ReserveLH(array, array, size + (size >> 2));
     data->Size = size;
 }
 
@@ -1059,8 +1059,8 @@ void FUN_140005ba0(void** array, void* owner, Scaleform::UPInt size)
 void FUN_140005c20(void** array, Scaleform::UPInt size)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    if (size < fields[1]) { if (size < fields[2] / 2) FUN_1400050c0(array, array, size); }
-    else if (size >= fields[2]) FUN_1400050c0(array, array, size + (size >> 2));
+    if (size < fields[1]) { if (size < fields[2] / 2) Video01ReserveLH(array, array, size); }
+    else if (size >= fields[2]) Video01ReserveLH(array, array, size + (size >> 2));
     fields[1] = size;
 }
 
@@ -1436,22 +1436,22 @@ void FUN_140006940(Scaleform::String* destination, Scaleform::UPInt count,
         ::new (destination) Video01StringPair(*reinterpret_cast<const Video01StringPair*>(source));
 }
 
-// MS2-FUNCTIONAL: reserves the WeakPtrProxy pointer array on the global heap (ArrayDataBase<.., AllocatorGH>::Reserve).
-// BEHAVIOUR FIX: the exe allocates a new buffer with the global heap's Alloc (vtable +0x50, 0x140006897); ours
-// forwarded to FUN_1400050c0, the AllocAutoHeap version, which picks the heap owning `owner` (the array's address).
-// @0x140006810
-void FUN_140006810(void** array, void* owner, Scaleform::UPInt requested)
+// 0x140006810 is the SDK Reserve of the VideoCharacters array (Array<WeakPtr<VideoCharacter> >, ResizeNoConstruct 0x140006e70).
+static __forceinline void Video01ReserveCharacters(void** array, void* owner, Scaleform::UPInt requested)
 {
-    (void)owner;
-    Video01Reserve<sizeof(void*)>(array, requested);
+    typedef Scaleform::WeakPtr<Scaleform::GFx::Video::VideoCharacter> T;
+    reinterpret_cast<Scaleform::ArrayDataBase<T, Scaleform::AllocatorGH<T, 2>, Scaleform::ArrayDefaultPolicy>*>(array)->Reserve(owner, requested);
 }
+// MS2-PIN: ?Reserve@?$ArrayDataBase@V?$WeakPtr@VVideoCharacter@Video@GFx@Scaleform@@@Scaleform@@U?$AllocatorGH@V?$WeakPtr@VVideoCharacter@Video@GFx@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x140006810 ; unique
+//
+//
 
-// MS2-FUNCTIONAL: reallocates storage for 16-byte records with four-element capacity rounding.
-// @0x1400069a0
-void FUN_1400069a0(void** array, void* owner, Scaleform::UPInt capacity)
-{
-    Video01Reserve<16>(array, capacity);
+// 0x1400069a0 is the SDK Reserve of the CuePointParam array (ResizeNoConstruct 0x140006f50).
+static __forceinline void Video01ReserveCueParams(void** array, void* owner, Scaleform::UPInt capacity)
+{   typedef Scaleform::GFx::Video::VideoPlayer::CuePointParam T;
+    reinterpret_cast<Scaleform::ArrayDataBase<T, Scaleform::AllocatorGH<T, 2>, Scaleform::ArrayDefaultPolicy>*>(array)->Reserve(owner, capacity);
 }
+// MS2-PIN: ?Reserve@?$ArrayDataBase@UCuePointParam@VideoPlayer@Video@GFx@Scaleform@@U?$AllocatorGH@UCuePointParam@VideoPlayer@Video@GFx@Scaleform@@$01@5@UArrayDefaultPolicy@5@@Scaleform@@QEAAXPEBX_K@Z 0x1400069a0 ; unique
 
 // clears this array descriptor, releasing its buffer when it is dynamically sized.
 // @0x140006bf0
@@ -1497,8 +1497,8 @@ template<> void Scaleform::GFx::AS2::PagedStack<Scaleform::GFx::AS2::Value, 32>:
         Scaleform::UPInt size = stack[5] + 1;
         void** array = reinterpret_cast<void**>(stack + 4);
         Video01ArrayData* data = reinterpret_cast<Video01ArrayData*>(array);
-        if (size < data->Size) { if (size < data->Capacity >> 1) FUN_1400050c0(array, array, size); }
-        else if (size >= data->Capacity) FUN_1400050c0(array, array, size + (size >> 2));
+        if (size < data->Size) { if (size < data->Capacity >> 1) Video01ReserveLH(array, array, size); }
+        else if (size >= data->Capacity) Video01ReserveLH(array, array, size + (size >> 2));
         void** slot = reinterpret_cast<void**>(stack[4]) + size - 1;
         data->Size = size;
         if (slot) *slot = page;
@@ -1542,9 +1542,9 @@ void FUN_140006e70(void** array, void* owner, Scaleform::UPInt size)
         items += count - 1;
         for (Scaleform::UPInt i = 0; i < count; ++i, --items)
             if (*items) static_cast<Scaleform::WeakPtrProxy*>(*items)->Release();
-        if (size < fields[2] / 2) FUN_140006810(array, owner, size);
+        if (size < fields[2] / 2) Video01ReserveCharacters(array, owner, size);
     } else if (size >= fields[2]) {
-        FUN_140006810(array, owner, size + (size >> 2));
+        Video01ReserveCharacters(array, owner, size + (size >> 2));
     }
     fields[1] = size;
 }
@@ -1556,9 +1556,9 @@ void FUN_140006f50(void** array, void* owner, Scaleform::UPInt size)
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (size < fields[1]) {
         FUN_1400068d0(static_cast<Scaleform::String*>(*array) + size * 2, fields[1] - size);
-        if (size < fields[2] / 2) FUN_1400069a0(array, owner, size);
+        if (size < fields[2] / 2) Video01ReserveCueParams(array, owner, size);
     } else if (size >= fields[2]) {
-        FUN_1400069a0(array, owner, size + (size >> 2));
+        Video01ReserveCueParams(array, owner, size + (size >> 2));
     }
     fields[1] = size;
 }
@@ -2187,13 +2187,13 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_14000cee0(Scaleform::GFx::AS2::CFuncti
     return object;
 }
 
-// MS2-FUNCTIONAL: resizes storage for 48-byte video-track records with four-slot rounding.
-// @0x14000b940
-void FUN_14000b940(void** array, void* owner, Scaleform::UPInt capacity)
-{
-    (void)owner;
-    Video01Reserve<0x30>(array, capacity);
-}
+// 0x14000b940 is the SDK Reserve of the CuePoint array (ResizeNoConstruct 0x14000bc40); the CuePoint instance name is
+// the separately linked copy 0x1423ca2b0, so this unit instantiates it for a local 0x30-byte stand-in.
+struct Video01CuePointSlot { void* p[6]; };
+static __forceinline void Video01ReserveCuePoints(void** array, void* owner, Scaleform::UPInt capacity)
+{   typedef Video01CuePointSlot T;
+    reinterpret_cast<Scaleform::ArrayDataBase<T, Scaleform::AllocatorGH<T, 2>, Scaleform::ArrayDefaultPolicy>*>(array)->Reserve(owner, capacity); }
+// MS2-PIN: ?Reserve@?$ArrayDataBase@UVideo01CuePointSlot@@U?$AllocatorGH@UVideo01CuePointSlot@@$01@Scaleform@@UArrayDefaultPolicy@3@@Scaleform@@QEAAXPEBX_K@Z 0x14000b940 ; unique
 
 // initializes or grows the video-track hash table at its observed load threshold.
 // @0x14000b680
@@ -2213,9 +2213,9 @@ void FUN_14000bc40(void** array, void* owner, Scaleform::UPInt size)
     if (size < fields[1])
     {
         FUN_14000b530(static_cast<unsigned char*>(*array) + size * 0x30, fields[1] - size);
-        if (size < fields[2] / 2) FUN_14000b940(array, owner, size);
+        if (size < fields[2] / 2) Video01ReserveCuePoints(array, owner, size);
     }
-    else if (size >= fields[2]) FUN_14000b940(array, owner, size + (size >> 2));
+    else if (size >= fields[2]) Video01ReserveCuePoints(array, owner, size + (size >> 2));
     fields[1] = size;
 }
 
