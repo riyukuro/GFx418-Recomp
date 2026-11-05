@@ -3102,15 +3102,15 @@ void AvmTextField::SetImageSubstitutions(const FnCall& fn)
     Object*            pobj = ArgCopy(&fn, 0)->ToObject(fn.Env);
     if (pobj)
     {
-        AvmTextField* pavmTf = FromCharacter(pch);
+        // FromCharacter(pch) at each call (the exe re-reads the AvmTextField offset per element)
         if (pobj->GetObjectType() == Object_Array)
         {
             ArrayObject* parr = static_cast<ArrayObject*>(pobj);
             for (int i = 0, n = parr->GetSize(); i < n; ++i)
-                pavmTf->ProceedImageSubstitution(fn, i, parr->GetElementPtr(i));
+                FromCharacter(pch)->ProceedImageSubstitution(fn, i, parr->GetElementPtr(i));
         }
         else
-            pavmTf->ProceedImageSubstitution(fn, 0, ArgCopy(&fn, 0));
+            { const Value* parg = ArgCopy(&fn, 0); FromCharacter(pch)->ProceedImageSubstitution(fn, 0, parg); }
     }
     else
         pch->LogScriptWarning("%s.setImageSubstitutions() failed: parameter should be either 'null', object or array",
