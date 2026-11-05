@@ -203,11 +203,11 @@ extern "C" const unsigned long long DAT_1431c4ef0;
 extern "C" void FUN_1423ca030(void*, const char*, const char*, ...);
 void FUN_14257dc30(void*);
 extern "C" void FUN_1423c9330(unsigned long long, unsigned long long);
-namespace Scaleform { namespace GFx { void FUN_1423ca2b0(void* array, const void*, UPInt newCapacity); } }
+#include "../include/video/video_video.h"   // (C3) FUN_1423ca2b0 = Ime01CueArr::Reserve; typedef below
 // ~ArrayLH<String> (0x1422fbf60). Not the real dtor: called as ~ArrayLH it inlines and the two dtor bodies
 // below no longer match.
 extern "C" void FUN_1422fbf60(void*);
-typedef Scaleform::ArrayLH<Scaleform::String> Ime01StringArray;   // PushBack 0x1422fd480
+typedef Scaleform::ArrayLH<Scaleform::String> Ime01StringArray; typedef Scaleform::ArrayDataBase<Scaleform::GFx::Video::VideoPlayer::CuePoint, Scaleform::AllocatorGH<Scaleform::GFx::Video::VideoPlayer::CuePoint, 2>, Scaleform::ArrayDefaultPolicy> Ime01CueArr; template<> void Ime01CueArr::Reserve(const void*, Scaleform::UPInt);   // PushBack 0x1422fd480 (Ime01StringArray)
 
 struct HWND__;
 
@@ -2173,9 +2173,9 @@ void FUN_1423ca6b0(void* raw, const char* name)
         if (newSize < size) {
             FUN_1423c9330(array[0] + newSize * sizeof(Record), size - newSize);
             if (newSize < (array[2] >> 1))
-                Scaleform::GFx::FUN_1423ca2b0(array, array, newSize);
+                reinterpret_cast<Ime01CueArr*>(array)->Reserve(array, newSize);
         } else if (newSize >= array[2])
-            Scaleform::GFx::FUN_1423ca2b0(array, array, newSize + (newSize >> 2));
+            reinterpret_cast<Ime01CueArr*>(array)->Reserve(array, newSize + (newSize >> 2));
         array[1] = newSize;
         new (reinterpret_cast<Record*>(array[0]) + newSize - 1) Record(record);
         ++*reinterpret_cast<int*>(bytes + 0xd0);
@@ -4071,9 +4071,9 @@ void FUN_1423cc3d0(void* raw)
         if (newSize < size) {
             FUN_1423c9330(array[0] + newSize * sizeof(Record), size - newSize);
             if (newSize < (array[2] >> 1))
-                Scaleform::GFx::FUN_1423ca2b0(array, array, newSize);
+                reinterpret_cast<Ime01CueArr*>(array)->Reserve(array, newSize);
         } else if (newSize >= array[2])
-            Scaleform::GFx::FUN_1423ca2b0(array, array, newSize + (newSize >> 2));
+            reinterpret_cast<Ime01CueArr*>(array)->Reserve(array, newSize + (newSize >> 2));
         array[1] = newSize;
         new (reinterpret_cast<Record*>(array[0]) + newSize - 1) Record(record);
         ++*reinterpret_cast<int*>(self + 0xd0);
