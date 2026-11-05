@@ -17,7 +17,7 @@
 #define MS2_RAW_INLINE __forceinline
 #include "sfr_gfx_07raw.h"
 #include "../include/kernel/sf_hash.h"
-
+#include "../include/kernel/sf_array.h"
 #include <new>
 #include <string.h>
 #include <windows.h>
@@ -34,7 +34,7 @@ struct RawLocker
 };
 }
 
-void FUN_142623b10(U*, void*, U);                 // Array<0x18-byte record>::Reserve
+struct AmpCallInfoSlot { U a, b, c; }; static __forceinline void FUN_142623b10(U* a, void* o, U n) { reinterpret_cast<ArrayDataBase<AmpCallInfoSlot, AllocatorLH<AmpCallInfoSlot, 0x245>, ArrayConstPolicy<0, 4, true> >*>(a)->Reserve(o, n); }   // (C3) = Array<CallInfo>::Reserve (0x142623b10)
 void FUN_142623ee0(U*, void*, U);                 // Array<Ptr>::Reserve
 void FUN_14261ee70(U**, void*, NodeRef*, U);
 void FUN_14261f070(U**, void*, KeyStringOps::Ref*, U);

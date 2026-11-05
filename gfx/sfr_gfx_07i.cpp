@@ -51,7 +51,7 @@ void FUN_1426251d0(U**, void*, U);
 void FUN_1426255e0(U**, void*, U);
 U* FUN_1426223c0(U**, U*, const String*);   // NoCase String set Find(iterator out, key)
 void FUN_1426240f0(U*, void*, U);             // Array<Ptr>::Resize
-void FUN_142623bc0(U*, void*, U);             // Array<0x20-byte record>::Reserve
+static __forceinline void FUN_142623bc0(U* a, void* o, U n) { reinterpret_cast<ArrayDataBase<AMP::MovieFunctionStats::FuncStats, AllocatorLH<AMP::MovieFunctionStats::FuncStats, 2>, ArrayDefaultPolicy>*>(a)->Reserve(o, n); }   // (C3) = Array<FuncStats>::Reserve (0x142623bc0)
 //void FUN_142623c60(U*, void*, U);           // (C3) = Sfr07iFillArr::Reserve
 void FUN_142623e40(U*, void*, U);             // Array<Ptr>::Reserve
 void FUN_142623d00(U*, void*, U);             // Array<0x18-byte record>::Reserve
@@ -1169,52 +1169,52 @@ void FUN_142623a00(char* self, unsigned hi, U lo, const char* text)
     }
 }
 
-// @0x142623b10
-void FUN_142623b10(U* array, void* heapOwner, U n)
-{
-    if (n < array[2])
-        return;
-    if (n == 0)
-    {
-        if (array[0])
-        {
-            Memory::Free((void*)array[0]);
-            array[0] = 0;
-        }
-        array[2] = 0;
-    }
-    else
-    {
-        n = (n + 3) / 4 * 4;
-        if (array[0])
-            array[0] = (U)Memory::Realloc((void*)array[0], 0x18 * n);
-        else
-            array[0] = (U)Memory::AllocAutoHeap(heapOwner, 0x18 * n, AllocInfo(0x245, 0, 0));
-        array[2] = n;
-    }
-}
-
-// @0x142623bc0
-void FUN_142623bc0(U* array, void* heapOwner, U n)
-{
-    if (n == 0)
-    {
-        if (array[0])
-        {
-            Memory::Free((void*)array[0]);
-            array[0] = 0;
-        }
-        array[2] = 0;
-    }
-    else
-    {
-        n = (n + 3) / 4 * 4;
-        if (array[0])
-            array[0] = (U)Memory::Realloc((void*)array[0], 0x20 * n);
-        else
-            array[0] = (U)Memory::AllocAutoHeap(heapOwner, 0x20 * n, AllocInfo(2, 0, 0));
-        array[2] = n;
-    }
-}
-
+struct AmpCallInfoSlot { U a, b, c; };   // ViewStats::CallInfo stand-in (0x18 bytes; the real type is not in our SDK headers)
+// @0x142623b10: ArrayDataBase<CallInfo, AllocatorLH<, 0x245>, ArrayConstPolicy<0, 4, true>>::Reserve (caller: sfr_gfx_07j's 0x142624020)
 }} // namespace Scaleform::GFx
+template void Scaleform::ArrayDataBase<Scaleform::GFx::AmpCallInfoSlot, Scaleform::AllocatorLH<Scaleform::GFx::AmpCallInfoSlot, 0x245>, Scaleform::ArrayConstPolicy<0, 4, true> >::Reserve(const void*, Scaleform::UPInt);
+// MS2-PIN: ?Reserve@?$ArrayDataBase@UAmpCallInfoSlot@GFx@Scaleform@@U?$AllocatorLH@UAmpCallInfoSlot@GFx@Scaleform@@$0CEF@@3@U?$ArrayConstPolicy@$0A@$03$00@3@@Scaleform@@QEAAXPEBX_K@Z 0x142623b10 ; unique
+
+// @0x142623bc0: ArrayDataBase<MovieFunctionStats::FuncStats, AllocatorLH<, 2>, ArrayDefaultPolicy>::Reserve (FUN_142623bc0 above)
+// MS2-PIN: ?Reserve@?$ArrayDataBase@UFuncStats@MovieFunctionStats@AMP@GFx@Scaleform@@U?$AllocatorLH@UFuncStats@MovieFunctionStats@AMP@GFx@Scaleform@@$01@5@UArrayDefaultPolicy@5@@Scaleform@@QEAAXPEBX_K@Z 0x142623bc0 ; unique
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+// (namespace Scaleform::GFx closed above the 0x142623b10 instantiation)

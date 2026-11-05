@@ -11,7 +11,7 @@
 #include "../gfx/sfr_gfx_07raw.h"
 #include "ms2/scaleform/include/kernel/sf_refcount.h"
 #include <intrin.h>
-
+#include "ms2/scaleform/include/kernel/sf_array.h"
 void __empty_global_delete(void*, size_t);   // the sized operator delete the compiler pairs with ::new
 
 namespace Scaleform { namespace GFx {
@@ -25,7 +25,7 @@ extern "C" void FUN_142689aa0(void*, void*, const void*);       // Hash copy (ds
 extern "C" void FUN_14268a450(void*, void*, const void*);       // Hash find (hash, iterator out, key)
 extern "C" void FUN_1426899e0(void*, const void*, const void*); // Hash add (hash, key, value)
 extern "C" void FUN_142686440(void*, void*);                    // visits a child record into the grouping
-void FUN_142623bc0(U*, void*, U);                                // ArrayData<0x20-byte entry>::Reserve (sfr_gfx_07i, Scaleform::GFx)
+namespace AMP { struct MovieFunctionStats { struct FuncStats; }; } typedef ArrayDataBase<AMP::MovieFunctionStats::FuncStats, AllocatorLH<AMP::MovieFunctionStats::FuncStats, 2>, ArrayDefaultPolicy> Sfr03nFuncStatsArr; } template<> void GFx::Sfr03nFuncStatsArr::Reserve(const void*, UPInt); namespace GFx { static __forceinline void FUN_142623bc0(U* a, void* o, U n) { reinterpret_cast<Sfr03nFuncStatsArr*>(a)->Reserve(o, n); }   // (C3) = Array<FuncStats>::Reserve (0x142623bc0, sfr_gfx_07i; name-only view of FuncStats)
 extern "C" void FUN_1426871f0(void*);                           // ~ the grouping hash
 
 // The RefCount base calls, made directly as the exe makes them.
