@@ -16,6 +16,7 @@
 #include <emmintrin.h>
 #include "../gfx/sfr_gfx_07raw.h"
 #include "ms2/scaleform/include/render/render_primitive.h"
+#include "../include/render/render_bundle.h"
 #include "ms2/scaleform/include/render/render_scale9grid.h"
 #include "ms2/scaleform/include/gfx/as2/as2_pointobject.h"
 #include "ms2/scaleform/include/gfx/as2/as2_rectangleobject.h"
@@ -79,7 +80,6 @@ extern unsigned char DAT_143a51b50[];
 namespace Scaleform { namespace GFx {
 
 extern "C" char DAT_143191990[];
-extern "C" char DAT_1431927c8[];
 extern "C" char DAT_143a2fe60[];
 extern "C" char DAT_143a30338[];
 extern "C" char DAT_143a2dd20[];
@@ -288,77 +288,77 @@ void FUN_142cc96f0()
 // @0x142cc9710
 void FUN_142cc9710()
 {
-    RawSetVtable(DAT_143a2fd38, DAT_1431927c8);
+    reinterpret_cast<Render::SortKeyInterface*>(DAT_143a2fd38)->Render::SortKeyInterface::~SortKeyInterface();
 }
 
 // static Render::SortKeyInterface at 0x143a2fd28: back to its interface base vftable.
 // @0x142cc9720
 void FUN_142cc9720()
 {
-    RawSetVtable(DAT_143a2fd28, DAT_1431927c8);
+    reinterpret_cast<Render::SortKeyInterface*>(DAT_143a2fd28)->Render::SortKeyInterface::~SortKeyInterface();
 }
 
 // SKI_BlendMode::InstanceEnd (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9730
 void FUN_142cc9730()
 {
-    RawSetVtable(RawObj(Render::SKI_BlendMode::InstanceEnd), DAT_1431927c8);
+    reinterpret_cast<Render::SortKeyInterface*>(RawObj(Render::SKI_BlendMode::InstanceEnd))->Render::SortKeyInterface::~SortKeyInterface();
 }
 
 // SKI_Filter::InstanceEnd (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9740
 void FUN_142cc9740()
 {
-    RawSetVtable(RawObj(Render::SKI_Filter::InstanceEnd), DAT_1431927c8);
+    reinterpret_cast<Render::SortKeyInterface*>(RawObj(Render::SKI_Filter::InstanceEnd))->Render::SortKeyInterface::~SortKeyInterface();
 }
 
 // SKI_ProjectionMatrix3D::InstanceEnd (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9750
 void FUN_142cc9750()
 {
-    RawSetVtable(RawObj(Render::SKI_ProjectionMatrix3D::InstanceEnd), DAT_1431927c8);
+    reinterpret_cast<Render::SortKeyInterface*>(RawObj(Render::SKI_ProjectionMatrix3D::InstanceEnd))->Render::SortKeyInterface::~SortKeyInterface();
 }
 
 // SKI_ViewMatrix3D::InstanceEnd (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9760
 void FUN_142cc9760()
 {
-    RawSetVtable(RawObj(Render::SKI_ViewMatrix3D::InstanceEnd), DAT_1431927c8);
+    reinterpret_cast<Render::SortKeyInterface*>(RawObj(Render::SKI_ViewMatrix3D::InstanceEnd))->Render::SortKeyInterface::~SortKeyInterface();
 }
 
 // SKI_ComplexPrimitive::Instance3D (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9770
 void FUN_142cc9770()
 {
-    RawSetVtable(RawObj(Render::SKI_ComplexPrimitive::Instance3D), DAT_1431927c8);
+    reinterpret_cast<Render::SortKeyInterface*>(RawObj(Render::SKI_ComplexPrimitive::Instance3D))->Render::SortKeyInterface::~SortKeyInterface();
 }
 
 // SKI_Primitive::Instance3D (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9780
 void FUN_142cc9780()
 {
-    RawSetVtable(RawObj(Render::SKI_Primitive::Instance3D), DAT_1431927c8);
+    reinterpret_cast<Render::SortKeyInterface*>(RawObj(Render::SKI_Primitive::Instance3D))->Render::SortKeyInterface::~SortKeyInterface();
 }
 
 // SKI_ComplexPrimitive::Instance (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9790
 void FUN_142cc9790()
 {
-    RawSetVtable(RawObj(Render::SKI_ComplexPrimitive::Instance), DAT_1431927c8);
+    reinterpret_cast<Render::SortKeyInterface*>(RawObj(Render::SKI_ComplexPrimitive::Instance))->Render::SortKeyInterface::~SortKeyInterface();
 }
 
 // static Render::SortKeyInterface at 0x143a2fd50: back to its interface base vftable.
 // @0x142cc97a0
 void FUN_142cc97a0()
 {
-    RawSetVtable(DAT_143a2fd50, DAT_1431927c8);
+    reinterpret_cast<Render::SortKeyInterface*>(DAT_143a2fd50)->Render::SortKeyInterface::~SortKeyInterface();
 }
 
 // SKI_Primitive::Instance (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc97b0
 void FUN_142cc97b0()
 {
-    RawSetVtable(RawObj(Render::SKI_Primitive::Instance), DAT_1431927c8);
+    reinterpret_cast<Render::SortKeyInterface*>(RawObj(Render::SKI_Primitive::Instance))->Render::SortKeyInterface::~SortKeyInterface();
 }
 
 // SKI_BlendMode::BlendModeItem (Render::RenderQueueItem::Interface): back to its interface base vftable.
@@ -379,35 +379,35 @@ void FUN_142cc97d0()
 // @0x142cc97e0
 void FUN_142cc97e0()
 {
-    RawSetVtable(RawObj(Render::SKI_BlendMode::InstanceStart), DAT_1431927c8);
+    reinterpret_cast<Render::SortKeyInterface*>(RawObj(Render::SKI_BlendMode::InstanceStart))->Render::SortKeyInterface::~SortKeyInterface();
 }
 
 // SKI_Filter::InstanceStart (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc97f0
 void FUN_142cc97f0()
 {
-    RawSetVtable(RawObj(Render::SKI_Filter::InstanceStart), DAT_1431927c8);
+    reinterpret_cast<Render::SortKeyInterface*>(RawObj(Render::SKI_Filter::InstanceStart))->Render::SortKeyInterface::~SortKeyInterface();
 }
 
 // SKI_ProjectionMatrix3D::InstanceStart (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9800
 void FUN_142cc9800()
 {
-    RawSetVtable(RawObj(Render::SKI_ProjectionMatrix3D::InstanceStart), DAT_1431927c8);
+    reinterpret_cast<Render::SortKeyInterface*>(RawObj(Render::SKI_ProjectionMatrix3D::InstanceStart))->Render::SortKeyInterface::~SortKeyInterface();
 }
 
 // SKI_ViewMatrix3D::InstanceStart (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9810
 void FUN_142cc9810()
 {
-    RawSetVtable(RawObj(Render::SKI_ViewMatrix3D::InstanceStart), DAT_1431927c8);
+    reinterpret_cast<Render::SortKeyInterface*>(RawObj(Render::SKI_ViewMatrix3D::InstanceStart))->Render::SortKeyInterface::~SortKeyInterface();
 }
 
 // static Render::SortKeyInterface at 0x143a2fe08: back to its interface base vftable.
 // @0x142cc9820
 void FUN_142cc9820()
 {
-    RawSetVtable(RawObj(Render::SKI_NullInterface), DAT_1431927c8);
+    reinterpret_cast<Render::SortKeyInterface*>(RawObj(Render::SKI_NullInterface))->Render::SortKeyInterface::~SortKeyInterface();
 }
 
 // static ResourceKey::KeyInterface at 0x143a2fe18: back to its interface base vftable.
@@ -466,14 +466,14 @@ void FUN_142cc98d0()
 // @0x142cc98f0
 void FUN_142cc98f0()
 {
-    RawSetVtable(RawObj(Render::SKI_TextPrimitive::Instance3D), DAT_1431927c8);
+    reinterpret_cast<Render::SortKeyInterface*>(RawObj(Render::SKI_TextPrimitive::Instance3D))->Render::SortKeyInterface::~SortKeyInterface();
 }
 
 // SKI_TextPrimitive::Instance (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9900
 void FUN_142cc9900()
 {
-    RawSetVtable(RawObj(Render::SKI_TextPrimitive::Instance), DAT_1431927c8);
+    reinterpret_cast<Render::SortKeyInterface*>(RawObj(Render::SKI_TextPrimitive::Instance))->Render::SortKeyInterface::~SortKeyInterface();
 }
 
 // AS2 Point_DefaultParams, Value[2] at 0x143a51b70.
@@ -512,3 +512,4 @@ void FUN_142cca4d0()
 }
 
 }} // namespace Scaleform::GFx
+// MS2-PIN: ??_7SortKeyInterface@Render@Scaleform@@6B@ 0x1431927c8
