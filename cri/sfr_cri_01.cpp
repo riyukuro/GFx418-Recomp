@@ -34,7 +34,7 @@ extern const void* const DAT_1431b8fd0[];
 extern const void* const DAT_1431b8db0[];
 extern const void* const DAT_1431b8f18[];
 extern const void* const DAT_1431b8f30[];
-void** FUN_1425b38b0(const void* stateBag, void** ret);                          // StateBag::GetLog (Ptr<Log> by value)
+namespace Scaleform { namespace GFx { class StateBag { public: Ptr<Log> GetLog() const; }; } }   // view: GetLog = FUN_1425b38b0
 
 CriMvSoundInterface::~CriMvSoundInterface() {}
 CriMvSystemTimerInterface::~CriMvSystemTimerInterface() {}
@@ -1038,7 +1038,7 @@ void VideoProviderNetStream::OpenUrl(const char* url, ASVM& asvm)
                 FUN_14257dcb0(imageCreator);
             }
             void* log = NULL;
-            log = *FUN_1425b38b0(stateBag, &log);                     // StateBag::GetLog, Ptr<Log> by value
+            ::new (&log) Ptr<Log>(static_cast<const GFx::StateBag*>(stateBag)->GetLog());   // raw ref, released below
             void* fileOpener  = getState(stateBag, 9);                // State_FileOpener
             void* taskManager = getState(stateBag, 20);               // State_TaskManager
             void* heap = *reinterpret_cast<void**>(proot + 0x40);
