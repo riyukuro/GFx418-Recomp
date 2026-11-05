@@ -2087,9 +2087,9 @@ bool ShapeMeshProvider::createNullMesh(VertexOutput* pout, unsigned layer, unsig
     return true;
 }
 
-// Matrix2x4<float>::SetInverse (0x142446cb0) seen with its source matrix by value: the caller's copy is then an
+// Matrix2x4<float>::SetInverse (0x142446cb0) stays out of line; its source is a copy of *m (as Invert does), an
 // argument temporary, which the exe places at the bottom of the frame
-void FUN_142446cb0(Matrix2F* m, Matrix2F src);
+//
 
 // Matrix2x4::SetRectToParl as the exe inlines it into computeImgAdjustMatrix, with the inverse kept out of line
 static SF_INLINE void Sfr03dSetRectToParl(Matrix2F* m, float x1, float y1, float x2, float y2, const float* parl)
@@ -2097,7 +2097,7 @@ static SF_INLINE void Sfr03dSetRectToParl(Matrix2F* m, float x1, float y1, float
     float src[6] = { x1, y1, x2, y1, x2, y2 };
     m->SetMatrix(src[2] - src[0], src[4] - src[0], src[0], src[3] - src[1], src[5] - src[1], src[1]);
     Matrix2F d(parl[2] - parl[0], parl[4] - parl[0], parl[0], parl[3] - parl[1], parl[5] - parl[1], parl[1]);
-    FUN_142446cb0(m, *m);
+    m->SetInverse(Matrix2F(*m));
     m->Append(d);
 }
 
