@@ -660,9 +660,9 @@ class TextSnapshotObject : public Object
 public:
     void* Data68[5]; // +0x68 StaticTextSnapshotData (0x28 bytes, layout not recovered)
 
-    // (appended for sfr_as2_02: MovieClip.getTextSnapshot) an empty snapshot with the TextSnapshot prototype
-    // Out of line in the exe (0x1429231e0, sfr_as2_03); MovieClip.getTextSnapshot has it inlined, so its TU defines
-    // MS2_AS2_TEXTSNAPSHOT_CTOR_INLINE before the includes.
+    // An empty snapshot with the TextSnapshot prototype. Out of line in the exe (0x1429231e0, sfr_as2_03); MovieClip.getTextSnapshot
+    // inlines it: sfr_as2_02 uses the tagged template (not emitted, body parsed only there), the split units define MS2_AS2_TEXTSNAPSHOT_CTOR_INLINE.
+    template <class Tag> TextSnapshotObject(Environment* penv, Tag) : Object(penv) { ::new (Data68) StaticTextSnapshotData(); Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_TextSnapshot)); }
 #ifdef MS2_AS2_TEXTSNAPSHOT_CTOR_INLINE
     TextSnapshotObject(Environment* penv) : Object(penv)
     {

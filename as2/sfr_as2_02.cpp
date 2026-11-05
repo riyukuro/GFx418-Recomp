@@ -1553,7 +1553,7 @@ void AvmSprite::SpriteGetTextSnapshot(const FnCall& fn)
     Sprite* psprite = SpriteGetTarget(fn);
     if (!psprite)
         return;
-    Ptr<TextSnapshotObject> psnap = *SF_HEAP_NEW(fn.Env->GetHeap()) TextSnapshotObject(fn.Env);
+    Ptr<TextSnapshotObject> psnap = *SF_HEAP_NEW(fn.Env->GetHeap()) TextSnapshotObject(fn.Env, ObjectInlineCtorTag());
     psprite->GetTextSnapshot(&psnap->GetData());
     fn.Result->SetAsObject(psnap);
 }
