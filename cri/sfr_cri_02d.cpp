@@ -451,9 +451,9 @@ typedef struct CriMvMetaPlayerView
     CriMvEventEntry* Events;                // 0xec0
 } CriMvMetaPlayerView;
 CRI_C_LINKAGE void retrieveAudioHeader(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
-void FUN_140032650(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
+CRI_C_LINKAGE void FUN_140032650(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
 CRI_C_LINKAGE void retrieveSubtitleHeader(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
-void FUN_140032db0(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
+CRI_C_LINKAGE void FUN_140032db0(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
 CRI_C_LINKAGE void retrieveCuePointHeader(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
 CRI_C_LINKAGE CriBool recordSubtitleHeader(void* player, const CriMovieInputChunk* input);
 CRI_C_LINKAGE CriBool isEndStopProcessingProc(void* player);
