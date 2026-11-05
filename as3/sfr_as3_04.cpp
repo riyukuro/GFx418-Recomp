@@ -4800,7 +4800,7 @@ static __forceinline Instances::Namespace& As3_04GetNamespace(Scaleform::GFx::AS
 
 // @0x142415c20
 Instances::Namespace* FUN_142415c20(InstanceTraits::fl::Namespace* self, Scaleform::GFx::AS3::Abc::NamespaceKind kind,
-                                    const ASString& uri)
+                                    const ASString& uri, const Scaleform::GFx::AS3::Value& /*prefix*/)
 {
     return &As3_04GetNamespace(self->InstanceFactory, kind, uri);
 }
