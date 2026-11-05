@@ -208,6 +208,7 @@
 // MS2-RANGE: 0x142956c90-0x142956ca0 .text$mn   (sfr24: full-exe outside-unit row)
 // MS2-RANGE: 0x142956ca0-0x142956cb0 .text$mn   (sfr24: full-exe outside-unit row)
 // MS2-RANGE: 0x142956cb0-0x142956cd0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142995370-0x142995440 .text$mn   (BitmapFilterObject::readonlyFilterParams, the header inline it calls)
 
 #include <sys/timeb.h>
 #include "../include/gfx/as2/as2_action.h"

@@ -60,6 +60,17 @@ public:
     virtual ObjectType GetObjectType() const; // exe 0x1429541b0
 };
 
+// Inline for the same reason as writableFilterParams below; sfr_as2_05 (its callers) owns its range.
+// @0x142995370
+inline const Render::BlurFilterParams& BitmapFilterObject::readonlyFilterParams() const
+{
+    static Render::BlurFilterParams unavailableParams;
+    Render::Filter* filter = pFilter;
+    if (!filter || !(filter->GetFilterType() >= Render::Filter_Blur && filter->GetFilterType() <= Render::Filter_Blur_End))
+        return unavailableParams;
+    return static_cast<Render::BlurFilterImpl*>(filter)->GetParams();
+}
+
 // Inline: cl does not inline it (it holds a guarded static), so its callers (sfr_as2_05, sfr_as2_06h) call the
 // COMDAT, and the dummy params are built on first use under the thread-safe guard, as in the exe (an out-of-line
 // definition gets them constant-initialized). sfr_as2_06h owns its range.

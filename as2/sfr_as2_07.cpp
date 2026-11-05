@@ -55,7 +55,7 @@
 // MS2-RANGE: 0x142994e10-0x142994fd0 .text$mn
 // MS2-RANGE: 0x142994fe0-0x1429950f0 .text$mn
 // MS2-RANGE: 0x142995100-0x142995180 .text$mn
-// MS2-RANGE: 0x142995370-0x142996690 .text$mn
+// MS2-RANGE: 0x142995440-0x142996690 .text$mn
 // MS2-RANGE: 0x14298cc70-0x14298cc80 .text$mn   (sfr24: full-exe outside-unit row)
 // MS2-RANGE: 0x142991140-0x142991170 .text$mn   (sfr24: full-exe outside-unit row)
 // MS2-RANGE: 0x142991170-0x142991190 .text$mn   (sfr24: full-exe outside-unit row)
@@ -617,16 +617,16 @@ void BitmapFilterObject::SetDistance(float d)
     bf->SetAngleDistance(bf->GetAngle(), d);
 }
 
-// MS2-FUNCTIONAL cl constant-initializes the static params; the exe builds them under a thread-safe guard
-// @0x142995370
-const Render::BlurFilterParams& BitmapFilterObject::readonlyFilterParams() const
-{
-    static Render::BlurFilterParams unavailableParams;
-    Render::Filter* filter = pFilter;
-    if (!filter || !(filter->GetFilterType() >= Render::Filter_Blur && filter->GetFilterType() <= Render::Filter_Blur_End))
-        return unavailableParams;
-    return static_cast<Render::BlurFilterImpl*>(filter)->GetParams();
-}
+// (readonlyFilterParams 0x142995370 is an inline definition in as2_bitmapfilter.h; sfr_as2_05, its caller, owns its range)
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 // @0x142994e90
 void BitmapData::commonInit(Environment* penv)
