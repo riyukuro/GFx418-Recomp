@@ -9,10 +9,10 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-typedef ArrayLH<Value*, StatMV_ActionScript_Mem> ArrayObjectElements;
+typedef ArrayLH<Value*> ArrayObjectElements;   // default stat (2): the exe's GetFocusArray Reserve and the Resize's Reserve (0x14297d5f0) pass 2
 
 // The element array's Resize (exe 0x14297e2b0) is a COMDAT the exe calls where cl inlines it: call it through a member pointer.
-typedef ArrayData<Value*, AllocatorLH<Value*, StatMV_ActionScript_Mem>, ArrayDefaultPolicy> ArrayObjectElementsData;
+typedef ArrayData<Value*, AllocatorLH<Value*, Stat_Default_Mem>, ArrayDefaultPolicy> ArrayObjectElementsData;
 
 template<class T>
 inline void ArrayObject_Swap(T& a, T& b)
