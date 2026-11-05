@@ -177,7 +177,7 @@ public:
     const T& Back() const                  { return At(Size - 1); }
     T&       Back()                        { return At(Size - 1); }
 
-private:
+private: friend struct ArrayPagedFriend;   // FUN_140015250 (sfr_video_02) calls allocatePageSafe out of line
     ArrayPagedBase(const SelfType&);
     const SelfType& operator=(const SelfType&);
 

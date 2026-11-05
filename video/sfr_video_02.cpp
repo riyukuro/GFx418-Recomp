@@ -100,7 +100,7 @@ extern void* FUN_142581520(void*, void*);
 #define DAT_143b15f60 (static_cast<void*>(Scaleform::Memory::pGlobalHeap))
 // MS2's ComplexFill vtable is referenced by the reconstructed temporary video fill object below.
 extern "C" void* DAT_14317b668;
-extern bool FUN_1423dfe30(void*, unsigned __int64);
+namespace Scaleform { typedef ArrayPagedBase<const GFx::AS3::RefCountBaseGC<323>*, 10, 5, AllocatorPagedLH_POD<const GFx::AS3::RefCountBaseGC<323>*, 2> > Video02GcRoots; template<> bool Video02GcRoots::allocatePageSafe(UPInt); struct ArrayPagedFriend { static bool AllocatePageSafe(Video02GcRoots* a, UPInt nb) { return a->allocatePageSafe(nb); } }; } // (C3) FUN_1423dfe30
 extern void* PTR_FUN_1431b71b0;
 extern void* PTR_FUN_1431b7260;
 extern void* PTR_LAB_1431b5fb0;
@@ -2125,7 +2125,7 @@ void* FUN_140015250(void* array)
     char* bytes = static_cast<char*>(array);
     const unsigned __int64 page = *reinterpret_cast<unsigned __int64*>(bytes + 8) >> 10;
     if (page >= *reinterpret_cast<unsigned __int64*>(bytes + 0x10) &&
-        !FUN_1423dfe30(array, page))
+        !Scaleform::ArrayPagedFriend::AllocatePageSafe(reinterpret_cast<Scaleform::Video02GcRoots*>(array), page))
         return 0;
     void** pages = *reinterpret_cast<void***>(bytes + 0x20);
     return static_cast<char*>(pages[page]) + (*reinterpret_cast<unsigned*>(bytes + 8) & 0x3ff) * sizeof(void*);
