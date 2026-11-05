@@ -33,6 +33,9 @@
 #include "../include/gfx/gfx_asstring.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/gfx/as2/as2_stringobject.h"
+#include "../include/gfx/gfx_taskmanager.h"
+#include "../include/gfx/gfx_playertasks.h"
+#include "../include/gfx/as2/as2_loadqueue.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -59,19 +62,19 @@ static inline void ra(unsigned long long tagged) // atomic shared string-data re
     if (_InterlockedExchangeAdd((volatile long*)c, -1) == 1) Memory::Free((void*)(tagged & ~3ull));
 }
 // The base vftables the inlined destructors store.
-extern const void* DAT_14317c9d8[];
-extern const void* DAT_143188d98[];
 extern const void* DAT_143215370[];
-extern const void* DAT_1432153b8[];
 extern const void* DAT_1432155c0[];
 extern const void* DAT_143215648[];
-extern const void* DAT_1432172f0[];
 extern const void* DAT_143217718[];
 extern const void* DAT_143218490[];
 extern const void* DAT_1432184d8[];
 extern const void* DAT_143222848[];
 
 // The Prototype<X> and SharedObjectPtr destructors called by name emit these vftables here as well.
+// MS2-PIN: ??_7Task@GFx@Scaleform@@6B@ 0x143188d98
+// MS2-PIN: ??_7ActionBufferData@AS2@GFx@Scaleform@@6B@ 0x1432153b8
+// MS2-PIN: ??_7ASCSSFileLoader@AS2@GFx@Scaleform@@6B@ 0x1432172f0
+// MS2-PIN: ??_7LoadQueueEntry@GFx@Scaleform@@6B@ 0x14317c9d8
 // MS2-PIN: ??_7SharedObjectPtr@AS2@GFx@Scaleform@@6B@ 0x14321dd78
 // MS2-PIN: ??_7?$Prototype@VButtonObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143217e28
 // MS2-PIN: ??_7?$Prototype@VButtonObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143217d38
@@ -89,9 +92,7 @@ extern const void* DAT_143222848[];
 // @0x142928f30
 void* DeleteAs2_142928f30(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432153b8;
-    if (*(void**)((char*)p+0x10)) Memory::Free(*(void**)((char*)p+0x10));
-    static_cast<RefCountImplCore*>((void*)(p))->RefCountImplCore::~RefCountImplCore();
+    static_cast<ActionBufferData*>(p)->ActionBufferData::~ActionBufferData();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -223,8 +224,7 @@ void* DeleteAs2_14292a050(void* p, unsigned flags)
 {
     *(const void**)p = DAT_143222848;
     if (*(void**)((char*)p+0x18)) Memory::Free(*(void**)((char*)p+0x18));
-    *(const void**)p = DAT_1432172f0;
-    static_cast<RefCountImplCore*>((void*)(p))->RefCountImplCore::~RefCountImplCore();
+    static_cast<ASCSSFileLoader*>(p)->ASCSSFileLoader::~ASCSSFileLoader();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -290,8 +290,7 @@ void* DeleteAs2_14292afe0(void* p, unsigned flags)
     ((String*)((char*)p+0x28))->~String();
     ((String*)((char*)p+0x20))->~String();
     if (*(void**)((char*)p+0x18)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x18))->Release();
-    *(const void**)p = DAT_143188d98;
-    static_cast<RefCountImplCore*>((void*)(p))->RefCountImplCore::~RefCountImplCore();
+    static_cast<Task*>(p)->Task::~Task();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -309,8 +308,7 @@ void* DeleteAs2_14292b390(void* p, unsigned flags)
     ((String*)((char*)p+0x28))->~String();
     ((String*)((char*)p+0x20))->~String();
     if (*(void**)((char*)p+0x18)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x18))->Release();
-    *(const void**)p = DAT_143188d98;
-    static_cast<RefCountImplCore*>((void*)(p))->RefCountImplCore::~RefCountImplCore();
+    static_cast<Task*>(p)->Task::~Task();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -332,9 +330,7 @@ void* DeleteAs2_14292b0c0(void* p, unsigned flags)
     ((Value*)((char*)p+0x58))->~Value();
     ((Value*)((char*)p+0x38))->~Value();
     rc(*(void**)((char*)p+0x30));
-    unsigned long long name = *(unsigned long long*)((char*)p+0x18);
-    *(const void**)p = DAT_14317c9d8;
-    ra(name);
+    static_cast<LoadQueueEntry*>(p)->LoadQueueEntry::~LoadQueueEntry();
     if (flags & 1)
     {
         if (!(flags & 4))

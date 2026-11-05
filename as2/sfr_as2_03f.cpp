@@ -15,6 +15,7 @@
 namespace Scaleform { class Range; } // gfx_textfield.h (WIP header) names Range before declaring it
 #define MS2_AS2_TEXTSNAPSHOT_CTOR_INLINE // MovieClip.getTextSnapshot inlines the TextSnapshotObject ctor
 #include "../include/gfx/as2/as2_action.h"
+#include "../include/gfx/as2/as2_loadqueue.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -55,8 +56,6 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 template<> SF_NOINLINE Prototype<TextFieldObject, Environment>::~Prototype();  // 0x1429250a0
 
 // The base vftables the inlined destructors store.
-extern const void* DAT_14317bc90[];
-extern const void* DAT_1432172f0[];
 extern const void* DAT_1432173f8[];
 extern const void* DAT_143217440[];
 extern const void* DAT_1432174e8[];
@@ -65,6 +64,8 @@ extern const void* DAT_1432174e8[];
 // MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143216050
 // MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143215f60
 // MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215fa8
+// MS2-PIN: ??_7ObjectInterface@Value@GFx@Scaleform@@6B@ 0x14317bc90
+// MS2-PIN: ??_7ASCSSFileLoader@AS2@GFx@Scaleform@@6B@ 0x1432172f0
 
 // @0x142928370
 void* DeleteAs2_142928370(void* p, unsigned flags)
@@ -172,7 +173,7 @@ void* DeleteAs2_142928c10(void* p, unsigned flags)
 // @0x142928d00
 void* DeleteAs2_142928d00(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14317bc90;
+    static_cast<Scaleform::GFx::Value::ObjectInterface*>(p)->Scaleform::GFx::Value::ObjectInterface::~ObjectInterface();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -186,8 +187,7 @@ void* DeleteAs2_142928d00(void* p, unsigned flags)
 // @0x142928d50
 void* DeleteAs2_142928d50(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432172f0;
-    static_cast<RefCountImplCore*>(p)->RefCountImplCore::~RefCountImplCore();
+    static_cast<ASCSSFileLoader*>(p)->ASCSSFileLoader::~ASCSSFileLoader();
     if (flags & 1)
     {
         if (!(flags & 4))
