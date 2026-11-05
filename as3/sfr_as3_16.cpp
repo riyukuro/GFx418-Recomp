@@ -212,7 +212,6 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 extern const void* DAT_14317d8d8[];     // MovieRoot
 extern const void* DAT_14317da88[];     // MovieRoot at +0x28
 extern const void* DAT_14317daa0[];     // MovieRoot at +0x38
-extern const void* DAT_14317b648[];     // the empty interface base (ASMovieRootBase +0x28, Tracer)
 extern const void* DAT_14317afe8[];     // ASMovieRootBase at +0x38
 extern const void* DAT_14317b938[];     // Tracer
 }}}
@@ -260,7 +259,7 @@ extern "C" void FUN_1424de650(void* self)
 
     FUN_1424de460(reinterpret_cast<long long*>(bytes + 0x40));
     *reinterpret_cast<const void***>(bytes + 0x38) = Scaleform::GFx::AS3::DAT_14317afe8;
-    *reinterpret_cast<const void***>(bytes + 0x28) = Scaleform::GFx::AS3::DAT_14317b648;
+    reinterpret_cast<Scaleform::GFx::AS3::FlashUI*>(bytes + 0x28)->Scaleform::GFx::AS3::FlashUI::~FlashUI();
     reinterpret_cast<Scaleform::GFx::ASMovieRootBase*>(self)->Scaleform::GFx::ASMovieRootBase::~ASMovieRootBase();
 }
 
@@ -295,6 +294,7 @@ Scaleform::GFx::AS3::XMLSupport::~XMLSupport()
 Scaleform::GFx::AS3::XMLSupportImpl::~XMLSupportImpl()
 {
 }
+// MS2-PIN: ??_7FlashUI@AS3@GFx@Scaleform@@6B@ 0x14317b648
 // MS2-PIN: ??_7XMLSupport@AS3@GFx@Scaleform@@6B@ 0x14317b7b8
 // MS2-PIN: ??_7XMLSupportImpl@AS3@GFx@Scaleform@@6B@ 0x14317f9e0
 
@@ -412,7 +412,7 @@ extern "C" void FUN_1424df070(void* self)
     reinterpret_cast<RecalcArray*>(bytes + 0xb0)->~RecalcArray();
     reinterpret_cast<PosArray*>(bytes + 0x90)->~PosArray();
     reinterpret_cast<PosArray*>(bytes + 0x70)->~PosArray();
-    *reinterpret_cast<const void***>(bytes) = Scaleform::GFx::AS3::DAT_14317b648;
+    reinterpret_cast<Scaleform::GFx::AS3::FlashUI*>(bytes)->Scaleform::GFx::AS3::FlashUI::~FlashUI();
 }
 
 namespace {
