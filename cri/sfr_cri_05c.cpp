@@ -1182,7 +1182,7 @@ void m2vidct_InitIdctTbls(void)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x1400540d0
-void FUN_1400540d0(void)
+void FUN_1400540d0(void *ctx)   /* the exe callers pass the decoder context; unused */
 {
   return;
 }
