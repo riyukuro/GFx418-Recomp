@@ -67,7 +67,7 @@ public:
 };
 
 // An image the exporter extracted from the movie.
-class ImageCreateExportInfo : public ImageCreateInfo
+struct ImageCreateExportInfo : public ImageCreateInfo
 {
 public:
     Render::ImageFileFormat Format;        // +0x38

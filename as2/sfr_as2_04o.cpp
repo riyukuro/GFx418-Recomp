@@ -28,8 +28,8 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-// MovieImpl::ActivateFocusCapture, declared only in the player build
-void FUN_14256bbf0(MovieImpl* pmovie, unsigned controllerIdx);
+// MovieImpl::ActivateFocusCapture (0x14256bbf0) is called through gfx_movieimpl.h's declaration
+//
 // AvmSprite::FindClassAndInitializeClassInstance (gap of sfr_as2_05)
 void FUN_142943480(const FnCall& fn);
 
@@ -137,7 +137,7 @@ void SelectionCtorFunction::CaptureFocus(const FnCall& fn)
     if (!focusedChar)
     {
         // no character is focused: simulate a Tab press
-        FUN_14256bbf0(proot, controllerIdx);
+        proot->ActivateFocusCapture(controllerIdx);
         focusedChar = proot->GetFocusedCharacter(controllerIdx);
     }
     if (capture)

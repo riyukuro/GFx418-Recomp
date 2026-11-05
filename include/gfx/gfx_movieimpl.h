@@ -571,9 +571,9 @@ public:
     void ProcessInput();
     // A queued mouse event; miceProceededMask gets the mouse's bit (exe 0x142573380).
     void ProcessMouse(const InputEventsQueueEntry* qe, UInt32* miceProceededMask, bool avm2);
-#ifdef SF_GFX_PLAYERIMPL
-    // (appended, sfr24) The focus keys. A Tab press on the controller without a key event (exe 0x14256bbf0).
+    // (appended, sfr24; declared in every build, sfr_as2_04o calls it) The focus keys. A Tab press on the controller without a key event (exe 0x14256bbf0).
     void ActivateFocusCapture(unsigned controllerIdx);
+#ifdef SF_GFX_PLAYERIMPL
     // Fills the key state from the controller's focus group, collecting its tab order first (exe 0x142570d80).
     void InitFocusKeyInfo(ProcessFocusKeyInfo* pfocusInfo, const InputEventsQueueEntry::KeyEntry& keyEntry,
                           bool inclFocusEnabled, FocusGroupDescr* pfocusGroup = 0);
