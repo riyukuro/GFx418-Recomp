@@ -161,7 +161,7 @@ void FUN_1400467c0(Any a0,Any a1,Any a2,Any a3);
 // call these and the typed 0x1400467a0-b8 overloads, so their arguments are passed directly (no Any temporaries).
 struct CriUsfStandardHeader;
 unsigned long criUsfCmn_ParseUsfHeaderStd(const unsigned char* data, unsigned long size, CriUsfStandardHeader* header);
-const unsigned char* criUsfCmn_GetContents(const unsigned char* data, unsigned long size, long* contentSize);
+extern "C" const unsigned char* criUsfCmn_GetContents(const unsigned char* data, unsigned long size, long* contentSize);
 void criSj_SplitChunk(const void* source, unsigned long maximum, void* prefix, void* suffix);
 void FUN_14004c370();
 void FUN_14004c7c0(Any a0,Any a1);
@@ -307,9 +307,9 @@ unsigned int CRIDLG_GetPriority(unsigned __int64); // C3: the definition's signa
 void CRIDLG_SetPriority(unsigned __int64, unsigned int); // C3: the definition's signature
 void CRIDLG_SetAffinityMask(unsigned __int64, unsigned int); // C3: the definition's signature
 unsigned __int64 CRICRS_Create(__int64, int);  // C3: the definition's signature
-void CRICRS_Destroy(_RTL_CRITICAL_SECTION *); // C3: the definition's signature
-unsigned int CRICRS_Enter(_RTL_CRITICAL_SECTION *);   // C3: the definition's signature
-unsigned int CRICRS_Leave(_RTL_CRITICAL_SECTION *);   // C3: the definition's signature
+extern "C" void CRICRS_Destroy(_RTL_CRITICAL_SECTION *); // C3: the definition's signature
+extern "C" unsigned int CRICRS_Enter(_RTL_CRITICAL_SECTION *);   // C3: the definition's signature
+extern "C" unsigned int CRICRS_Leave(_RTL_CRITICAL_SECTION *);   // C3: the definition's signature
 void MPVUMCT_Intra(__int64);  // C3: the definition's signature
 void MPVUMCT_PpicSkipped(__int64, int); // C3: the definition's signature
 void MPVUMCT_BpicSkipped(__int64, int); // C3: the definition's signature

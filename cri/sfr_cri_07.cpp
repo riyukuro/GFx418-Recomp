@@ -451,14 +451,14 @@ void FUN_14006aa60(short *src, short *dst);
 
 void crimvply_clearFrameInfoMembers(void *);  // C3: the definition's signature
 void crimvply_clearAlphaFrameInfoMembers(void *);  // C3: sfr_cri_02c's definition (0x1400351c0)
-void crimvply_makeFrameInfoMembers(void *, void *, void const *, unsigned __int64, unsigned long);  // C3: the definition's signature
+extern "C" void crimvply_makeFrameInfoMembers(void *, void *, void const *, unsigned __int64, unsigned long);  // C3: the definition's signature
 long crimvply_isUnderGetFrameCondition(void *);  // C3: sfr_cri_02c's definition (0x140035560)
 void FUN_1400356a0(void *, void *, void *, CriMvFrameInfo const *, void const *);  // C3: the definition's signature
 extern "C" void crimvply_occurFatalError(void *, char const *, long);  // C3: the definition (C linkage)
 extern "C" void crimvply_occurUserError(void *, char const *, long);  // C3: the definition (C linkage)
 void criErr_NotifyPrmArray(long, char const *, long, long, void *);  // C3: the definition's signature
 long criAlphaDec_CopyAlphaFrameBuffer(void *, void *, void *);  // C3: the definition (0x140043f70)
-void * criAlphaDec_GetAlphaFramePointer(void *, void *);  // C3: the definition's signature
+extern "C" void * criAlphaDec_GetAlphaFramePointer(void *, void *);  // C3: the definition's signature
 void criAlphaDec_ReleaseAlphaFramePointer(unsigned __int64 *, void *);  // C3: the definition's signature
 long criVdec_CopyFrameYuvBuffers(void *, void *, void *);  // C3: the definition (0x140044950)
 void * criVdec_GetFramePointer(void *, void *);  // C3: the definition's signature
@@ -529,7 +529,7 @@ int cridlg_GetStat(int *);
 cri_u4 CRIDLG_TryBeginInvoke(cri_u8, cri_u8, cri_u8);
 int cridlg_TryBeginInvoke(int *, cri_u8, cri_u8);
 void CRIDLG_EndInvoke(cri_u8, cri_u4);
-void cridlg_EndInvoke(int *, cri_u4);
+extern "C" void cridlg_EndInvoke(int *, cri_u4);
 cri_u4 CRIDLG_IsCompleted(cri_u8, cri_u4);
 int cridlg_IsCompleted(int *, int);
 cri_u4 CRIDLG_GetPriority(cri_u8);
@@ -541,13 +541,13 @@ void cridlg_SetAffinityMask(int *, uint);
 cri_u8 FUN_140068190(longlong);
 cri_u8 FUN_140068200(cri_u8);
 extern "C" cri_u8 FUN_140068210(longlong);
-void cridlg_assert(const char *);
+extern "C" void cridlg_assert(const char *);
 void cridlg_lock();
 void cridlg_unlock();
 cri_u8 CRICRS_Create(longlong, int);
-void CRICRS_Destroy(LPCRITICAL_SECTION);
-cri_u4 CRICRS_Enter(LPCRITICAL_SECTION);
-cri_u4 CRICRS_Leave(LPCRITICAL_SECTION);
+extern "C" void CRICRS_Destroy(LPCRITICAL_SECTION);
+extern "C" cri_u4 CRICRS_Enter(LPCRITICAL_SECTION);
+extern "C" cri_u4 CRICRS_Leave(LPCRITICAL_SECTION);
 void mpvumct_OutputIntra6blk(short *, int *, longlong);
 void FUN_140068590(longlong *, longlong, uint);
 void mpvumct_BiMakeMb(longlong *, longlong, uint);
@@ -1558,7 +1558,7 @@ void CRIDLG_EndInvoke(cri_u8 arg1, cri_u4 arg2)
 }
 
 // @0x140067e00
-void cridlg_EndInvoke(int *arg1, cri_u4 arg2)
+extern "C" void cridlg_EndInvoke(int *arg1, cri_u4 arg2)
 {
   int i_v1;
   int i_v2;
@@ -1712,7 +1712,7 @@ void cridlg_SetAffinityMask(int *arg1, uint arg2)
 }
 
 // @0x140068280
-void cridlg_assert(const char *arg1)
+extern "C" void cridlg_assert(const char *arg1)
 {
   CRIERR_CallErr(arg1);
   return;
@@ -1761,7 +1761,7 @@ cri_u8 CRICRS_Create(longlong arg1, int arg2)
 
 // @0x140068380
 #pragma function(memset)                      // the exe obj calls memset here
-void CRICRS_Destroy(LPCRITICAL_SECTION arg1)
+extern "C" void CRICRS_Destroy(LPCRITICAL_SECTION arg1)
 {
   if (arg1 == (LPCRITICAL_SECTION)0x0) {
     CRIERR_CallErr("CRICRS_Destroy : NULL pointer is passed.");
@@ -1778,7 +1778,7 @@ void CRICRS_Destroy(LPCRITICAL_SECTION arg1)
 #pragma intrinsic(memset)
 
 // @0x1400683d0
-cri_u4 CRICRS_Enter(LPCRITICAL_SECTION arg1)
+extern "C" cri_u4 CRICRS_Enter(LPCRITICAL_SECTION arg1)
 {
   cri_u4 u_v1 = 0;
   
@@ -1797,7 +1797,7 @@ cri_u4 CRICRS_Enter(LPCRITICAL_SECTION arg1)
 }
 
 // @0x140068430
-cri_u4 CRICRS_Leave(LPCRITICAL_SECTION arg1)
+extern "C" cri_u4 CRICRS_Leave(LPCRITICAL_SECTION arg1)
 {
   cri_u4 u_v1 = 0;
   

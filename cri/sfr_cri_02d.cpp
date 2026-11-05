@@ -322,34 +322,34 @@ typedef struct CriMvSubtitleFrameCounter { CriUint8 Reserved[0xe30]; CriUint32 V
 #else
 #define CRI_C_LINKAGE
 #endif
-CriBool allocateMetaWork(void* player);
+CRI_C_LINKAGE CriBool allocateMetaWork(void* player);
 void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue);
-void criUsfDmx_Stop(void* demux);
-void criUsfDmx_Execute(void* demux);
-CriSint32 criUsfDmx_GetStatus(void* demux);
-void crimvply_transitErrorState(void* player, void* message);
+CRI_C_LINKAGE void criUsfDmx_Stop(void* demux);
+CRI_C_LINKAGE void criUsfDmx_Execute(void* demux);
+CRI_C_LINKAGE CriSint32 criUsfDmx_GetStatus(void* demux);
+CRI_C_LINKAGE void crimvply_transitErrorState(void* player, void* message);
 CRI_C_LINKAGE void crimvply_occurUserError(void* owner, const char* message, CriSint32 value);
-void criMvPlyAmng_TerminateSupply(void* audioManager);
-void criVdec_TerminateSupply(void* decoder);
-void criAlphaDec_TerminateSupply(void* decoder);
-void criUsfDmx_Start(void* demux);
-void criUsfDmx_SetInputSj(void* demux, void* value);
+CRI_C_LINKAGE void criMvPlyAmng_TerminateSupply(void* audioManager);
+CRI_C_LINKAGE void criVdec_TerminateSupply(void* decoder);
+CRI_C_LINKAGE void criAlphaDec_TerminateSupply(void* decoder);
+CRI_C_LINKAGE void criUsfDmx_Start(void* demux);
+CRI_C_LINKAGE void criUsfDmx_SetInputSj(void* demux, void* value);
 void FUN_140044fb0(void* output, CriUint32 index, void* value, CriUint32 type, CriUint32 flags);
 #ifdef __cplusplus
-void criUsfDmx_SetThrououtSwitch(void* demux, CriUint8 value);  // the C++ name of sfr_cri_03b's definition
+CRI_C_LINKAGE void criUsfDmx_SetThrououtSwitch(void* demux, CriUint8 value);  // the C++ name of sfr_cri_03b's definition
 #else
-void criUsfDmx_SetThrououtSwitch(void* demux, CriBool value);   // the exe C callers pass a 32-bit switch (mov edx,1)
+CRI_C_LINKAGE void criUsfDmx_SetThrououtSwitch(void* demux, CriBool value);   // the exe C callers pass a 32-bit switch (mov edx,1)
 #endif
-void criSj_Reset(void* streamJoint);
-void* criMvPly_GetInputSj(void* player, CriUint32* available, CriUint32* bounded);
+CRI_C_LINKAGE void criSj_Reset(void* streamJoint);
+CRI_C_LINKAGE void* criMvPly_GetInputSj(void* player, CriUint32* available, CriUint32* bounded);
 CRI_C_LINKAGE void criSj_UngetChunk(void* queue, CriSint32 operation, void* chunk);
 CRI_C_LINKAGE CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
-void criSj_GetInputChunk(void* object, void* value);
-void criMvPly_AddInputMemory(void* player, void* chunk, CriUint32 type);
+CRI_C_LINKAGE void criSj_GetInputChunk(void* object, void* value);
+CRI_C_LINKAGE void criMvPly_AddInputMemory(void* player, void* chunk, CriUint32 type);
 void FUN_140046814(void* streamJoint, const void* chunk, CriUint32 size);
 CRI_C_LINKAGE void crimvply_occurFatalError(void* owner, const char* message, CriSint32 value);
 CRI_C_LINKAGE void criSj_PutChunk(void* queue, CriSint32 operation, void* chunk);
-const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
+CRI_C_LINKAGE const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
 typedef struct CriUsfStandardHeader CriUsfStandardHeader;
 CriBool criMvPly_IsSetDefaultDecryptionKey(void);
 CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8* data, CriUint32 size, CriUsfStandardHeader* header);
@@ -391,10 +391,10 @@ CriSint32 criHeap_Free(CriHeap heap, void* ptr);
 extern CriSint32 DAT_143b27948;
 extern CriUint8 DAT_143b27a48[0x20];
 extern CriUint8 DAT_143b27a68[0x20];
-void*     criUtfRtv_Create(void* heap, void* data, CriUint32 size);                                     /* 14003b348 */
-CriUint32 FID_conflict_criUtfRtv_GetDataSint32Fn(const struct CriUtfRtvView* object, CriUint32 index, const char* key); /* 14003a85c */
-CriUint32 criUtfRtv_GetNumRecord(const struct CriUtfRtvView* object);                                  /* 14003a45c */
-void      criUtfRtv_Destroy(CriUint64* table);                                                         /* 14003a108 */
+CRI_C_LINKAGE void*     criUtfRtv_Create(void* heap, void* data, CriUint32 size);                                     /* 14003b348 */
+CRI_C_LINKAGE CriUint32 FID_conflict_criUtfRtv_GetDataSint32Fn(const struct CriUtfRtvView* object, CriUint32 index, const char* key); /* 14003a85c */
+CRI_C_LINKAGE CriUint32 criUtfRtv_GetNumRecord(const struct CriUtfRtvView* object);                                  /* 14003a45c */
+CRI_C_LINKAGE void      criUtfRtv_Destroy(CriUint64* table);                                                         /* 14003a108 */
 typedef struct CriUtfRtvCell                // criUtfRtv_GetCellVal output: a string cell's pointer and length
 {
     CriUint64 Type;                         // a byte in CRI; no char array, so no /GS cookie
@@ -450,33 +450,33 @@ typedef struct CriMvMetaPlayerView
     CriUint32 Reservedebc;
     CriMvEventEntry* Events;                // 0xec0
 } CriMvMetaPlayerView;
-void retrieveAudioHeader(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
+CRI_C_LINKAGE void retrieveAudioHeader(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
 void FUN_140032650(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
-void retrieveSubtitleHeader(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
+CRI_C_LINKAGE void retrieveSubtitleHeader(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
 void FUN_140032db0(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
-void retrieveCuePointHeader(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
-CriBool recordSubtitleHeader(void* player, const CriMovieInputChunk* input);
-CriBool isEndStopProcessingProc(void* player);
-void resetHandle(void* player);
+CRI_C_LINKAGE void retrieveCuePointHeader(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
+CRI_C_LINKAGE CriBool recordSubtitleHeader(void* player, const CriMovieInputChunk* input);
+CRI_C_LINKAGE CriBool isEndStopProcessingProc(void* player);
+CRI_C_LINKAGE void resetHandle(void* player);
 void executeMvPlyPrepServer(void* player);
-void executeMvPlyPlayingServer(void* player);
-void executeVideoServer(void* player);
+CRI_C_LINKAGE void executeMvPlyPlayingServer(void* player);
+CRI_C_LINKAGE void executeVideoServer(void* player);
 void executeUsfServer(void* player);
-void criMvPlyAmng_ExecuteAudioServer(void* audioManager, void* player);
+CRI_C_LINKAGE void criMvPlyAmng_ExecuteAudioServer(void* audioManager, void* player);
 CriSint32 getInternalStatus(void* player);
 CriBool isLockedInputChunk(const void* player);
-void criMvPlyAmng_Destroy(void* manager, void* heap);
-void criAlphaDec_Destroy(void* decoder);
-void criVdec_Destroy(CriUint64* adapter);
-void criSj_Destroy(void* streamJoint);
+CRI_C_LINKAGE void criMvPlyAmng_Destroy(void* manager, void* heap);
+CRI_C_LINKAGE void criAlphaDec_Destroy(void* decoder);
+CRI_C_LINKAGE void criVdec_Destroy(CriUint64* adapter);
+CRI_C_LINKAGE void criSj_Destroy(void* streamJoint);
 CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* chunk, CriSint32 channel);
-void releaseSubtitleChunk(void* player, CriMvSubtitleChunk* chunk);
-void ungetSubtitleChunk(void* player, CriMvSubtitleChunk* chunk);
-void analyzeSubtitleInfo(void* player, CriMvSubtitleChunk* chunk, void* outputInfo);
+CRI_C_LINKAGE void releaseSubtitleChunk(void* player, CriMvSubtitleChunk* chunk);
+CRI_C_LINKAGE void ungetSubtitleChunk(void* player, CriMvSubtitleChunk* chunk);
+CRI_C_LINKAGE void analyzeSubtitleInfo(void* player, CriMvSubtitleChunk* chunk, void* outputInfo);
 CriBool criMvPly_IsSetDefaultDecryptionKey(void);
-void crimvply_makeFrameInfoMembers(void* player, void* output, const void* frameInfo, CriUint64 firstWord, CriUint32 flags);
-void crimvply_makeAlphaFrameInfoMembers(void* player, void* destination, const void* source);
-void* criAlphaDec_GetAlphaFramePointer(void* decoder, void* frameInfo);
+CRI_C_LINKAGE void crimvply_makeFrameInfoMembers(void* player, void* output, const void* frameInfo, CriUint64 firstWord, CriUint32 flags);
+CRI_C_LINKAGE void crimvply_makeAlphaFrameInfoMembers(void* player, void* destination, const void* source);
+CRI_C_LINKAGE void* criAlphaDec_GetAlphaFramePointer(void* decoder, void* frameInfo);
 void crimvply_clearAlphaFrameInfoMembers(void* info);
 CriBool crimvply_isUnderGetFrameCondition(void* player);
 void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct CriMvAlphaDecoderFrameInfo* info);

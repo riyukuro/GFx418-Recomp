@@ -49,10 +49,10 @@ void criMvPly_SetPcmFormat(void *, long);
 void criErr_Notify(long, char const *);
 void criCs_Destroy(struct _RTL_CRITICAL_SECTION *);
 unsigned long criAtomic_TestAndSet(unsigned long *, unsigned long);
-void criUtfRtv_Destroy(unsigned __int64 *);
-unsigned long FID_conflict_criUtfRtv_GetDataSint32Fn(struct CriUtfRtvView const *, unsigned long, char const *);
-void * criUtfRtv_Create(void *, void *, unsigned long);
-unsigned char const * criUsfCmn_GetContents(unsigned char const *, unsigned long, long *);
+extern "C" void criUtfRtv_Destroy(unsigned __int64 *);
+extern "C" unsigned long FID_conflict_criUtfRtv_GetDataSint32Fn(struct CriUtfRtvView const *, unsigned long, char const *);
+extern "C" void * criUtfRtv_Create(void *, void *, unsigned long);
+extern "C" unsigned char const * criUsfCmn_GetContents(unsigned char const *, unsigned long, long *);
 long criVmpv_CalcMovieHandleWork(long);
 unsigned long criVmpv_GetMaxNumberOfHandles(void);
 // C3: the definitions' names and signatures
@@ -83,7 +83,7 @@ unsigned long criMvPly_GetWave32(void *, unsigned long, void *, unsigned long, v
 unsigned long criMvPly_GetSubAudioWave16(void *, unsigned long, void *, unsigned long, void *);
 unsigned long criMvPly_GetSubAudioWave32(void *, unsigned long, void *, unsigned long, void *);
 void criMvPly_StartMemory(void *, void const *, unsigned long);
-void criMvPly_AddInputMemory(void *, void *, unsigned long);
+extern "C" void criMvPly_AddInputMemory(void *, void *, unsigned long);
 long criMvPly_CalcPlaybackWorkSize(void *, struct CriMvStreamingParameters const *);
 void criMvPly_SetSeekPosition(void *, unsigned long, unsigned long);
 void criMvPly_SetSeekAlphaPosition(void *, unsigned long);

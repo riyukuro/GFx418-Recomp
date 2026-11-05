@@ -25,15 +25,22 @@ typedef unsigned __int64 cri_u8;
 typedef __int64 longlong;
 typedef cri_u8 cri_code(cri_u8);
 
-void cridlg_EndInvoke(int *, cri_u4);
+// sfr_cri_07 defines these with C linkage (extern "C"), so the clang-cl C++ compile declares them so too
+#ifdef __cplusplus
+#define CRI_C_LINKAGE extern "C"
+#else
+#define CRI_C_LINKAGE
+#endif
+
+CRI_C_LINKAGE void cridlg_EndInvoke(int *, cri_u4);
 cri_u8 FUN_140068200(cri_u8);
 cri_u8 FUN_140068210(longlong);
-void cridlg_assert(const char *);
+CRI_C_LINKAGE void cridlg_assert(const char *);
 cri_u8 CRICRS_Create(longlong, int);
-void CRICRS_Destroy(LPCRITICAL_SECTION);
+CRI_C_LINKAGE void CRICRS_Destroy(LPCRITICAL_SECTION);
 cri_u8 FUN_140068190(longlong);
-cri_u4 CRICRS_Enter(LPCRITICAL_SECTION);
-cri_u4 CRICRS_Leave(LPCRITICAL_SECTION);
+CRI_C_LINKAGE cri_u4 CRICRS_Enter(LPCRITICAL_SECTION);
+CRI_C_LINKAGE cri_u4 CRICRS_Leave(LPCRITICAL_SECTION);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // create a CRI worker thread record in the caller's work area (4-byte aligned, at least 0x7c bytes): its wait event,

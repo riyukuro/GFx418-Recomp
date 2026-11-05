@@ -298,7 +298,7 @@ int cridlg_GetStat(int *);
 cri_u4 CRIDLG_TryBeginInvoke(cri_u8, cri_u8, cri_u8);
 int cridlg_TryBeginInvoke(int *, cri_u8, cri_u8);
 void CRIDLG_EndInvoke(cri_u8, cri_u4);
-void cridlg_EndInvoke(int *, cri_u4);
+extern "C" void cridlg_EndInvoke(int *, cri_u4);
 cri_u4 CRIDLG_IsCompleted(cri_u8, cri_u4);
 int cridlg_IsCompleted(int *, int);
 cri_u4 CRIDLG_GetPriority(cri_u8);
@@ -310,13 +310,13 @@ void cridlg_SetAffinityMask(int *, uint);
 cri_u8 FUN_140068190(longlong);
 cri_u8 FUN_140068200(cri_u8);
 extern "C" cri_u8 FUN_140068210(longlong);
-void cridlg_assert(const char *);
+extern "C" void cridlg_assert(const char *);
 void cridlg_lock();
 void cridlg_unlock();
 cri_u8 CRICRS_Create(longlong, int);
-void CRICRS_Destroy(LPCRITICAL_SECTION);
-cri_u4 CRICRS_Enter(LPCRITICAL_SECTION);
-cri_u4 CRICRS_Leave(LPCRITICAL_SECTION);
+extern "C" void CRICRS_Destroy(LPCRITICAL_SECTION);
+extern "C" cri_u4 CRICRS_Enter(LPCRITICAL_SECTION);
+extern "C" cri_u4 CRICRS_Leave(LPCRITICAL_SECTION);
 void mpvumct_OutputIntra6blk(short *, int *, longlong);
 void FUN_140068590(longlong *, longlong, uint);
 void mpvumct_BiMakeMb(longlong *, longlong, uint);
@@ -591,7 +591,7 @@ int cridlg_TryBeginInvoke(int *arg1, cri_u8 arg2, cri_u8 arg3);
 
 void CRIDLG_EndInvoke(cri_u8 arg1, cri_u4 arg2);
 
-void cridlg_EndInvoke(int *arg1, cri_u4 arg2);
+extern "C" void cridlg_EndInvoke(int *arg1, cri_u4 arg2);
 
 cri_u4 CRIDLG_IsCompleted(cri_u8 arg1, cri_u4 arg2);
 
@@ -615,7 +615,7 @@ cri_u8 FUN_140068200(cri_u8 arg1);
 
 extern "C" cri_u8 FUN_140068210(longlong arg1);
 
-void cridlg_assert(const char *arg1);
+extern "C" void cridlg_assert(const char *arg1);
 
 void cridlg_lock();
 
@@ -626,12 +626,12 @@ cri_u8 CRICRS_Create(longlong arg1, int arg2);
 #pragma intrinsic(memset)
 
 #pragma function(memset)                      // the exe obj calls memset here
-void CRICRS_Destroy(LPCRITICAL_SECTION arg1);
+extern "C" void CRICRS_Destroy(LPCRITICAL_SECTION arg1);
 #pragma intrinsic(memset)
 
-cri_u4 CRICRS_Enter(LPCRITICAL_SECTION arg1);
+extern "C" cri_u4 CRICRS_Enter(LPCRITICAL_SECTION arg1);
 
-cri_u4 CRICRS_Leave(LPCRITICAL_SECTION arg1);
+extern "C" cri_u4 CRICRS_Leave(LPCRITICAL_SECTION arg1);
 #pragma optimize("", on)
 
 void mpvumct_OutputIntra6blk(short *arg1, int *arg2, longlong arg3);

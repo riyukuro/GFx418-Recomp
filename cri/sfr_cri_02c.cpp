@@ -81,7 +81,7 @@ extern const void* DAT_1431b8db0[];
 extern const void* DAT_1431b9430[];
 }
 
-const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
+extern "C" const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
 struct CriMovieParsedChunk;
 
 // ---- exe helpers this part calls (bound by address until their units are recovered)
@@ -142,7 +142,7 @@ void     initializeHandleParameters(void* player);
 void*    crimvply_findVdecIF(CriSint32 codecId);
 void*    criVdec_GetVdecCoreIf(void* decoderInterface);
 extern "C" CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
-void criSj_GetInputChunk(void* object, void* value);
+extern "C" void criSj_GetInputChunk(void* object, void* value);
 void     criSj_PutInputChunk(void* streamJoint, const void* chunk, CriUint32 size);
 void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void* suffix);
 void     criCs_Enter(_RTL_CRITICAL_SECTION* section);
@@ -162,11 +162,11 @@ CriBool  executeDecHdrStageMetaGet(void* player);
 CriBool  FUN_140031990(void* player);
 CriUint32 FUN_1400358d0(void* output, const void* info);
 void     FUN_140034d40(void* player, CriMovieInputChunk* output);
-CriBool  allocateMetaWork(void* player);
-CriBool  isEndStopProcessingProc(void* player);
+extern "C" CriBool  allocateMetaWork(void* player);
+extern "C" CriBool  isEndStopProcessingProc(void* player);
 CriSint32 criMvPlyAmng_IsEndAudioPlayback(void* decoder, void* player);
-void     criMvPlyAmng_ExecuteAudioServer(void* audioManager, void* player);
-void     resetHandle(void* player);
+extern "C" void     criMvPlyAmng_ExecuteAudioServer(void* audioManager, void* player);
+extern "C" void     resetHandle(void* player);
 void     executeUsfServer(void* player);
 void     executeMvPlyPrepServer(void* player);
 CriBool  FUN_140033d70(void* player, const CriMovieInputChunk* input, CriUint8 outputIndex);
@@ -181,21 +181,21 @@ CriUint64 FUN_1400445d0(CriUint64* pair);
 void*    FUN_140043c50(void** decoder);
 void     FUN_140044210(CriUint64* pair, void* first, void* second);
 void     FUN_1400441b0(CriUint64* pair, CriUint32 first, CriUint32 second);
-void     executeMvPlyPlayingServer(void* player);
+extern "C" void     executeMvPlyPlayingServer(void* player);
 CriBool  criMvPly_DecodeVideoInCs(void* player);
 void     executeMvPlyDechdrServer(void* player);
 void     executeUsfServer(void* player);
 void     FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue);
-void     criUsfDmx_Stop(void* demux);
-void     criUsfDmx_Execute(void* demux);
-void*    criUtfRtv_Create(void* heap, void* data, CriUint32 size);
-CriUint32 FID_conflict_criUtfRtv_GetDataSint32Fn(const CriUtfRtvView* object, CriUint32 index, const char* key);
+extern "C" void     criUsfDmx_Stop(void* demux);
+extern "C" void     criUsfDmx_Execute(void* demux);
+extern "C" void*    criUtfRtv_Create(void* heap, void* data, CriUint32 size);
+extern "C" CriUint32 FID_conflict_criUtfRtv_GetDataSint32Fn(const CriUtfRtvView* object, CriUint32 index, const char* key);
 CriUint32 criUtfRtv_ConvFieldNameToNo(const CriUtfRtvView* object, const char* key);
-CriUint32 criUtfRtv_GetNumRecord(const CriUtfRtvView* object);
+extern "C" CriUint32 criUtfRtv_GetNumRecord(const CriUtfRtvView* object);
 CriUint32 criUtfRtv_GetDataSint32Fn(const CriUtfRtvView* object, CriUint32 index, const char* key);
 CriUint64 criUtfRtv_GetDataUint64(const CriUtfRtvView* object, CriUint32 index, CriUint32 value);
 CriSint32 criUtfRtv_GetCellVal(const CriUtfRtvView* object, CriUint32 row, CriUint32 field, CriUtfRtvCell* cell);
-void     criUtfRtv_Destroy(CriUint64* table);
+extern "C" void     criUtfRtv_Destroy(CriUint64* table);
 CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8* data, CriUint32 size, CriUsfStandardHeader* output);
 CriBool  criAlphaDec_DecodeFrame(void* decoder);
 CriBool  criVdec_DecodeFrame(void* decoder);
@@ -207,22 +207,22 @@ CriBool  crimvply_StartInCs(void* player);
 CriBool  allocateMetaWorkInCs(void* player);
 void     FUN_140030cb0(void* player);
 void     crimvply_StopInCs(void* player);
-void     crimvply_makeFrameInfoMembers(void* player, void* output, const void* frameInfo, CriUint64 firstWord, CriUint32 flags);
+extern "C" void     crimvply_makeFrameInfoMembers(void* player, void* output, const void* frameInfo, CriUint64 firstWord, CriUint32 flags);
 CriBool  criMvPly_DiscardNextFrame(void* player, void* output);
 CriBool  criMvPly_LockFrameBuffer(void* player, void* yuvBuffers, void* output);
 CriSint32 criVdec_GetStatus(void* decoder);
-CriSint32 criUsfDmx_GetStatus(void* demux);
+extern "C" CriSint32 criUsfDmx_GetStatus(void* demux);
 CriSint32 criVdec_GetNumPictureData(void* decoder);
 CriSint32 criAlphaDec_GetNumPictureData(void* decoder);
 CriUint32 criVdec_GetNumDecPool(void* decoder);
 CriUint32 criAlphaDec_GetNumDecPool(void* decoder);
 void FUN_140044710(void* decoder);
 void FUN_140043d90(void* decoder);
-void     criMvPlyAmng_TerminateSupply(void* audioManager);
+extern "C" void     criMvPlyAmng_TerminateSupply(void* audioManager);
 void     criMvPlyAmng_Stop(void* audioManager);
 void     criMvPlyAmng_ResetAudioSj(void* audioManager);
-void     criVdec_TerminateSupply(void* videoDecoder);
-void     criAlphaDec_TerminateSupply(void* alphaDecoder);
+extern "C" void     criVdec_TerminateSupply(void* videoDecoder);
+extern "C" void     criAlphaDec_TerminateSupply(void* alphaDecoder);
 CriSint32 criAlphaDec_GetStatus(void* decoder);
 void     criVdec_RequestStop(void* decoder);
 void     criAlphaDec_RequestStop(void* decoder);
@@ -246,7 +246,7 @@ CriUint32 criMvPlyAmng_GetWave16(void* manager, CriSint32 stream, void* player, 
 CriUint32 criMvPlyAmng_GetWave32(void* manager, CriSint32 stream, void* player, CriUint32 format,
                           void* output, CriUint32 sampleCount, CriUint32* result);
 void*    criAlphaDec_GetNextAlphaFrameInfo(void* decoder, void* frameInfo);
-void*    criAlphaDec_GetAlphaFramePointer(void* decoder, void* frameInfo);
+extern "C" void*    criAlphaDec_GetAlphaFramePointer(void* decoder, void* frameInfo);
 void*    criVdec_GetNextFrameInfo(void* decoder, void* frameInfo);
 void     criUsfDmx_Initialize(void);
 void     criAtomic_Initialize(void);
@@ -275,9 +275,9 @@ void     criAlphaDec_SetProcessorMask(CriUint64* decoder, CriUint32 count);
 void     criVdec_SetDlgPara(void* decoder, CriUint32 count, void* streamInfo, void* outputInfo);
 void     criAlphaDec_SetDlgPara(CriUint64* decoder, CriUint32 count, void* streamInfo, void* outputInfo);
 void     FUN_140032650(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed);
-void     retrieveAudioHeader(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed);
+extern "C" void     retrieveAudioHeader(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed);
 void     FUN_140032db0(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed);
-void     retrieveSubtitleHeader(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed);
+extern "C" void     retrieveSubtitleHeader(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed);
 struct CriMovieStreamSlotView;
 void     prepareNextHeaderIfCompleted(void* player, CriMovieStreamSlotView* slot);
 void*    FUN_14002db40(void* thread, void* config);
@@ -290,21 +290,21 @@ CriUint32 criMvPlyAmng_GetDataSizeWave(void* manager, CriSint32 stream, void* pl
 CriSint32 criMvPlyAmng_IsEndAudioPlaybackById(void* manager, void* player, CriSint32 stream);
 void     criMvPlyAmng_DestroyAudioDecoder(void* manager, void* decoder, CriSint32 stream);
 CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* chunk, CriSint32 channel);
-void     releaseSubtitleChunk(void* player, CriMvSubtitleChunk* chunk);
-void     criMvPly_AddInputMemory(void* player, void* chunk, CriUint32 type);
-void     ungetSubtitleChunk(void* player, CriMvSubtitleChunk* chunk);
-void     analyzeSubtitleInfo(void* player, CriMvSubtitleChunk* chunk, void* outputInfo);
-void     criSj_Destroy(void* streamJoint);
-void     criUsfDmx_SetInputSj(void* demux, void* value);
-void     criUsfDmx_SetThrououtSwitch(void* demux, CriUint8 value);
+extern "C" void     releaseSubtitleChunk(void* player, CriMvSubtitleChunk* chunk);
+extern "C" void     criMvPly_AddInputMemory(void* player, void* chunk, CriUint32 type);
+extern "C" void     ungetSubtitleChunk(void* player, CriMvSubtitleChunk* chunk);
+extern "C" void     analyzeSubtitleInfo(void* player, CriMvSubtitleChunk* chunk, void* outputInfo);
+extern "C" void     criSj_Destroy(void* streamJoint);
+extern "C" void     criUsfDmx_SetInputSj(void* demux, void* value);
+extern "C" void     criUsfDmx_SetThrououtSwitch(void* demux, CriUint8 value);
 void     criUsfDmx_Destroy(void* demux);
 void     FUN_140030c70(void* player);
 CriBool  freeMetaWork(void* player);
-void     criUsfDmx_Start(void* demux);
-void     criSj_Reset(void* streamJoint);
-void     criMvPlyAmng_Destroy(void* manager, void* heap);
-void     criAlphaDec_Destroy(void* decoder);
-void     criVdec_Destroy(CriUint64* adapter);
+extern "C" void     criUsfDmx_Start(void* demux);
+extern "C" void     criSj_Reset(void* streamJoint);
+extern "C" void     criMvPlyAmng_Destroy(void* manager, void* heap);
+extern "C" void     criAlphaDec_Destroy(void* decoder);
+extern "C" void     criVdec_Destroy(CriUint64* adapter);
 void     FUN_142584540(void* event, CriSint32 timeout);
 void     FUN_14258b260(void* event);
 void     FUN_14258aca0(void* lock);
@@ -980,7 +980,7 @@ void criMvPly_SetSeekAlphaPosition(void* player, CriUint32 value)
 
 // MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this state transition is rebuilt with our VS2017 toolset.
 // @0x1400379b0
-void crimvply_transitErrorState(void* player, void* message)
+extern "C" void crimvply_transitErrorState(void* player, void* message)
 {
     if (message == message) {}               // the CRI unused-argument idiom: /Od loads it (the exe's dead load)
     if (player)
@@ -1238,7 +1238,7 @@ void criMvPly_SetDemuxOutputSj(void* player, void* value, CriUint32 type, CriUin
 
 // MS2-FUNCTIONAL: detect terminal decoder errors and report them through the player error logger.
 // @0x140034690
-void executeVideoServer(void* player)
+extern "C" void executeVideoServer(void* player)
 {
     void* videoDec = ((CriMvDecoderHandleFields*)player)->VideoDecoder;
     if (videoDec)
@@ -1302,7 +1302,7 @@ CriBool FUN_1400341d0(void* player, const CriMovieInputChunk* input)
 
 // accept decoded alpha-stream metadata and decrement its pending record count.
 // @0x140036d50
-CriBool recordSubtitleHeader(void* player, const CriMovieInputChunk* input)
+extern "C" CriBool recordSubtitleHeader(void* player, const CriMovieInputChunk* input)
 {
     CriUint32* dst;
     CriMovieParsedChunk meta;
@@ -1323,7 +1323,7 @@ CriBool recordSubtitleHeader(void* player, const CriMovieInputChunk* input)
 
 // MS2-FUNCTIONAL: replace the pending movie chunk and save the most recently enqueued record.
 // @0x1400363b0
-void criMvPly_AddInputMemory(void* player, void* chunk, CriUint32 type)
+extern "C" void criMvPly_AddInputMemory(void* player, void* chunk, CriUint32 type)
 {
     CriMovieChunkQueueRecord item;
     CriMovieChunkQueueRecord stale;          // the replaced chunk is popped into its own record
@@ -1433,7 +1433,7 @@ CriUint32 decideReadBufferExtSize(void* player)
 
 // MS2-FUNCTIONAL: selects the active CRI read buffer and returns its available and bounded sizes.
 // @0x140037050
-void* criMvPly_GetInputSj(void* player, CriUint32* available, CriUint32* bounded)
+extern "C" void* criMvPly_GetInputSj(void* player, CriUint32* available, CriUint32* bounded)
 {
     void* buffer = NULL;
     CriUint32 first = 0;
@@ -1548,7 +1548,7 @@ extern "C" void crimvply_occurUserError(void* owner, const char* message, CriSin
 // MS2-FUNCTIONAL: convert the decoder's frame metadata into the 0x38-byte output info, taking the dimensions from the
 // movie. This is not a plain copy: the decoder's +0x14 moves to +0x1c, and +0x14/+0x18/+0x34 come from the player.
 // @0x140035480
-void crimvply_makeAlphaFrameInfoMembers(void* player, void* destination, const void* source)
+extern "C" void crimvply_makeAlphaFrameInfoMembers(void* player, void* destination, const void* source)
 {
     struct FrameView
     {
@@ -1690,7 +1690,7 @@ void criMvPly_DetachSubAudio(void* player)
 
 // MS2-FUNCTIONAL: decode a subtitle record and calculate its audio-synchronized presentation position.
 // @0x140036f40
-void analyzeSubtitleInfo(void* player, CriMvSubtitleChunk* chunk, void* outputInfo)
+extern "C" void analyzeSubtitleInfo(void* player, CriMvSubtitleChunk* chunk, void* outputInfo)
 {
     // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): p, length, ptr, curTime, tunit.
     const CriUint8* p;
@@ -1856,7 +1856,7 @@ void criErr_NotifyGeneric(CriSint32 category, const char* code, CriSint32 error)
 
 // MS2-FUNCTIONAL: copies the CRI decoded frame planes and stream dimensions into the public frame record.
 // @0x140035260
-void crimvply_makeFrameInfoMembers(void* player, void* output, const void* frameInfo,
+extern "C" void crimvply_makeFrameInfoMembers(void* player, void* output, const void* frameInfo,
                    CriUint64 firstWord, CriUint32 flags)
 {
     struct PlaneSource { CriUint64 data; CriUint32 width; CriUint32 lines; CriUint32 pitch; };
@@ -2294,7 +2294,7 @@ void FUN_140031100(void* player)
 
 // MS2-FUNCTIONAL: parse sample rate, channel count, sample count, and buffer size from an audio header.
 // @0x140032a70
-void retrieveAudioHeader(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
+extern "C" void retrieveAudioHeader(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
 {
     struct WorkSizeView { CriUint32 Reserved; CriUint32 Size; };
     CriUint32 suggestedSize4;
@@ -2311,7 +2311,7 @@ void retrieveAudioHeader(void* player, void* workInfo, CriUint32* output, const 
 
 // parse channel and time-base metadata for a CRI Movie stream record.
 // @0x140032b70
-void retrieveSubtitleHeader(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
+extern "C" void retrieveSubtitleHeader(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
 {
     struct WorkSizeView { CriUint32 Reserved; CriUint32 Size; };
     void* document = criUtfRtv_Create(((CriMvPlyObj*)player)->utf_heap, (void*)parsed->Data, parsed->Size);
@@ -2328,7 +2328,7 @@ void retrieveSubtitleHeader(void* player, void* workInfo, CriUint32* output, con
 
 // parse the cue metadata header and raise the required working-buffer size.
 // @0x140032c70
-void retrieveCuePointHeader(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
+extern "C" void retrieveCuePointHeader(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
 {
     struct WorkSizeView { CriUint32 Reserved; CriUint32 Size; };
     void* document = criUtfRtv_Create(((CriMvPlyObj*)player)->utf_heap, (void*)parsed->Data, parsed->Size);
@@ -2985,7 +2985,7 @@ void executeMvPlyDechdrServer(void* player)
 
 // advance a completed video decoder (and its alpha decoder) through the metadata and stop phases
 // @0x1400344f0
-void executeMvPlyPlayingServer(void* player)
+extern "C" void executeMvPlyPlayingServer(void* player)
 {
     if (((CriMvDecoderHandleFields*)player)->VideoDecoder)
     {
@@ -3034,7 +3034,7 @@ void copyDataFromHeadAnalyToReadBuffer(void* player)
 // Reset the player's demux, streams, audio manager, and seek metadata for a new open.
 // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): read, chunk, queue.
 // @0x140031570
-void resetHandle(void* player)
+extern "C" void resetHandle(void* player)
 {
     struct ResetView
     {
@@ -3175,7 +3175,7 @@ void FUN_1400314a0(void* player)
 
 // MS2-FUNCTIONAL: report whether both decoder backends have completed their stop processing.
 // @0x1400314d0
-CriBool isEndStopProcessingProc(void* player)
+extern "C" CriBool isEndStopProcessingProc(void* player)
 {
     void* videoDecoder = ((CriMvDecoderHandleFields*)player)->VideoDecoder;
     void* alphaDecoder = ((CriMvDecoderHandleFields*)player)->AlphaDecoder;   // after videoDecoder: same VC9 slot bucket
@@ -3299,7 +3299,7 @@ void executeDiscardFrameServer(void* player)
 
 // MS2-FUNCTIONAL: discard the player's pending subtitle chunk.
 // @0x140036e30
-void releaseSubtitleChunk(void* player, CriMvSubtitleChunk* chunk)
+extern "C" void releaseSubtitleChunk(void* player, CriMvSubtitleChunk* chunk)
 {
     if (player == NULL)
         return;
@@ -3310,7 +3310,7 @@ void releaseSubtitleChunk(void* player, CriMvSubtitleChunk* chunk)
 
 // MS2-FUNCTIONAL: return a subtitle chunk to the head of the player's subtitle queue.
 // @0x140036e80
-void ungetSubtitleChunk(void* player, CriMvSubtitleChunk* chunk)
+extern "C" void ungetSubtitleChunk(void* player, CriMvSubtitleChunk* chunk)
 {
     if (player == NULL)
         return;
@@ -3409,7 +3409,7 @@ void FUN_140030c70(void* player)
 #pragma optimize("", off)                    // the exe built these lock wrappers without optimization (/Od)
 // MS2-FUNCTIONAL: perform the player update under its handle critical section.
 // @0x140031aa0
-CriBool allocateMetaWork(void* player)
+extern "C" CriBool allocateMetaWork(void* player)
 {
     enterHandleCs(player);
     CriBool result = allocateMetaWorkInCs(player);

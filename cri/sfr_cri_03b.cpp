@@ -67,7 +67,7 @@ void MPV_Finish(void);
 void SJMEM_Finish(void);
 void SJRBF_Finish(void);
 void FUN_14004e2a0(void*);
-void criSj_Destroy(void*);
+extern "C" void criSj_Destroy(void*);
 void* FUN_14004fe20(void*, CriUint32, CriUint32);
 void criVmpv_Destroy(void*);
 CriSint32 FUN_14003cff0(void*);
@@ -80,7 +80,7 @@ void FUN_14004ff90(void*, void*, void*);
 extern "C" void criSj_UngetChunk(void*, CriSint32, void*);
 extern "C" void criSj_PutChunk(void*, CriSint32, void*);
 extern "C" CriSint32 FUN_1400467b8(void*, CriSint32);
-void criSj_Reset(void*);
+extern "C" void criSj_Reset(void*);
 void criSj_GetChunk(void*, CriSint32, CriUint32, void*);
 CriSint32 FUN_140053630(void*);
 CriUint32 criMvPlyAdec_GetDataSizeWave(void*, void*, CriUint32);
@@ -372,7 +372,7 @@ void criVmpv_ReleaseAlphaFramePointer(void* target, const CriUint64* settings);
 
 void criMvPlyAmng_Stop(void* decoderList);
 
-void criMvPlyAmng_TerminateSupply(void* decoderList);
+extern "C" void criMvPlyAmng_TerminateSupply(void* decoderList);
 
 void mvPlyAdec_ResetAudioDecoderSj(void* trackSet);
 #pragma optimize("", on)
@@ -380,7 +380,7 @@ void mvPlyAdec_ResetAudioDecoderSj(void* trackSet);
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: refresh a read-buffer header when its state is active, then drain one queued chunk.
 // @0x1400458b8
-void criUsfDmx_Execute(void* object)
+extern "C" void criUsfDmx_Execute(void* object)
 {
     struct ReaderBuffer
     {
@@ -457,7 +457,7 @@ CriUint64 FUN_14003a0b4(CriUint64 value, CriUint32 alignment);
 
 CriUint32 FUN_14003a0f8(CriSint32 index);
 
-void criUtfRtv_Destroy(CriUint64* table);
+extern "C" void criUtfRtv_Destroy(CriUint64* table);
 #pragma optimize("", on)
 
 void criMvPly_AttachM2V();
@@ -529,7 +529,7 @@ static inline const CriUint8* criUtfGetRecordField(const CriUtfRtvView* table, C
 #pragma function(strcmp)                      // the exe calls strcmp here rather than expanding it
 CriUint32 criUtfRtv_ConvFieldNameToNo(const CriUtfRtvView* table, const CriChar8* name);
 
-CriUint32 criUtfRtv_GetNumRecord(const CriUtfRtvView* table);
+extern "C" CriUint32 criUtfRtv_GetNumRecord(const CriUtfRtvView* table);
 
 CriUint32 criUtfRtv_SearchFastStrByIndexTable(const CriUtfRtvView* table, CriUint32 slotIndex, const CriChar8* name);
 #pragma intrinsic(strcmp)
@@ -546,7 +546,7 @@ double criUtfRtv_GetDataFloat64(const CriUtfRtvView* table, CriUint32 row, CriUi
 
 const CriChar8* criUtfRtv_GetDataStr(const CriUtfRtvView* table, CriUint32 row, CriUint32 field);
 
-CriUint32 FID_conflict_criUtfRtv_GetDataSint32Fn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name);
+extern "C" CriUint32 FID_conflict_criUtfRtv_GetDataSint32Fn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name);
 
 CriUint32 criUtfRtv_GetDataSint32Fn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name);
 
@@ -573,11 +573,11 @@ CriUint64 FUN_14003adac(const CriUtfRtvView* table, CriUint32 firstRow, CriSint3
 
 CriBool criUsfCmn_GetChunkIdAndSIze(const CriUint8* data, CriUint32 size, CriUint32* id, CriUint32* chunkSize);
 
-void* criUtfRtv_Create(void* heap, void* table, CriUint32 size);
+extern "C" void* criUtfRtv_Create(void* heap, void* table, CriUint32 size);
 
 CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8* data, CriUint32 size, CriUsfStandardHeader* header);
 
-const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
+extern "C" const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -682,7 +682,7 @@ void FUN_140043d90(void* decoder);
 
 void criAlphaDec_RequestStop(void* decoder);
 
-void criAlphaDec_TerminateSupply(void* decoder);
+extern "C" void criAlphaDec_TerminateSupply(void* decoder);
 
 CriSint32 criAlphaDec_GetNumPictureData(void* decoder);
 
@@ -692,9 +692,9 @@ void* criAlphaDec_GetNextAlphaFrameInfo(void* decoder, void* frameInfo);
 
 CriBool criAlphaDec_CopyAlphaFrameBuffer(void* decoder, void* buffers, void* frameInfo);
 
-void criAlphaDec_Destroy(void* decoder);
+extern "C" void criAlphaDec_Destroy(void* decoder);
 
-void* criAlphaDec_GetAlphaFramePointer(void* decoder, void* frameInfo);
+extern "C" void* criAlphaDec_GetAlphaFramePointer(void* decoder, void* frameInfo);
 
 CriSint32 criVdec_GetStatus(void* decoder);
 
@@ -704,7 +704,7 @@ void FUN_140044710(void* decoder);
 
 void criVdec_RequestStop(void* decoder);
 
-void criVdec_TerminateSupply(void* decoder);
+extern "C" void criVdec_TerminateSupply(void* decoder);
 
 CriSint32 criVdec_GetNumPictureData(void* decoder);
 
@@ -1081,7 +1081,7 @@ void mpvumc_IncreMbadr(CriMpvDecoderState* state);
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: read the initialized flag stored in the CRI demux object.
 // @0x140044f8c
-CriSint32 criUsfDmx_GetStatus(void* object)
+extern "C" CriSint32 criUsfDmx_GetStatus(void* object)
 {
     if (object == NULL)
     {
@@ -1092,7 +1092,7 @@ CriSint32 criUsfDmx_GetStatus(void* object)
 
 // MS2-FUNCTIONAL: reset the demux object's secondary state and mark it initialized.
 // @0x140044f9c
-void criUsfDmx_Start(void* object)
+extern "C" void criUsfDmx_Start(void* object)
 {
     *((CriUint8*)object + 10) = 0;
     *((CriUint8*)object + 9) = 1;
@@ -1100,14 +1100,14 @@ void criUsfDmx_Start(void* object)
 
 // MS2-FUNCTIONAL: store the demux object's opaque user-data pointer.
 // @0x140044fa8
-void criUsfDmx_SetInputSj(void* object, void* value)
+extern "C" void criUsfDmx_SetInputSj(void* object, void* value)
 {
     *(void**)((CriUint8*)object + 0x10) = value;
 }
 
 // MS2-FUNCTIONAL: clear the demux object's one-byte status flag.
 // @0x140044fd8
-void criUsfDmx_SetThrououtSwitch(void* object, CriUint8 value)
+extern "C" void criUsfDmx_SetThrououtSwitch(void* object, CriUint8 value)
 {
     *((CriUint8*)object + 0xb) = value;
 }
@@ -1174,14 +1174,14 @@ void FUN_1400459d4(void* object)
 
 // MS2-FUNCTIONAL: call the stream-joint object's first virtual operation.
 // @0x140046798
-void criSj_Reset(void* object)
+extern "C" void criSj_Reset(void* object)
 {
     (*(void (**)(void*))((CriUint8*)*(void**)object + 8))(object);
 }
 
 // MS2-FUNCTIONAL: call the stream-joint object's deleting destructor slot.
 // @0x140046784
-void criSj_Destroy(void* object)
+extern "C" void criSj_Destroy(void* object)
 {
     DAT_143ba9d30 = "\nCRI Stream Joint/PCx64 Ver.1.01.00 Build:Jan 13 2012 19:02:02\n";
     (**(void (***)(void*))object)(object);
@@ -1279,7 +1279,7 @@ extern "C" CriSint32 FUN_1400467b8(void* object, CriSint32 query = 0)
 
 // MS2-FUNCTIONAL: call the stream-joint object's indexed range operation with default bounds.
 // @0x140046804
-void criSj_GetInputChunk(void* object, void* value)
+extern "C" void criSj_GetInputChunk(void* object, void* value)
 {
     ((void (*)(void*, CriSint32, CriSint32, void*))*(void**)((CriUint8*)*(void**)object + 0x10))(object, 0, -1, value);
 }
@@ -1406,7 +1406,7 @@ CriSint32 criSjUni_GetTotalSize(void* object, CriSint32 lane)
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-void criVdec_Destroy(CriUint64* adapter);
+extern "C" void criVdec_Destroy(CriUint64* adapter);
 
 extern "C" void mvPlyAdec_StartAudioDecoder(CriSint32* state, void* input);
 
@@ -1414,7 +1414,7 @@ CriSint32 criMvPlyAmng_CalcAmngWorkSize(const void* player);
 
 CriBool mvPlyAdec_IsReadyAudioPlayback(void* decoder, const void* operation);
 
-void criMvPlyAmng_Destroy(void* manager, void* heap);
+extern "C" void criMvPlyAmng_Destroy(void* manager, void* heap);
 
 void* criMvPlyAmng_Create(void* owner, void* heap, const void* config);
 
@@ -1426,7 +1426,7 @@ CriBool criMvPlyAmng_CreateAudioDecoder(void* manager, void* owner, void* heap, 
 // MS2-FUNCTIONAL: drain and reset a CRI movie output ring before restoring its terminal queue entry.
 // @0x1400453c4
 #pragma function(memset)
-void criUsfDmx_Stop(void* object)
+extern "C" void criUsfDmx_Stop(void* object)
 {
     struct QueueEntry { void* Queue; CriUint32 Reserved; CriSint32 State; };
     struct OutputState
@@ -2112,8 +2112,8 @@ CriBool FUN_140035560(void*);
 void FUN_1400351c0(void*);
 CriUint32 FUN_1400358d0(void*, const void*);
 void FUN_1400359e0(void*, const void*);
-void crimvply_makeFrameInfoMembers(void*, void*, const void*, CriUint64, CriUint32);
-void crimvply_makeAlphaFrameInfoMembers(void*, void*, const void*);
+extern "C" void crimvply_makeFrameInfoMembers(void*, void*, const void*, CriUint64, CriUint32);
+extern "C" void crimvply_makeAlphaFrameInfoMembers(void*, void*, const void*);
 CriBool criMvPly_CopyFrameARGB8888Buffer(void*, CriUint8*, CriUint32, CriUint32, const void*, const void*, const void*);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -2340,10 +2340,10 @@ void* criUsfDmx_CreateWithWork(CriSint32 count, void* work, CriSint32 workSize)
 #pragma intrinsic(memset)
 #pragma optimize("", on)
 
-const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
+extern "C" const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-void criMvPlyAmng_ExecuteAudioServer(void* trackSet, void* player);
+extern "C" void criMvPlyAmng_ExecuteAudioServer(void* trackSet, void* player);
 #pragma optimize("", on)
 
 CriSint32 criSjUni_GetNumChainPool(void* streamJoint);

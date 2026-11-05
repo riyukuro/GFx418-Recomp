@@ -76,7 +76,7 @@ void MPV_Finish(void);
 void SJMEM_Finish(void);
 void SJRBF_Finish(void);
 unsigned int MPV_Destroy(__int64);    // C3: the definition's signature
-void criSj_Destroy(void*);
+extern "C" void criSj_Destroy(void*);
 extern "C" unsigned __int64 SJRBF_Create(unsigned __int64, unsigned int, unsigned int);   // C3: the definition's signature
 void criVmpv_Destroy(void*);
 CriSint32 FUN_14003cff0(void*);
@@ -90,7 +90,7 @@ unsigned int MPV_SetErrFunc(__int64, unsigned __int64, unsigned __int64); // C3:
 extern "C" void criSj_UngetChunk(void*, CriSint32, void*);
 extern "C" void criSj_PutChunk(void*, CriSint32, void*);
 extern "C" CriSint32 FUN_1400467b8(void*, CriSint32);
-void criSj_Reset(void*);
+extern "C" void criSj_Reset(void*);
 void criSj_GetChunk(void*, CriSint32, CriUint32, void*);
 CriSint32 FUN_140053630(void*);
 CriUint32 criMvPlyAdec_GetDataSizeWave(void*, void*, CriUint32);
@@ -131,7 +131,7 @@ class Image { protected: void initTexture_NoAddRef(Texture* texture); // 0x14257
 void FUN_140054040(__int64, unsigned __int64, unsigned __int64);  // C3: the definition's signature
 void FUN_140053540(__int64);  // C3: the definition's signature
 extern "C" void crimvply_occurFatalError(void*, const CriChar8*, CriSint32);
-void crimvply_transitErrorState(void* player, void* message);
+extern "C" void crimvply_transitErrorState(void* player, void* message);
 unsigned __int64 criAadx_Execute(__int64); // C3: the definition's signature
 void FUN_140053470(unsigned __int64 *);  // C3: the definition's signature
 extern "C" void crimvply_occurUserError(void*, const CriChar8*, CriSint32);
@@ -509,7 +509,7 @@ void criMvPlyAmng_Stop(void* decoderList)
 
 // notify every decoder in the audio list that its player is active.
 // @0x140042880
-void criMvPlyAmng_TerminateSupply(void* decoderList)
+extern "C" void criMvPlyAmng_TerminateSupply(void* decoderList)
 {
     struct DecoderList { void* Decoders[2]; CriSint32 Count; };
     if (!decoderList)
@@ -541,7 +541,7 @@ void mvPlyAdec_ResetAudioDecoderSj(void* trackSet)
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-void criUsfDmx_Execute(void* object);
+extern "C" void criUsfDmx_Execute(void* object);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -603,7 +603,7 @@ CriUint64 FUN_14003a0b4(CriUint64 value, CriUint32 alignment);
 
 CriUint32 FUN_14003a0f8(CriSint32 index);
 
-void criUtfRtv_Destroy(CriUint64* table);
+extern "C" void criUtfRtv_Destroy(CriUint64* table);
 #pragma optimize("", on)
 
 // @0x14003b840
@@ -719,7 +719,7 @@ static inline const CriUint8* criUtfGetRecordField(const CriUtfRtvView* table, C
 #pragma function(strcmp)                      // the exe calls strcmp here rather than expanding it
 CriUint32 criUtfRtv_ConvFieldNameToNo(const CriUtfRtvView* table, const CriChar8* name);
 
-CriUint32 criUtfRtv_GetNumRecord(const CriUtfRtvView* table);
+extern "C" CriUint32 criUtfRtv_GetNumRecord(const CriUtfRtvView* table);
 
 CriUint32 criUtfRtv_SearchFastStrByIndexTable(const CriUtfRtvView* table, CriUint32 slotIndex, const CriChar8* name);
 #pragma intrinsic(strcmp)
@@ -736,7 +736,7 @@ double criUtfRtv_GetDataFloat64(const CriUtfRtvView* table, CriUint32 row, CriUi
 
 const CriChar8* criUtfRtv_GetDataStr(const CriUtfRtvView* table, CriUint32 row, CriUint32 field);
 
-CriUint32 FID_conflict_criUtfRtv_GetDataSint32Fn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name);
+extern "C" CriUint32 FID_conflict_criUtfRtv_GetDataSint32Fn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name);
 
 CriUint32 criUtfRtv_GetDataSint32Fn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name);
 
@@ -763,11 +763,11 @@ CriUint64 FUN_14003adac(const CriUtfRtvView* table, CriUint32 firstRow, CriSint3
 
 CriBool criUsfCmn_GetChunkIdAndSIze(const CriUint8* data, CriUint32 size, CriUint32* id, CriUint32* chunkSize);
 
-void* criUtfRtv_Create(void* heap, void* table, CriUint32 size);
+extern "C" void* criUtfRtv_Create(void* heap, void* table, CriUint32 size);
 
 CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8* data, CriUint32 size, CriUsfStandardHeader* header);
 
-const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
+extern "C" const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -1403,7 +1403,7 @@ void criAlphaDec_RequestStop(void* decoder)
 
 // run the alpha decoder's completion callback.
 // @0x140043e20
-void criAlphaDec_TerminateSupply(void* decoder)
+extern "C" void criAlphaDec_TerminateSupply(void* decoder)
 {
     typedef void (*Callback)(void*);
     if (decoder && ((CriDecoderWrapper*)decoder)->Table[0x60 / 8])
@@ -1461,7 +1461,7 @@ CriBool criAlphaDec_CopyAlphaFrameBuffer(void* decoder, void* buffers, void* fra
 
 // destroy an alpha decoder, clear its wrapper, and release the wrapper allocation.
 // @0x140043be0
-void criAlphaDec_Destroy(void* decoder)
+extern "C" void criAlphaDec_Destroy(void* decoder)
 {
     typedef void (*DestroyCallback)(void*);
     struct DecoderTable { CriUint8 Reserved[0x20]; DestroyCallback Destroy; };
@@ -1477,7 +1477,7 @@ void criAlphaDec_Destroy(void* decoder)
 
 // retrieve an alpha decoder frame pointer through its callback table.
 // @0x140043fe0
-void* criAlphaDec_GetAlphaFramePointer(void* decoder, void* frameInfo)
+extern "C" void* criAlphaDec_GetAlphaFramePointer(void* decoder, void* frameInfo)
 {
     typedef void* (*Callback)(void*, void*);
     void* result = NULL;
@@ -1528,7 +1528,7 @@ void criVdec_RequestStop(void* decoder)
 
 // invoke the video decoder's completion callback.
 // @0x140044790
-void criVdec_TerminateSupply(void* decoder)
+extern "C" void criVdec_TerminateSupply(void* decoder)
 {
     typedef void (*Callback)(void*);
     if (decoder && ((CriDecoderWrapper*)decoder)->Table[0x60 / 8])
@@ -2079,13 +2079,13 @@ void mpvumc_IncreMbadr(CriMpvDecoderState* state)
 }
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-CriSint32 criUsfDmx_GetStatus(void* object);
+extern "C" CriSint32 criUsfDmx_GetStatus(void* object);
 
-void criUsfDmx_Start(void* object);
+extern "C" void criUsfDmx_Start(void* object);
 
-void criUsfDmx_SetInputSj(void* object, void* value);
+extern "C" void criUsfDmx_SetInputSj(void* object, void* value);
 
-void criUsfDmx_SetThrououtSwitch(void* object, CriUint8 value);
+extern "C" void criUsfDmx_SetThrououtSwitch(void* object, CriUint8 value);
 
 void criUsfDmx_TerminateSupply(void* object);
 #pragma optimize("", on)
@@ -2209,9 +2209,9 @@ void FUN_1400459bc(void* object);
 
 void FUN_1400459d4(void* object);
 
-void criSj_Reset(void* object);
+extern "C" void criSj_Reset(void* object);
 
-void criSj_Destroy(void* object);
+extern "C" void criSj_Destroy(void* object);
 
 void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void* suffix);
 
@@ -2227,7 +2227,7 @@ extern "C" void criSj_PutChunk(void* object, CriSint32 operation = 0, void* chun
 
 extern "C" CriSint32 FUN_1400467b8(void* object, CriSint32 query = 0);
 
-void criSj_GetInputChunk(void* object, void* value);
+extern "C" void criSj_GetInputChunk(void* object, void* value);
 
 char* FUN_140046944(char* dst, size_t size, const char* src);
 
@@ -2443,7 +2443,7 @@ CriSint32 criSjUni_GetTotalSize(void* object, CriSint32 lane);
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // dispatch the EasyFileReader free operation and release its heap-owned adapter.
 // @0x140044560
-void criVdec_Destroy(CriUint64* adapter)
+extern "C" void criVdec_Destroy(CriUint64* adapter)
 {
     struct FileAdapterOps { CriUint8 Reserved00[0x20]; void* Free; };
     if (adapter && ((FileAdapterOps*)adapter[1])->Free)
@@ -2534,7 +2534,7 @@ CriBool mvPlyAdec_IsReadyAudioPlayback(void* decoder, const void* operation)
 
 // release all audio decoder entries and the owning stream joint from a player manager.
 // @0x1400420b0
-void criMvPlyAmng_Destroy(void* manager, void* heap)
+extern "C" void criMvPlyAmng_Destroy(void* manager, void* heap)
 {
     struct AudioManager
     {
@@ -2612,7 +2612,7 @@ void* criMvPlyAmng_Create(void* owner, void* heap, const void* config)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 #pragma function(memset)
-void criUsfDmx_Stop(void* object);
+extern "C" void criUsfDmx_Stop(void* object);
 #pragma intrinsic(memset)
 #pragma optimize("", on)
 
@@ -3557,8 +3557,8 @@ CriBool crimvply_isUnderGetFrameCondition(void* player);
 void crimvply_clearAlphaFrameInfoMembers(void* info);
 CriUint32 FUN_1400358d0(void*, const void*);
 void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const CriMvAlphaDecoderFrameInfo* info);
-void crimvply_makeFrameInfoMembers(void*, void*, const void*, CriUint64, CriUint32);
-void crimvply_makeAlphaFrameInfoMembers(void*, void*, const void*);
+extern "C" void crimvply_makeFrameInfoMembers(void*, void*, const void*, CriUint64, CriUint32);
+extern "C" void crimvply_makeAlphaFrameInfoMembers(void*, void*, const void*);
 CriBool criMvPly_CopyFrameARGB8888Buffer(void*, CriUint8*, CriUint32, CriUint32, const void*, const void*, const void*);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -4307,12 +4307,12 @@ bool FUN_1400415f0(void* handle, void* planeSet)
 void* criUsfDmx_CreateWithWork(CriSint32 count, void* work, CriSint32 workSize);
 #pragma optimize("", on)
 
-const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
+extern "C" const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // route queued USF chunks to the matching track decoders until a track set needs more data.
 // @0x1400428e0
-void criMvPlyAmng_ExecuteAudioServer(void* trackSet, void* player)
+extern "C" void criMvPlyAmng_ExecuteAudioServer(void* trackSet, void* player)
 {
     struct Chunk { CriUint8* Data; CriUint32 Size; CriUint32 Reserved; };
     struct Decoder { CriUint8 Reserved00[0x90]; CriSint32 Active; };
