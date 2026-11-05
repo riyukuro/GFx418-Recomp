@@ -79,7 +79,7 @@ unsigned int MPV_Destroy(__int64);    // C3: the definition's signature
 extern "C" void criSj_Destroy(void*);
 extern "C" unsigned __int64 SJRBF_Create(unsigned __int64, unsigned int, unsigned int);   // C3: the definition's signature
 void criVmpv_Destroy(void*);
-CriSint32 FUN_14003cff0(void*);
+extern "C" CriSint32 FUN_14003cff0(void*);   // C3: defined in the C unit sfr_cri_03d
 CriUint32 criVdecCmn_GetNumPictureData(const void* decoder);
 void* FUN_140027f7c(void*, CriSint32, const CriChar8*, CriSint32, CriSint32);
 void* criUtfRtv_CreateByUtfHeapWithHeapType(void*, CriUint32, const void*, CriUint32);

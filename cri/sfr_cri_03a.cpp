@@ -75,7 +75,7 @@ void FUN_14004e2a0(void*);
 extern "C" void criSj_Destroy(void*);
 void* FUN_14004fe20(void*, CriUint32, CriUint32);
 void criVmpv_Destroy(void*);
-CriSint32 FUN_14003cff0(void*);
+extern "C" CriSint32 FUN_14003cff0(void*);   // C3: defined in the C unit sfr_cri_03d
 CriUint32 criVdecCmn_GetNumPictureData(const void* decoder);
 void* criUtfRtv_CreateByUtfHeapWithHeapType(void*, CriUint32, const void*, CriUint32);
 CriSint32 FUN_14004e2f0(void*, CriSint32, CriSint32);
