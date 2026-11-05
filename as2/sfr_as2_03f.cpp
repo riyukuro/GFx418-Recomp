@@ -88,7 +88,7 @@ void* DeleteAs2_142928770(void* p, unsigned flags)
     *(const void**)((char*)p+0x20) = DAT_143217440;
     *(const void**)((char*)p+0x98) = DAT_1432174e8;
     reinterpret_cast<GASPrototypeBase*>((char*)p+0x98)->GASPrototypeBase::~GASPrototypeBase();
-    reinterpret_cast<Text::StyleManager*>((char*)p+0x68)->Text::StyleManager::~StyleManager();
+    reinterpret_cast<Scaleform::GFx::Text::StyleManager*>((char*)p+0x68)->Scaleform::GFx::Text::StyleManager::~StyleManager();
     static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
