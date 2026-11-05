@@ -471,7 +471,7 @@ public:
     {
         Env->LogScriptError("Error: Null or invalid 'this' is used for a method of %s class.\n", pclassName);
     }
-    void ThisPtrError_Call(const char* pclassName) const; // exe 0x142990c40, the out-of-line copy of ThisPtrError
+    void ThisPtrError_Call(const char* pclassName, const char* psrcfile = 0, int line = 0) const; // exe 0x142990c40, the out-of-line copy of ThisPtrError (callers zero r8/r9)
 };
 
 // Bails out of a native method when this is not of the class.

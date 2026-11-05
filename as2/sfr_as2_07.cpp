@@ -1401,7 +1401,7 @@ void StringObject::SetValue(Environment* penv, const Value& v)
 }
 
 // @0x142990c40
-void FnCall::ThisPtrError_Call(const char* pclassName) const
+void FnCall::ThisPtrError_Call(const char* pclassName, const char*, int) const
 {
     ThisPtrError(pclassName);
 }

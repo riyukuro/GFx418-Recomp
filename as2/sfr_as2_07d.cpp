@@ -22,7 +22,7 @@
 
 void FUN_14000b9e0(Scaleform::UPInt* tableRef, void* owner, void** pair, Scaleform::UPInt hash);
 namespace Scaleform { namespace GFx { namespace AS2 { class FnCall; class Value; }}}
-void FUN_142990c40(const Scaleform::GFx::AS2::FnCall* pfn, const char* pclassName, const char*, int);
+// (C3) void FUN_142990c40(const FnCall*, const char*, const char*, int) = FnCall::ThisPtrError_Call (sfr_as2_07)
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -45,7 +45,7 @@ SF_FORCEINLINE bool CheckNodeThis(const FnCall& fn)
     bool isXml  = CheckThisPtrCopy(&fn, ObjectInterface::Object_XML);
     if (!isNode && !isXml)
     {
-        ::FUN_142990c40(&fn, "XMLNode", 0, 0);
+        fn.ThisPtrError_Call("XMLNode", 0, 0);
         return false;
     }
     return true;

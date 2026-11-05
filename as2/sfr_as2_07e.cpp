@@ -26,9 +26,9 @@
 
 void FUN_14000b9e0(Scaleform::UPInt* tableRef, void* owner, void** pair, Scaleform::UPInt hash);
 namespace Scaleform { namespace GFx { namespace AS2 { class FnCall; class Value; }}}
-// FnCall::ThisPtrError_Call (sfr_as2_07). The exe call sites also zero r8/r9, which the one-argument member call
-// does not (7 rows drop), so the four-argument form stays.
-void FUN_142990c40(const Scaleform::GFx::AS2::FnCall* pfn, const char* pclassName, const char*, int);
+// FnCall::ThisPtrError_Call (sfr_as2_07). The exe call sites also zero r8/r9: the member takes the SDK's
+// (className, psrcfile, line) shape, so the calls pass (cls, 0, 0).
+// (C3) void FUN_142990c40(const FnCall*, const char*, const char*, int) = FnCall::ThisPtrError_Call
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -48,7 +48,7 @@ SF_FORCEINLINE bool CheckXmlThis(const FnCall& fn)
 {
     if (!CheckThisPtrCopy(&fn, ObjectInterface::Object_XML))
     {
-        ::FUN_142990c40(&fn, "XML", 0, 0);
+        fn.ThisPtrError_Call("XML", 0, 0);
         return false;
     }
     return true;
