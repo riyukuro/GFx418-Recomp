@@ -23,13 +23,13 @@ MS2_AS2_HASH_FINDINDEX(Object::Watchpoint)
 
 // The standard member of a name (ASStringHash<char>::GetCaseCheck): by node when case sensitive, else by the
 // lowercase twins; the member is copied out when found.
-// MS2-FUNCTIONAL: a free function in place of the template member; the hash walks are inlined in the exe
+// MS2-PIN: ?GetCaseCheck@?$ASStringHashBase@DV?$HashUncachedLH@VASString@GFx@Scaleform@@DUASStringHashFunctor@23@$0BEE@@Scaleform@@@GFx@Scaleform@@QEBA_NAEBVASString@23@PEAD_N@Z 0x142949cf0 ; unique: the exe body is the template member
 // @0x142949cf0
-bool StandardMemberHash_GetCaseCheck(const ASStringHash<char>* phash, const ASString& key, char* pvalue,
-                                     bool caseSensitive)
-{
-    return phash->GetCaseCheck(key, pvalue, caseSensitive);
-}
+// (was the free forwarder StandardMemberHash_GetCaseCheck; the exe function is the template member itself)
+}}} // namespace Scaleform::GFx::AS2
+template bool Scaleform::GFx::ASStringHashBase<char, Scaleform::HashUncachedLH<Scaleform::GFx::ASString, char,
+    Scaleform::GFx::ASStringHashFunctor, Scaleform::GFx::StatMV_ASString_Mem> >::GetCaseCheck(const Scaleform::GFx::ASString&, char*, bool) const;
+namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The watchpoint of a property (ASStringHash_GC<Object::Watchpoint>::GetCaseCheck), null when there is none.
 // A free function in place of the template member (the callers reach it under this name). It is the inlined
