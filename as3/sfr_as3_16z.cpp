@@ -981,7 +981,7 @@ void FUN_1425456e0(void* p);            // Abc::File::~File
 void FUN_14257eb30(void* p);
 void FUN_1424dc630(void* p);
 void FUN_1424de650(void* p);            // MovieRoot::~MovieRoot
-void FUN_1423f0720(void* p);            // ArrayDataBase<SPtr<Namespace>,..,2> dtor (already instantiated here)
+typedef ArrayDataBase<SPtr<Instances::Namespace>, AllocatorLH<SPtr<Instances::Namespace>, 2>, ArrayDefaultPolicy> Sfr16zNsArr; // (C3) FUN_1423f0720 = its dtor
 void FUN_1424df070(void* p);            // Tracer::~Tracer
 void FUN_1424df380(void* p);            // VM::~VM
 }
@@ -1196,7 +1196,7 @@ void* DeleteAs3_1424e33f0(void* p, unsigned flags) { FUN_1424de650(p); Sfr21GFre
 // @0x1424e3450
 void* DeleteAs3_1424e3450(void* p, unsigned flags)
 {
-    FUN_1423f0720(Sfr21At(p, 0x20));
+    reinterpret_cast<Sfr16zNsArr*>(Sfr21At(p, 0x20))->Sfr16zNsArr::~Sfr16zNsArr();
     static_cast<Scaleform::GFx::AS3::GASRefCountBase*>(p)->Scaleform::GFx::AS3::GASRefCountBase::~GASRefCountBase();
     Sfr21GFree(p, flags, 0x38);
     return p;
