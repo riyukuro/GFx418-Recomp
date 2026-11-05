@@ -31,7 +31,7 @@
 // MS2-RANGE: 0x142906650-0x1429069f0 .text$mn
 // MS2-RANGE: 0x142901150-0x142901276 .text$mn
 // MS2-RANGE: 0x142900fc0-0x14290114c .text$mn
-// MS2-RANGE: 0x142901280-0x142901406 .text$mn
+//
 // MS2-RANGE: 0x142908e90-0x142909300 .text$mn
 // MS2-RANGE: 0x1428ffa20-0x1428ffcca .text$mn
 // MS2-RANGE: 0x1428ff660-0x1428ffa19 .text$mn
@@ -2081,16 +2081,16 @@ void SharedObjectProto::Clear(const FnCall& fn)
 }
 
 // Bytes of the data object.
-// MS2-FUNCTIONAL the exe inlines ComputeSizeInBytes (out of line in sfr_as2_04)
-// @0x142901280
-void SharedObjectProto::GetSize(const FnCall& fn)
-{
-    MS2_AS2_CHECK_THIS(fn, SharedObject);
-    SharedObject* pthis = static_cast<SharedObject*>(fn.ThisPtr);
-    if (!pthis)
-        return;
-    fn.Result->SetInt((int)pthis->ComputeSizeInBytes(fn.Env));
-}
+// (SharedObjectProto::GetSize 0x142901280 is in sfr_as2_04, next to the ComputeSizeInBytes it inlines)
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 // RemoveCaseCheck of the registered class table (exe 0x14297cd20).
 void         ClassHash_RemoveCaseCheck(ASStringHash<FunctionRef>* phash, const ASString& key, bool caseSensitive);

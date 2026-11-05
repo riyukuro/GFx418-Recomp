@@ -55,6 +55,7 @@
 // MS2-RANGE: 0x14296e6c0-0x14296e731 .text$mn
 // MS2-RANGE: 0x14291c320-0x14291c3fb .text$mn
 // MS2-RANGE: 0x142937bc0-0x142937c98 .text$mn
+// MS2-RANGE: 0x142901280-0x142901406 .text$mn   (SharedObjectProto::GetSize, from sfr_as2_02)
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -730,6 +731,17 @@ UPInt SharedObject::ComputeSizeInBytes(Environment* penv)
     SizeVisitor visitor(penv);
     pdata->VisitMembers(penv->GetSC(), &visitor, 0, 0);
     return visitor.Size;
+}
+
+// SharedObject.getSize() (from sfr_as2_02: in the exe it inlines ComputeSizeInBytes, so it shares its TU)
+// @0x142901280
+void SharedObjectProto::GetSize(const FnCall& fn)
+{
+    MS2_AS2_CHECK_THIS(fn, SharedObject);
+    SharedObject* pthis = static_cast<SharedObject*>(fn.ThisPtr);
+    if (!pthis)
+        return;
+    fn.Result->SetInt((int)pthis->ComputeSizeInBytes(fn.Env));
 }
 
 // @0x142935680
