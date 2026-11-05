@@ -166,13 +166,17 @@ void* DeleteAs2_14292bfc0(MouseListener* p, unsigned flags)
     return p;
 }
 
-extern const void* DAT_143215370[];   // RefCountBaseGC<323> vftable
+// The RefCountBaseGC<323> dtor is protected: a derived view runs it.
+struct Sfr_RcgcDtor : RefCountBaseGC<323>
+{
+    static void Destroy(void* p) { static_cast<Sfr_RcgcDtor*>(p)->RefCountBaseGC<323>::~RefCountBaseGC(); }
+};
 // Scalar deleting destructor of the RefCountBaseGC<323> base (vftable 0x143215370 slot): stores the base vptr and
 // frees through the Scaleform heap (the objects come from it), as the exe does.
 // @0x14292cae0
 void* DeleteAs2_14292cae0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_143215370;
+    Sfr_RcgcDtor::Destroy(p);
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -210,3 +214,4 @@ void* DeleteAs2_14292dc40(ObjectInterface::MemberVisitor* p, unsigned flags)
 // MS2-PIN: ??_7InvokeCallback@AsBroadcaster@AS2@GFx@Scaleform@@6B@ 0x14321bdb8
 // MS2-PIN: ??_7MemberVisitor@DisplayList@GFx@Scaleform@@6B@ 0x143215358
 // MS2-PIN: ??_7MouseListener@AS2@GFx@Scaleform@@6B@ 0x143217718
+// MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS2@GFx@Scaleform@@6B@ 0x143215370

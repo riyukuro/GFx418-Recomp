@@ -62,10 +62,13 @@ static inline void ra(unsigned long long tagged) // atomic shared string-data re
     if (_InterlockedExchangeAdd((volatile long*)c, -1) == 1) Memory::Free((void*)(tagged & ~3ull));
 }
 // The base vftables the inlined destructors store.
-extern const void* DAT_143215370[];
+// The RefCountBaseGC<323> dtor is protected: a derived view runs it.
+struct Sfr_RcgcDtor : RefCountBaseGC<323>
+{
+    static void Destroy(void* p) { static_cast<Sfr_RcgcDtor*>(p)->RefCountBaseGC<323>::~RefCountBaseGC(); }
+};
 extern const void* DAT_1432155c0[];
 extern const void* DAT_143215648[];
-extern const void* DAT_143217718[];
 extern const void* DAT_143218490[];
 extern const void* DAT_1432184d8[];
 extern const void* DAT_143222848[];
@@ -88,6 +91,8 @@ extern const void* DAT_143222848[];
 // MS2-PIN: ??_7?$Prototype@VStringObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321ab00
 // MS2-PIN: ??_7?$Prototype@VStringObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321aa10
 // MS2-PIN: ??_7?$Prototype@VStringObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321aa58
+// MS2-PIN: ??_7MouseListener@AS2@GFx@Scaleform@@6B@ 0x143217718
+// MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS2@GFx@Scaleform@@6B@ 0x143215370
 
 // @0x142928f30
 void* DeleteAs2_142928f30(void* p, unsigned flags)
@@ -346,7 +351,7 @@ void* DeleteAs2_14292beb0(void* p, unsigned flags)
 {
     ((FunctionRefBase*)((char*)p+0x90))->DropRefs();
     rg(*(void**)((char*)p+0x78));
-    *(const void**)((char*)p+0x70) = DAT_143217718;
+    reinterpret_cast<MouseListener*>((char*)p+0x70)->MouseListener::~MouseListener();
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
     static_cast<Object*>((void*)(p))->Object::~Object();
@@ -382,7 +387,7 @@ void* DeleteAs2_14292dae0(void* p, unsigned flags)
 {
     ((FunctionRefBase*)((char*)p+0x38))->DropRefs();
     ((FunctionRefBase*)((char*)p+0x20))->DropRefs();
-    *(const void**)p = DAT_143215370;
+    Sfr_RcgcDtor::Destroy(p);
     if (flags & 1)
     {
         if (!(flags & 4))

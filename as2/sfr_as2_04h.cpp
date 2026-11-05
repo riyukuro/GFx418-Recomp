@@ -14,6 +14,7 @@
 // MS2-RANGE: 0x14292b4e0-0x14292b586 .text$mn
 // MS2-RANGE: 0x14292ba00-0x14292baaa .text$mn
 // MS2-RANGE: 0x14292c3e0-0x14292c520 .text$mn
+// MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS2@GFx@Scaleform@@6B@ 0x143215370
 
 #include <intrin.h>
 #include "../include/gfx/as2/as2_action.h"
@@ -101,7 +102,11 @@ extern const void* DAT_143216480[];
 extern const void* DAT_143216528[];
 extern const void* DAT_1432177d8[];
 extern const void* DAT_14317bde0[];
-extern const void* DAT_143215370[];
+// The RefCountBaseGC<323> dtor is protected: a derived view runs it.
+struct Sfr_RcgcDtor : RefCountBaseGC<323>
+{
+    static void Destroy(void* p) { static_cast<Sfr_RcgcDtor*>(p)->RefCountBaseGC<323>::~RefCountBaseGC(); }
+};
 extern const void* DAT_1432153c8[];
 extern const void* DAT_1432155c0[];
 extern const void* DAT_143215648[];
@@ -115,7 +120,7 @@ void* DeleteAs2_142928c70(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432153a0;
     static_cast<RefCountCollector<StatMV_ActionScript_Mem>*>(p)->Collect(0);
-    *(const void**)((char*)p+0x40) = DAT_143215370;
+    Sfr_RcgcDtor::Destroy((char*)p+0x40);
     static_cast<RefCountCollector<StatMV_ActionScript_Mem>*>(p)->Roots.ClearAndRelease();
     static_cast<RefCountImplCore*>((void*)(p))->RefCountImplCore::~RefCountImplCore();
     if (flags & 1)
@@ -133,7 +138,7 @@ void* DeleteAs2_142928dc0(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432153a0;
     static_cast<RefCountCollector<StatMV_ActionScript_Mem>*>(p)->Collect(0);
-    *(const void**)((char*)p+0x40) = DAT_143215370;
+    Sfr_RcgcDtor::Destroy((char*)p+0x40);
     static_cast<RefCountCollector<StatMV_ActionScript_Mem>*>(p)->Roots.ClearAndRelease();
     static_cast<RefCountImplCore*>((void*)(p))->RefCountImplCore::~RefCountImplCore();
     if (flags & 1)
@@ -296,7 +301,7 @@ void* DeleteAs2_14292ba00(void* p, unsigned flags)
     ((Value*)((char*)p+0x48))->~Value();
     rg(*(void**)((char*)p+0x28));
     reinterpret_cast<Sfr04hHashVal*>((char*)p+0x20)->~Sfr04hHashVal();
-    *(const void**)p = DAT_143215370;
+    Sfr_RcgcDtor::Destroy(p);
     if (flags & 1)
     {
         if (!(flags & 4))
