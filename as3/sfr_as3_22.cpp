@@ -4437,7 +4437,7 @@ extern "C" void FUN_142687170(Ms2StringLHArrayBase* locales)
 }
 // ArrayData<String, AllocatorLH>::Resize. symbols.tsv binds Reserve<String, AllocatorLH> to 0x1422fdbd0, but this
 // copy calls the Reserve at 0x14268e600 (the Ptr<ImageInfo> one, folded), so it reaches it by VA.
-extern "C" void FUN_14268e600(Ms2StringLHArrayBase* locales, const void* pheapAddr, Scaleform::UPInt newCapacity);
+typedef Scaleform::ArrayDataBase<Scaleform::Ptr<Scaleform::GFx::AMP::FuncTreeItem>, Scaleform::AllocatorLH<Scaleform::Ptr<Scaleform::GFx::AMP::FuncTreeItem>, 2>, Scaleform::ArrayDefaultPolicy> Sfr22FuncTreeArr; // (C3) FUN_14268e600 = its Reserve
 // @0x14268e8c0
 extern "C" void FUN_14268e8c0(Ms2StringLHArrayBase* locales, Scaleform::UPInt newSize)
 {
@@ -4447,11 +4447,11 @@ extern "C" void FUN_14268e8c0(Ms2StringLHArrayBase* locales, Scaleform::UPInt ne
     {
         Allocator::DestructArray(locales->Data + newSize, oldSize - newSize);
         if (newSize < (locales->Policy.GetCapacity() >> 1))
-            FUN_14268e600(locales, locales, newSize);
+            reinterpret_cast<Sfr22FuncTreeArr*>(locales)->Reserve(locales, newSize);
     }
     else if (newSize >= locales->Policy.GetCapacity())
     {
-        FUN_14268e600(locales, locales, newSize + (newSize >> 2));
+        reinterpret_cast<Sfr22FuncTreeArr*>(locales)->Reserve(locales, newSize + (newSize >> 2));
     }
     locales->Size = newSize;
     if (newSize > oldSize)
