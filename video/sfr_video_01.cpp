@@ -23,7 +23,6 @@
 template <class T> struct ExeDecl { typedef T type; };
 
 extern ExeDecl<void*>::type DAT_1431b59f0;
-extern ExeDecl<void*>::type DAT_14317bf80;   // AvmDisplayObjBase vftable
 #define VideoProtoGCVtable DAT_1431b59f0
 extern ExeDecl<void*>::type DAT_1431b5940;
 #define VideoProtoInterfaceVtable DAT_1431b5940
@@ -2389,7 +2388,7 @@ void FUN_14000d570(void** proxy) { if (*proxy) static_cast<Scaleform::WeakPtrPro
 // @0x14000d5c0
 void* FUN_14000d5c0(void* object, unsigned flags)
 {
-    *static_cast<void***>(object) = &DAT_14317bf80;
+    static_cast<Scaleform::GFx::AvmDisplayObjBase*>(object)->Scaleform::GFx::AvmDisplayObjBase::~AvmDisplayObjBase();
     if (flags & 1) ::operator delete(object);
     return object;
 }
@@ -4380,3 +4379,4 @@ const char* ObjectInterface::GetTextValue(Environment*) const { return 0; }
 // MS2-PIN: ?IsCFunction@CFunctionObject@AS2@GFx@Scaleform@@UEBA_NXZ 0x14000cea0
 // MS2-PIN: ?GetNumArgs@CFunctionObject@AS2@GFx@Scaleform@@UEBAHXZ 0x14000ceb0
 // MS2-PIN: ?GetTextValue@ObjectInterface@AS2@GFx@Scaleform@@UEBAPEBDPEAVEnvironment@234@@Z 0x14000e370
+// MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80

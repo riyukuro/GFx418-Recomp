@@ -15,6 +15,7 @@
 // MS2-RANGE: 0x14292ba00-0x14292baaa .text$mn
 // MS2-RANGE: 0x14292c3e0-0x14292c520 .text$mn
 // MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS2@GFx@Scaleform@@6B@ 0x143215370
+// MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
 
 #include <intrin.h>
 #include "../include/gfx/as2/as2_action.h"
@@ -96,7 +97,6 @@ static inline void ra(unsigned long long tagged) // atomic shared string-data re
 // The base vftables the inlined destructors store.
 extern const void* DAT_143215b00[];
 extern const void* DAT_143215c48[];
-extern const void* DAT_14317bf80[];
 extern const void* DAT_143216338[];
 extern const void* DAT_143216480[];
 extern const void* DAT_143216528[];
@@ -197,11 +197,11 @@ void* DeleteAs2_1429294f0(void* p, unsigned flags)
 {
     rg(*(void**)((char*)p+0x38));
     *(const void**)p = DAT_143215b00;
-    *(const void**)((char*)p+0x30) = DAT_14317bf80;
+    reinterpret_cast<AvmDisplayObjBase*>((char*)p+0x30)->AvmDisplayObjBase::~AvmDisplayObjBase();
     *(const void**)((char*)p+0x8) = DAT_143215c48;
     reinterpret_cast<Sfr04hHashEv*>((char*)p+0x28)->~Sfr04hHashEv();
     static_cast<ObjectInterface*>((void*)((char*)p+0x8))->ObjectInterface::~ObjectInterface();
-    *(const void**)p = DAT_14317bf80;
+    reinterpret_cast<AvmDisplayObjBase*>(p)->AvmDisplayObjBase::~AvmDisplayObjBase();
     if ((flags & 5) == 5)
         ::operator delete(p, 0x40);
     return p;
@@ -214,7 +214,7 @@ void* DeleteAs2_142929590(void* p, unsigned flags)
     *(const void**)((char*)p+0x8) = DAT_143215c48;
     reinterpret_cast<Sfr04hHashEv*>((char*)p+0x28)->~Sfr04hHashEv();
     static_cast<ObjectInterface*>((void*)((char*)p+0x8))->ObjectInterface::~ObjectInterface();
-    *(const void**)p = DAT_14317bf80;
+    reinterpret_cast<AvmDisplayObjBase*>(p)->AvmDisplayObjBase::~AvmDisplayObjBase();
     if ((flags & 5) == 5)
         ::operator delete(p, 0x30);
     return p;
@@ -230,11 +230,11 @@ void* DeleteAs2_142929600(void* p, unsigned flags)
     rg(*(void**)((char*)p+0x1d8));
     reinterpret_cast<Environment*>((char*)p+0x38)->Environment::~Environment();
     *(const void**)p = DAT_143215b00;
-    *(const void**)((char*)p+0x30) = DAT_14317bf80;
+    reinterpret_cast<AvmDisplayObjBase*>((char*)p+0x30)->AvmDisplayObjBase::~AvmDisplayObjBase();
     *(const void**)((char*)p+0x8) = DAT_143215c48;
     reinterpret_cast<Sfr04hHashEv*>((char*)p+0x28)->~Sfr04hHashEv();
     static_cast<ObjectInterface*>((void*)((char*)p+0x8))->ObjectInterface::~ObjectInterface();
-    *(const void**)p = DAT_14317bf80;
+    reinterpret_cast<AvmDisplayObjBase*>(p)->AvmDisplayObjBase::~AvmDisplayObjBase();
     if ((flags & 5) == 5)
         ::operator delete(p, 0x200);
     return p;
@@ -247,11 +247,11 @@ void* DeleteAs2_1429296e0(void* p, unsigned flags)
     ((Value*)((char*)p+0x40))->~Value();
     rs(*(void**)((char*)p+0x38));
     *(const void**)p = DAT_143215b00;
-    *(const void**)((char*)p+0x30) = DAT_14317bf80;
+    reinterpret_cast<AvmDisplayObjBase*>((char*)p+0x30)->AvmDisplayObjBase::~AvmDisplayObjBase();
     *(const void**)((char*)p+0x8) = DAT_143215c48;
     reinterpret_cast<Sfr04hHashEv*>((char*)p+0x28)->~Sfr04hHashEv();
     static_cast<ObjectInterface*>((void*)((char*)p+0x8))->ObjectInterface::~ObjectInterface();
-    *(const void**)p = DAT_14317bf80;
+    reinterpret_cast<AvmDisplayObjBase*>(p)->AvmDisplayObjBase::~AvmDisplayObjBase();
     if ((flags & 5) == 5)
         ::operator delete(p, 0x68);
     return p;

@@ -2093,10 +2093,6 @@ void FUN_140012e10(void* dispatcher, void* collector, void* operation)
     Video02ForEachChildGC(prcc, *reinterpret_cast<const Scaleform::GFx::AS3::Value*>(fields + 0xd8), op, owner);
 }
 
-namespace Scaleform { namespace GFx { namespace AS2 {
-extern const void* DAT_14317bf80[];   // AvmDisplayObjBase vftable
-}}} // namespace Scaleform::GFx::AS2
-
 // releases the video character's retained AS2 value and then runs its AvmCharacter base destructor. The exe stores
 // the AvmDisplayObjBase vftable at +0x30 first, as the inline AvmDisplayObjBase dtor does.
 // @0x14000e840
@@ -2109,7 +2105,7 @@ void FUN_14000e840(void* object)
         --*reinterpret_cast<unsigned*>(static_cast<char*>(value) + 0x18);
         reinterpret_cast<Scaleform::GFx::AS2::Video02GCAccess*>(value)->ReleaseInternal();
     }
-    *reinterpret_cast<const void**>(bytes + 0x30) = Scaleform::GFx::AS2::DAT_14317bf80;
+    reinterpret_cast<Scaleform::GFx::AvmDisplayObjBase*>(bytes + 0x30)->Scaleform::GFx::AvmDisplayObjBase::~AvmDisplayObjBase();
     static_cast<Scaleform::GFx::AS2::AvmCharacter*>(object)->Scaleform::GFx::AS2::AvmCharacter::~AvmCharacter();
 }
 
@@ -3885,3 +3881,4 @@ void FUN_140013440(void*, void*, const void* thisValue, void* result, unsigned, 
 // instance name.
 // @0x1400141a0
 const char* FUN_1400141a0(void*) { return "Instances::fl_net::NetStream"; }
+// MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
