@@ -6139,7 +6139,7 @@ found:
     goto done;
 }
 
-unsigned long long FUN_1423cb980(long long* manager, long long layouts, unsigned count);
+bool FUN_1423cb980(long long* manager, long long layouts, unsigned count);
 
 // MS2-FUNCTIONAL: enumerates the installed keyboard layouts and TSF language profiles into the language list
 // (+0x90 entries, "@@"-joined +0x70 names, +0x80 count) and refreshes the active layout, flags and mode.
@@ -6167,7 +6167,7 @@ bool FUN_1423d8140(long long* manager)
         *reinterpret_cast<unsigned*>(self + 0x19c) = 0;
         layouts[i] = *reinterpret_cast<unsigned long long*>(self + 0x198);
     }
-    const bool registryFailed = reinterpret_cast<bool(*)(long long*, long long, unsigned)>(
+    const bool registryFailed = (
         FUN_1423cb980)(manager, reinterpret_cast<long long>(layouts), count);
     Scaleform::Memory::Free(layouts);
     if (registryFailed) return registryFailed;
@@ -6292,45 +6292,45 @@ bool FUN_1423d8140(long long* manager)
     return false;
 }
 
-// MS2-FUNCTIONAL: enumerates HKLM\SYSTEM\CurrentControlSet\Control\Keyboard Layouts and appends one 0x18-byte record
+// Enumerates HKLM\SYSTEM\CurrentControlSet\Control\Keyboard Layouts and appends one 0x18-byte record
 // per layout to the array at +0x158: { UTF-8 "IME File", UTF-8 "Layout Text", layout id, whether the id is among the
 // count loaded HKLs }. The subkey id is also parsed into +0x198. Per-subkey errors are logged and skipped; returns
 // true when the root key cannot be opened or queried.
 // @0x1423cb980
-unsigned long long FUN_1423cb980(long long* manager, long long layouts, unsigned count)
+bool FUN_1423cb980(long long* manager, long long layouts, unsigned count)
 {
     auto* self = reinterpret_cast<unsigned char*>(manager);
-    auto* logError = reinterpret_cast<void(*)(void*, DWORD, const char*)>(
-        (*reinterpret_cast<void***>(manager))[0x78 / sizeof(void*)]);
+    auto logError = [](long long* m, DWORD e, const char* s) { reinterpret_cast<void(*)(void*, DWORD, const char*)>(
+        (*reinterpret_cast<void***>(m))[0x78 / sizeof(void*)])(m, e, s); };
     struct LayoutRecord { char* imeFile; char* layoutText; unsigned layoutId; unsigned loaded; };
-    ::Scaleform::String unused;
     DWORD subkeyCount = 0;
-    HKEY root = nullptr;
+    ::Scaleform::String unused;
+    HKEY root;
     LONG error = RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Control\\Keyboard Layouts", 0,
                                KEY_READ, &root);
     if (error) {
         logError(manager, error, "GFxIME Error:Opening Registry Key failed ");
-        return 1;
-    }
+        return true;
+    } else if (!root) return true;
     FILETIME written;
     error = RegQueryInfoKeyW(root, nullptr, nullptr, nullptr, &subkeyCount, nullptr, nullptr, nullptr, nullptr,
                              nullptr, nullptr, &written);
     if (error) {
         logError(manager, error, "GFxIME Error:Retrieving subkey information failed ");
-        return 1;
+        return true;
     }
     char keyName[0x400];
     wchar_t layoutText[0x400], imeFile[0x400];
     char layoutTextUtf8[0x800], imeFileUtf8[0x800];
-    for (DWORD i = 0; i < subkeyCount; ++i) {
+    if (subkeyCount) for (DWORD i = 0; i < subkeyCount; ++i) { auto* const layoutId = reinterpret_cast<unsigned long long*>(self + 0x198);
         DWORD nameLength = 0x400, valueSize = 0x400;
         error = RegEnumKeyExA(root, i, keyName, &nameLength, nullptr, nullptr, nullptr, &written);
         if (error) {
             logError(manager, error, "GFxIME Error:Enumerating Registry Subkeys Failed ");
             continue;
         }
-        sscanf(keyName, "%x", reinterpret_cast<unsigned*>(self + 0x198));
-        HKEY subkey = nullptr;
+        sscanf(keyName, "%x", reinterpret_cast<unsigned*>(layoutId));
+        HKEY subkey;
         error = RegOpenKeyExA(root, keyName, 0, KEY_QUERY_VALUE, &subkey);
         if (error) {
             logError(manager, error, "GFxIME Error:Opening Registry subkey Failed ");
@@ -6341,9 +6341,9 @@ unsigned long long FUN_1423cb980(long long* manager, long long layouts, unsigned
         valueSize = 0x400;
         error = RegQueryValueExW(subkey, L"IME File", nullptr, nullptr, reinterpret_cast<BYTE*>(imeFile), &valueSize);
         if (error) {
-            if ((*reinterpret_cast<unsigned*>(self + 0x198) & 0xe000000) == 0xe000000) {
-                ::Scaleform::String message = ::Scaleform::String("GFxIME Error:Obtaining IME Filename failed for ") + keyName;
-                logError(manager, error, message.ToCStr());
+            if ((*layoutId & 0xe000000) == 0xe000000) {
+                logError(manager, error,
+                         (::Scaleform::String("GFxIME Error:Obtaining IME Filename failed for ") + keyName).ToCStr());
             }
             memset(imeFile, 0, sizeof(imeFile));
         }
@@ -6352,28 +6352,28 @@ unsigned long long FUN_1423cb980(long long* manager, long long layouts, unsigned
         ::Scaleform::UTF8Util::EncodeString(imeFileUtf8, imeFile, -1);
         LayoutRecord record;
         sscanf(keyName, "%x", &record.layoutId);
-        const size_t textSize = strlen(layoutTextUtf8) + 1;
+        const unsigned textSize = unsigned(strlen(layoutTextUtf8) + 1);
         record.layoutText = static_cast<char*>(::Scaleform::Memory::Alloc(textSize));
         if (record.layoutText) strcpy_s(record.layoutText, textSize, layoutTextUtf8);
-        const size_t imeSize = strlen(imeFileUtf8) + 1;
+        const unsigned imeSize = unsigned(strlen(imeFileUtf8) + 1);
         record.imeFile = static_cast<char*>(::Scaleform::Memory::Alloc(imeSize));
         if (record.imeFile) strcpy_s(record.imeFile, imeSize, imeFileUtf8);
+        for (unsigned j = 0; j < count; ++j)
+            if (reinterpret_cast<unsigned long long*>(layouts)[j] == *layoutId) { record.loaded = 1; goto recorded; }
         record.loaded = 0;
-        const unsigned long long current = *reinterpret_cast<unsigned long long*>(self + 0x198);
-        for (unsigned j = 0; j < count; ++j) {
-            if (reinterpret_cast<unsigned long long*>(layouts)[j] == current) {
-                record.loaded = 1;
-                break;
-            }
-        }
+    recorded:
+
         auto* records = reinterpret_cast<unsigned long long*>(self + 0x158);   // { data, size, capacity }
-        const unsigned long long size = records[1] + 1;
-        if (size >= records[2]) FUN_1423cc680(records, records, size + (size >> 2));
+        // ArrayData::ResizeNoConstruct(Size + 1), then the copy into the new last slot.
+        const unsigned long long oldSize = records[1], size = oldSize + 1;
+        if (size < oldSize) {
+            if (size < (records[2] >> 1)) FUN_1423cc680(records, records, size);
+        } else if (size >= records[2]) FUN_1423cc680(records, records, size + (size >> 2));
         records[1] = size;
         reinterpret_cast<LayoutRecord*>(records[0])[size - 1] = record;
     }
     RegCloseKey(root);
-    return 0;
+    return false;
 }
 
 // MS2-FUNCTIONAL: Vista provider slot 1 (table 0x14313b520): loads the registry layouts, lists each TSF language
