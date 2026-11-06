@@ -230,19 +230,20 @@ void MovieRoot::SetExternalInterfaceRetVal(const GFx::Value& retVal)
     Value2ASValue(retVal, &ExternalIntfRetVal);
 }
 
-// ~0u keeps the default: no frame limit, 1000 roots.
-// MS2-FUNCTIONAL: same stores and defaults; the exe interleaves the cmov/compare differently (47 vs 48 bytes).
+// ~0u keeps the default: no frame limit, 1000 roots. The body is ASRefCountCollector::SetParams, which the exe
+// inlines here (the SDK's if/else form).
 // @0x142989030
 void MovieRoot::SetMemoryParams(unsigned frameBetweenCollections, unsigned maxRootCount)
 {
     ASRefCountCollector* pgc = MemContext->ASGC;
-    if (frameBetweenCollections == ~0u)
-        frameBetweenCollections = 0;
-    if (maxRootCount == ~0u)
-        maxRootCount = 1000;
-    pgc->PresetFramesBetween = frameBetweenCollections;
-    pgc->MaxRootCount        = maxRootCount;
-    pgc->PresetMaxRootCount  = maxRootCount;
+    if (frameBetweenCollections != ~0u)
+        pgc->PresetFramesBetween = frameBetweenCollections;
+    else
+        pgc->PresetFramesBetween = 0;
+    if (maxRootCount != ~0u)
+        pgc->PresetMaxRootCount = pgc->MaxRootCount = maxRootCount;
+    else
+        pgc->PresetMaxRootCount = pgc->MaxRootCount = 1000;
 }
 
 // The script side of a button (partial local copy: the AS object slots; the vftable is sfr_as2_03z's).
@@ -282,15 +283,12 @@ Object* AvmTextField::GetASObject() const
 }
 
 // KeyCtorFunction's KeyboardState::IListener slots: both record the key and broadcast its handler.
-// MS2-FUNCTIONAL: the exe's slots are the this-adjusting thunks themselves (rcx -= 0x70, jmp NotifyListeners); here
-// the compiler adds the thunk in front of these bodies.
 // @0x14296c180
 void KeyCtorFunction::OnKeyDown(InteractiveObject* pmovie, const EventId& evt, int)
 {
     NotifyListeners(pmovie, evt);
 }
 
-// MS2-FUNCTIONAL: as OnKeyDown.
 // @0x14296c1d0
 void KeyCtorFunction::OnKeyUp(InteractiveObject* pmovie, const EventId& evt, int)
 {
