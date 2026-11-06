@@ -265,55 +265,63 @@ bool MovieRoot::Init(MovieDefImpl* pmovieDef)
     return true;
 }
 
+// MouseEntry::IsAnyButtonPressed (SDK; not in our header), inlined in the exe.
+static SF_FORCEINLINE bool Ms2AnyPressed06s2(const InputEventsQueueEntry::MouseEntry& me)
+{
+    return !(me.Flags & (InputEventsQueueEntry::MouseButton_Move | InputEventsQueueEntry::MouseButton_Released)) &&
+           me.ButtonsState != 0;
+}
+
+// MovieRoot::GetLevelMovie, inlined in the exe.
+static SF_FORCEINLINE InteractiveObject* Ms2LevelMovie06s2(const MovieRoot* proot, int level)
+{
+    MovieImpl* pmovie = proot->pMovieImpl;
+    for (unsigned i = 0; i < pmovie->MovieLevelsSize; i++)
+    {
+        if (pmovie->pMovieLevels[i].Level == level)
+            return pmovie->pMovieLevels[i].pSprite;
+    }
+    return 0;
+}
+
 // A mouse move, wheel or button change goes to the Mouse class's listeners (in _level0's environment); a wheel or
 // button event only when the topmost character under the mouse is an AS2 one. Without the extensions only the
 // first button is reported.
-// MS2-FUNCTIONAL: register allocation and block layout differ.
 // @0x1429694e0
 void MovieRoot::NotifyMouseEvent(const GFx::InputEventsQueueEntry* qe, const GFx::MouseState& ms, int mi)
 {
-    InteractiveObject* plevel0 = 0;
-    for (unsigned i = 0; i < pMovieImpl->MovieLevelsSize; i++)
-    {
-        if (pMovieImpl->pMovieLevels[i].Level == 0)
-        {
-            plevel0 = pMovieImpl->pMovieLevels[i].pSprite;
-            break;
-        }
-    }
+    InteractiveObject* plevel0 = Ms2LevelMovie06s2(this, 0);
     Environment* penv =
         static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(plevel0->GetAvmObjImpl()))->GetASEnvironment();
     const InputEventsQueueEntry::MouseEntry& me = qe->GetMouseEntry();
-    if (!pMouseListener || pMouseListener->IsEmpty() ||
-        !(BeMouseMoved(ms) || me.IsButtonsStateChanged() || me.IsMouseWheel()))
-        return;
-
-    bool extensions = penv->CheckExtensions();
-    if (BeMouseMoved(ms))
-        pMouseListener->OnMouseMove(penv, mi);
-    if (!me.IsMouseWheel() && !me.IsButtonsStateChanged())
-        return;
-
-    Ptr<InteractiveObject> ptopMouseCharacter = pMovieImpl->GetTopMostEntity(me.GetPosition(), mi, true);
-    if (ptopMouseCharacter && ptopMouseCharacter->GetAVMVersion() != 1)
-        return;
-    if (me.IsMouseWheel())
-        pMouseListener->OnMouseWheel(penv, mi, me.WheelScrollDelta, ptopMouseCharacter);
-    if (me.IsButtonsStateChanged())
+    if (pMouseListener && !pMouseListener->IsEmpty() &&
+        (BeMouseMoved(ms) || me.IsButtonsStateChanged() || me.IsMouseWheel()))
     {
-        unsigned buttonId = 1;
-        for (UInt16 mask = 1; mask; mask <<= 1, ++buttonId)
+        bool extensions = penv->CheckExtensions();
+        if (BeMouseMoved(ms))
+            pMouseListener->OnMouseMove(penv, mi);
+        if (me.IsMouseWheel() || me.IsButtonsStateChanged())
         {
-            if (me.ButtonsState & mask)
+            Ptr<InteractiveObject> ptopMouseCharacter = pMovieImpl->GetTopMostEntity(me.GetPosition(), mi, true);
+            if (ptopMouseCharacter && ptopMouseCharacter->GetAVMVersion() != 1)
+                return;
+            if (me.IsMouseWheel())
+                pMouseListener->OnMouseWheel(penv, mi, me.WheelScrollDelta, ptopMouseCharacter);
+            if (me.IsButtonsStateChanged())
             {
-                if (!(me.Flags & (InputEventsQueueEntry::MouseButton_Move | InputEventsQueueEntry::MouseButton_Released)) &&
-                    me.ButtonsState)
-                    pMouseListener->OnMouseDown(penv, mi, buttonId, ptopMouseCharacter);
-                else
-                    pMouseListener->OnMouseUp(penv, mi, buttonId, ptopMouseCharacter);
+                for (unsigned mask = 1, buttonId = 1; 0xFFFF & mask; mask <<= 1, ++buttonId)
+                {
+                    if (me.ButtonsState & mask)
+                    {
+                        if (Ms2AnyPressed06s2(me))
+                            pMouseListener->OnMouseDown(penv, mi, buttonId, ptopMouseCharacter);
+                        else
+                            pMouseListener->OnMouseUp(penv, mi, buttonId, ptopMouseCharacter);
+                    }
+                    if (!extensions)
+                        break;
+                }
             }
-            if (!extensions)
-                break;
         }
     }
 }
