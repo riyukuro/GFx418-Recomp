@@ -51,13 +51,18 @@ void AvmSprite::CallFrameActions(unsigned frame)
     GetAS2Root()->DoActionsForSession(session);
 }
 
+// The level clips, as the movie holds them (MovieImpl::LevelInfo with its counted sprite reference; as sfr_as3_17d).
+struct Sfr04mLevelInfo
+{
+    int                    Level;
+    Ptr<InteractiveObject> pSprite;
+};
+
 // Clears every level's display list, then lets each level run its teardown slot and empties the level array.
-// MS2-FUNCTIONAL: 3 bytes short, the exe pads the label after the out-of-line Reserve call with a nop
 // @0x142934480
 void MovieRoot::ClearDisplayList()
 {
     typedef void (*LevelSlot)(void*);
-    typedef ArrayDataBase<MovieImpl::LevelInfo, AllocatorLH<MovieImpl::LevelInfo, 327>, ArrayDefaultPolicy> LevelArray;
     for (UPInt n = pMovieImpl->MovieLevelsSize; n != 0; --n)
     {
         DisplayObjContainer* plevel = reinterpret_cast<DisplayObjContainer*>(pMovieImpl->pMovieLevels[n - 1].pSprite);
@@ -69,31 +74,7 @@ void MovieRoot::ClearDisplayList()
         void* plevel = pMovieImpl->pMovieLevels[n - 1].pSprite;
         reinterpret_cast<LevelSlot>((*static_cast<void***>(plevel))[0x1b0 / 8])(plevel);
     }
-    // MovieLevels.Clear(): ArrayDataBase::ResizeNoConstruct(0), the Ptr<InteractiveObject> dtors written out
-    LevelArray& levels  = *reinterpret_cast<LevelArray*>(&pMovieImpl->pMovieLevels);
-    UPInt       oldSize = levels.Size;
-    if (0 < oldSize)
-    {
-        MovieImpl::LevelInfo* p = levels.Data + oldSize - 1;
-        for (UPInt i = 0; i < oldSize; ++i, --p)
-            if (p->pSprite)
-                FUN_14257dcd0(p->pSprite);
-        if (0 < (levels.Policy.GetCapacity() >> 1))
-        {
-            // Reserve(0), inlined in the exe
-            if (levels.Data)
-            {
-                Memory::pGlobalHeap->Free(levels.Data);
-                levels.Data = 0;
-            }
-            levels.Policy.SetCapacity(0);
-        }
-    }
-    else if (0 >= levels.Policy.GetCapacity())
-    {
-        levels.Reserve(&levels, 0);
-    }
-    levels.Size = 0;
+    reinterpret_cast<ArrayLH<Sfr04mLevelInfo, 0x147>*>(&pMovieImpl->pMovieLevels)->Clear();
 }
 
 }}} // namespace Scaleform::GFx::AS2

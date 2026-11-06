@@ -2761,7 +2761,7 @@ void AvmTextField::GetLineText(const FnCall& fn)
 }
 
 // appendHtml(html): not for a field with a style sheet; <img> tags become image substitutions.
-// MS2-FUNCTIONAL the exe loads the document before the image array is built
+// MS2-FUNCTIONAL scheduling only: the exe loads pDocument (+0xe0) between the image array's zero stores; cl loads it after them (doc local, pDocument->, SDK TextField::AppendHtml wrapper, real HTMLImageTagInfoArray type and the SDK nested-if body tried)
 // @0x14290b9f0
 void AvmTextField::AppendHtml(const FnCall& fn)
 {

@@ -24,8 +24,10 @@ struct EntryAccess : Entry { using Entry::destroyHelper; };
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-// MS2-FUNCTIONAL: the raw members are released by hand; the exe drops +0x58/+0x50 before them and inlines
-// ASMovieRootBase's destructor, here a call
+// MS2-FUNCTIONAL: the SDK body is empty. In the exe, +0x28 (TopNode, Ptr<Render::TreeContainer>), +0x30 (Ptr<ASSupport>)
+// and +0x38 (Ptr<MemoryContextImpl>) are member Ptrs destroyed after +0x58/+0x50, and ~ASMovieRootBase (an inline {} in
+// the SDK) is inlined. Here those are raw fields released by hand and the base dtor is out of line (sfr_as3_16). The fix
+// needs the as2_movieroot.h member types, the 03ag ctor and the base-dtor inline change together
 // @0x142925be0
 MovieRoot::~MovieRoot()
 {
