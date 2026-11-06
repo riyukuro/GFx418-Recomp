@@ -46,6 +46,9 @@ public:
     {
         Ptr<DisplayObjectBase> Char;
         const ButtonRecord*    Record;
+
+        CharToRec() {}
+        CharToRec(DisplayObjectBase* ch, const ButtonRecord* r) : Char(ch), Record(r) {}
     };
     typedef ArrayLH<CharToRec> StateCharArray;
 

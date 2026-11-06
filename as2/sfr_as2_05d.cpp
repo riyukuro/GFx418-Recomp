@@ -14,7 +14,7 @@
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_button.h"
 #include "../include/gfx/gfx_interactiveobject.h"
-
+template <> void Scaleform::ArrayDataBase<Scaleform::GFx::Button::CharToRec, Scaleform::AllocatorLH<Scaleform::GFx::Button::CharToRec, 2>, Scaleform::ArrayDefaultPolicy>::ResizeNoConstruct(const void*, UPInt); // out of line in the exe (0x1425248e0)
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The script side of a button (partial local copy; the other units carry their own).
@@ -81,7 +81,6 @@ ButtonObject* AvmButton::GetButtonASObject()
 }
 
 // The state character made from rec leaves its state (the Hit state holds none): found by record.
-// MS2-FUNCTIONAL: element removal through the array class instead of the inlined memmove
 // @0x142943360
 Button::CharToRec AvmButton::FindCharacterAndRemove(const ButtonRecord& rec)
 {
@@ -92,24 +91,25 @@ Button::CharToRec AvmButton::FindCharacterAndRemove(const ButtonRecord& rec)
         Button::StateCharArray Characters;
     };
     StateView* pstates = reinterpret_cast<StateView*>(reinterpret_cast<UByte*>(pDispObj) + 0xe0);
-    for (unsigned state = 0; state < 4; ++state)
+    for (unsigned i = 0; i < Button::StatesCount; ++i)
     {
-        if (state == Button::Hit)
-            continue;
-        Button::StateCharArray& chars = pstates[state].Characters;
-        for (UPInt i = 0; i < chars.GetSize(); ++i)
+        if (i != Button::Hit)
         {
-            if (chars[i].Record == &rec)
+            Button::ButtonState curState = (Button::ButtonState)i;
+            Button::StateCharArray&
+                chars = pstates[curState].Characters;
+            for (UPInt j = 0, n = chars.GetSize(); j < n; ++j)
             {
-                Button::CharToRec found = chars[i];
-                chars.RemoveAt(i);
-                return found;
+                if (chars[j].Record == &rec)
+                {
+                    Button::CharToRec chr = chars[j];
+                    chars.RemoveAt(j);
+                    return chr;
+                }
             }
         }
     }
-    Button::CharToRec none;
-    none.Record = 0;
-    return none;
+    return Button::CharToRec();
 }
 
 }}} // namespace Scaleform::GFx::AS2
