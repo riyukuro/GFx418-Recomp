@@ -6399,15 +6399,43 @@ void FUN_1424ffc10(Scaleform::UPInt self, Scaleform::UPInt name, Scaleform::UPIn
 
 // Calls the method in slot ind of tr's VTable on _this with the result on the operand stack: a method body gets a
 // call frame for the interpreter, a thunk is called at once (its result pushed).
-// MS2-FUNCTIONAL 0x142500260: through VM::ExecuteInternalUnsafe on a VTable-index value (same dispatch, inlined there)
+// VM::ExecuteVTableIndUnsafe: the VTable-index case of ExecuteInternalUnsafe with the result left on the stack.
+// MS2-FUNCTIONAL 0x142500260: AddFrame and the thunk call inlined as the exe does (946 vs 950 bytes); register
+// allocation differs, and AddFrame's stack-overflow throw goes through ThrowError rather than FUN_14252ecb0
 // @0x142500260
-void FUN_142500260(Scaleform::UPInt vm, unsigned int ind, Scaleform::UPInt traits, void* value, unsigned int argc, void* args)
+void FUN_142500260(Scaleform::UPInt vmp, unsigned int ind, Scaleform::UPInt traits, void* value, unsigned int argc, void* args)
 {
     using namespace Scaleform::GFx::AS3;
-    const Value func(static_cast<Scaleform::SInt32>(ind), *reinterpret_cast<const Traits*>(traits), Value::kVTableInd);
+    VM& vm = *reinterpret_cast<VM*>(vmp);
+    const Traits& tr = *reinterpret_cast<const Traits*>(traits);
+    const Value& _this = *static_cast<const Value*>(value);
+    const Value* argv = static_cast<const Value*>(args);
+    const Value& m = tr.GetVT().VTMethods[ind];
+    Scaleform::SIMD::PrefetchObj(&m);
+    if (m.GetKind() == Value::kMethodInd)
+    {
+        const Traits& ot = m.GetTraits();
+        VMAbcFile& file = *ot.GetFilePtr();
+        const Scaleform::SInt32 mbi_ind = file.GetAbcFile().Methods.Info[m.GetMethodInd()]->MethodBodyInfoInd;
+        vm.AddFrame(Value(static_cast<Scaleform::SInt32>(ind), tr, Value::kVTableInd), file, mbi_ind, _this, argc,
+                    argv, false, ot.InitScope, ot, ot.GetVT().Names[ind]);
+        return;
+    }
+    const ThunkInfo& thunk = m.AsThunk();
+    Scaleform::SIMD::PrefetchObj(&thunk);
     Value result;
-    reinterpret_cast<VM*>(vm)->ExecuteInternalUnsafe(func, *static_cast<const Value*>(value), result, argc,
-                                                     static_cast<const Value*>(args), true);
+    const unsigned maxArgs = thunk.GetMaxArgNum();
+    if (maxArgs != 0x3ff && (argc > maxArgs || argc < thunk.GetMinArgNum()))
+    {
+        const VM::Error e(VM::eWrongArgumentCountError, vm, thunk.Name, thunk.GetMinArgNum(), maxArgs, argc);
+        FUN_14252ecb0(&vm, &e, &fl::ArgumentErrorCI);
+    }
+    else
+    {
+        thunk.Method(thunk, vm, _this, result, argc, argv);
+        if (!vm.IsException())
+            Sfr33PushResult(vm, result);
+    }
 }
 
 // VM::VMAbcFilesWeak.Clear()
