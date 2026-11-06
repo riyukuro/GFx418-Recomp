@@ -159,7 +159,7 @@ void SF_STDCALL GFx_DefineFontLoader(LoadProcess* p, const TagInfo& tagInfo)
     p->AddFontDataResource(ResourceId(fontId), pf);
 }
 
-// MS2-FUNCTIONAL 0x1425c4b70: the exe's bounds vcall (slot +0x38) sets no float arg (our xorps xmm2) and swaps r12/r15.
+struct Sfr04bBoundsLocalView { virtual void S0() = 0; virtual void S1() = 0; virtual void S2() = 0; virtual void S3() = 0; virtual void S4() = 0; virtual void S5() = 0; virtual void S6() = 0; virtual RectF GetBoundsLocal() const = 0; }; // 4.1 slot 7: no morph ratio
 // @0x1425c4b70
 void SF_STDCALL GFx_DefineShapeLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
@@ -175,7 +175,7 @@ void SF_STDCALL GFx_DefineShapeLoader(LoadProcess* p, const TagInfo& tagInfo)
         *SF_HEAP_NEW(p->GetLoadHeap()) SwfShapeCharacterDef(shp);
 
     p->LogParse("  bound rect:");
-    p->GetStream()->LogParseClass(static_cast<ShapeBaseCharacterDef*>(ch.GetPtr())->GetBoundsLocal());
+    p->GetStream()->LogParseClass(reinterpret_cast<const Sfr04bBoundsLocalView*>(ch.GetPtr())->GetBoundsLocal());
 
     p->AddResource(ResourceId(characterId), ch.GetPtr());
 }
