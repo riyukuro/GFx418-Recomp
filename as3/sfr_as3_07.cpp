@@ -269,7 +269,7 @@ static inline void FUN_1425eb200(Scaleform::Render::ImageBase * p0, Scaleform::R
 // Fills a bitmap image with random noise (exe body).
 static inline void FUN_1425eddc0(Scaleform::Render::ImageBase * p0, long p1, unsigned long p2, unsigned long p3, unsigned long p4, bool p5) { ((Scaleform::Render::DrawableImage*)(p0))->Noise((unsigned int)(p1), (unsigned int)(p2), (unsigned int)(p3), (unsigned int)(p4), p5); }
 
-void FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap);
+Scaleform::Render::TreeNode* FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap);
 // AS3::Stage::SetOrientation (as3_stage.h) and the AvmButton state setters (as3_avm.h), defined in sfr_as3_19.
 namespace Scaleform { namespace GFx { namespace AS3 {
 class Stage { public: void SetOrientation(const ASString& orientation); };

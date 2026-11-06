@@ -3386,10 +3386,10 @@ bool Sfr34_AvmBitmapView::PointTestLocal(const PointF& pt, UInt8 hitTestMask) co
 
 // AvmBitmap::RecreateRenderNode: the bitmap's AS3 image may have changed, so its render node is made again
 // from the current image and put back where the old one was in the parent's children.
-// MS2-FUNCTIONAL declared void by its caller (sfr_as3_07); the exe also returns the new render node in rax, and
-// self and index take each other's registers (rdi/rsi)
+// MS2-FUNCTIONAL the parent's inlined GetAt in the search loop loads the entry table one instruction earlier in the
+// exe (rcx/rdx swapped there)
 // @0x142520b20
-void FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap)
+Scaleform::Render::TreeNode* FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap)
 {
     using namespace Scaleform;
     using namespace Scaleform::GFx;
@@ -3433,6 +3433,7 @@ void FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap)
                 parent->Insert(index, self->pRenNode);
         }
     }
+    return self->pRenNode;
 }
 
 namespace Scaleform { namespace GFx { namespace AS3 {

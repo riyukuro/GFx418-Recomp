@@ -1741,7 +1741,7 @@ bool FUN_142501a80(Scaleform::GFx::ASMovieRootBase* proot, const Scaleform::GFx:
                   Scaleform::GFx::CharacterCreateInfo* pinfo);
 void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase* proot, Scaleform::GFx::DisplayObject* pcont);
 // AvmBitmap::RecreateRenderNode.
-void FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap);
+Scaleform::Render::TreeNode* FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap);
 // AvmButton set-up after its creation from AS3.
 static inline void FUN_1425ddd20(Scaleform::GFx::DisplayObject * p0) { ((Scaleform::GFx::Button*)(p0))->CreateCharacters(); }
 // MovieImpl::GetDrawableImageContext (made on first use).
