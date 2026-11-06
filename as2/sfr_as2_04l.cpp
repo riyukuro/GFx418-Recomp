@@ -25,11 +25,12 @@
 #include "../include/gfx/as2/as2_refcountcollector.h"
 #include "../include/kernel/sf_std.h"
 #include "../include/render/text_core.h"
-
+#include "../include/gfx/as2/as2_valueobjectinterface.h"
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-// The movie's value interface (exe vftable 0x143222128; its members are recovered elsewhere).
-extern const void* DAT_143222128[];
+// CreateObjectInterface inlines the AS2ValueObjectInterface constructor, so its vftable is emitted here:
+// MS2-PIN: ??_7AS2ValueObjectInterface@GFx@Scaleform@@6B@ 0x143222128
+// MS2-PIN: ??_7ObjectInterface@Value@GFx@Scaleform@@6B@ 0x14317bc90
 
 // the same flush-and-collect as the heap's limit handler, without touching the limits
 // @0x1429349a0
@@ -95,16 +96,15 @@ MovieDefRootNode* MovieRoot::CreateMovieDefRootNode(MemoryHeap* pheap, MovieDefI
 // @0x1429379d0
 void MovieRoot::CreateObjectInterface(MovieImpl* pmovie)
 {
-    UPInt* pif = static_cast<UPInt*>(pMovieImpl->pHeap->Alloc(0x10));
-    if (pif)
-    {
-        pif[1] = reinterpret_cast<UPInt>(pmovie);
-        pif[0] = reinterpret_cast<UPInt>(DAT_143222128);
-        pmovie->pObjectInterface = pif;
-        return;
-    }
-    pmovie->pObjectInterface = 0;
+    pmovie->pObjectInterface = SF_HEAP_NEW(pMovieImpl->pHeap) AS2ValueObjectInterface(pmovie);
 }
+//
+//
+//
+//
+//
+//
+//
 
 // Binds the host value to the VM object: display objects must still be on the stage, others are Arrays or
 // plain Objects.
