@@ -167,6 +167,7 @@ public:
     inline Value(InteractiveObject* pcharacter); // as2_avmcharacter.h
     Value(bool val)   { T.Type = BOOLEAN; V.BooleanValue = val; }
     Value(Number val) { T.Type = NUMBER; NV.NumberValue = val; }
+    Value(float val)  { T.Type = NUMBER; NV.NumberValue = double(val); }
     Value(int val)    { T.Type = INTEGER; NV.Int32Value = val; }
     // A value of a type without payload (UNSET, NULLTYPE, ...).
     explicit Value(type typeVal) { T.Type = (UByte)typeVal; }

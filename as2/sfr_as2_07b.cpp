@@ -423,7 +423,6 @@ void SoundObject::Finalize_GC()
 template void Prototype<SoundObject>::Finalize_GC();
 
 // position and duration in milliseconds; everything else is an ordinary member.
-// MS2-FUNCTIONAL: the exe calls Value::operator= and Value::~Value out of line; same values
 // @0x1429986f0
 bool SoundObject::GetMember(Environment* penv, const ASString& name, Value* val)
 {
