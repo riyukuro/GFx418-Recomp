@@ -2372,7 +2372,7 @@ FMOD_RESULT CreateAudioSoundFromRequest(void* player, void* request, FMOD::Sound
 
 
 namespace Scaleform {
-// MS2-FUNCTIONAL: constructs the callback-backed FMOD stream descriptor for the two accepted request formats.
+// Constructs the callback-backed FMOD stream descriptor for the two accepted request formats.
 // @0x1427450b0
 FMOD_RESULT CreateBufferedAudioStream(void* player, const char* path, FMOD::Sound** sound)
 {
@@ -2384,10 +2384,10 @@ FMOD_RESULT CreateBufferedAudioStream(void* player, const char* path, FMOD::Soun
     info.length = 0x0fffffff;
     switch (format & 0x700) {
     case 0x100:
-        mode = 0x2003040;
         info.format = ((format & 7) == 2) + 1;  // Sample_16: FMOD PCM16, else PCM8
         info.defaultfrequency = *reinterpret_cast<const int*>(path + 0x14);
         info.numchannels = (format & 8) ? 2 : 1;  // Sample_Stereo
+        mode = 0x2003040;
         break;
     case 0x200:
         info.format = 0xb;
@@ -2403,7 +2403,7 @@ FMOD_RESULT CreateBufferedAudioStream(void* player, const char* path, FMOD::Soun
     return reinterpret_cast<FMOD::System*>(*reinterpret_cast<void**>(static_cast<char*>(player) + 0x10))->createStream(path, mode, &info, sound);
 }
 
-// MS2-FUNCTIONAL: resolves the stream owner and writes the created FMOD stream into the request record.
+// Resolves the stream owner and writes the created FMOD stream into the request record.
 // @0x142744680
 bool CreateRequestAudioStream(void* request)
 {
