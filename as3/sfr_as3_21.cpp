@@ -509,15 +509,26 @@ CheckResult VectorBase<SInt32>::Resize(UPInt size)
     return ok;
 }
 
+// The SDK's inline VectorBase::GetSize() (32-bit) and GetVM() accessors, used by Set's range tests as in the SDK.
+struct Sfr21VecAccess
+{
+    template <class A> static __forceinline UInt32 GetSize(const A& a) { return static_cast<UInt32>(a.GetSize()); }
+    static __forceinline VM& GetVM(VM& vm) { return vm; }
+};
+
+// The two range tests are the SDK's separate blocks.
 // @0x142563720
-// MS2-FUNCTIONAL: size compares and the inlined Resize scheduled differently
 template <>
 __declspec(noinline) CheckResult VectorBase<SInt32>::Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr)
 {
-    if ((Fixed && ind >= (UInt32)V.GetSize()) || ind > (UInt32)V.GetSize())
+    if (Fixed && ind >= Sfr21VecAccess::GetSize(V))
     {
-        VM& vm = VMRef;
-        vm.ThrowRangeError(VM::Error(VM::eInvalidRangeError, vm, (int)ind, (int)V.GetSize() - 1));
+        Sfr21VecAccess::GetVM(VMRef).ThrowRangeError(VM::Error(VM::eInvalidRangeError, Sfr21VecAccess::GetVM(VMRef), (int)ind, static_cast<int>(Sfr21VecAccess::GetSize(V) - 1)));
+        return false;
+    }
+    if (ind > Sfr21VecAccess::GetSize(V))
+    {
+        Sfr21VecAccess::GetVM(VMRef).ThrowRangeError(VM::Error(VM::eInvalidRangeError, Sfr21VecAccess::GetVM(VMRef), (int)ind, static_cast<int>(Sfr21VecAccess::GetSize(V) - 1)));
         return false;
     }
     if (ind == (UInt32)V.GetSize() && !Resize(ind + 1))
@@ -726,15 +737,19 @@ CheckResult VectorBase<Ptr<ASStringNode> >::Resize(UPInt size)
     return ok;
 }
 
+// The two range tests are the SDK's separate blocks.
 // @0x1425638c0
-// MS2-FUNCTIONAL: size compares scheduled differently
 template <>
 __declspec(noinline) CheckResult VectorBase<Ptr<ASStringNode> >::Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr)
 {
-    if ((Fixed && ind >= (UInt32)V.GetSize()) || ind > (UInt32)V.GetSize())
+    if (Fixed && ind >= Sfr21VecAccess::GetSize(V))
     {
-        VM& vm = VMRef;
-        vm.ThrowRangeError(VM::Error(VM::eInvalidRangeError, vm, (int)ind, (int)V.GetSize() - 1));
+        Sfr21VecAccess::GetVM(VMRef).ThrowRangeError(VM::Error(VM::eInvalidRangeError, Sfr21VecAccess::GetVM(VMRef), (int)ind, static_cast<int>(Sfr21VecAccess::GetSize(V) - 1)));
+        return false;
+    }
+    if (ind > Sfr21VecAccess::GetSize(V))
+    {
+        Sfr21VecAccess::GetVM(VMRef).ThrowRangeError(VM::Error(VM::eInvalidRangeError, Sfr21VecAccess::GetVM(VMRef), (int)ind, static_cast<int>(Sfr21VecAccess::GetSize(V) - 1)));
         return false;
     }
     if (ind == (UInt32)V.GetSize() && !Resize(ind + 1))
@@ -2859,15 +2874,19 @@ __declspec(noinline) void VectorBase<Value>::SetUnsafe(UInt32 ind, const Value& 
     V[ind] = Value(v);
 }
 
+// The two range tests are the SDK's separate blocks.
 // @0x142563a00
-// MS2-FUNCTIONAL: size compares scheduled differently
 template <>
 __declspec(noinline) CheckResult VectorBase<Value>::Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr)
 {
-    if ((Fixed && ind >= (UInt32)V.GetSize()) || ind > (UInt32)V.GetSize())
+    if (Fixed && ind >= Sfr21VecAccess::GetSize(V))
     {
-        VM& vm = VMRef;
-        vm.ThrowRangeError(VM::Error(VM::eInvalidRangeError, vm, (int)ind, (int)V.GetSize() - 1));
+        Sfr21VecAccess::GetVM(VMRef).ThrowRangeError(VM::Error(VM::eInvalidRangeError, Sfr21VecAccess::GetVM(VMRef), (int)ind, static_cast<int>(Sfr21VecAccess::GetSize(V) - 1)));
+        return false;
+    }
+    if (ind > Sfr21VecAccess::GetSize(V))
+    {
+        Sfr21VecAccess::GetVM(VMRef).ThrowRangeError(VM::Error(VM::eInvalidRangeError, Sfr21VecAccess::GetVM(VMRef), (int)ind, static_cast<int>(Sfr21VecAccess::GetSize(V) - 1)));
         return false;
     }
     if (ind == (UInt32)V.GetSize() && !Resize(ind + 1))
