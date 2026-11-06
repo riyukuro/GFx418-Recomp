@@ -27,7 +27,7 @@ class PerlinGenerator
         return 1.0f - (float)(unsigned)(((A * n * n + B) * n + C) & 0x7fffffff) * (1.0f / 1073741824.0f);
     }
 
-    float SmoothNoise(int x, int y);
+    __declspec(noalias) float SmoothNoise(int x, int y); // noalias: the exe (LTCG) keeps loads across it
 };
 static_assert(sizeof(PerlinGenerator) == 0x10, "PerlinGenerator size");
 

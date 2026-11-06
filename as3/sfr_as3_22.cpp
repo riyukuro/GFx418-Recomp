@@ -724,7 +724,7 @@ struct DICommand_FloodFill
 };
 struct DICommand_PerlinNoise
 {
-    virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+    virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const; const Sfr22NoiseImage* pImage; float FrequencyX, FrequencyY; unsigned NumOctaves, RandomSeed; bool Stitch, FractalNoise; unsigned ChannelMask; bool GrayScale; float Offsets[32]; unsigned OffsetCount; // +8 .. +0xac
 };
 struct DICommand_FillRect
 {
@@ -1199,95 +1199,95 @@ void Scaleform::Render::DICommand_FloodFill::ExecuteSW(Scaleform::Render::DIComm
 // all three colour bytes) one of eight lattice generators is picked from the seed, and every octave cosine-
 // interpolates SmoothNoise at the four lattice corners around the (offset) sample point; frequency doubles and
 // amplitude halves per octave, the sum is normalised by the total amplitude.
-// MS2-FUNCTIONAL: (corrected, sfr36) reads the plane once instead of per pixel; the generator parameters are our table
+// MS2-FUNCTIONAL: permanent: cl evaluates the fractional_Y corner pair first, the exe (LTCG) the (1 - fractional_Y) pair;
+// every operand order of the expression compiles to the same code here. The rest is register and home-slot choice.
 // @0x142677740
-void Scaleform::Render::DICommand_PerlinNoise::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& imageRef, Scaleform::Render::ImageData**) const
+void Scaleform::Render::DICommand_PerlinNoise::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData**) const
 {
-    void* operation = const_cast<Scaleform::Render::DICommand_PerlinNoise*>(this);
-    Scaleform::Render::ImageData* image = &imageRef;
-    using namespace Scaleform;
-    using Scaleform::Render::ImagePlane;
-    using Scaleform::Render::PerlinGenerator;
-    // Row stride and polynomial coefficients of the eight generators (exe 0x143191a90).
-    static const int Generators[8][4] = {
+    // Prime sets of the eight generators (exe 0x143191a90): row stride and polynomial coefficients.
+    static const int NoisePrimeFactors[8][4] = {
         {67, 19937, 178757, 7978189}, {97, 21701, 100511, 2200591}, {73, 23209, 499321, 9218263},
         {19, 44497, 422861, 6200351}, {59, 43261, 300589, 9299317}, {17, 33461, 475333, 1200809},
         {23, 96557, 457117, 6267011}, {43, 28657, 199669, 2299553},
     };
-    const auto* op         = static_cast<const unsigned char*>(operation);
-    const float baseX      = *reinterpret_cast<const float*>(op + 0x10);
-    const float baseY      = *reinterpret_cast<const float*>(op + 0x14);
-    const unsigned octaves = *reinterpret_cast<const unsigned*>(op + 0x18);
-    const int seed         = *reinterpret_cast<const int*>(op + 0x1c);
-    unsigned channels      = *reinterpret_cast<const unsigned*>(op + 0x24);
-    const bool gray        = *reinterpret_cast<const bool*>(op + 0x28);
-    const auto* offsets    = reinterpret_cast<const float*>(op + 0x2c);
-    const unsigned offsetCount = *reinterpret_cast<const unsigned*>(op + 0xac);
-    const float pi = 3.14159265f;
-    if (gray)
-        channels = (channels & ~6u) | 1u;
-
-    ImagePlane plane;
-    image->GetPlane(0, &plane);
-    for (unsigned y = 0; y < plane.Height; ++y)
+    // Grayscale only uses the red channel (copied to green and blue), and possibly alpha.
+    unsigned channelMask = ChannelMask;
+    if ( GrayScale )
     {
-        UByte* line = plane.pData + plane.Pitch * y;
-        for (unsigned x = 0; x < plane.Width; ++x)
-        {
-            const bool transparent =
-                *(static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8)) + 0x48) != 0;
-            UInt32 color = 0;
-            UByte  alpha = 0xff;
-            for (unsigned ch = 0; ch < (transparent ? 4u : 3u); ++ch)
-            {
-                if (!(channels & (1u << ch)))
-                    continue;
-                PerlinGenerator gen;
-                const int* g = Generators[((seed + (int)ch) * -3) & 7];
-                gen.Stride = g[0]; gen.A = g[1]; gen.B = g[2]; gen.C = g[3];
+        channelMask &= ~(Sfr22NoiseImage::Channel_Green|Sfr22NoiseImage::Channel_Blue);
+        channelMask |= Sfr22NoiseImage::Channel_Red;
+    }
 
-                float fx = 2.0f / baseX, fy = 2.0f / baseY;
-                float total = 0.0f, weight = 0.0f, amp = 1.0f;
-                for (unsigned o = 0; o < octaves; ++o)
+    for ( unsigned y = 0; y < dest.GetSize().Height; ++y )
+    {
+        UByte* line = dest.GetScanline(y);
+        for ( unsigned x = 0; x < dest.GetSize().Width; ++x )
+        {
+            Color color(0xFF000000);
+            bool transparent = pImage->IsTransparent();
+            unsigned channelCount = transparent ? 4 : 3;
+            for ( unsigned channel = 0; channel < channelCount; ++channel )
+            {
+                // Skip channels that are not in the mask.
+                if ( (channelMask & (1<<channel)) != 0 )
                 {
-                    float px = (float)x * fx, py = (float)y * fy;
-                    if (o < offsetCount)
+                PerlinGenerator generator = *reinterpret_cast<const PerlinGenerator*>(NoisePrimeFactors[((RandomSeed + channel) * -3) & 7]);
+                float freqX = 2.0f / FrequencyX;
+                float freqY = 2.0f / FrequencyY;
+                float noise = 0;
+                float fmax = 0;
+                float amplitude = 1.0f;
+                for ( unsigned octave = 0; octave < NumOctaves; ++octave )
+                {
+                    float fx = x * freqX;
+                    float fy = y * freqY;
+                    if ( octave < OffsetCount )
                     {
-                        px += offsets[o * 2];
-                        py += offsets[o * 2 + 1];
+                        fx += Offsets[octave*2+0];
+                        fy += Offsets[octave*2+1];
                     }
-                    const int ix = (int)px, iy = (int)py;
-                    const float tx = (float)((1.0 - cos((double)((px - (float)ix) * pi))) * 0.5);
-                    const float ty = (float)((1.0 - cos((double)((py - (float)iy) * pi))) * 0.5);
-                    const float n00 = gen.SmoothNoise(ix, iy);
-                    const float n10 = gen.SmoothNoise(ix + 1, iy);
-                    const float n01 = gen.SmoothNoise(ix, iy + 1);
-                    const float n11 = gen.SmoothNoise(ix + 1, iy + 1);
-                    fx += fx;
-                    fy += fy;
-                    weight += amp;
-                    total += ((n00 * (1.0f - tx) + n10 * tx) * (1.0f - ty) + (n01 * (1.0f - tx) + n11 * tx) * ty + 1.0f)
-                             * 0.5f * amp;
-                    amp *= 0.5f;
+                    // InterpolatedNoise: cosine interpolation of SmoothNoise at the four lattice corners.
+                    int   integer_X    = int(fx);
+                    int   integer_Y    = int(fy);
+                    float fractional_X = (float)((1 - cos((double)((fx - integer_X) * 3.1415927f))) * .5);
+                    float fractional_Y = (float)((1 - cos((double)((fy - integer_Y) * 3.1415927f))) * .5);
+                    float interp = (generator.SmoothNoise(integer_X, integer_Y) * (1 - fractional_X)
+                                  + generator.SmoothNoise(integer_X + 1, integer_Y) * fractional_X) * (1 - fractional_Y)
+                                 + (generator.SmoothNoise(integer_X, integer_Y + 1) * (1 - fractional_X)
+                                  + generator.SmoothNoise(integer_X + 1, integer_Y + 1) * fractional_X) * fractional_Y;
+                    noise += (1 + interp) * 0.5f * amplitude;
+                    freqX *= 2;
+                    freqY *= 2;
+                    fmax += amplitude;
+                    amplitude /= 2;
                 }
-                const UByte v = (UByte)(int)((total / weight) * 255.0f);
-                if (gray && ch != 3)
-                    color = v | ((UInt32)v << 8) | ((UInt32)v << 16);
-                else if (ch == 0)
-                    color = (color & 0x0000ffffu) | ((UInt32)v << 16);
-                else if (ch == 1)
-                    color = (color & 0xffff00ffu) | ((UInt32)v << 8);
-                else if (ch == 2)
-                    color = (color & 0xffffff00u) | v;
+                noise /= fmax;
+
+                if ( GrayScale && channel != 3 )
+                    color.SetRGBFloat(noise, noise, noise);
                 else
-                    alpha = v;
+                {
+                    UByte v = (UByte)(255*noise);
+                    switch(channel)
+                    {
+                    case 1: color.SetGreen(v); break;
+                    case 2: color.SetBlue (v); break;
+                    case 3: color.SetAlpha(v); break;
+                    default: color.SetRed (v); break;
+                    }
+                }
+                }
             }
-            if (!transparent)
-                alpha = 0xff;
-            image->SetPixelInScanline(line, x, (color & 0x00ffffffu) | ((UInt32)alpha << 24));
+            if ( !transparent )
+                color.SetAlpha(255);
+            dest.SetPixelInScanline(line, x, color.ToColor32());
         }
     }
 }
+
+
+
+
 
 namespace Scaleform {
 // Master channel group volume, 1.0 when the group cannot be fetched.
