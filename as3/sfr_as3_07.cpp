@@ -4887,11 +4887,11 @@ namespace Instances { namespace fl_display
         }
     }
 #pragma strict_gs_check(pop)
-
+static SF_FORCEINLINE bool Sfr07ConstructBuiltinValue(VM& vm, Value& v, const char* gname, unsigned argc, const Value* argv) { vm.Construct(gname, v, argc, argv, true); return !vm.IsException() && !v.IsNullOrUndefined(); }
 #pragma strict_gs_check(push, on)
     // Per-channel 256-bucket histograms of the bitmap (or of hRect), returned as a Vector.<Vector.<Number>>
     // holding the red, green, blue and alpha counts.
-    // MS2-FUNCTIONAL: frame layout and register allocation differ (the exe keeps result in rdi and the error Value rbp-based)
+    // MS2-FUNCTIONAL: slot order (the exe puts the result spill and the Error at rbp-0x80 and the Vector Value lowest) and result in rdi; same code otherwise
     // @0x14244e670
     void BitmapData::histogram(SPtr<Instances::fl::Object>& result, Instances::fl_geom::Rectangle* hRect)
     {
@@ -4912,18 +4912,18 @@ namespace Instances { namespace fl_display
         unsigned colors[4][256];
         (this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL)->Histogram(prect, colors);
 
-        Value count(UInt32(4));
+        Value count[] = {Value(UInt32(4))};
         Value vec;
-        GetVM().Construct("Vector.<Vector.<Number>>", vec, 1, &count, true);
-        if (GetVM().IsException() || vec.IsNullOrUndefined())
+        if (!Sfr07ConstructBuiltinValue(GetVM(), vec, "Vector.<Vector.<Number>>", 1, count))
             return;
+
         result = static_cast<Instances::fl::Object*>(vec.GetObject());
 
         SPtr<Instances::fl::Object> channels[4];
         for (unsigned i = 0; i < 4; ++i)
         {
-            Value size(UInt32(256));
-            if (!GetVM().ConstructBuiltinObject(channels[i], "Vector.<Number>", 1, &size))
+            Value size[] = {Value(UInt32(256))};
+            if (!GetVM().ConstructBuiltinObject(channels[i], "Vector.<Number>", 1, size))
                 return;
             for (unsigned j = 0; j < 256; ++j)
             {
