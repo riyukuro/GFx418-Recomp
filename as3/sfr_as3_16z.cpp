@@ -433,17 +433,30 @@ void MovieRoot::ASValue2GFxValue(const Value& v, GFx::Value* pdestVal) const
 // The loaded-movie-def hash (+0x6e8): the value an identity-hashed key maps to, and the add of a new node.
 void* Sfr33IdWordHashGet(const UByte* self, const UPInt& key);       // 0x1425059f0
 static inline void* FUN_1425059f0(const void* self, const UPInt& key) { return Sfr33IdWordHashGet(static_cast<const UByte*>(self), key); }
-void FUN_1424d4220(void* self, void* pheapAddr, const void* nodeRef, UPInt hashValue);
-// The body is the LoadedMovieDefs hash's HashSetBase::add<NodeRef> (0x1424d4220), emitted where the real hash type is
-// used. The hook DLL binds the FUN_ name as before.
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:?FUN_1424d4220@AS3@GFx@Scaleform@@YAXPEAX0PEBX_K@Z=??$add@UNodeRef@?$HashNode@PEAVMovieDefImpl@GFx@Scaleform@@UMS2_LoadedMovieDefInfo@3@V?$IdentityHash@PEAVMovieDefImpl@GFx@Scaleform@@@3@@Scaleform@@@?$HashSetBase@U?$HashNode@PEAVMovieDefImpl@GFx@Scaleform@@UMS2_LoadedMovieDefInfo@3@V?$IdentityHash@PEAVMovieDefImpl@GFx@Scaleform@@@3@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@PEAVMovieDefImpl@GFx@Scaleform@@$01@2@V?$HashsetNodeEntry@U?$HashNode@PEAVMovieDefImpl@GFx@Scaleform@@UMS2_LoadedMovieDefInfo@3@V?$IdentityHash@PEAVMovieDefImpl@GFx@Scaleform@@@3@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBUNodeRef@?$HashNode@PEAVMovieDefImpl@GFx@Scaleform@@UMS2_LoadedMovieDefInfo@3@V?$IdentityHash@PEAVMovieDefImpl@GFx@Scaleform@@@3@@1@_K@Z")
-#endif
+}}} // namespace Scaleform::GFx::AS3
+// The LoadedMovieDefs hash's node/set types (as in sfr_as3_15, which holds the add<NodeRef> instance, 0x1424d4220).
+namespace Scaleform {
+struct MS2_LoadedMovieDefInfo
+{
+    Ptr<GFx::MovieDefImpl> pMovieDef;
+    unsigned               UseCnt;
+
+    MS2_LoadedMovieDefInfo(GFx::MovieDefImpl* def) : pMovieDef(def), UseCnt(1) {}
+};
+typedef HashNode<GFx::MovieDefImpl*, MS2_LoadedMovieDefInfo, IdentityHash<GFx::MovieDefImpl*> > MS2_LoadedMovieDefNode;
+typedef HashSetBase<MS2_LoadedMovieDefNode, MS2_LoadedMovieDefNode::NodeHashF, MS2_LoadedMovieDefNode::NodeAltHashF,
+                    AllocatorLH<GFx::MovieDefImpl*, 2>,
+                    HashsetNodeEntry<MS2_LoadedMovieDefNode, MS2_LoadedMovieDefNode::NodeHashF> >
+    MS2_LoadedMovieDefSet;
+extern template void MS2_LoadedMovieDefSet::add<MS2_LoadedMovieDefNode::NodeRef>(void*, const MS2_LoadedMovieDefNode::NodeRef&,
+                                                                               UPInt);
+} // namespace Scaleform
+namespace Scaleform { namespace GFx { namespace AS3 {
 
 // A use of pdefImpl: an entry already listed counts one more use; otherwise one is added (holding the definition)
 // with a single use.
 // MS2-FUNCTIONAL: register allocation only (exe keeps the key in rbx and copies it to rdi for the Ptr); the hash
-// lookup and add are called through their exe addresses
+// lookup is called through its exe address; the add is the hash's own Add (add<NodeRef>, 0x1424d4220)
 // @0x1424e8e20
 void MovieRoot::AddLoadedMovieDef(MovieDefImpl* pdefImpl)
 {
@@ -460,7 +473,8 @@ void MovieRoot::AddLoadedMovieDef(MovieDefImpl* pdefImpl)
     }
     Info info = { def, 1 };
     NodeRef ref = { &pdefImpl, &info };
-    FUN_1424d4220(&LoadedMovieDefs, &LoadedMovieDefs, &ref, reinterpret_cast<UPInt>(pdefImpl));
+    reinterpret_cast<MS2_LoadedMovieDefSet&>(LoadedMovieDefs)
+        .Add(&LoadedMovieDefs, reinterpret_cast<const MS2_LoadedMovieDefNode::NodeRef&>(ref));
 }
 
 // MovieRoot::AddInvokeAlias: maps alias to the closure invoked for it, creating the alias hash (+0x80) on first use.
