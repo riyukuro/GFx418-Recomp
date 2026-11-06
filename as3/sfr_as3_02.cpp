@@ -1248,9 +1248,9 @@ namespace Instances
 
 // SPtr<Namespace>::operator=(Namespace*) and operator=(Pickable) (0x1423f1840, 0x1423f18b0) and
 // ASString::operator= (0x1423f1a30), out of line in the exe here.
-Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>&
-FUN_1423f18b0(Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>* self,
-              Scaleform::Pickable<Scaleform::GFx::AS3::Instances::Namespace> p);
+//
+//
+//
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1300,7 +1300,7 @@ namespace Instances { namespace fl
                     {
                         InstanceTraits::fl::Namespace& itr_ns = static_cast<InstanceTraits::fl::Namespace&>(
                             GetVM().GetClassTraitsNamespace().GetInstanceTraits());
-                        FUN_1423f18b0(&Ns, MakeInternedNamespace(itr_ns, Abc::NS_Public, uri, Value::GetUndefined()));
+                        (Ns.*static_cast<SPtr<Instances::Namespace>& (SPtr<Instances::Namespace>::*)(Pickable<Instances::Namespace>)>(&SPtr<Instances::Namespace>::operator=))(MakeInternedNamespace(itr_ns, Abc::NS_Public, uri, Value::GetUndefined()));
                     }
                 }
             }
