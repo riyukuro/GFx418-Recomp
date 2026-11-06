@@ -6883,7 +6883,8 @@ bool AvmTextField::OnMouseEvent(const EventId& event)
 
 // AvmTextField::OnCharEvent: a "textInput" TextEvent of the character to the AS3 object when it listens for it;
 // false when the event's default action was prevented.
-// MS2-FUNCTIONAL register allocation: the exe keeps one more callee-saved register and a 0x10 larger frame
+// MS2-FUNCTIONAL register allocation: the exe keeps one more callee-saved register and a 0x10 larger frame (this in
+// r14, the event in rdi, the result in esi), and reuses the event register for the SPtr release
 // @0x142518750
 bool AvmTextField::OnCharEvent(wchar_t wcharCode, unsigned controllerIdx)
 {
@@ -6896,11 +6897,12 @@ bool AvmTextField::OnCharEvent(wchar_t wcharCode, unsigned controllerIdx)
         Value params[] = { Value(name, Value::InlineStr), Value(true), Value(true) };
         ASVM* asvm = AS3RootOf(pDispObj)->pAVM;
         asvm->ConstructInstance(evt, asvm->ExtensionsEnabled ? asvm->TextEventExClass : asvm->TextEventClass, 3, params);
-        evt->Target = as3obj;
-        evt->SetText(wcharCode);
+        Instances::fl_events::TextEvent* e = evt.GetPtr();
+        e->Target = as3obj;
+        e->SetText(wcharCode);
         if (asvm->ExtensionsEnabled)
-            static_cast<Instances::fl_gfx::TextEventEx*>(evt.GetPtr())->controllerIdx = controllerIdx;
-        rv = as3obj->DispatchEventObject(evt, pDispObj);
+            static_cast<Instances::fl_gfx::TextEventEx*>(e)->controllerIdx = controllerIdx;
+        rv = as3obj->DispatchEventObject(e, pDispObj);
     }
     return rv;
 }
