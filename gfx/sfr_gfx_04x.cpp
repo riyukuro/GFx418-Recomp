@@ -490,8 +490,6 @@ bool GFxInitImportActions::IsInitImportActionsTag() const
 }
 
 // ImportAssets / ImportAssets2: the symbols another file supplies, bound when that file is loaded.
-// MS2-FUNCTIONAL 0x1425c5d70: same reads, calls, log text and objects; register assignment (rsi/r14, edi/esi) and the
-// hoisted -1 of the string release differ.
 // @0x1425c5d70
 void SF_STDCALL GFx_ImportLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
