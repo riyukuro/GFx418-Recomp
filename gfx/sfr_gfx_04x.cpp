@@ -420,77 +420,93 @@ enum
 };
 
 // DefineBitsLossless / DefineBitsLossless2: a color-mapped or direct bitmap, zlib-compressed; decompressed when used.
-// MS2-FUNCTIONAL 0x1425c5340: same reads, formats, log text and objects; register allocation and the ResourceId
-// slot differ.
 // @0x1425c5340
 void SF_STDCALL GFx_DefineBitsLossless2Loader(LoadProcess* p, const TagInfo& tagInfo)
 {
-    ResourceId rid(p->ReadU16());
-    UByte      bitmapFormat = p->GetStream()->ReadU8();
-    UInt16     width        = p->ReadU16();
-    UInt16     height       = p->ReadU16();
-    p->LogParse("  DefBitsLossless2: tagInfo.TagType = %d, id = %d, fmt = %d, w = %d, h = %d\n", tagInfo.TagType,
-                rid.GetIdIndex(), bitmapFormat, width, height);
+    UInt16 bitmapResourceId = p->ReadU16();
+    UByte  bitmapFormat     = p->ReadU8(); // 3 == 8 bit, 4 == 16 bit, 5 == 32 bit
+    UInt16 width            = p->ReadU16();
+    UInt16 height           = p->ReadU16();
 
-    Render::ImageSource* psource = 0;
-    ZlibSupportBase*     pzlib   = p->GetLoadStates()->pZlibSupport;
-    if (!pzlib)
-        p->LogError("Error: GFxZlibState is not set - can't load zipped image data\n");
-    else if (tagInfo.TagType == Tag_DefineBitsLossless)
+    p->LogParse("  DefBitsLossless2: tagInfo.TagType = %d, id = %d, fmt = %d, w = %d, h = %d\n", tagInfo.TagType,
+                bitmapResourceId, bitmapFormat, width, height);
+
+    Ptr<Render::ImageSource> pimageSrc;
+
+    if (true) // SDK p->IsLoadingImageData(), always 1
     {
-        if (bitmapFormat == 3)
+        ZlibSupportBase* pzlib = p->GetLoadStates()->pZlibSupport;
+        if (!pzlib)
+            p->LogError("Error: GFxZlibState is not set - can't load zipped image data\n");
+        else
         {
-            UInt16 colorTableSize = (UInt16)(p->ReadU8() + 1);
-            int    length         = tagInfo.TagLength + tagInfo.TagDataOffset - p->Tell();
-            psource = (SF_NEW ZlibImageSource(pzlib, p->GetUnderlyingFile(), Render::Size<unsigned long>(width, height),
-                                              ZlibImageSource::ColorMappedRGB, Render::Image_R8G8B8, colorTableSize,
-                                              length))
-                          ->GetSource();
-        }
-        else if (bitmapFormat == 4)
-        {
-            int length = tagInfo.TagLength + tagInfo.TagDataOffset - p->Tell();
-            psource    = (SF_NEW ZlibImageSource(pzlib, p->GetUnderlyingFile(), Render::Size<unsigned long>(width, height),
-                                                 ZlibImageSource::RGB16, Render::Image_R8G8B8, 0, length))
-                          ->GetSource();
-        }
-        else if (bitmapFormat == 5)
-        {
-            int length = tagInfo.TagLength + tagInfo.TagDataOffset - p->Tell();
-            psource    = (SF_NEW ZlibImageSource(pzlib, p->GetUnderlyingFile(), Render::Size<unsigned long>(width, height),
-                                                 ZlibImageSource::RGB24, Render::Image_R8G8B8, 0, length))
-                          ->GetSource();
+            if (tagInfo.TagType == Tag_DefineBitsLossless)
+            {
+                if (bitmapFormat == 3)
+                {
+                    UInt16 colorTableSize = p->ReadU8();
+                    colorTableSize += 1; // SWF stores one less than the actual size
+                    int bufferBytes = tagInfo.TagDataOffset + tagInfo.TagLength - p->Tell();
+                    pimageSrc = *(SF_NEW ZlibImageSource(pzlib, p->GetUnderlyingFile(),
+                                                         Render::Size<unsigned long>(width, height),
+                                                         ZlibImageSource::ColorMappedRGB, Render::Image_R8G8B8,
+                                                         colorTableSize, bufferBytes))
+                                     ->GetSource();
+                }
+                else if (bitmapFormat == 4)
+                {
+                    int bufferBytes = tagInfo.TagDataOffset + tagInfo.TagLength - p->Tell();
+                    pimageSrc = *(SF_NEW ZlibImageSource(pzlib, p->GetUnderlyingFile(),
+                                                         Render::Size<unsigned long>(width, height),
+                                                         ZlibImageSource::RGB16, Render::Image_R8G8B8, 0, bufferBytes))
+                                     ->GetSource();
+                }
+                else if (bitmapFormat == 5)
+                {
+                    int bufferBytes = tagInfo.TagDataOffset + tagInfo.TagLength - p->Tell();
+                    pimageSrc = *(SF_NEW ZlibImageSource(pzlib, p->GetUnderlyingFile(),
+                                                         Render::Size<unsigned long>(width, height),
+                                                         ZlibImageSource::RGB24, Render::Image_R8G8B8, 0, bufferBytes))
+                                     ->GetSource();
+                }
+            }
+            else // Tag_DefineBitsLossless2
+            {
+                if (bitmapFormat == 3)
+                {
+                    UInt16 colorTableSize = p->ReadU8();
+                    colorTableSize += 1; // SWF stores one less than the actual size
+                    int bufferBytes = tagInfo.TagDataOffset + tagInfo.TagLength - p->Tell();
+                    pimageSrc = *(SF_NEW ZlibImageSource(pzlib, p->GetUnderlyingFile(),
+                                                         Render::Size<unsigned long>(width, height),
+                                                         ZlibImageSource::ColorMappedRGBA, Render::Image_R8G8B8A8,
+                                                         colorTableSize, bufferBytes))
+                                     ->GetSource();
+                }
+                else if (bitmapFormat == 4)
+                {
+                    int bufferBytes = tagInfo.TagDataOffset + tagInfo.TagLength - p->Tell();
+                    pimageSrc = *(SF_NEW ZlibImageSource(pzlib, p->GetUnderlyingFile(),
+                                                         Render::Size<unsigned long>(width, height),
+                                                         ZlibImageSource::RGB16, Render::Image_R8G8B8A8, 0,
+                                                         bufferBytes))
+                                     ->GetSource();
+                }
+                else if (bitmapFormat == 5)
+                {
+                    int bufferBytes = tagInfo.TagDataOffset + tagInfo.TagLength - p->Tell();
+                    pimageSrc = *(SF_NEW ZlibImageSource(pzlib, p->GetUnderlyingFile(),
+                                                         Render::Size<unsigned long>(width, height),
+                                                         ZlibImageSource::RGBA, Render::Image_R8G8B8A8, 0,
+                                                         bufferBytes))
+                                     ->GetSource();
+                }
+            }
         }
     }
-    else
-    {
-        if (bitmapFormat == 3)
-        {
-            UInt16 colorTableSize = (UInt16)(p->ReadU8() + 1);
-            int    length         = tagInfo.TagLength + tagInfo.TagDataOffset - p->Tell();
-            psource = (SF_NEW ZlibImageSource(pzlib, p->GetUnderlyingFile(), Render::Size<unsigned long>(width, height),
-                                              ZlibImageSource::ColorMappedRGBA, Render::Image_R8G8B8A8, colorTableSize,
-                                              length))
-                          ->GetSource();
-        }
-        else if (bitmapFormat == 4)
-        {
-            int length = tagInfo.TagLength + tagInfo.TagDataOffset - p->Tell();
-            psource    = (SF_NEW ZlibImageSource(pzlib, p->GetUnderlyingFile(), Render::Size<unsigned long>(width, height),
-                                                 ZlibImageSource::RGB16, Render::Image_R8G8B8A8, 0, length))
-                          ->GetSource();
-        }
-        else if (bitmapFormat == 5)
-        {
-            int length = tagInfo.TagLength + tagInfo.TagDataOffset - p->Tell();
-            psource    = (SF_NEW ZlibImageSource(pzlib, p->GetUnderlyingFile(), Render::Size<unsigned long>(width, height),
-                                                 ZlibImageSource::RGBA, Render::Image_R8G8B8A8, 0, length))
-                          ->GetSource();
-        }
-    }
-    p->AddImageResource(rid, psource);
-    if (psource)
-        psource->Release();
+
+    // Create a unique resource for the image and add it.
+    p->AddImageResource(ResourceId(bitmapResourceId), pimageSrc);
 }
 
 // The InitActions placeholder of an import: the imported file's actions run there.
