@@ -249,23 +249,12 @@ struct HeapArrayCopy
     ArrayLH_POD<ArgWords, 323>*    pArray;
 };
 
-// MS2-FUNCTIONAL: the array is the plain POD array with its size policy
+// A heap-new copy of the source array, or null when there is none.
 // @0x142924090
 HeapArrayCopy* FUN_142924090(HeapArrayCopy* pret, MemoryHeap* pheap, const ArrayLH_POD<ArgWords, 323>* psrc)
 {
     pret->pHeap = pheap;
-    if (!psrc)
-    {
-        pret->pArray = 0;
-        return pret;
-    }
-    void* pmem = pheap->Alloc(0x18);
-    if (!pmem)
-    {
-        pret->pArray = 0;
-        return pret;
-    }
-    pret->pArray = ::new (pmem) ArrayLH_POD<ArgWords, 323>(*psrc);
+    pret->pArray = psrc ? SF_HEAP_NEW(pheap) ArrayLH_POD<ArgWords, 323>(*psrc) : 0;
     return pret;
 }
 
