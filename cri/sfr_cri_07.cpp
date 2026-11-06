@@ -2060,26 +2060,19 @@ void mpvumct_OneReadMb(longlong arg1, longlong arg2, int *arg3, longlong *arg4, 
   (*cfn)(ctx);
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140068cc0
 void MPVUMCT_PpicSkipped(longlong arg1, int arg2)
 {
-  int i_v1;
-  int i_v2;
-  longlong l_v3;
-  int local_res8[2];  // mpvumct_CalcOfs writes the chroma and luma offsets as one int pair
-  
-  i_v1 = *(int *)((char *)arg1 + 0x1794);
-  l_v3 = arg1;
+  int end = *(int *)((char *)arg1 + 0x1794);
+  int ofs[2];
+  longlong *a = (longlong *)((char *)arg1 + 0x1638);
+  longlong *b = (longlong *)((char *)arg1 + 0x1658);
   mpvumct_SubMbadr(arg1,arg2);
-  i_v2 = *(int *)((char *)l_v3 + 0x1794);
-  while (i_v2 < i_v1) {
-    mpvumct_CalcOfs(arg1,arg1 + 0x1638,local_res8);
-    mpvumct_PpicSkipMb(local_res8,(longlong *)((char *)arg1 + 0x1638),(longlong *)((char *)arg1 + 0x1658));
+  while (*(int *)((char *)arg1 + 0x1794) < end) {
+    mpvumct_CalcOfs(arg1,(longlong)a,ofs);
+    mpvumct_PpicSkipMb(ofs,a,b);
     mpvumct_IncreMbadr(arg1);
-    i_v2 = *(int *)((char *)arg1 + 0x1794);
   }
-  return;
 }
 
 // @0x140068d50
