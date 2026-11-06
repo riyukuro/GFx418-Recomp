@@ -354,9 +354,9 @@ void SKI_MaskEnd::RQII_EndMask::EmitToHAL(RenderQueueItem& item, RenderQueueProc
     if (qp.GetQueueEmitFilter() != RenderQueueProcessor::QPF_All)
         return;
     HAL* hal = qp.GetHAL();
-    if ((SPInt)item.GetData() == SortKeyMask_End)
+    if ((int)(UPInt)item.GetData() == SortKeyMask_End)
         hal->EndMaskSubmit();
-    else if ((SPInt)item.GetData() == SortKeyMask_Pop)
+    else if ((int)(UPInt)item.GetData() == SortKeyMask_Pop)
         hal->PopMask();
 }
 
