@@ -211,6 +211,7 @@ public:
     {
         Set__proto__(psc, pprototype);
     }
+    StageObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06s9
 
     virtual ObjectType GetObjectType() const; // exe 0x142954310: Object_Stage
 };
@@ -221,6 +222,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143213660
 
     StageProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142920c50
+    StageProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06s9
 };
 
 // 0x70 bytes.
