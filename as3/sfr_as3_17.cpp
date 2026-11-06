@@ -3127,76 +3127,149 @@ static bool Sfr33SlotNsMatches(const Scaleform::GFx::AS3::Instances::Namespace& 
     return sns.GetKind() == Abc::NS_Private ? &sns == &ns : sns.GetUri().GetNode() == ns.GetUri().GetNode();
 }
 
-// The class traits for mn as seen from the scope traits tr. A qualified name takes the declared type of the first
-// matching slot of that name; for a namespace set, each namespace in turn takes the type of its first matching slot
-// when typed, else the VM's class of that name and namespace (found on the global object and cached). NULL when the
-// name does not convert to a string.
-// MS2-FUNCTIONAL 0x142501310: raw namespace-set and VM offsets; name chain walked through Slots::GetSlotInfo
+// Slots::GetSlotInfo and GetPrevSlotIndex, one level inline here as in the exe (0x142416fb0, 0x14250cc30 out of line).
+static __forceinline const Scaleform::GFx::AS3::SlotInfo& Sfr17SlotInfoFI(const Scaleform::GFx::AS3::Slots& s,
+                                                                          Scaleform::GFx::AS3::AbsoluteIndex ind)
+{
+    if (ind < s.FirstOwnSlotNum)
+        return s.Parent->GetSlotInfo(ind);
+    return s.VArray[ind.Get() - s.FirstOwnSlotNum].Value;
+}
+static __forceinline Scaleform::SPInt Sfr17PrevSlotFI(const Scaleform::GFx::AS3::Slots& s, Scaleform::SPInt ind)
+{
+    if (static_cast<Scaleform::UPInt>(ind) < s.FirstOwnSlotNum)
+        return s.Parent->GetPrevSlotIndex(ind);
+    return s.VArray[ind - s.FirstOwnSlotNum].Prev;
+}
+static __forceinline bool Sfr17IsQNameFI(const Scaleform::GFx::AS3::Multiname& mn)
+{
+    const unsigned bits = static_cast<Scaleform::UInt8>(mn.Kind) & 3;
+    return bits == 0 || bits == 1;
+}
+
+// FindFixedSlot (0x1425011c0) without the on-demand object, inline here as in the exe.
+static __forceinline const Scaleform::GFx::AS3::SlotInfo* Sfr17FindFixedSlotInl(const Scaleform::GFx::AS3::Traits& t,
+    const Scaleform::GFx::ASString& name, const Scaleform::GFx::AS3::Instances::Namespace& ns, Scaleform::UPInt& index)
+{
+    using namespace Scaleform;
+    using namespace Scaleform::GFx::AS3;
+    const SlotInfo* sli_ptr = NULL;
+    const Abc::NamespaceKind kind = ns.GetKind();
+    const UInt32* values = t.FindSlotValues(name);
+    if (values != NULL)
+    {
+        for (SPInt ind = *values; ind >= 0; ind = Sfr17PrevSlotFI(t, ind))
+        {
+            index = static_cast<UPInt>(ind);
+            const SlotInfo& si = Sfr17SlotInfoFI(t, AbsoluteIndex(ind));
+            const Instances::Namespace& cur_ns = *si.pNs;
+            if (cur_ns.GetKind() == kind)
+            {
+                bool found = false;
+                switch (kind)
+                {
+                case Abc::NS_Protected:
+                    found = true;
+                    break;
+                case Abc::NS_Private:
+                    found = (&ns == &cur_ns);
+                    break;
+                default:
+                    found = (cur_ns.GetUri().GetNode() == ns.GetUri().GetNode());
+                    break;
+                }
+                if (found)
+                {
+                    sli_ptr = &si;
+                    break;
+                }
+            }
+        }
+    }
+    return sli_ptr;
+}
+
+// VM::Resolve2ClassTraits(name, ns, appDomain), inline here as in the exe.
+static __forceinline Scaleform::GFx::AS3::ClassTraits::Traits* Sfr17Resolve2CT(Scaleform::GFx::AS3::VM& vm,
+    const Scaleform::GFx::ASString& name, const Scaleform::GFx::AS3::Instances::Namespace& ns)
+{
+    using namespace Scaleform::GFx::AS3;
+    ClassTraits::Traits** found = FUN_142414ac0(&vm.ClassTraitsSet, name, ns);
+    if (found != NULL && *found != NULL)
+        return *found;
+    ClassTraits::Traits* ctr = FUN_142415520(vm.GlobalObject.GetPtr(), name, ns);
+    if (ctr != NULL)
+        vm.ClassTraitsSet.Add(name, ns, ctr);
+    return ctr;
+}
+
+// The class traits for mn as seen from the scope traits t (SDK FindFixedTraits(vm, t, mn, appDomain)).
+// MS2-FUNCTIONAL 0x142501310: raw namespace-set and VM offsets; cl hoists the FindSlotValues call shared by both
+// branches above the IsQName test, where the exe calls it in each (971 vs 1010 bytes)
 // @0x142501310
 void* FUN_142501310(Scaleform::GFx::AS3::VM& vm, void* scope, const Scaleform::GFx::AS3::Multiname& mn)
 {
     using namespace Scaleform;
     using namespace Scaleform::GFx;
     using namespace Scaleform::GFx::AS3;
-    const Traits& tr = *static_cast<const Traits*>(scope);
+    const Traits& t = *static_cast<const Traits*>(scope);
+    const AS3::Value& vn = mn.Name;
     const UByte* sm = *reinterpret_cast<UByte* const*>(*reinterpret_cast<UByte* const*>(reinterpret_cast<UByte*>(&vm) + 0x10) + 0x1e8);
     ASString name(reinterpret_cast<ASStringNode*>(const_cast<UByte*>(sm) + 0x40));
-    ClassTraits::Traits* ct = NULL;
-    if (!mn.Name.Convert2String(name))
+    if (!vn.Convert2String(name))
         return NULL;
-    const UByte* obj = reinterpret_cast<const UByte*>(mn.Obj.GetPtr());
-    if (mn.IsQName())
+    const ClassTraits::Traits* result = NULL;
+    if (Sfr17IsQNameFI(mn))
     {
-        const Instances::Namespace& ns = *reinterpret_cast<const Instances::Namespace*>(obj);
-        VM* tvm = *reinterpret_cast<VM* const*>(reinterpret_cast<const UByte*>(&tr) + 0x78);
-        if (const UInt32* values = tr.FindSlotValues(name))
-        {
-            SPInt ind = *values;
-            do
-            {
-                const SlotInfo& si = tr.GetSlotInfo(AbsoluteIndex(ind));
-                if (Sfr33SlotNsMatches(*si.pNs, ns))
-                {
-                    ct = Sfr33SlotDataType(&si, tvm);
-                    break;
-                }
-                if (static_cast<UPInt>(ind) < tr.FirstOwnSlotNum)
-                    ind = tr.Parent->GetPrevSlotIndex(ind);
-                else
-                    ind = tr.VArray[static_cast<UPInt>(ind) - tr.FirstOwnSlotNum].Prev;
-            } while (ind >= 0);
-        }
-        return ct;
+        UPInt index = 0;
+        const Instances::Namespace& ns = *reinterpret_cast<const Instances::Namespace*>(mn.Obj.GetPtr());
+        const SlotInfo* si = Sfr17FindFixedSlotInl(t, name, ns, index);
+        if (si)
+            result = Sfr33SlotDataType(si, *reinterpret_cast<VM* const*>(reinterpret_cast<const UByte*>(&t) + 0x78));
+        return const_cast<ClassTraits::Traits*>(result);
     }
-    const UInt32* values = tr.FindSlotValues(name);
-    const UPInt n = *reinterpret_cast<const UPInt*>(obj + 0x28);
-    for (UPInt i = 0; i < n; ++i)
+    const UByte* obj = reinterpret_cast<const UByte*>(mn.Obj.GetPtr());
+    const UInt32* values = t.FindSlotValues(name);
+    const UPInt size = *reinterpret_cast<const UPInt*>(obj + 0x28);
+    for (UPInt i = 0; i < size; ++i)
     {
         const Instances::Namespace& ns =
             **reinterpret_cast<Instances::Namespace* const*>(*reinterpret_cast<const UPInt*>(obj + 0x20) + i * 8);
-        if (values)
+        if (values != NULL)
         {
-            SPInt ind = *values;
-            do
+            for (SPInt ind = *values; ind >= 0; ind = Sfr17PrevSlotFI(t, ind))
             {
-                const SlotInfo& si = tr.GetSlotInfo(AbsoluteIndex(ind));
-                if (Sfr33SlotNsMatches(*si.pNs, ns))
+                const SlotInfo& si = Sfr17SlotInfoFI(t, AbsoluteIndex(ind));
+                const Instances::Namespace& cur_ns = *si.pNs;
+                if (cur_ns.GetKind() == ns.GetKind())
                 {
-                    if ((ct = Sfr33SlotDataType(&si, &vm)) != NULL)
-                        return ct;
-                    break;
+                    bool found = false;
+                    switch (ns.GetKind())
+                    {
+                    case Abc::NS_Protected:
+                        found = true;
+                        break;
+                    case Abc::NS_Private:
+                        found = (&ns == &cur_ns);
+                        break;
+                    default:
+                        found = (cur_ns.GetUri().GetNode() == ns.GetUri().GetNode());
+                        break;
+                    }
+                    if (found)
+                    {
+                        result = Sfr33SlotDataType(&si, &vm);
+                        break;
+                    }
                 }
-                if (static_cast<UPInt>(ind) < tr.FirstOwnSlotNum)
-                    ind = tr.Parent->GetPrevSlotIndex(ind);
-                else
-                    ind = tr.VArray[static_cast<UPInt>(ind) - tr.FirstOwnSlotNum].Prev;
-            } while (ind >= 0);
+            }
         }
-        ct = Sfr27GetClassTraitsByName(&vm, &name, &ns);
-        if (ct)
+        if (!result)
+            result = Sfr17Resolve2CT(vm, name, ns);
+        if (result)
             break;
     }
-    return ct;
+    return const_cast<ClassTraits::Traits*>(result);
 }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -3753,7 +3826,7 @@ static inline bool Sfr17IsQName(const Multiname& mn)
 // @0x142500f90
 const SlotInfo* FindFixedSlot(VM& vm, const Traits& tr, const Multiname& mn, UPInt& index, Object* obj)
 {
-    const Value& vn = mn.Name;
+    const AS3::Value& vn = mn.Name;
     StringManager& sm = vm.GetStringManager();
     ASString name = sm.GetBuiltin(AS3Builtin_empty_);
     if (!vn.Convert2String(name))
