@@ -2614,7 +2614,17 @@ static void Sfr33TracerValueSet(Scaleform::GFx::AS3::Value& v, unsigned flags, v
 // Tracer: a name mn that resolves to a class is pushed as its class object (kind Class) or, for a class with no
 // constructor yet whose script object holds it in a slot, as the slot read of that object; the state's op stack
 // (+0x38) gets the class (not_null: flagged not null) or its traits-typed value. False when mn names no class.
-// MS2-FUNCTIONAL 0x1424f8910: written on raw offsets (tracer +0x20 state, class traits +0xc0/+0x80/+0x68/+0xd0)
+// MS2-FUNCTIONAL 0x1424f8910: written on raw offsets (tracer +0x20 state, class traits +0xc0/+0x80/+0x68/+0xd0);
+// the exe keeps one Value slot for both branches (ours two, a 0x20 larger frame) and tail-merges the ~Multiname
+// returns. The Values are dtor-less slots released through the out-of-line ReleaseInternal, as in the exe.
+static __forceinline void Sfr33ValueReleaseInternal(Scaleform::GFx::AS3::Value& v);
+// A Value slot with no destructor: the tracer releases it through the out-of-line ReleaseInternal.
+struct Sfr33RawValue
+{
+    union { Scaleform::GFx::AS3::Value v; };
+    Sfr33RawValue() {}
+    ~Sfr33RawValue() {}
+};
 // @0x1424f8910
 bool FUN_1424f8910(void* tr, void* state, Scaleform::GFx::AS3::Multiname mn, bool pop, bool not_null)
 {
@@ -2632,13 +2642,21 @@ bool FUN_1424f8910(void* tr, void* state, Scaleform::GFx::AS3::Multiname mn, boo
     void* cls = *reinterpret_cast<void**>(itr + 0x80);
     if (cls)
     {
-        Value v;
+        Sfr33RawValue vb;
+        Value& v = vb.v;
         Sfr33TracerValueSet(v, 0xd, cls, true);
-        if (!FUN_1424f86d0(self, v, pop))
-            return false;
-        *reinterpret_cast<unsigned*>(&v) = not_null ? 0x40d : 0xd;
-        opstack.PushBack(v);
-        return true;
+        if (FUN_1424f86d0(self, v, pop))
+        {
+            unsigned& fl = *reinterpret_cast<unsigned*>(&v);
+            fl = 0xd;
+            if (not_null)
+                fl = 0x40d;
+            opstack.PushBack(v);
+            Sfr33ValueReleaseInternal(v);
+            return true;
+        }
+        Sfr33ValueReleaseInternal(v);
+        return false;
     }
     if (!((itr[0x68] >> 4) & 1))
         return false;
@@ -2648,14 +2666,13 @@ bool FUN_1424f8910(void* tr, void* state, Scaleform::GFx::AS3::Multiname mn, boo
     if (!FindFixedSlot(*vm, **reinterpret_cast<const Traits* const*>(script + 0x20), mn, index,
                        reinterpret_cast<Object*>(script)))
         return false;
-    {
-        Value t;
-        Sfr33TracerValueSet(t, not_null ? 0x449 : 0x49, ctr, false);
-        opstack.PushBack(t);
-    }
-    Value v;
+    Sfr33RawValue vb;
+    Value& v = vb.v;
+    Sfr33TracerValueSet(v, not_null ? 0x449 : 0x49, ctr, false);
+    opstack.PushBack(v);
     Sfr33TracerValueSet(v, 0xc, script, true);
     FUN_1424f86d0(self, v, false);
+    Sfr33ValueReleaseInternal(v);
     FUN_14251fb90(self, 0xb6, static_cast<unsigned>(static_cast<int>(index) + 1));   // getslot
     return true;
 }
@@ -5218,7 +5235,11 @@ struct ValueAssignCopies
     static void AssignFunction(Value& v, Instances::Function* p);          // 0x1424052a0
     static void AssignUnsafeFunction(Value& v, Instances::Function* p);    // 0x1424053f0
     static void AssignUnsafeNamespace(Value& v, Instances::Namespace* p);  // 0x142405420
+    static void ReleaseInternal(Value& v) { v.ReleaseInternal(); }        // 0x142521f00, out of line
 };
+} } }
+static __forceinline void Sfr33ValueReleaseInternal(Scaleform::GFx::AS3::Value& v) { Scaleform::GFx::AS3::ValueAssignCopies::ReleaseInternal(v); }
+namespace Scaleform { namespace GFx { namespace AS3 {
 
 // @0x142506d60
 Value GetAbsObject(UPInt addr)
