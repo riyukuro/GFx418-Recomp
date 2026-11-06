@@ -4012,6 +4012,11 @@ void* FUN_1424d8640(void* self, MemoryContextImpl* pctx, MovieImpl* pmovie, ASSu
     b[0x6e1] = 0;
     return self;
 }
+// The AS3 support constructs the movie root by its real name; bind it to this body. The hook DLL binds the name to
+// the exe by its symbols row (a second /alternatename would conflict).
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:??0MovieRoot@AS3@GFx@Scaleform@@QEAA@PEAVMemoryContextImpl@123@PEAVMovieImpl@23@PEAVASSupport@23@@Z=?FUN_1424d8640@AS3@GFx@Scaleform@@YAPEAXPEAXPEAVMemoryContextImpl@123@PEAVMovieImpl@23@PEAVASSupport@23@@Z")
+#endif
 // ---- Tracer constructor ----
 extern const void* DAT_14317b938[];      // Tracer vftable
 
