@@ -1160,7 +1160,7 @@ void CFunctionObject::Invoke(const FnCall& fn, LocalFrame*, const char*)
 }
 
 
-// MS2-FUNCTIONAL: dispatches to InvokeImpl and restores the alternate prototype when called through super.
+// dispatches to InvokeImpl and restores the alternate prototype when called through super.
 // @0x142963aa0
 void UserDefinedFunctionObject::Invoke(const FnCall& fn, LocalFrame*, const char*)
 {
@@ -2019,7 +2019,6 @@ static SF_FORCEINLINE InteractiveObject* GetMovieAtLevel(const MovieImpl* pmovie
     return 0;
 }
 
-// MS2-FUNCTIONAL the MovieRoot vftable is not modeled: the Invoke(InteractiveObject*, ...) slot differs (exe 0x1a0)
 // @0x142963a10
 bool MovieRoot::Invoke(const char* pmethodName, GFx::Value* presult, const GFx::Value* pargs, unsigned numArgs)
 {
@@ -2038,7 +2037,6 @@ void ActionBufferData::Read(StreamContext* psc, unsigned eventLength)
 }
 
 // Queues Stage.onResize for the next action pass when there is a _level0.
-// MS2-FUNCTIONAL register allocation of the two _level0 lookups differs
 // @0x14296a450
 void MovieRoot::NotifyOnResize()
 {
@@ -2070,7 +2068,7 @@ static inline Environment* GetLevel0MovieEnvironment(MovieImpl* pmovieImpl)
     return static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pmovie->GetAvmObjImpl()))->GetASEnvironment();
 }
 
-// MS2-FUNCTIONAL: queues the Selection CFunction with the recovered focus arguments through the environment helper.
+// queues the Selection CFunction with the recovered focus arguments through the environment helper.
 // @0x14296a850
 void MovieRoot::NotifyQueueSetFocus(InteractiveObject* ch, unsigned controllerIdx, FocusMovedType fmt)
 {
@@ -2151,7 +2149,7 @@ public:
     virtual void Init(Environment* penv, Object* sheet);
 };
 
-// MS2-FUNCTIONAL: opens the CSS file, reads its complete byte stream into an owned, terminated buffer, and closes it.
+// opens the CSS file, reads its complete byte stream into an owned, terminated buffer, and closes it.
 // @0x1429663d0
 void CSSFileLoaderAndParserImpl::Load(const String& fileName, FileOpener* opener)
 {
@@ -2205,7 +2203,7 @@ void StringCtorFunction::GlobalCtor(const FnCall& fn)
         fn.Result->SetString(fn.Arg(0).ToString(fn.Env));
 }
 
-// MS2-FUNCTIONAL: returns the active StyleSheet receiver or constructs a new sheet for a global call.
+// returns the active StyleSheet receiver or constructs a new sheet for a global call.
 // @0x14295c930
 void StyleSheetCtorFunction::GlobalCtor(const FnCall& fn)
 {
@@ -3238,7 +3236,7 @@ template void ArrayBase<ArrayData<GFx::AS2::Value, AllocatorLH<GFx::AS2::Value, 
 template void ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, GFx::AS2::StatMV_ActionScript_Mem>,
                             ArrayDefaultPolicy>::ResizeNoConstruct(const void*, UPInt);
 
-// MS2-FUNCTIONAL: removes the exact or case-folded watchpoint key according to the AS2 version's name rules.
+// removes the exact or case-folded watchpoint key according to the AS2 version's name rules.
 // @0x14297cae0
 namespace GFx { namespace AS2 {
 void WatchpointHash_RemoveCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key,
@@ -3252,7 +3250,7 @@ void WatchpointHash_RemoveCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, 
         set->RemoveAlt(ASStringNoCaseKey(key));
 }
 
-// MS2-FUNCTIONAL: removes the exact or case-folded registered class name according to the AS2 version's rules.
+// removes the exact or case-folded registered class name according to the AS2 version's rules.
 // @0x14297cd20
 void ClassHash_RemoveCaseCheck(ASStringHash<FunctionRef>* phash, const ASString& key, bool caseSensitive)
 {
@@ -3289,6 +3287,9 @@ void ClassHash_RemoveCaseCheck(ASStringHash<FunctionRef>* phash, const ASString&
 // MS2-PIN: ??_7InvokeCallback@AsBroadcaster@AS2@GFx@Scaleform@@6B@ 0x14321bdb8
 // MS2-PIN: ??_7SetFocusInvokeCallback@AS2@GFx@Scaleform@@6B@ 0x143221850
 // MS2-PIN: ??_7LocalInvokeCallback@MouseCtorFunction@AS2@GFx@Scaleform@@6B@ 0x14321ccf8
+// MS2-PIN: ??_7ActionBufferData@AS2@GFx@Scaleform@@6B@ 0x1432153b8
+// MS2-PIN: ??_7?$RefCountBase@VActionBufferData@AS2@GFx@Scaleform@@$0BAI@@Scaleform@@6B@ 0x14318ccd8
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BAI@@Scaleform@@6B@ 0x14318ccd8
 
 // data_rdata_sf_b names these vftable slots by their address
 #pragma comment(linker, "/alternatename:?FUN_14295d440@@YAXXZ=?CSSHolder_HasStyleSheet@GFx@Scaleform@@YA_NPEBX@Z")
