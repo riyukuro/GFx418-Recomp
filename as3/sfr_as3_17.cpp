@@ -5935,11 +5935,56 @@ Value VMAbcFile::GetDetailValue(const Abc::ValueDetail& d)
 
 }}}
 
+// Value::operator=(const ASString&), out of line in the exe (defined in sfr_as3_19).
+Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+// Multiname::PostProcessName(false) (0x14251cef0, sfr_as3_18), as the exe inlines it into DeleteMember.
+static __forceinline void Sfr17PostProcessName(Multiname& mn)
+{
+    if (!mn.Name.IsString())
+        return;
+    ASString n = mn.Name.AsString();
+    if (n.GetSize() == 0)
+        return;
+    if (n[0] == '*')
+        FUN_1424e0d40(mn.Name, ASString(n.GetManager()->GetEmptyStringNode()));
+    else if (n[0] == '@')
+    {
+        mn.Kind = static_cast<Abc::MultinameKind>(mn.Kind | 8);
+        if (n.GetSize() == 2 && n[1] == '*')
+            FUN_1424e0d40(mn.Name, ASString(n.GetManager()->GetEmptyStringNode()));
+        else
+            FUN_1424e0d40(mn.Name, ASString(n.SubstringNode(1, n.GetSize())));
+    }
+}
+
+// Multiname(Namespace&, const Value&) (0x1424d8a90, sfr_as3_15) with SetRTNameUnsafe and PostProcessName, as the
+// exe inlines them into DeleteMember (the same body as sfr_as3_19's copy).
+__forceinline Multiname::Multiname(Instances::Namespace& ns, const Value& name, InlineCtorTag)
+    : Kind(static_cast<Abc::MultinameKind>(0))
+    , Obj(&ns)
+{
+    const UInt32 k = static_cast<UInt32>(name.GetKind());
+    if (k - 0xc <= 3 && name.GetGASRefCountBase() != NULL)
+    {
+        const Traits& tr = reinterpret_cast<Object*>(name.GetGASRefCountBase())->GetTraits();
+        if (static_cast<int>(tr.TraitsType) == 0xc && (static_cast<UInt8>(~static_cast<UInt8>(static_cast<UInt8>(tr.Flags) >> 5)) & 1) != 0)
+        {
+            Sfr27MultinameFromQName(this, &name);
+            return;
+        }
+    }
+    Name.AssignUnsafe(name);
+    Sfr17PostProcessName(*this);
+}
+}}} // namespace Scaleform::GFx::AS3
+
 namespace Scaleform { namespace GFx {
 // AS3ValueObjectInterface::DeleteMember: deletes the public property name (a leading '@' names an attribute) of
 // the object pdata; true when it was deleted. this+8 is the movie whose +0x18 is the MovieRoot (pAVM +0x48,
 // string manager +0x348).
-// MS2-FUNCTIONAL 0x1424f4780: raw self/MovieRoot offsets
+// MS2-FUNCTIONAL 0x1424f4780: raw self/MovieRoot offsets; regalloc (the exe holds the temp Value flags in r14 and merges the two string AddRefs)
 // @0x1424f4780
 bool AS3ValueObjectInterface::DeleteMember(void* pdata, const char* name, bool isdobj)
 {
@@ -5948,8 +5993,9 @@ bool AS3ValueObjectInterface::DeleteMember(void* pdata, const char* name, bool i
     AS3::Object* obj = static_cast<AS3::Object*>(pdata);
     const UByte* root = *reinterpret_cast<UByte* const*>(*reinterpret_cast<UByte* const*>(static_cast<UByte*>(self) + 8) + 0x18);
     AS3::VM& vm = **reinterpret_cast<AS3::VM* const*>(root + 0x48);
-    const ASString str((*reinterpret_cast<ASStringManager* const*>(root + 0x348))->CreateStringNode(name));
-    const AS3::Multiname mn(vm.GetPublicNamespace(), AS3::Value(str));
+    const AS3::Multiname mn(vm.GetPublicNamespace(),
+                            AS3::Value(ASString((*reinterpret_cast<ASStringManager* const*>(root + 0x348))->CreateStringNode(name)), AS3::Value::InlineStr),
+                            AS3::Multiname::InlineCtorTag());
     return obj->DeleteProperty(mn);
 }
 }} // namespace Scaleform::GFx
