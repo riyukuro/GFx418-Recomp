@@ -4063,7 +4063,6 @@ void GlowFilterCtorFunction::GlobalCtor(const FnCall& fn)
     { Value v(Value::UNSET); PropFlags flags; pfilter->SetMemberRaw(psc, psc->CreateConstString("quality"), v, flags); }
 }
 
-// MS2-FUNCTIONAL inline ObjectInlineCtorTag ctor as in the exe; the rest is regalloc (r12 vs r15)
 // @0x142958720
 void BevelFilterCtorFunction::GlobalCtor(const FnCall& fn)
 {
@@ -4127,16 +4126,16 @@ void BevelFilterCtorFunction::GlobalCtor(const FnCall& fn)
                                             if (fn.NArgs > 10)
                                             {
                                                 ASString type = fn.Arg(10).ToString(fn.Env);
-                                                bool inner = strcmp(type.ToCStr(), "inner") == 0;
-                                                Render::BlurFilterParams& p = pfilter->writableFilterParams();
-                                                p.Mode = inner ? (p.Mode | Render::BlurFilterParams::Mode_Inner)
-                                                               : (p.Mode & ~Render::BlurFilterParams::Mode_Inner);
+                                                if (type == "inner")
+                                                    pfilter->writableFilterParams().Mode |= Render::BlurFilterParams::Mode_Inner;
+                                                else
+                                                    pfilter->writableFilterParams().Mode &= ~Render::BlurFilterParams::Mode_Inner;
                                                 if (fn.NArgs > 11)
                                                 {
-                                                    bool knockout = fn.Arg(11).ToBool(fn.Env);
-                                                    Render::BlurFilterParams& p = pfilter->writableFilterParams();
-                                                    p.Mode = knockout ? (p.Mode | Render::BlurFilterParams::Mode_Knockout)
-                                                                      : (p.Mode & ~Render::BlurFilterParams::Mode_Knockout);
+                                                    if (fn.Arg(11).ToBool(fn.Env))
+                                                        pfilter->writableFilterParams().Mode |= Render::BlurFilterParams::Mode_Knockout;
+                                                    else
+                                                        pfilter->writableFilterParams().Mode &= ~Render::BlurFilterParams::Mode_Knockout;
                                                 }
                                             }
                                         }
