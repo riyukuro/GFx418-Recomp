@@ -368,24 +368,22 @@ bool AvmButton::GetStandardMember(StandardMember index, Value* val, bool opcodeF
 
 // The common members, then the clip's frames, lockroot, focusEnabled, tabChildren, scale9Grid and scrollRect (SWF 8,
 // as Rectangles in pixels), hitArea and the hitTestDisable extension.
-// MS2-FUNCTIONAL the exe shares one SetInt_Call tail for the frame members; here each case calls it
 // @0x142955c50
 bool AvmSprite::GetStandardMember(StandardMember index, Value* val, bool opcodeFlag) const
 {
     if (AvmCharacter::GetStandardMember(index, val, opcodeFlag))
         return true;
-    int frame;
     switch (index)
     {
     case M_currentframe:
-        frame = GetSprite()->GetCurrentFrame() + 1;
-        break;
+        val->SetInt_Call(GetSprite()->GetCurrentFrame() + 1);
+        return true;
     case M_totalframes:
-        frame = GetSprite()->pDef->GetFrameCount();
-        break;
+        val->SetInt_Call(GetSprite()->pDef->GetFrameCount());
+        return true;
     case M_framesloaded:
-        frame = GetSprite()->GetLoadingFrame();
-        break;
+        val->SetInt_Call(GetSprite()->GetLoadingFrame());
+        return true;
     case M_lockroot:
         val->SetBool((GetSprite()->Flags & Sprite::Flags_LockRoot) != 0);
         return true;
@@ -395,58 +393,66 @@ bool AvmSprite::GetStandardMember(StandardMember index, Value* val, bool opcodeF
     case M_tabChildren:
         SetBool3W(val, *reinterpret_cast<const SByte*>(&Unrecovered_1f8));
         return true;
-    case M_scale9Grid:
-    {
-        if (GetASEnvironment()->GetVersion() < 8)
-            return false;
-        if (!GetSprite()->HasScale9Grid())
-        {
-            val->SetUndefined();
-            return true;
-        }
-        RectF                sg   = GetSprite()->GetScale9Grid();
-        Environment*         penv = const_cast<Environment*>(GetASEnvironment());
-        Ptr<RectangleObject> rect = *SF_HEAP_NEW(penv->GetHeap()) RectangleObject(penv);
-        rect->SetProperties(penv, ASRect(Render::TwipsToPixels(sg.x1), Render::TwipsToPixels(sg.y1),
-                                         Render::TwipsToPixels(sg.x2), Render::TwipsToPixels(sg.y2)));
-        val->SetAsObject(rect);
-        return true;
-    }
     case M_hitArea:
         if (GetSprite()->pHitAreaHandle)
         {
             val->SetAsCharacterHandle(GetSprite()->pHitAreaHandle);
             return true;
         }
-        val->SetUndefined();
-        return false;
-    case M_scrollRect:
-    {
-        if (GetASEnvironment()->GetVersion() < 8)
-            return false;
-        if (!GetSprite()->pScrollRect)
-        {
+        else
             val->SetUndefined();
+        break;
+    case M_scale9Grid:
+    {
+        if (GetASEnvironment()->GetVersion() >= 8)
+        {
+            if (GetSprite()->HasScale9Grid())
+            {
+                RectF                sg   = GetSprite()->GetScale9Grid();
+                Environment*         penv = const_cast<Environment*>(GetASEnvironment());
+                Ptr<RectangleObject> rect = *SF_HEAP_NEW(penv->GetHeap()) RectangleObject(penv);
+                ASRect gr(Render::TwipsToPixels(sg.x1), Render::TwipsToPixels(sg.y1),
+                          Render::TwipsToPixels(sg.x2), Render::TwipsToPixels(sg.y2));
+                rect->SetProperties(penv, gr);
+                val->SetAsObject(rect);
+            }
+            else
+                val->SetUndefined();
             return true;
         }
-        const Render::RectD  r    = GetSprite()->pScrollRect->Rectangle;
-        Environment*         penv = const_cast<Environment*>(GetASEnvironment());
-        Ptr<RectangleObject> rect = *SF_HEAP_NEW(penv->GetHeap()) RectangleObject(penv);
-        rect->SetProperties(penv, ASRect(Render::TwipsToPixels(r.x1), Render::TwipsToPixels(r.y1),
-                                         Render::TwipsToPixels(r.x2), Render::TwipsToPixels(r.y2)));
-        val->SetAsObject(rect);
-        return true;
+        break;
+    }
+    case M_scrollRect:
+    {
+        if (GetASEnvironment()->GetVersion() >= 8)
+        {
+            if (GetSprite()->pScrollRect)
+            {
+                Render::RectD        r    = GetSprite()->pScrollRect->Rectangle;
+                Environment*         penv = const_cast<Environment*>(GetASEnvironment());
+                Ptr<RectangleObject> rect = *SF_HEAP_NEW(penv->GetHeap()) RectangleObject(penv);
+                ASRect gr(Render::TwipsToPixels(r.x1), Render::TwipsToPixels(r.y1),
+                          Render::TwipsToPixels(r.x2), Render::TwipsToPixels(r.y2));
+                rect->SetProperties(penv, gr);
+                val->SetAsObject(rect);
+            }
+            else
+                val->SetUndefined();
+            return true;
+        }
+        break;
     }
     case M_hitTestDisable:
-        if (!GetASEnvironment()->CheckExtensions())
-            return false;
-        val->SetBool((GetSprite()->Flags & InteractiveObject::Mask_HitTestDisable) != 0);
-        return true;
+        if (GetASEnvironment()->CheckExtensions())
+        {
+            val->SetBool((static_cast<const InteractiveObject*>(GetSprite())->Flags & InteractiveObject::Mask_HitTestDisable) != 0);
+            return true;
+        }
+        break;
     default:
-        return false;
+        break;
     }
-    val->SetInt_Call(frame);
-    return true;
+    return false;
 }
 
 // count elements of the AS2 array at the path from index on, into the host's array of ints, doubles, floats,
