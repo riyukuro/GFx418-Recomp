@@ -11,6 +11,7 @@
 // MS2-RANGE: 0x140002930-0x14000e470 .text$mn
 #define MS2_AS2_VALUE_DTOR_CALL
 #include "../include/video/video_as2netstream.h"
+#include "../include/video/video_as2videoobject.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_sprite.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
@@ -3967,23 +3968,7 @@ void VideoProto::AttachVideo(const FnCall& fn)
     }
 }
 
-// The script object of a Video clip.
-class VideoObject : public Object
-{
-public:
-    VideoObject(ASStringContext* psc, Object* pprototype);              // exe 0x14000de10
-    VideoObject(GlobalContext* gCtxt, InteractiveObject* pcharacter);   // exe 0x14000dee0
-    VideoObject(Environment* penv);                                     // exe 0x14000dfb0
-
-    virtual ObjectType GetObjectType() const { return Object_VideoASObject; }
-    virtual InteractiveObject* GetASCharacter();
-    virtual const InteractiveObject* GetASCharacter() const;
-
-protected:
-    virtual void Finalize_GC();   // exe 0x14000db80
-
-    WeakPtr<InteractiveObject> pCharacter;   // +0x68
-};
+// VideoObject: include/video/video_as2videoobject.h
 
 // "constructor" and "__constructor__" are answered by the prototype part (as sfr_as2_07b's Prototype<SoundObject>).
 // @0x14000a110

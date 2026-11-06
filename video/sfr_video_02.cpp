@@ -13,6 +13,7 @@
 #include "../include/video/video_video.h"
 #include "../include/video/video_characterdef.h"
 #include "../include/video/video_as3providernetstream.h"
+#include "../include/video/video_as2videoobject.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/as2/as2_actiontypes.h"
 #include "../include/gfx/as2/as2_objectproto.h"
@@ -117,9 +118,6 @@ extern void* PTR_LAB_1431b6540;
 extern void* PTR_FUN_1431b64f0;
 extern void* PTR_LAB_1431b6440;
 extern void* PTR_LAB_1431b6430;
-extern void* DAT_1431b59f0;   // Prototype<VideoObject> vftables
-extern void* DAT_1431b5940;
-extern void* DAT_1431b5938;
 extern void* PTR_FUN_1431b7360;
 extern void* PTR_FUN_1431b6060;
 extern void* PTR_LAB_1431b63f8;
@@ -572,7 +570,6 @@ __declspec(noinline) bool FUN_14000e6a0(void*) { return true; }
 // @0x14000e6b0
 __declspec(noinline) bool FUN_14000e6b0(const AvmCharacter* pavm) { return pavm->AvmCharacter::IsTabable(); }
 // [25], [26]: the cached script object (sfr_video_01)
-class VideoObject;
 VideoObject* FUN_14000e020(AvmCharacter* character);
 // @0x14000e890
 VideoObject* FUN_14000e890(AvmCharacter* character) { return FUN_14000e020(character); }
@@ -3130,14 +3127,9 @@ Scaleform::GFx::AS2::Object* FUN_140011c00(Scaleform::GFx::AS2::Object* object, 
 // @0x14000ebe0
 void FUN_14000ebe0(Scaleform::GFx::AS2::Object* object)
 {
-    char* bytes = reinterpret_cast<char*>(object);
-    *reinterpret_cast<void**>(bytes) = &DAT_1431b59f0;
-    *reinterpret_cast<void**>(bytes + 0x20) = &DAT_1431b5940;
-    *reinterpret_cast<void**>(bytes + 0x70) = &DAT_1431b5938;
-    reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0x70)->GASPrototypeBase::~GASPrototypeBase();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
-    int* refs = *reinterpret_cast<int**>(bytes + 0x68);
-    if (refs && --*refs == 0) Scaleform::Memory::Free(refs);
-    object->Object::~Object();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
+    // the real dtor (non-virtual, as the exe: a virtual call from the deleting dtor recurses)
+    static_cast<Scaleform::GFx::AS2::Prototype<Scaleform::GFx::AS2::VideoObject>*>(object)
+        ->Scaleform::GFx::AS2::Prototype<Scaleform::GFx::AS2::VideoObject>::~Prototype();
 }
 
 // scalar deleting form of VideoObject's prototype destruction.
@@ -3880,3 +3872,6 @@ const char* FUN_1400141a0(void*) { return "Instances::fl_net::NetStream"; }
 // MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
 // MS2-PIN: ??_7?$RefCountBase@VComplexFill@Render@Scaleform@@$01@Scaleform@@6B@ 0x14317b660
 // MS2-PIN: ??_7ComplexFill@Render@Scaleform@@6B@ 0x14317b668
+// MS2-PIN: ??_7?$Prototype@VVideoObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b59f0
+// MS2-PIN: ??_7?$Prototype@VVideoObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b5940
+// MS2-PIN: ??_7?$Prototype@VVideoObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x1431b5938
