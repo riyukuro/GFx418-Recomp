@@ -263,6 +263,7 @@ void DisplayObjectBase::ConcatenateMatrix(const Matrix& m)
 // Puts a container between this object's node and its parent: the container takes over the transform, color
 // transform, visibility, blend mode and scale9 grid, the old node keeps the content.
 // @0x1425f1450
+// MS2-FUNCTIONAL: the exe holds the container's node data in rdx (flags in cl) in the index loop; ours swaps rcx and rdx
 Render::TreeContainer* DisplayObjectBase::ConvertToTreeContainer()
 {
     if (!pRenNode)
@@ -273,13 +274,14 @@ Render::TreeContainer* DisplayObjectBase::ConvertToTreeContainer()
     Ptr<TreeContainer> newnode = *GetRenderContext().CreateEntry<TreeContainer>();
     if (cont)
     {
-        if (!pRenNode->IsMaskNode())
+        TreeNode* ren = pRenNode;
+        if (!ren->IsMaskNode())
         {
             UPInt i = 0;
             for (UPInt n = cont->GetSize(); i < n; ++i)
             {
                 TreeNode* nd = cont->GetAt(i);
-                if (nd == pRenNode)
+                if (nd == ren)
                     break;
             }
             cont->Remove(i, 1);
@@ -315,13 +317,14 @@ Render::TreeContainer* DisplayObjectBase::ConvertToTreeContainer()
     pRenNode->SetBlendMode(Render::Blend_None);
 
     RectF s9g = pRenNode->GetScale9Grid();
-    if (s9g.x1 < s9g.x2 && s9g.y1 < s9g.y2)
+    if (!s9g.IsEmpty())
     {
         newnode->SetScale9Grid(s9g);
         pRenNode->SetScale9Grid(RectF(0));
     }
 
-    newnode->Add(pRenNode);
+    UPInt sz = newnode->GetSize();
+    newnode->Insert(sz, pRenNode);
     pRenNode = newnode;
     return newnode;
 }
@@ -803,7 +806,7 @@ struct MovieViewport : public Render::Viewport
     float Scale;
     float AspectRatio;
 
-    MovieViewport() : Scale(1.0f), AspectRatio(1.0f) {}
+    MovieViewport() { Scale = AspectRatio = 1.0f; }
 };
 
 // Movie::GetViewport (MovieImpl vftable +0x60).
@@ -813,8 +816,30 @@ static inline void GetMovieViewport(MovieImpl* pmovie, MovieViewport* pviewport)
     (*(GetViewportFn**)pmovie)[0x60 / 8](pmovie, pviewport);
 }
 
+// The SDK's Matrix4x4::TransformHomogeneous: x, y, z built as a point, then divided by w.
+static inline Point3F SdkTransformHomogeneous(const Matrix4F& m, const Point3F& p)
+{
+    Point3F result(m.M[0][0] * p.x + m.M[0][1] * p.y + m.M[0][2] * p.z + m.M[0][3],
+                   m.M[1][0] * p.x + m.M[1][1] * p.y + m.M[1][2] * p.z + m.M[1][3],
+                   m.M[2][0] * p.x + m.M[2][1] * p.y + m.M[2][2] * p.z + m.M[2][3]);
+    float w = m.M[3][0] * p.x + m.M[3][1] * p.y + m.M[3][2] * p.z + m.M[3][3];
+    result.x /= w;
+    result.y /= w;
+    result.z /= w;
+    return result;
+}
+
+// The SDK's GetWorldMatrix() by value.
+static inline Matrix2F SdkGetWorldMatrix(const DisplayObjectBase* pobj)
+{
+    Matrix2F m;
+    pobj->GetWorldMatrix(&m);
+    return m;
+}
+
 // A local 3D point (twips) on the stage (twips), projected through the inherited view and perspective.
 // @0x1425f3430
+// MS2-FUNCTIONAL: in the inlined parent Prepend the exe multiplies t.M00*m.M00 first; ours starts with t.M01*m.M10
 PointF DisplayObjectBase::Local3DToGlobal(const Point3F& ptIn) const
 {
     if (Is3D(true))
@@ -829,14 +854,14 @@ PointF DisplayObjectBase::Local3DToGlobal(const Point3F& ptIn) const
         GetWorldMatrix3D(&world);
 
         Matrix4F mvp(Matrix4F(proj, view), world);
-        Point3F  p1 = mvp.TransformHomogeneous(ptIn);
+        Point3F  p1 = SdkTransformHomogeneous(mvp, ptIn);
 
         MovieViewport vp;
         GetMovieViewport(pASRoot->GetMovieImpl(), &vp);
 
         // To window pixels.
-        p1.x = (p1.x + 1.0f) * float(vp.Width) * 0.5f;
-        p1.y = (1.0f - p1.y) * float(vp.Height) * 0.5f;
+        p1.x = vp.Width * (p1.x + 1) / 2.f;
+        p1.y = vp.Height * (-p1.y + 1) / 2.f;
 
         // To stage twips.
         const MovieImpl* pmovie = pASRoot ? pASRoot->GetMovieImpl() : 0;
@@ -848,11 +873,7 @@ PointF DisplayObjectBase::Local3DToGlobal(const Point3F& ptIn) const
         return PointF(p1.x, p1.y);
     }
 
-    Matrix world;
-    GetWorldMatrix(&world);
-    PointF p(ptIn.x, ptIn.y);
-    world.Transform(&p.x, &p.y);
-    return p;
+    return SdkGetWorldMatrix(this).Transform(PointF(ptIn.x, ptIn.y));
 }
 
 
@@ -1382,6 +1403,7 @@ static inline DisplayObjContainer* CharToDisplayObjContainer(DisplayObjectBase* 
 // Detaches the render node from the display list parent's container so another node can hold it (a mask); the
 // display list keeps the object. Returns the detached node, null when newParent lies under it.
 // @0x1425f4800
+// MS2-FUNCTIONAL: the exe recomputes the node's entry index for Is3D after the M3D copy; ours reuses it
 Ptr<TreeNode> DisplayObjectBase::SetIndirectTransform(TreeNode* newParent)
 {
     Ptr<TreeNode>  renderNode    = GetRenderNode();
@@ -1697,6 +1719,7 @@ void DisplayObjectBase::SetVisibleFlag(bool v)
 // scrollRect: the node is clipped by a rectangle mask shape (drawn at the origin) and shifted by the scroll; a null
 // rectangle removes it. Masks (setMask) and indirect transforms do not combine with it.
 // @0x1425f5a70
+// MS2-FUNCTIONAL: the exe stores the Rectangle's first 16 bytes before the last 8 and keeps two GetTreeNode tails; ours merges them
 void DisplayObject::SetScrollRect(const Render::RectD* r)
 {
     if (GetMask())
