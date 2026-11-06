@@ -1383,11 +1383,25 @@ ArrayObject::~ArrayObject()
     Resize(0);
 }
 
+// `inline` under cl, so this copy is COMDAT-any: sfr_as2_04g inlines the same body into the deleting dtor 0x14292d4b0
+// and cl (no /Zc:inline) emits its copy too. MS2_Sfr03EmitTextFieldObjectDtor keeps it emitted here.
+#if defined(__clang__)
+#define SFR03_TEXTFIELDOBJECT_DTOR
+#else
+#define SFR03_TEXTFIELDOBJECT_DTOR inline
+#endif
 // @0x142925f10
-TextFieldObject::~TextFieldObject()
+SFR03_TEXTFIELDOBJECT_DTOR TextFieldObject::~TextFieldObject()
 {
     SF_FREE(pIMECompositionStringStyles);
 }
+// Calls the inline dtor above out of line (inline_depth 0), so cl emits it here. Nothing calls it.
+#pragma inline_depth(0)
+void MS2_Sfr03EmitTextFieldObjectDtor(TextFieldObject* p)
+{
+    p->TextFieldObject::~TextFieldObject();
+}
+#pragma inline_depth()
 
 // @0x142925f70
 TextSnapshotObject::~TextSnapshotObject()
