@@ -93,13 +93,19 @@ struct ChildClipVisitor : public DisplayList::MemberVisitor
 
 } // namespace
 
+// The key the handler hash uses: key down/up events are kept without their key code.
+static SF_INLINE EventId MS2_TreatEventId(const EventId& id)
+{
+    if (id.Id == EventId::Event_KeyDown || id.Id == EventId::Event_KeyUp)
+        return EventId(id.Id);
+    return id;
+}
+
 // Adds a handler for exactly one event (key events are kept without their key code).
-// MS2-FUNCTIONAL: the inlined Set copies the EventId field by field (the exe's EventId copy assignment), ours with one movups; same behavior
 // @0x14298a620
 void AvmCharacter::SetSingleClipEventHandler(const EventId& id, const Value& handler)
 {
-    HandlerArray* phandlers = EventHandlers.Get(
-        (id.Id == EventId::Event_KeyDown || id.Id == EventId::Event_KeyUp) ? EventId(id.Id) : EventId(id));
+    HandlerArray* phandlers = EventHandlers.Get(MS2_TreatEventId(id));
     if (!phandlers)
     {
         HandlerArray* parr = SF_HEAP_AUTO_NEW(this) HandlerArray();
