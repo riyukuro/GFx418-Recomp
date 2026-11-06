@@ -4398,7 +4398,19 @@ static SF_FORCEINLINE AvmCharacter* Value_ToAvmCharacterInl(const Value& v, Envi
     return pchar ? ToAvmCharacter(pchar) : 0;
 }
 
-// MS2-FUNCTIONAL same logic; the exe orders the GetVarParams stores and the r13/r15 clears around the resolve-handler test differently (block layout only)
+// Value::ToResolveHandler as a fresh FunctionRef: copy (SetLocalFrame inlined) or null, built in place.
+struct GetVariable_ResolveRef : FunctionRefBase
+{
+    SF_FORCEINLINE GetVariable_ResolveRef(const Value* pv)
+    {
+        if (pv->GetType() == Value::RESOLVEHANDLER)
+            FunctionRef_InitCopyInl(this, pv->V.FunctionValue);
+        else
+            Init((FunctionObject*)0);
+    }
+    SF_FORCEINLINE ~GetVariable_ResolveRef() { DropRefs(); }
+};
+
 // @0x142956cd0
 bool Environment::GetVariable(const ASString& varname, Value* presult, const WithStackArray* pwithStack,
                               InteractiveObject** ppnewTarget, Value* powner, unsigned exclFlags)
@@ -4408,7 +4420,8 @@ bool Environment::GetVariable(const ASString& varname, Value* presult, const Wit
     {
         ObjectInterface* pobj = NULL;
         Value            thisVal;
-        if (GetVariableRaw(GetVarParams(GetBuiltin(ASBuiltin_this), &thisVal, pwithStack)))
+        MovieRoot* proot = (MovieRoot*)GetSC()->pContext->pMovieRoot->pASMovieRoot;
+        if (GetVariableRaw(GetVarParams(proot->GetStringManager()->GetBuiltin(ASBuiltin_this), &thisVal, pwithStack)))
         {
             pobj = thisVal.ToObject(this);
             if (!pobj)
@@ -4431,12 +4444,10 @@ bool Environment::GetVariable(const ASString& varname, Value* presult, const Wit
         else
             pobj = ToAvmCharacter(GetTarget());
 
-        FunctionRef resolveHandler;
-        if (presult->GetType() == Value::RESOLVEHANDLER)
-            FunctionRef_InitCopyInl(&resolveHandler, presult->V.FunctionValue);
+        GetVariable_ResolveRef resolveHandler(presult);
         Push(varname);
         presult->SetUndefined();
-        resolveHandler.Invoke(FnCall(presult, pobj, this, 1, GetTopIndex()));
+        static_cast<FunctionRef&>(static_cast<FunctionRefBase&>(resolveHandler)).Invoke(FnCall(presult, pobj, this, 1, GetTopIndex()));
         Drop1();
     }
     return rv;
