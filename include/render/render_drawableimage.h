@@ -412,14 +412,11 @@ struct DICommand_SourceRect : public DICommand
     }
 
     // Trims the right/bottom edges to the source image (exe copy 0x1425ef3d0).
-    // MS2-FUNCTIONAL: x2/y2 land in swapped registers (r9/r10) against the exe copy
     virtual void UpdateClippedRects()
     {
         ImageSize size = pSource->GetSize();
-        SInt32 overX = SourceRect.x2 - (SInt32)size.Width;
-        SInt32 overY = SourceRect.y2 - (SInt32)size.Height;
-        ClippedSourceRect.x2 = SourceRect.x2 - Alg::Max<SInt32>(overX, 0);
-        ClippedSourceRect.y2 = SourceRect.y2 - Alg::Max<SInt32>(overY, 0);
+        Point<SInt32> over(SourceRect.x2 - (SInt32)size.Width, SourceRect.y2 - (SInt32)size.Height);
+        ClippedSourceRect.SetBottomRight(Point<SInt32>(SourceRect.x2 - Alg::Max<SInt32>(over.x, 0), SourceRect.y2 - Alg::Max<SInt32>(over.y, 0)));
     }
     virtual unsigned GetSourceImages(DISourceImages* ps) const
     {

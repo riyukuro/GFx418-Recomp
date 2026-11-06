@@ -1101,9 +1101,7 @@ void DrawableImageContext::processTreeRootKillList()
 // MS2-PIN: ??$addCommand@UDICommand_CopyPixels@Render@Scaleform@@@DrawableImage@Render@Scaleform@@IEAAXAEBUDICommand_CopyPixels@12@@Z 0x1425e8960
 // MS2-PIN: ??$addCommand@UDICommand_FillRect@Render@Scaleform@@@DrawableImage@Render@Scaleform@@IEAAXAEBUDICommand_FillRect@12@@Z 0x1425e8c20
 // MS2-PIN: ??$addCommand@UDICommand_FloodFill@Render@Scaleform@@@DrawableImage@Render@Scaleform@@IEAAXAEBUDICommand_FloodFill@12@@Z 0x1425e8ce0
-// MS2-FUNCTIONAL ??0DICommand_SourceRect@Render@Scaleform@@QEAA@AEBU012@@Z: inlined UpdateClippedRects keeps x2/y2 in swapped registers (r9/r10), see render_drawableimage.h
 // MS2-PIN: ??0DICommand_SourceRect@Render@Scaleform@@QEAA@AEBU012@@Z 0x1425e9620
-// MS2-FUNCTIONAL ??0DICommand_SourceRect@Render@Scaleform@@QEAA@PEAVDrawableImage@12@0AEBV?$Rect@J@12@AEBV?$Point@J@12@@Z: inlined UpdateClippedRects keeps x2/y2 in swapped registers (r9/r10), see render_drawableimage.h
 // MS2-PIN: ??0DICommand_SourceRect@Render@Scaleform@@QEAA@PEAVDrawableImage@12@0AEBV?$Rect@J@12@AEBV?$Point@J@12@@Z 0x1425e9710
 // MS2-PIN: ??_G?$DICommand_SourceRectImpl@UDICommand_ApplyFilter@Render@Scaleform@@@Render@Scaleform@@UEAAPEAXI@Z 0x1425ea280
 // MS2-PIN: ??_G?$DICommand_SourceRectImpl@UDICommand_ColorTransform@Render@Scaleform@@@Render@Scaleform@@UEAAPEAXI@Z 0x1425ea2e0
