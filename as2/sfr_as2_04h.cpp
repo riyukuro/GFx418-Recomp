@@ -30,29 +30,20 @@
 void FUN_14257dcd0(void* p);  // global in the exe
 
 void FUN_1424a9ed0(void*);   // global, defined in sfr_as3_12
-void FUN_14000b080(void** table);  // global, defined in sfr_video_01
 
 namespace Scaleform {
 // Out of line in the exe; the explicit-specialization declarations keep the dtors uninlined.
-typedef ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, 327>, ArrayDefaultPolicy> Sfr04hArrStr;
 typedef ArrayDataBase<GFx::AS2::AsFunctionObject::ArgSpec, AllocatorLH<GFx::AS2::AsFunctionObject::ArgSpec, 323>,
     ArrayDefaultPolicy> Sfr04hArrArg;
-typedef HashNode<GFx::ASString, char, GFx::ASStringHashFunctor> Sfr04hHN1;
-typedef HashSetBase<Sfr04hHN1, Sfr04hHN1::NodeHashF, Sfr04hHN1::NodeAltHashF, AllocatorLH<GFx::ASString, 324>,
-    HashsetNodeEntry<Sfr04hHN1, Sfr04hHN1::NodeHashF> > Sfr04hHashChar;
-typedef HashNode<GFx::ASString, GFx::AS2::FunctionRef, GFx::ASStringHashFunctor> Sfr04hHN2;
-typedef HashSetBase<Sfr04hHN2, Sfr04hHN2::NodeHashF, Sfr04hHN2::NodeAltHashF, AllocatorLH<GFx::ASString, 324>,
-    HashsetNodeEntry<Sfr04hHN2, Sfr04hHN2::NodeHashF> > Sfr04hHashFn;
 typedef HashNode<GFx::ASString, GFx::AS2::Value, GFx::ASStringHashFunctor> Sfr04hHN3;
 typedef HashSetBase<Sfr04hHN3, Sfr04hHN3::NodeHashF, Sfr04hHN3::NodeAltHashF, AllocatorLH<GFx::ASString, 324>,
     GFx::HashsetNodeEntry_GC<Sfr04hHN3, Sfr04hHN3::NodeHashF> > Sfr04hHashVal;
 typedef HashNode<GFx::EventId, ArrayLH<GFx::AS2::Value, 323, ArrayDefaultPolicy>, GFx::EventIdHashFunctor> Sfr04hHN4;
 typedef HashSetBase<Sfr04hHN4, Sfr04hHN4::NodeHashF, Sfr04hHN4::NodeAltHashF, AllocatorLH<GFx::EventId, 323>,
     HashsetCachedNodeEntry<Sfr04hHN4, Sfr04hHN4::NodeHashF> > Sfr04hHashEv;
-template<> SF_NOINLINE Sfr04hArrStr::~ArrayDataBase();   // 0x14256a8e0
+// ActionBuffer::Dictionary's element array (StatMV_ActionScript_Mem): out of line, as in sfr_as2_03.
+template<> ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, 323>, ArrayDefaultPolicy>::~ArrayDataBase(); // 0x14256a8e0
 template<> SF_NOINLINE Sfr04hArrArg::~ArrayDataBase();   // 0x142924180
-template<> SF_NOINLINE Sfr04hHashChar::~HashSetBase();   // 0x142924580
-template<> SF_NOINLINE Sfr04hHashFn::~HashSetBase();     // 0x142924770
 template<> SF_NOINLINE Sfr04hHashVal::~HashSetBase();    // 0x142924960
 template<> SF_NOINLINE Sfr04hHashEv::~HashSetBase();     // 0x142924a20
 }
@@ -65,9 +56,6 @@ protected:
 };
 struct EntryAccess : Entry { using Entry::destroyHelper; };
 } } }
-
-// Clears a hash, defined with a plain pointer parameter in sfr_video_04.
-void FUN_140001f40(void* phash);
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -107,11 +95,9 @@ struct Sfr_RcgcDtor : RefCountBaseGC<323>
 {
     static void Destroy(void* p) { static_cast<Sfr_RcgcDtor*>(p)->RefCountBaseGC<323>::~RefCountBaseGC(); }
 };
-extern const void* DAT_1432153c8[];
 extern const void* DAT_1432155c0[];
 extern const void* DAT_143215648[];
 extern const void* DAT_143215a98[];
-extern const void* DAT_143215af8[];
 extern const void* DAT_14316afc0[];
 extern const void* DAT_1432153a0[];
 
@@ -151,16 +137,21 @@ void* DeleteAs2_142928dc0(void* p, unsigned flags)
     return p;
 }
 
-// ActionBuffer::Dictionary (an ArrayCC<ASString>): the DefaultValue release is inlined, the ArrayDataBase dtor is not.
-struct B142928e90 { void* D; UPInt S; UPInt C; ~B142928e90() { reinterpret_cast<Sfr04hArrStr*>(this)->~Sfr04hArrStr(); } };
-struct DCC142928e90 : B142928e90 { ASString DefaultValue; };
+// Out of line at 0x142925140 in sfr_as2_03 (`inline` there under cl, so both copies are COMDAT-any). The Dictionary's
+// DefaultValue release is inlined, its ArrayDataBase dtor (0x14256a8e0) is not (declared at the top).
+inline ActionBuffer::~ActionBuffer()
+{
+}
+
+// Out of line at 0x142925920 in sfr_as2_03 (`inline` there under cl). The exe inlines it into 0x14292b4e0, cl does
+// not without __forceinline (same body and calls as the 03 copy).
+__forceinline GlobalContext::~GlobalContext()
+{
+}
 // @0x142928e90
 void* DeleteAs2_142928e90(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432153c8;
-    ((DCC142928e90*)((char*)p+0x18))->~DCC142928e90();
-    if (*(void**)((char*)p+0x10)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x10))->Release();
-    static_cast<RefCountNTSImplCore*>((void*)(p))->RefCountNTSImplCore::~RefCountNTSImplCore();
+    static_cast<ActionBuffer*>(p)->ActionBuffer::~ActionBuffer();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -276,13 +267,7 @@ void* DeleteAs2_14292a0e0(void* p, unsigned flags)
 // @0x14292b4e0
 void* DeleteAs2_14292b4e0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_143215af8;
-    reinterpret_cast<Sfr04hHashChar*>((char*)p+0x70)->~Sfr04hHashChar();
-    rg(*(void**)((char*)p+0x60));
-    ::FUN_140001f40((char*)p+0x20);
-    reinterpret_cast<Sfr04hHashFn*>((char*)p+0x18)->~Sfr04hHashFn();
-    ::FUN_14000b080((void**)((char*)p+0x10));
-    static_cast<RefCountNTSImplCore*>((void*)(p))->RefCountNTSImplCore::~RefCountNTSImplCore();
+    static_cast<GlobalContext*>(p)->GlobalContext::~GlobalContext();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -340,3 +325,7 @@ void* DeleteAs2_14292c3e0(void* p, unsigned flags)
 }
 
 }}} // namespace
+
+// The inlined ActionBuffer and GlobalContext destructors emit these vftables here as well.
+// MS2-PIN: ??_7ActionBuffer@AS2@GFx@Scaleform@@6B@ 0x1432153c8
+// MS2-PIN: ??_7GlobalContext@AS2@GFx@Scaleform@@6B@ 0x143215af8

@@ -1366,16 +1366,31 @@ UserDefinedFunctionObject::~UserDefinedFunctionObject()
 {
 }
 
+// `inline` under cl (COMDAT-any): sfr_as2_04h inlines the same bodies into the deleting dtors 0x142928e90 and
+// 0x14292b4e0. MS2_Sfr03EmitActionDtors (uncalled anchor) keeps them emitted here.
+#if defined(__clang__)
+#define SFR03_ACTION_DTOR
+#else
+#define SFR03_ACTION_DTOR inline
+#endif
 // The dictionary's element array teardown is out of line (declared above).
 // @0x142925140
-ActionBuffer::~ActionBuffer()
+SFR03_ACTION_DTOR ActionBuffer::~ActionBuffer()
 {
 }
 
 // @0x142925920
-GlobalContext::~GlobalContext()
+SFR03_ACTION_DTOR GlobalContext::~GlobalContext()
 {
 }
+// Calls the inline dtors above out of line (inline_depth 0), so cl emits them here. Nothing calls it.
+#pragma inline_depth(0)
+void MS2_Sfr03EmitActionDtors(ActionBuffer* pb, GlobalContext* pg)
+{
+    pb->ActionBuffer::~ActionBuffer();
+    pg->GlobalContext::~GlobalContext();
+}
+#pragma inline_depth()
 
 // @0x1429252e0
 ArrayObject::~ArrayObject()
