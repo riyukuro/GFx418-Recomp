@@ -1787,14 +1787,14 @@ template void ContextData_ImplMixin<TreeRoot::NodeData, TreeContainer::NodeData>
 
 extern unsigned DestroyCalls;
 
-// TreeRoot::NodeData's Destroy slot (no .pdata): counts, then destroys in place through the virtual destructor.
-// MS2-FUNCTIONAL: free-function form of the mixin's Destroy (the mixin here carries only the copy slots); calls the
-// deleting destructor directly instead of through the vftable.
+// TreeRoot::NodeData's Destroy slot (no .pdata): counts, then destroys in place through vftable slot 0 (the
+// deleting destructor, FUN_14256ba70 in TreeRootNodeDataVTable 0x143183320) with flags 0, a tail call as in the exe.
 // @0x14256e920
 void FUN_14256e920(TreeRoot::NodeData* data)
 {
     DestroyCalls++;
-    FUN_14256ba70(data, 0);
+    typedef void* (*DtorSlot)(TreeRoot::NodeData*, unsigned);
+    (*(DtorSlot*)*(void**)data)(data, 0);
 }
 
 } // namespace ContextImpl
