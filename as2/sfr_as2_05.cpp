@@ -3620,7 +3620,7 @@ static SF_FORCEINLINE void Selection_GetFlag(Value* val, unsigned bits)
         val->SetUndefined();
 }
 
-// MS2-FUNCTIONAL: register allocation (the exe keeps psc in rsi and the new CFunctionObject in r14, ours swaps them)
+// MS2-FUNCTIONAL: register allocation (the exe keeps psc in rsi and the new CFunctionObject in r14, ours swaps them) and the exe stores pFunction between the two vtable stores
 // @0x14294fc20
 bool SelectionCtorFunction::GetMember(Environment* penv, const ASString& name, Value* val)
 {
@@ -3632,7 +3632,7 @@ bool SelectionCtorFunction::GetMember(Environment* penv, const ASString& name, V
         if (strcmp(pname, "captureFocus") == 0)
         {
             Value func;
-            CFunctionObjectInline::InitValue(func, psc, CaptureFocus);
+            CFunctionObjectInline::InitValueHeapFirst(func, psc, CaptureFocus);
             *val = func;
             return true;
         }
@@ -3669,49 +3669,49 @@ bool SelectionCtorFunction::GetMember(Environment* penv, const ASString& name, V
         else if (strcmp(pname, "moveFocus") == 0)
         {
             Value func;
-            CFunctionObjectInline::InitValue(func, psc, MoveFocus);
+            CFunctionObjectInline::InitValueHeapFirst(func, psc, MoveFocus);
             *val = func;
             return true;
         }
         else if (strcmp(pname, "findFocus") == 0)
         {
             Value func;
-            CFunctionObjectInline::InitValue(func, psc, FindFocus);
+            CFunctionObjectInline::InitValueHeapFirst(func, psc, FindFocus);
             *val = func;
             return true;
         }
         else if (strcmp(pname, "setModalClip") == 0)
         {
             Value func;
-            CFunctionObjectInline::InitValue(func, psc, SetModalClip);
+            CFunctionObjectInline::InitValueHeapFirst(func, psc, SetModalClip);
             *val = func;
             return true;
         }
         else if (strcmp(pname, "getModalClip") == 0)
         {
             Value func;
-            CFunctionObjectInline::InitValue(func, psc, GetModalClip);
+            CFunctionObjectInline::InitValueHeapFirst(func, psc, GetModalClip);
             *val = func;
             return true;
         }
         else if (strcmp(pname, "setControllerFocusGroup") == 0)
         {
             Value func;
-            CFunctionObjectInline::InitValue(func, psc, SetControllerFocusGroup);
+            CFunctionObjectInline::InitValueHeapFirst(func, psc, SetControllerFocusGroup);
             *val = func;
             return true;
         }
         else if (strcmp(pname, "getControllerFocusGroup") == 0)
         {
             Value func;
-            CFunctionObjectInline::InitValue(func, psc, GetControllerFocusGroup);
+            CFunctionObjectInline::InitValueHeapFirst(func, psc, GetControllerFocusGroup);
             *val = func;
             return true;
         }
         else if (strcmp(pname, "getFocusBitmask") == 0)
         {
             Value func;
-            CFunctionObjectInline::InitValue(func, psc, GetFocusBitmask);
+            CFunctionObjectInline::InitValueHeapFirst(func, psc, GetFocusBitmask);
             *val = func;
             return true;
         }
@@ -3723,14 +3723,14 @@ bool SelectionCtorFunction::GetMember(Environment* penv, const ASString& name, V
         else if (strcmp(pname, "getControllerMaskByFocusGroup") == 0)
         {
             Value func;
-            CFunctionObjectInline::InitValue(func, psc, GetControllerMaskByFocusGroup);
+            CFunctionObjectInline::InitValueHeapFirst(func, psc, GetControllerMaskByFocusGroup);
             *val = func;
             return true;
         }
         else if (strcmp(pname, "getFocusArray") == 0)
         {
             Value func;
-            CFunctionObjectInline::InitValue(func, psc, GetFocusArray);
+            CFunctionObjectInline::InitValueHeapFirst(func, psc, GetFocusArray);
             *val = func;
             return true;
         }
