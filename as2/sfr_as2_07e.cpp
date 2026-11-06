@@ -551,7 +551,13 @@ void XmlObject::NotifyOnLoad(Environment* penv, bool success)
     penv->Drop1();
 }
 
-// MS2-FUNCTIONAL: exe inlines the XmlCtorFunction ctor
+Value* FUN_142923b90(Value* pthis, const FunctionRef& func); // sfr_as2_03, Value(const FunctionRef&) out of line
+// Raw room for a Value the exe builds through FUN_142923b90.
+struct XmlValueStorage
+{
+    XmlValueStorage() {}
+    UInt64 Raw0, Raw1, Raw2, Raw3;
+};
 // @0x1429a22b0
 FunctionRef XmlCtorFunction::Register(GlobalContext* pgc)
 {
@@ -564,10 +570,16 @@ FunctionRef XmlCtorFunction::Register(GlobalContext* pgc)
         Ptr<Object>   pproto  = proto.GetPtr();
         ASBuiltinType key     = ASBuiltin_XML;
         void*         pair[2] = { &key, &pproto };
-        ::FUN_14000b9e0(reinterpret_cast<UPInt*>(&pgc->Prototypes), &pgc->Prototypes, pair,
-                        FixedSizeHash<ASBuiltinType>()(key));
+        UPInt*        ptable  = reinterpret_cast<UPInt*>(&pgc->Prototypes);
+        ::FUN_14000b9e0(ptable, ptable, pair, FixedSizeHash<ASBuiltinType>()(key));
     }
-    pgc->pGlobal->SetMemberRaw(&sc, pgc->GetStringManager()->GetBuiltin(ASBuiltin_XML), Value(ctor));
+    {
+        XmlValueStorage storage;
+        Value& fval = *reinterpret_cast<Value*>(&storage);
+        pgc->pGlobal->SetMemberRaw(&sc, pgc->GetStringManager()->GetBuiltin(ASBuiltin_XML),
+                                   *FUN_142923b90(&fval, ctor));
+        fval.~Value();
+    }
     return ctor;
 }
 

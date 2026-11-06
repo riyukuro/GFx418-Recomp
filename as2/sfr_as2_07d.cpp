@@ -826,7 +826,13 @@ void XmlNodeObject::InitializeStandardMembers(GlobalContext& gc, ASStringHash<ch
     }
 }
 
-// MS2-FUNCTIONAL: the exe inlines the XmlNodeCtorFunction ctor, the prototype store and InitializeStandardMembers
+Value* FUN_142923b90(Value* pthis, const FunctionRef& func); // sfr_as2_03, Value(const FunctionRef&) out of line
+// Raw room for a Value the exe builds through FUN_142923b90.
+struct XmlNodeValueStorage
+{
+    XmlNodeValueStorage() {}
+    UInt64 Raw0, Raw1, Raw2, Raw3;
+};
 // @0x14299e820
 FunctionRef XmlNodeCtorFunction::Register(GlobalContext* pgc)
 {
@@ -837,10 +843,16 @@ FunctionRef XmlNodeCtorFunction::Register(GlobalContext* pgc)
         Ptr<Object>   pproto = proto.GetPtr();
         ASBuiltinType key    = ASBuiltin_XMLNode;
         void*         pair[2] = { &key, &pproto };
-        ::FUN_14000b9e0(reinterpret_cast<UPInt*>(&pgc->Prototypes), &pgc->Prototypes, pair,
-                        FixedSizeHash<ASBuiltinType>()(key));
+        UPInt*        ptable  = reinterpret_cast<UPInt*>(&pgc->Prototypes);
+        ::FUN_14000b9e0(ptable, ptable, pair, FixedSizeHash<ASBuiltinType>()(key));
     }
-    pgc->pGlobal->SetMemberRaw(&sc, pgc->GetStringManager()->GetBuiltin(ASBuiltin_XMLNode), Value(ctor));
+    {
+        XmlNodeValueStorage storage;
+        Value& fval = *reinterpret_cast<Value*>(&storage);
+        pgc->pGlobal->SetMemberRaw(&sc, pgc->GetStringManager()->GetBuiltin(ASBuiltin_XMLNode),
+                                   *FUN_142923b90(&fval, ctor));
+        fval.~Value();
+    }
     XmlNodeObject::InitializeStandardMembers(*pgc, proto->XMLNodeMemberMap);
     return ctor;
 }
