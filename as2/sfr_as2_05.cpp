@@ -2096,7 +2096,6 @@ bool AvmSprite::ExecuteBuffer(ActionBuffer* pactionbuffer)
 }
 
 // Calls the native function with the parameters pushed on the environment stack (last one deepest).
-// MS2-FUNCTIONAL: exe zeroes ThisFunctionRef with one xmm store, saves rbp late; same calls
 // @0x14293ff70
 bool AvmCharacter::ExecuteCFunction(CFunctionPtr function, const Array<Value>& params)
 {
@@ -2108,18 +2107,15 @@ bool AvmCharacter::ExecuteCFunction(CFunctionPtr function, const Array<Value>& p
         if (nargs > 0)
             for (int i = nargs - 1; i >= 0; i--)
                 penv->Push(params[i]);
-        {
-            FnCall fn(&result, this, penv, nargs, penv->GetTopIndex());
-            function(fn);
-        }
-        penv->Drop(nargs);
+        function(FnCall(&result, this, penv, nargs, penv->GetTopIndex()));
+        if (nargs > 0)
+            penv->Drop(nargs);
         return true;
     }
     return false;
 }
 
 // Calls the script function with the parameters pushed on the environment stack (last one deepest).
-// MS2-FUNCTIONAL: exe zeroes ThisFunctionRef with one xmm store, saves rbp late; same calls
 // @0x1429413c0
 bool AvmCharacter::ExecuteFunction(const FunctionRef& function, const Array<Value>& params)
 {
@@ -2131,11 +2127,9 @@ bool AvmCharacter::ExecuteFunction(const FunctionRef& function, const Array<Valu
         if (nargs > 0)
             for (int i = nargs - 1; i >= 0; i--)
                 penv->Push(params[i]);
-        {
-            FnCall fn(&result, this, penv, nargs, penv->GetTopIndex());
-            function.Invoke(fn);
-        }
-        penv->Drop(nargs);
+        function.Invoke(FnCall(&result, this, penv, nargs, penv->GetTopIndex()));
+        if (nargs > 0)
+            penv->Drop(nargs);
         return true;
     }
     return false;
