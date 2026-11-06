@@ -3,7 +3,8 @@
 // as3_marshalling.h; they call through ThunkFuncN<...>::Method, defined in the sfr_as3di_* units.
 // MS2-UNIT: sfr_as3_03
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1423ff040-0x1424133c0 .text$mn
+// MS2-RANGE: 0x1423ff040-0x142409f00 .text$mn
+// MS2-RANGE: 0x142409fd0-0x1424133c0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_e4x.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_arraysort.h"
@@ -3488,25 +3489,8 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         }
     }
 
-    // @0x142409f00
-    void XML::EscapeElementValue(StringBuffer& buf, const ASString& s)
-    {
-        const char* p = s.ToCStr();
-        const char* end = p + s.GetSize();
-        while (p < end)
-        {
-            const UInt32 ch = UTF8Util::DecodeNextChar_Advance0(&p);
-            switch (ch)
-            {
-            case '"':   buf.AppendString("&quot;", 6); break;
-            case '&':   buf.AppendString("&amp;", 5); break;
-            case '\'':  buf.AppendString("&apos;", 6); break;
-            case '<':   buf.AppendString("&lt;", 4); break;
-            case '>':   buf.AppendString("&gt;", 4); break;
-            default:    buf.AppendChar(ch); break;
-            }
-        }
-    }
+    // 0x142409f00 XML::EscapeElementValue(buf, s) is defined in as3_obj_fl.h, so its callers in sfr_as3_03/04/19 see
+    // the body as the exe's did.
 }}}}}
 namespace Scaleform { namespace GFx { namespace AS3 {
 

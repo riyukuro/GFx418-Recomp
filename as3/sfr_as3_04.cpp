@@ -4,6 +4,7 @@
 // MS2-UNIT: sfr_as3_04
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1424133c0-0x14242a640 .text$mn
+// MS2-RANGE: 0x142409f00-0x142409fd0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_e4x.h"
@@ -3951,7 +3952,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     }
 
     // Pretty printing trims the text.
-    // MS2-FUNCTIONAL: the exe tests the pretty flag through a branchless select
     // @0x1424270d0
     void XMLText::ToXMLString(StringBuffer& buf, SInt32 ident, const NamespaceArray* ancestorNamespaces,
                               const NamespaceArray* usedNotDeclared)
@@ -3963,10 +3963,14 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
             pretty = false;
         if (pretty && ident > 0)
             AddIndent(buf, ident);
-        if (static_cast<const Classes::fl::XML&>(FUN_142508460(&GetTraits())).prettyPrinting)
-            EscapeElementValue(buf, ASString(Text.TruncateWhitespaceNode()));
-        else
-            EscapeElementValue(buf, Text);
+        const Classes::fl::XML& cl2 = static_cast<const Classes::fl::XML&>(FUN_142508460(&GetTraits()));
+        const ASString& text = Text;
+        if (cl2.prettyPrinting)
+        {
+            EscapeElementValue(buf, ASString(text.TruncateWhitespaceNode()));
+            return;
+        }
+        EscapeElementValue(buf, text);
     }
 
     // Simple content prints as the text of its text children, anything else as XML.
