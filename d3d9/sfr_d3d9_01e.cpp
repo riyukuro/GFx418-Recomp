@@ -42,7 +42,7 @@ bool FUN_142734790(Scaleform::Render::D3D9::ShaderManager* sm, Scaleform::Render
                    const Scaleform::Render::VertexFormat* format, Scaleform::Render::D3D9::ShaderInterface* psi,
                    unsigned flags);
 // StaticShaderManager::SetFilterFill (sfr_d3d9_01e, below)
-void FUN_142734e10(Scaleform::Render::D3D9::ShaderManager* sm, const Scaleform::Render::Matrix2F& mvp,
+bool FUN_142734e10(Scaleform::Render::D3D9::ShaderManager* sm, const Scaleform::Render::Matrix2F& mvp,
                    const Scaleform::Render::Cxform& cx, const Scaleform::Render::Filter* filter,
                    Scaleform::Ptr<Scaleform::Render::RenderTarget>* targets, unsigned* shaders, unsigned pass,
                    unsigned passCount, const Scaleform::Render::VertexFormat* format,
@@ -2132,137 +2132,167 @@ bool FUN_142734790(D3D9::ShaderManager* sm, Render::Texture** tex, const Matrix2
     return FUN_142731310(sm, copySource ? 2 : 1, tex, texgen, texsize, mvp, psi, flags);
 }
 
-// StaticShaderManager::SetFilterFill: the uniforms of one filter pass, drawn from the first target's texture; a blur
-// pass takes its kernel size, a shadow pass its colors, offset and the source, a color matrix its matrix
-// MS2-FUNCTIONAL: written from the decompile
+// the SDK ShaderInterfaceBase::SetUniform body inlined: SetUniform0 takes the desc's Array, not the bvar local
+static __forceinline void SffSetUniform(D3D9::ShaderInterface* psi, const D3D9::ShaderPair& sd, unsigned var,
+                                        const float* v, unsigned n, unsigned index = 0, unsigned batch = 0)
+{
+    if (sd->pVDesc->BatchUniforms[var].Offset >= 0)
+    {
+        unsigned bvar = sd->pVDesc->BatchUniforms[var].Array;
+        psi->SetUniform0(sd, sd->pVDesc->BatchUniforms[var].Array, v, n,
+                         batch * sd->pVDesc->Uniforms[bvar].BatchSize + sd->pVDesc->BatchUniforms[var].Offset + index);
+    }
+    else if (sd->pFDesc->BatchUniforms[var].Offset >= 0)
+    {
+        unsigned bvar = sd->pFDesc->BatchUniforms[var].Array;
+        psi->SetUniform0(sd, sd->pFDesc->BatchUniforms[var].Array, v, n,
+                         batch * sd->pFDesc->Uniforms[bvar].BatchSize + sd->pFDesc->BatchUniforms[var].Offset + index);
+    }
+    else
+        psi->SetUniform0(sd, var, v, n, index, batch);
+}
+
+// StaticShaderManager::SetFilterFill: the SDK body. The first target is the texture to be filtered; a blur pass takes
+// its kernel size, a shadow pass its colors, offset and the source, a color matrix its matrix with the cxform folded in
+// MS2-FUNCTIONAL: 1 line left: fsize's inline SetUniform stores UniformSet[array] as [r9+rdi] (exe [rdi+r9]); the SDK
+// SetUniform body, int/unsigned bvar, index order, declaration order and the knockout test were tried
 // @0x142734e10
-void FUN_142734e10(D3D9::ShaderManager* sm, const Matrix2F& mvp, const Cxform& cx, const Filter* filter,
+bool FUN_142734e10(D3D9::ShaderManager* sm, const Matrix2F& mvp, const Cxform& cx, const Filter* filter,
                    Ptr<RenderTarget>* targets, unsigned* shaders, unsigned pass, unsigned passCount,
                    const VertexFormat* format, D3D9::ShaderInterface* psi)
 {
     SF_UNUSED(sm);
-    if (!psi->SetStaticShader((D3D9::VertexShaderDesc::ShaderType)shaders[pass],
-                              (D3D9::FragShaderDesc::ShaderType)shaders[pass], format))
-        return;
+    // D3D9 VShaderForFShader is the identity
+    D3D9::VertexShaderDesc::ShaderType vshader = (D3D9::VertexShaderDesc::ShaderType)shaders[pass];
+
+    if (!psi->SetStaticShader(vshader, (D3D9::FragShaderDesc::ShaderType)shaders[pass], format))
+        return false;
     D3D9::ShaderInterfaceAccess::BeginPrimitive(psi);
-    const D3D9::ShaderPair& cur = psi->GetCurrentShaders();
-    psi->SetUniform(cur, D3D9::Uniform::SU_mvp, &mvp.M[0][0], 8);
+    const D3D9::ShaderPair& pso = psi->GetCurrentShaders();
 
-    unsigned         shader = shaders[pass];
-    Render::Texture* ptex   = targets[0]->GetTexture();
-    psi->SetTexture(cur, D3D9::Uniform::SU_tex, ptex, ImageFillMode(Wrap_Clamp, Sample_Linear));
+    // Apply the mvp
+    DfSetMatrix(psi, pso, D3D9::Uniform::SU_mvp, mvp);
 
-    // the target's rectangle inside its texture
-    const Rect<int>& r  = targets[0]->GetRect();
-    float            sx = (float)(r.x2 - r.x1) / (float)ptex->ImgSize.Width;
-    float            sy = (float)(r.y2 - r.y1) / (float)ptex->ImgSize.Height;
-    float texgen[8] = { sx, sx * 0.0f, sx * 0.0f, ((float)r.x1 + 0.0f) * sx,
-                        sy * 0.0f, sy, sy * 0.0f, ((float)r.y1 + 0.0f) * sy };
-    psi->SetUniform(cur, D3D9::Uniform::SU_texgen, texgen, 8);
+    // Apply the source texture (FS_start_shadows .. FS_end_shadows).
+    bool             shadowPass = shaders[pass] >= 0xa64b && shaders[pass] <= 0xa64b + 0x4501;
+    Render::Texture* ptexture   = targets[0]->GetTexture();
+    psi->SetTexture(pso, D3D9::Uniform::SU_tex, ptexture, ImageFillMode(Wrap_Clamp, Sample_Linear));
 
+    // Apply the texture matrix.
+    Matrix2F         texgen;
+    const Rect<int>& srect = targets[0]->GetRect();
+    texgen.AppendTranslation((float)srect.x1, (float)srect.y1);
+    texgen.AppendScaling((float)srect.Width() / ptexture->GetSize().Width,
+                         (float)srect.Height() / ptexture->GetSize().Height);
+    psi->SetUniform(pso, D3D9::Uniform::SU_texgen, &(texgen.M[0][0]), 8);
+
+    // Apply the remainder of the uniforms.
     if (filter->GetFilterType() <= Filter_Blur_End)
     {
         const BlurFilterParams& params = ((const BlurFilterImpl*)filter)->GetParams();
-        psi->SetUniformInline(cur, D3D9::Uniform::SU_cxmul, cx.M[0], 4);
-        psi->SetUniformInline(cur, D3D9::Uniform::SU_cxadd, cx.M[1], 4);
 
-        float texscale[2] = { 1.0f / (float)ptex->ImgSize.Width, 1.0f / (float)ptex->ImgSize.Height };
-        float blurx       = floorf(params.BlurX * 0.05f);
-        float blury       = floorf(params.BlurY * 0.05f);
-        if (blurx < 1.0f)
-            blurx = 1.0f;
-        if (blury < 1.0f)
-            blury = 1.0f;
+        // Common parameters.
+        psi->SetCxform(pso, cx);
 
-        // the box blur shaders run x and y in turn
+        float texscale[2];
+        texscale[0] = 1.0f / ptexture->GetSize().Width;
+        texscale[1] = 1.0f / ptexture->GetSize().Height;
+
         float fsize[4];
-        float samples;
-        if (shader - 0xa249 < 2)
+        float blurx = Alg::Max(1.0f, floorf(TwipsToPixels(params.BlurX)));
+        float blury = Alg::Max(1.0f, floorf(TwipsToPixels(params.BlurY)));
+        // FS_FBox1Blur, FS_FBox1BlurMul
+        if (shaders[pass] == 0xa249 || shaders[pass] == 0xa24a)
         {
-            if (!(pass & 1))
+            // On even passes, do the X blur, on odd passes, do the Y blur.
+            if ((pass & 1) == 0)
             {
-                fsize[0]    = (blurx - 1.0f) * 0.5f;
-                fsize[1]    = 0.0f;
-                texscale[1] = 0.0f;
-                samples     = blurx;
+                fsize[0]    = (blurx - 1) * 0.5f;
+                fsize[1]    = 0;
+                fsize[3]    = 1.0f / (blurx);
+                texscale[1] = 0;
             }
             else
             {
-                fsize[0]    = (blury - 1.0f) * 0.5f;
-                fsize[1]    = 0.0f;
-                texscale[0] = 0.0f;
-                samples     = blury;
+                fsize[0]    = (blury - 1) * 0.5f;
+                fsize[1]    = 0;
+                fsize[3]    = 1.0f / (blury);
+                texscale[0] = 0;
             }
         }
         else if (pass == passCount - 1 && pass != 0)
         {
             fsize[0] = 0.0f;
-            fsize[1] = (blury - 1.0f) * 0.5f;
-            samples  = blury;
+            fsize[1] = (blury - 1) * 0.5f;
+            fsize[3] = 1.0f / (blury);
         }
         else
         {
-            fsize[0] = (blurx - 1.0f) * 0.5f;
-            fsize[1] = (blury - 1.0f) * 0.5f;
-            samples  = blury * blurx;
+            fsize[0] = (blurx - 1) * 0.5f;
+            fsize[1] = (blury - 1) * 0.5f;
+            fsize[3] = 1.0f / (blurx * blury);
         }
+
+        // fsize.z = strength, only used on the last pass.
         fsize[2] = (pass == passCount - 1) ? params.Strength : 1.0f;
-        fsize[3] = 1.0f / samples;
-        psi->SetUniformInline(cur, D3D9::Uniform::SU_fsize, fsize, 4);
-        psi->SetUniformInline(cur, D3D9::Uniform::SU_texscale, texscale, 2);
 
-        // the shadow shaders
-        if (shader - 0xa64b > 0x4501)
-        {
-            psi->Finish(0);
-            return;
-        }
-        float scolor[4], scolor2[4];
-        params.Colors[0].GetRGBAFloat(&scolor[0], &scolor[1], &scolor[2], &scolor[3]);
-        params.Colors[1].GetRGBAFloat(&scolor2[0], &scolor2[1], &scolor2[2], &scolor2[3]);
-        // -TwipsToPixels: the shader samples the source against the shadow offset
-        float offset[2] = { params.Offset.x * -0.05f, params.Offset.y * -0.05f };
+        SffSetUniform(psi, pso, D3D9::Uniform::SU_fsize, fsize, 4);
+        SffSetUniform(psi, pso, D3D9::Uniform::SU_texscale, texscale, 2);
 
-        // the source drawn under the shadow (not for a hidden object without knockout)
-        if ((params.Mode & (BlurFilterParams::Mode_Knockout | BlurFilterParams::Mode_HideObject)) !=
-                BlurFilterParams::Mode_HideObject &&
-            targets[2])
+        if (shadowPass)
         {
-            Render::Texture* psrc = targets[2]->GetTexture();
-            float srctexscale[2]  = { 1.0f / ((float)psrc->ImgSize.Width * texscale[0]),
-                                      1.0f / ((float)psrc->ImgSize.Height * texscale[1]) };
-            psi->SetUniform(cur, D3D9::Uniform::SU_srctexscale, srctexscale, 2);
-            psi->SetTexture(cur, D3D9::Uniform::SU_srctex, psrc, ImageFillMode(Wrap_Clamp, Sample_Linear));
+            float scolors[2][4];
+            float srctexscale[2];
+            float offset[2];
+            params.Colors[0].GetRGBAFloat(&scolors[0][0], &scolors[0][1], &scolors[0][2], &scolors[0][3]);
+            params.Colors[1].GetRGBAFloat(&scolors[1][0], &scolors[1][1], &scolors[1][2], &scolors[1][3]);
+            offset[0] = -TwipsToPixels(params.Offset.x);
+            offset[1] = -TwipsToPixels(params.Offset.y);
+
+            if (!(params.Mode & BlurFilterParams::Mode_HideObject && !(params.Mode & BlurFilterParams::Mode_Knockout)) &&
+                targets[2])
+            {
+                Render::Texture* psrctex = targets[2]->GetTexture();
+                srctexscale[0]           = 1.0f / (psrctex->GetSize().Width * texscale[0]);
+                srctexscale[1]           = 1.0f / (psrctex->GetSize().Height * texscale[1]);
+                psi->SetUniform(pso, D3D9::Uniform::SU_srctexscale, srctexscale, 2);
+                psi->SetTexture(pso, D3D9::Uniform::SU_srctex, psrctex, ImageFillMode(Wrap_Clamp, Sample_Linear));
+            }
+
+            psi->SetUniform(pso, D3D9::Uniform::SU_scolor, scolors[0], 4);
+            SffSetUniform(psi, pso, D3D9::Uniform::SU_offset, offset, 2);
+
+            if (params.Mode & BlurFilterParams::Mode_Highlight)
+                psi->SetUniform(pso, D3D9::Uniform::SU_scolor2, scolors[1], 4);
         }
-        psi->SetUniform(cur, D3D9::Uniform::SU_scolor, scolor, 4);
-        psi->SetUniformInline(cur, D3D9::Uniform::SU_offset, offset, 2);
-        if (params.Mode & BlurFilterParams::Mode_Highlight)
-            psi->SetUniformInline(cur, D3D9::Uniform::SU_scolor2, scolor2, 4);
     }
     else
     {
-        // the color matrix with the cxform folded in, premultiplied by the cxform's alpha
-        const ColorMatrixFilter& m = *(const ColorMatrixFilter*)filter;
-        const float*             mul = cx.M[0];
-        const float*             add = cx.M[1];
-        float                    a   = mul[3];
-        float                    cxmul[16];
-        float                    cxadd[4];
-        for (unsigned i = 0; i < 4; i++)
+        ColorMatrixFilter& matrixFilter = *(ColorMatrixFilter*)filter;
+
+        // If there is a color transform, in addition to the filter, embed that directly into the matrix.
+        float matrixData[20];
+        memcpy(matrixData, &matrixFilter[0], sizeof(matrixData));
+        for (unsigned i = 0; i < 5; i++)
         {
-            cxmul[i * 4 + 0] = mul[0] * m[i * 4 + 0] * a;
-            cxmul[i * 4 + 1] = mul[1] * m[i * 4 + 1] * a;
-            cxmul[i * 4 + 2] = mul[2] * m[i * 4 + 2] * a;
-            cxmul[i * 4 + 3] = m[i * 4 + 3] * a;
+            matrixData[i * 4 + 0] = matrixData[i * 4 + 0] * cx.M[0][0] * cx.M[0][3];
+            matrixData[i * 4 + 1] = matrixData[i * 4 + 1] * cx.M[0][1] * cx.M[0][3];
+            matrixData[i * 4 + 2] = matrixData[i * 4 + 2] * cx.M[0][2] * cx.M[0][3];
+            matrixData[i * 4 + 3] = matrixData[i * 4 + 3] * cx.M[0][3];
         }
-        cxadd[0] = (mul[0] * m[16] * a + add[0] / 255.0f) * a;
-        cxadd[1] = (mul[1] * m[17] * a + add[1] / 255.0f) * a;
-        cxadd[2] = (mul[2] * m[18] * a + add[2] / 255.0f) * a;
-        cxadd[3] = (a * m[19] + add[3] / 255.0f) * a;
-        psi->SetUniform(cur, D3D9::Uniform::SU_cxadd, cxadd, 4);
-        psi->SetUniform(cur, D3D9::Uniform::SU_cxmul, cxmul, 16);
+        matrixData[16] = (matrixData[16] + cx.M[1][0] * 1.f / 255.f) * cx.M[0][3];
+        matrixData[17] = (matrixData[17] + cx.M[1][1] * 1.f / 255.f) * cx.M[0][3];
+        matrixData[18] = (matrixData[18] + cx.M[1][2] * 1.f / 255.f) * cx.M[0][3];
+        matrixData[19] = (matrixData[19] + cx.M[1][3] * 1.f / 255.f) * cx.M[0][3];
+
+        // Now apply the data.
+        psi->SetUniform(pso, D3D9::Uniform::SU_cxadd, &(matrixData[16]), 4);
+        psi->SetUniform(pso, D3D9::Uniform::SU_cxmul, &(matrixData[0]), 16);
     }
+
     psi->Finish(0);
+
+    return true;
 }
 
 
