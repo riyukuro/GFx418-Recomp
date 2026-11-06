@@ -111,6 +111,14 @@ static SF_FORCEINLINE AvmCharacter* AvmOfMovie(InteractiveObject* pmovie)
     return static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pmovie->GetAvmObjImpl()));
 }
 
+// AvmSprite::InvokeArgs, inlined in the exe: the sprite is kept alive across the call.
+static SF_FORCEINLINE bool SpriteInvokeArgs(AvmSprite* psprite, const char* methodName, Value* presult,
+                                            const char* methodArgFmt, va_list args)
+{
+    Ptr<InteractiveObject> thisPtr = psprite->GetDispObj();
+    return GAS_InvokeParsed(methodName, presult, psprite, &psprite->Env, methodArgFmt, args);
+}
+
 // Environment::GetAS2Root inline: the movie root of the target.
 static SF_FORCEINLINE MovieRoot* EnvRoot(const Environment* penv)
 {
@@ -186,7 +194,6 @@ void AsFunctionObject::Invoke(const FnCall& fn, LocalFrame* plocalFrame, const c
 }
 
 // Calls the method ppathToMethod of _level0 (or the alias registered for it) with the arguments from pargFmt.
-// MS2-FUNCTIONAL: register allocation differs (the format argument is kept in rsi).
 // @0x142963820
 bool MovieRoot::Invoke(const char* ppathToMethod, GFx::Value* presult, const char* pargFmt, ...)
 {
@@ -200,11 +207,8 @@ bool MovieRoot::Invoke(const char* ppathToMethod, GFx::Value* presult, const cha
     if (*reinterpret_cast<void* const*>(Unrecovered_78) && (palias = ResolveInvokeAlias(ppathToMethod)) != 0)
         retVal = InvokeAliasArgs(ppathToMethod, *palias, &resultVal, pargFmt, args);
     else
-    {
-        AvmSprite*             pavmSprite = static_cast<AvmSprite*>(AvmOfMovie(GetMovieAtLevel(pMovieImpl, 0)));
-        Ptr<InteractiveObject> holder     = pavmSprite->GetDispObj();
-        retVal = GAS_InvokeParsed(ppathToMethod, &resultVal, pavmSprite, &pavmSprite->Env, pargFmt, args);
-    }
+        retVal = SpriteInvokeArgs(static_cast<AvmSprite*>(AvmOfMovie(GetMovieAtLevel(pMovieImpl, 0))), ppathToMethod,
+                                  &resultVal, pargFmt, args);
     va_end(args);
     if (retVal && presult)
         ASValue2GFxValue(AvmOfMovie(GetMovieAtLevel(pMovieImpl, 0))->GetASEnvironment(), resultVal, presult);
