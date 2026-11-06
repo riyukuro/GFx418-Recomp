@@ -83,6 +83,9 @@ public:
     SF_FORCEINLINE FunctionRef(FunctionObject& original) { Init(original); }
     SF_FORCEINLINE FunctionRef(const FunctionRef& orig) { Init(orig); }
     SF_FORCEINLINE FunctionRef(const FunctionRefBase& orig) { Init(orig); }
+    // The copy with SetLocalFrame expanded in place, for units where the exe inlines it (sfr_as2_05j). A template
+    // over a unit-local tag, so each instantiation has its own name.
+    template<class Tag> FunctionRef(const FunctionRefBase& orig, Tag);
     SF_FORCEINLINE ~FunctionRef() { DropRefs(); }
 
     // Calls the function in its local frame.

@@ -11,12 +11,57 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-// MS2-FUNCTIONAL: the exe inlines the FnCall destructor
+struct SetLocalFrameInlineTag {};
+
+// FunctionRefBase::SetLocalFrame (exe 0x142981e70), expanded in place as the exe has it here.
+static SF_FORCEINLINE void FunctionRefSetLocalFrame(FunctionRefBase* p, LocalFrame* localFrame, bool weakRef)
+{
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->Release();
+    p->pLocalFrame = localFrame;
+    if (weakRef)
+        p->Flags |= FunctionRefBase::FuncRef_Weak;
+    else
+        p->Flags &= ~FunctionRefBase::FuncRef_Weak;
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->AddRef();
+}
+
+// FunctionRefBase::Init(orig) with the SetLocalFrame call expanded.
+template<class Tag>
+SF_FORCEINLINE FunctionRef::FunctionRef(const FunctionRefBase& orig, Tag)
+{
+    Flags    = 0;
+    Function = orig.Function;
+    if (!(Flags & FuncRef_Internal) && Function)
+        Function->AddRef();
+    pLocalFrame = 0;
+    if (orig.pLocalFrame)
+        FunctionRefSetLocalFrame(this, orig.pLocalFrame, (orig.Flags & FuncRef_Weak) != 0);
+}
+
+// Value::ToFunction with the cases as a switch.
+struct ValueAccess : Value
+{
+    using Value::ResolveFunctionName;
+};
+static SF_FORCEINLINE FunctionRef ValueToFunction(const Value& v, const Environment* penv)
+{
+    switch (v.GetType())
+    {
+    case Value::FUNCTION:
+        return FunctionRef(v.V.FunctionValue, SetLocalFrameInlineTag());
+    case Value::FUNCTIONNAME:
+        return static_cast<const ValueAccess&>(v).ResolveFunctionName(penv);
+    }
+    return FunctionRef();
+}
+
 // @0x142946a80
 bool GAS_Invoke(const Value& method, Value* presult, const Value& thisVal, Environment* penv, int nargs,
                 int firstArgBottomIndex, const char* pmethodName)
 {
-    FunctionRef func = method.ToFunction(penv);
+    FunctionRef func = ValueToFunction(method, penv);
     if (presult)
         presult->SetUndefined();
     if (!func.IsNull())
