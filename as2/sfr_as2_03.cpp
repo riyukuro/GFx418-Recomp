@@ -1500,7 +1500,15 @@ template decltype(HashLH<GFx::EventId, ArrayLH<GFx::AS2::Value, GFx::AS2::StatMV
                          GFx::AS2::StatMV_ActionScript_Mem>::mHash)::BaseType::~HashSetBase();
 template decltype(StringHashLH<GFx::AS2::MovieClipLoader::ProgressDesc>::mHash)::BaseType::~HashSetBase();
 
-// MS2-FUNCTIONAL the Ptr release is inlined differently (the exe calls ReleaseInternal from two sites)
+// The SDK's Pop1 (pCurrent-- on its own line), as the exe inlines it here.
+template <>
+inline void GFx::AS2::PagedStack<Ptr<GFx::AS2::FunctionObject>, 32>::Pop1()
+{
+    pCurrent->~Ptr<GFx::AS2::FunctionObject>();
+    pCurrent--;
+    if (pCurrent < pPageStart)
+        PopPage();
+}
 // @0x142924b70
 template GFx::AS2::PagedStack<Ptr<GFx::AS2::FunctionObject>, 32>::~PagedStack();
 // MS2-FUNCTIONAL register allocation of the pop loop (the exe reloads the top pointer each iteration)
