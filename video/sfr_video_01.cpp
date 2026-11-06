@@ -1840,6 +1840,8 @@ unsigned* FUN_1400079b0(unsigned* destination, const unsigned* source)
 }
 
 // destroys the AS2 call frame and optionally deletes its storage.
+// The exe calls the out-of-line dtor copy here (the dtor is header-inline).
+#pragma inline_depth(0)
 // @0x140007b70
 void* FUN_140007b70(Scaleform::GFx::AS2::FnCall* call, unsigned flags)
 {
@@ -1847,6 +1849,7 @@ void* FUN_140007b70(Scaleform::GFx::AS2::FnCall* call, unsigned flags)
     if (flags & 1) ::operator delete(call);
     return call;
 }
+#pragma inline_depth()
 
 // destroys a prototype base and optionally deletes its storage.
 // @0x140007c80
@@ -3871,11 +3874,6 @@ SF_NOINLINE bool ObjectInterface::SetConstMemberRaw(ASStringContext* psc, const 
     return SetMemberRaw(psc, psc->pContext->GetStringManager()->CreateConstString(name), val, PropFlags());
 }
 
-// @0x140007af0
-FnCall::~FnCall()
-{
-}
-
 // ==== NetStream constructor function ================================================================================
 
 // @0x14000cd30
@@ -4329,6 +4327,7 @@ const char* ObjectInterface::GetTextValue(Environment*) const { return 0; }
 // MS2-PIN: ??_7VideoProviderNetStream@AS2@GFx@Scaleform@@6B@ 0x1431b5620
 // MS2-PIN: ??_7VideoProvider@Video@GFx@Scaleform@@6B@ 0x1431b4f30
 // MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
+// MS2-PIN: ??1FnCall@AS2@GFx@Scaleform@@UEAA@XZ 0x140007af0
 // MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b4de0
 // MS2-PIN: ??$ForEachChild_GC@UReleaseFunctor@?$RefCountBaseGC@$0BED@@AS2@GFx@Scaleform@@@NetStream@AS2@GFx@Scaleform@@QEBAXPEAV?$RefCountCollector@$0BED@@123@@Z 0x140007e40
 // MS2-PIN: ??$ForEachChild_GC@UMarkInCycleFunctor@?$RefCountBaseGC@$0BED@@AS2@GFx@Scaleform@@@NetStream@AS2@GFx@Scaleform@@QEBAXPEAV?$RefCountCollector@$0BED@@123@@Z 0x140007ea0

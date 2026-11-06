@@ -456,8 +456,9 @@ public:
     }
     // The this value is resolved to its object; a function value is kept as the function ref (exe 0x14291be60).
     FnCall(Value* res, const Value& thisVal, Environment* penv, int nargs, int firstArgBottomIndex);
-    // Out of line in the exe (0x140007af0).
-    ~FnCall();
+    // Inline as in the SDK: the exe inlines it at most sites and calls the copy at 0x140007af0 where cl's inliner
+    // gives up (CFunctionObject::Invoke, Value::GetPropertyValue, ...); cl 19.16 makes the same choice.
+    ~FnCall() {}
 
     Log* GetLog() const; // exe 0x14294b230
     virtual bool IsVerboseActionErrors() const { return Env && Env->IsVerboseActionErrors(); }

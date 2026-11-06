@@ -37,3 +37,5 @@ bool GAS_Invoke(const Value& method, Value* presult, const Value& thisVal, Envir
 }
 
 } } }
+// MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
+// MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b4de0

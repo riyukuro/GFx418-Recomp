@@ -391,7 +391,7 @@ void SoundObject::DetachFromTarget()
         psprite->DetachSoundObject(this);
 }
 
-// MS2-FUNCTIONAL: the exe inlines the FnCall dtor; same handler lookup and call
+// Calls the onSoundComplete handler of the sound object.
 // @0x1429982b0
 void SoundObject::ExecuteOnSoundComplete()
 {

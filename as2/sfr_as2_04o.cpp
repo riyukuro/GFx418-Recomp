@@ -45,7 +45,7 @@ public:
     virtual void Invoke(Environment* penv, ObjectInterface* pthis, const FunctionRef& method);
 };
 
-// MS2-FUNCTIONAL the exe inlines ~FnCall (both ThisFunctionRef releases); here it is a call
+// Calls one listener method with the broadcast arguments already on the stack.
 // @0x142963320
 void SetFocusInvokeCallback::Invoke(Environment* penv, ObjectInterface* pthis, const FunctionRef& method)
 {
