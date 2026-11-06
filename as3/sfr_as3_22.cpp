@@ -3553,7 +3553,7 @@ __declspec(noinline) void* FindAudioRequestEntry(void** set, const unsigned char
     return reinterpret_cast<Sfr22RequestHash*>(set)->Get(*reinterpret_cast<const UInt64*>(key));
 }
 
-// MS2-FUNCTIONAL: removes a finished request from its keyed channel list, pulses completion when the table empties, and stops/releases the channel.
+// Removes a finished request from its keyed channel list, pulses completion when the table empties, and stops/releases the channel.
 // @0x1427454b0
 void RemoveAudioRequest(void* manager, void* request)
 {
@@ -3565,11 +3565,11 @@ void RemoveAudioRequest(void* manager, void* request)
         return;
 
     auto* managerBytes = static_cast<unsigned char*>(manager);
-    void* released;
-    {
-        Lock::Locker locker(reinterpret_cast<Lock*>(managerBytes + 0x80));
+    reinterpret_cast<Lock*>(managerBytes + 0x80)->DoLock();
+    // SDK SoundRendererFMODImpl::DetachAuxStreamer: explicit DoLock / Unlock, pchan nulled when not found.
+
         auto** set = reinterpret_cast<void**>(managerBytes + 0xa8);
-        unsigned long long key = *reinterpret_cast<unsigned long long*>(sound + 0x40);
+        unsigned long long key = *reinterpret_cast<unsigned long long*>(sound + 0x40), removeKey;
         auto* entry = static_cast<unsigned long long*>(FindAudioRequestEntry(set,
             reinterpret_cast<const unsigned char*>(&key)));
         bool removed = false;
@@ -3585,7 +3585,7 @@ void RemoveAudioRequest(void* manager, void* request)
                     ++emptyCount;
             }
             if (emptyCount == entry[1]) {
-                unsigned long long removeKey = *reinterpret_cast<unsigned long long*>(sound + 0x40);
+                removeKey = *reinterpret_cast<unsigned long long*>(sound + 0x40);
                 FUN_142742830(reinterpret_cast<long long*>(set), &removeKey);
             }
 
@@ -3600,12 +3600,12 @@ void RemoveAudioRequest(void* manager, void* request)
                 reinterpret_cast<Scaleform::Event*>(managerBytes + 0x20)->PulseEvent();
             }
         }
-        released = removed ? request : nullptr;
-    }
+        if (!removed) request = nullptr;
 
-    if (released) {
-        reinterpret_cast<FMOD::Channel*>(*reinterpret_cast<void**>(static_cast<unsigned char*>(released) + 0x38))->stop();
-        FUN_14257dcb0(released);
+    reinterpret_cast<Lock*>(managerBytes + 0x80)->Unlock();
+    if (request) {
+        reinterpret_cast<FMOD::Channel*>(*reinterpret_cast<void**>(static_cast<unsigned char*>(request) + 0x38))->stop();
+        FUN_14257dcb0(request);
     }
 }
 
