@@ -1752,36 +1752,36 @@ namespace Instances { namespace fl_display
         else
             result = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr())->GetCurrentFrame() + 1;
     }
-
-    // MS2-FUNCTIONAL: the exe inlines FrameScript::Descr's copy constructor into the PushBack
+    static SF_FORCEINLINE GFx::Sprite* Sfr07CharToSprite(GFx::DisplayObject* p) { return p->IsSprite() ? static_cast<GFx::Sprite*>(p) : 0; } static SF_FORCEINLINE void Sfr07PushDescr(ArrayCPP<MovieClip::FrameScript::Descr>& a, const MovieClip::FrameScript::Descr& d) { typedef MovieClip::FrameScript::Descr D; typedef ArrayData<D, AllocatorGH_CPP<D, Stat_Default_Mem>, ArrayDefaultPolicy> AD; AD& x = reinterpret_cast<AD&>(a); UPInt newSize = x.Size + 1; UPInt oldSize = x.Size; if (newSize < oldSize) { AllocatorGH_CPP<D, Stat_Default_Mem>::DestructArray(x.Data + newSize, oldSize - newSize); if (newSize < (x.Policy.GetCapacity() >> 1)) x.Reserve(newSize); } else if (newSize >= x.Policy.GetCapacity()) x.Reserve(newSize + (newSize >> 2)); x.Size = newSize; D* p = x.Data + x.Size - 1; ::new (&p->Method) Value(d.Method); p->Frame = d.Frame; }
+    // (SDK body; PushBack with the Descr copy and ResizeNoConstruct inlined, as the exe does)
     // @0x1424478a0
     void MovieClip::addFrameScript(Value& result, unsigned argc, const Value* argv)
     {
         SF_UNUSED(result);
         if (!pDispObj)
             CreateStageObject();
-        GFx::Sprite* psprite = pDispObj->IsSprite() ? static_cast<GFx::Sprite*>(pDispObj.GetPtr()) : NULL;
+        GFx::Sprite* psprite = Sfr07CharToSprite(pDispObj.GetPtr());
         if (!psprite)
             return;
         AvmDisplayObj* pavm = reinterpret_cast<AvmDisplayObj*>(psprite->GetAvmObjImpl());
 
         // (frame, function) pairs; frames that do not convert are skipped.
-        ArrayCPP<FrameScript::Descr> descrs;
-        const unsigned pairCnt = argc >> 1;
-        for (unsigned i = 0, j = 0; i < pairCnt; ++i, j += 2)
+        int n = argc / 2;
+        ArrayCPP<FrameScript::Descr> frames;
+        for (int i = 0, k = 0; i < n; ++i)
         {
-            SInt32 frame;
-            if (argv[j].Convert2Int32(frame))
-                descrs.PushBack(FrameScript::Descr(argv[j + 1], frame));
+            SInt32 frameNum;
+            if (!argv[k++].Convert2Int32(frameNum))
+                continue; FrameScript::Descr fr(argv[k++], frameNum); Sfr07PushDescr(frames, fr);
         }
-        frameScript.Set(FUN_14250a5c0(pavm), psprite->pDef->GetFrameCount(), (unsigned)descrs.GetSize(),
-                        descrs.GetDataPtr());
+        unsigned frameCnt = psprite->pDef->GetFrameCount();
+        frameScript.Set(FUN_14250a5c0(pavm), frameCnt, n, &frames[0]);
         if (frameScript.Get(psprite->GetCurrentFrame()))
         {
             // AvmSprite flags (+0x60) bit 1: a frame script is pending for the current frame.
             reinterpret_cast<UByte*>(pavm)[0x60] |= 2;
-            if (psprite->IsInPlayList())
-                psprite->AddToOptimizedPlayList();
+            if ((*reinterpret_cast<GFx::Sprite**>(reinterpret_cast<UByte*>(pavm) + 0x18))->IsInPlayList())
+                (*reinterpret_cast<GFx::Sprite**>(reinterpret_cast<UByte*>(pavm) + 0x18))->AddToOptimizedPlayList();
         }
     }
 
