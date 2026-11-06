@@ -34,6 +34,11 @@ namespace Scaleform {
 template <>
 void ArrayBase<ArrayData<Ptr<GFx::Sprite>, AllocatorLH<Ptr<GFx::Sprite>, GFx::StatMV_Other_Mem>,
                          ArrayDefaultPolicy> >::RemoveAt(UPInt index);
+// The event handler table's lookup (exe 0x142917460, explicit instantiation in sfr_as2_02): the exe calls it out of
+// line from the inlined Get.
+template<> template<> SPInt decltype(HashLH<GFx::EventId, ArrayLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>,
+                                            GFx::EventIdHashFunctor, GFx::AS2::StatMV_ActionScript_Mem>::mHash)::BaseType::
+    findIndexAlt<GFx::EventId>(const GFx::EventId& key) const;
 }
 
 
@@ -278,19 +283,40 @@ bool AvmSprite::OnEvent(const EventId& id)
     return true;
 }
 
+// AvmSprite::ExecuteInitActionFrameTags (sfr_as2_05), inlined in the exe here.
+static SF_FORCEINLINE void LeExecuteInitActionFrameTags(AvmSprite* pthis, unsigned frame)
+{
+    if (!pthis->InitActionsExecuted[frame])
+    {
+        Ptr<Sprite>        thisSprite = pthis->GetSprite();
+        TimelineDef::Frame initActionsFrame;
+        if (pthis->GetSprite()->pDef->GetInitActions(&initActionsFrame, frame) && initActionsFrame.GetTagCount() > 0)
+        {
+            for (unsigned i = 0; i < initActionsFrame.GetTagCount(); i++)
+                initActionsFrame.GetTag(i)->Execute(pthis->GetSprite());
+            pthis->InitActionsExecuted[frame] = true;
+        }
+    }
+}
+
 // The load event is queued (at frame priority when the clip has an onClipEvent(load), so that it comes before an
 // unload right after attachMovie), frame 0's InitActions run, and a clip that is the hit area of another one is set
 // again on it.
-// MS2-FUNCTIONAL: the exe inlines ExecuteInitActionFrameTags(0); register allocation differs.
 // @0x14296b860
 void AvmSprite::OnEventLoad()
 {
-    ActionPriority::Priority prio = LeHasClipEventHandler(this, EventId(EventId::Event_Load))
-                                        ? ActionPriority::AP_Frame : ActionPriority::AP_Load;
-    LeSetEventAction(GetAS2Root()->InsertEmptyAction(prio), GetSprite(), EventId(EventId::Event_Load));
-    GetSprite()->DisplayObjectBase::Flags |= DisplayObjectBase::Mask_JustLoaded;
+    if (LeHasClipEventHandler(this, EventId(EventId::Event_Load)))
+    {
+        LeSetEventAction(GetAS2Root()->InsertEmptyAction(ActionPriority::AP_Frame), GetSprite(), EventId::Event_Load);
+        GetSprite()->DisplayObjectBase::Flags |= DisplayObjectBase::Mask_JustLoaded;
+    }
+    else
+    {
+        LeSetEventAction(GetAS2Root()->InsertEmptyAction(ActionPriority::AP_Load), GetSprite(), EventId::Event_Load);
+        GetSprite()->DisplayObjectBase::Flags |= DisplayObjectBase::Mask_JustLoaded;
+    }
 
-    AvmSprite::ExecuteInitActionFrameTags(0);
+    LeExecuteInitActionFrameTags(this, 0);
     GetSprite()->DefaultOnEventLoad();
 
     UPInt n = LeHitAreas(GetAS2Root()).GetSize();
