@@ -262,8 +262,9 @@ public:
     // Pops n values.
     void   Drop(int n)
     {
-        while (n--)
-            Stack.Pop1();
+        if (n > 0)
+            for (unsigned i = n; i; i--)
+                Stack.Pop1();
     }
     SF_FORCEINLINE void Drop2() { Stack.Pop2(); }
 

@@ -1682,7 +1682,7 @@ void ObjectProto::Unwatch_(const FnCall& fn)
 }
 
 // apply(thisObject[, argArray]): call with the arguments taken from an array.
-// MS2-FUNCTIONAL register allocation; ours calls ~FunctionRef of the FnCall temporaries out of line
+// The array elements are pushed in reverse, so Arg(0) is the first element.
 // @0x142902ae0
 void FunctionProto::Apply(const FnCall& fn)
 {
@@ -1733,7 +1733,7 @@ void FunctionProto::Apply(const FnCall& fn)
 }
 
 // call(thisObject, arg1, ...): the arguments go onto the stack again and the function runs with this set.
-// MS2-FUNCTIONAL register allocation; ours calls ~FunctionRef of the FnCall temporaries out of line
+// Arg(0) becomes this; the remaining arguments are pushed again for the callee.
 // @0x142902f40
 void FunctionProto::Call(const FnCall& fn)
 {

@@ -2079,7 +2079,7 @@ bool AvmSprite::ExecuteBuffer(ActionBuffer* pactionbuffer)
 }
 
 // Calls the native function with the parameters pushed on the environment stack (last one deepest).
-// MS2-FUNCTIONAL: exe zeroes ThisFunctionRef with one xmm store, saves rbp late, Drop uses add -1/jne; same calls
+// MS2-FUNCTIONAL: exe zeroes ThisFunctionRef with one xmm store, saves rbp late; same calls
 // @0x14293ff70
 bool AvmCharacter::ExecuteCFunction(CFunctionPtr function, const Array<Value>& params)
 {
@@ -2102,7 +2102,7 @@ bool AvmCharacter::ExecuteCFunction(CFunctionPtr function, const Array<Value>& p
 }
 
 // Calls the script function with the parameters pushed on the environment stack (last one deepest).
-// MS2-FUNCTIONAL: exe zeroes ThisFunctionRef with one xmm store, saves rbp late, Drop uses add -1/jne; same calls
+// MS2-FUNCTIONAL: exe zeroes ThisFunctionRef with one xmm store, saves rbp late; same calls
 // @0x1429413c0
 bool AvmCharacter::ExecuteFunction(const FunctionRef& function, const Array<Value>& params)
 {
