@@ -343,7 +343,11 @@ public:
     };
 
     ASMovieRootBase* pASRoot;     // +0x20
+#ifdef SF_GFX_DOBJ_RESOURCEID_FIELD
+    ResourceId       Id;          // +0x28 (SDK type, for the inlined ctor copy)
+#else
     UInt32           Id;          // +0x28 ResourceId
+#endif
     int              Depth;       // +0x2c
     unsigned         CreateFrame; // +0x30
     union

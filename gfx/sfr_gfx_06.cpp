@@ -17,6 +17,8 @@
 // MS2-PIN: ??_7DisplayObject@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@2@@ 0x14318dcd0
 // MS2-PIN: ??_7DisplayObject@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@12@@ 0x14318df48
 // MS2-PIN: ??_GDisplayObject@GFx@Scaleform@@UEAAPEAXI@Z 0x1425f0c10
+#define SF_GFX_PLAYERIMPL
+#define SF_GFX_DOBJ_RESOURCEID_FIELD
 #include "../include/gfx/gfx_rendertree.h"
 #include "../include/gfx/gfx_displayobject.h"
 #include "../include/gfx/gfx_interactiveobject.h"
@@ -89,7 +91,6 @@ CharacterHandle::CharacterHandle(const ASString& name, DisplayObject* pparent, D
 // Construction
 
 // @0x1425f07e0
-// MS2-FUNCTIONAL: the exe ctor is a leaf (base ctor inlined differently), same stores
 DisplayObject::DisplayObject(ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id)
     : DisplayObjectBase(pasRoot, pparent, id), pScrollRect(0), Flags(0)
 {
@@ -101,7 +102,7 @@ DisplayObject::DisplayObject(ASMovieRootBase* pasRoot, InteractiveObject* pparen
 
 // @0x1425f0880
 DisplayObjectBase::DisplayObjectBase(ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id)
-    : pASRoot(pasRoot), Id(id.GetIdValue()), Depth(-1), CreateFrame(0), pParent(pparent), pGeomData(0),
+    : pASRoot(pasRoot), Id(id), Depth(-1), CreateFrame(0), pParent(pparent), pGeomData(0),
       pPerspectiveData(0), pIndXFormData(0), ClipDepth(0), Flags(0), BlendMode(Render::Blend_None), AvmObjOffset(0)
 {
     SetVisibleFlag();
@@ -204,10 +205,9 @@ void DisplayObjectBase::Clear3D(bool inherit)
 // Render node access
 
 // @0x1425f26b0
-// MS2-FUNCTIONAL: the context is reached through the placeholder words of MovieImpl
 Render::ContextImpl::Context& DisplayObjectBase::GetRenderContext() const
 {
-    return *reinterpret_cast<Render::ContextImpl::Context*>(GetMovieImpl()->RenderContext);
+    return GetMovieImpl()->RenderContext;
 }
 
 // @0x1425f26c0
@@ -388,7 +388,8 @@ MovieImpl* DisplayObjectBase::FindMovieImpl() const
 DisplayObject* CharacterHandle::ForceResolveCharacter(MovieImpl* proot) const
 {
     typedef DisplayObject* (*FindTargetFn)(ASMovieRootBase*, const ASString&);
-    return (*(FindTargetFn**)proot->pASMovieRoot)[0x40 / 8](proot->pASMovieRoot, NamePath);
+    ASMovieRootBase* pasRoot = proot->pASMovieRoot;
+    return (*(FindTargetFn**)pasRoot)[0x40 / 8](pasRoot, NamePath);
 }
 
 // @0x1425f1bd0
@@ -518,7 +519,7 @@ static __forceinline void Gfx06SetNormalizedScreenCoords(MovieImpl* pm, const Po
 Double DisplayObject::GetMouseX() const
 {
     MovieImpl* pMovie = GetMovieImpl();
-    PointF a = pMovie->MouseLastPosition;
+    PointF a = pMovie->mMouseState[0].GetLastPosition();
     PointF b(PointF::NoInit);
     Gfx06SetNormalizedScreenCoords(pMovie, a);
     TransformPointToLocal(&b, a, false);
@@ -529,7 +530,7 @@ Double DisplayObject::GetMouseX() const
 Double DisplayObject::GetMouseY() const
 {
     MovieImpl* pMovie = GetMovieImpl();
-    PointF a = pMovie->MouseLastPosition;
+    PointF a = pMovie->mMouseState[0].GetLastPosition();
     PointF b(PointF::NoInit);
     Gfx06SetNormalizedScreenCoords(pMovie, a);
     TransformPointToLocal(&b, a, false);
@@ -1616,7 +1617,7 @@ void DisplayObjectBase::SetProjectionMatrix3D(const Matrix4F& m)
     GetRenderNode()->SetProjectionMatrix3D(m);
 
     MovieImpl* pmovie = GetMovieImpl();
-    if (pmovie && pmovie->pMovieLevels[0].pSprite == this)
+    if (pmovie && pmovie->MovieLevels[0].pSprite == this)
     {
         pmovie->pRenderRoot->SetProjectionMatrix3D(m);
         pmovie->pTopMostRoot->SetProjectionMatrix3D(m);
@@ -1638,13 +1639,13 @@ void DisplayObjectBase::SetViewMatrix3D(const Matrix3F& m)
 
     MovieImpl* pmovie = GetMovieImpl();
     Matrix3F viewportInv(Matrix3F::Translation(pmovie->VisibleFrameRect.x1, pmovie->VisibleFrameRect.y1, 0),
-                         Matrix3F::Scaling(1.0f / (pmovie->ViewportWidth / pmovie->VisibleFrameRect.Width()),
-                                           1.0f / (pmovie->ViewportHeight / pmovie->VisibleFrameRect.Height()), 1.0f));
+                         Matrix3F::Scaling(1.0f / (pmovie->mViewport.Width / pmovie->VisibleFrameRect.Width()),
+                                           1.0f / (pmovie->mViewport.Height / pmovie->VisibleFrameRect.Height()), 1.0f));
     Matrix3F view(m, viewportInv);
 
     GetRenderNode()->SetViewMatrix3D(view);
 
-    if (pmovie && pmovie->pMovieLevels[0].pSprite == this)
+    if (pmovie && pmovie->MovieLevels[0].pSprite == this)
     {
         pmovie->pRenderRoot->SetViewMatrix3D(view);
         pmovie->pTopMostRoot->SetViewMatrix3D(view);
@@ -1740,7 +1741,7 @@ void DisplayObject::SetScrollRect(const Render::RectD* r)
 // The movie's ScreenToWorld (+0x130), which un-projects the normalized mouse position for the 3D hit tests.
 static inline Render::ScreenToWorld& GetScreenToWorld(MovieImpl* pmovie)
 {
-    return *(Render::ScreenToWorld*)(void*)&pmovie->ScreenToWorldSx;
+    return pmovie->ScreenToWorld;
 }
 
 // A stage point (twips) in the object's space: through the inverse of the 2D transforms, or for 3D objects by
