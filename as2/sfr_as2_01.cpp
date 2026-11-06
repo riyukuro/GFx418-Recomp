@@ -1299,9 +1299,16 @@ void GAS_GlobalASSetPropFlags(const FnCall& fn)
 // Bodies of the exe called here, by their addresses.
 namespace Scaleform { namespace GFx { namespace AS2 {
 
+// ObjectInterface::SetConstMemberRaw (0x1400054b0), which the exe inlines into the getter below.
+static __forceinline void Sfr01SetConstMember(Object* pobj, ASStringContext* psc, const char* name, const Value& val)
+{
+    pobj->SetMemberRaw(psc, psc->CreateConstString(name), val, PropFlags());
+}
+
 // Global getIMECandidateListStyle(): an object with the style members that are set.
+// The exe tests each flag as (bool)((Flags >> n) & 1): movzx, shr, test al,1.
 // @0x1428fa7a0
-// MS2-FUNCTIONAL same members and conversions; the exe's temporaries and branch layout differ
+// MS2-FUNCTIONAL register allocation differs (exe keeps fn in r15 and saves an unused rdi, frame 0x90)
 void GAS_GlobalGetIMECandidateListStyle(const FnCall& fn)
 {
     Ptr<IMEManagerBase> pime = fn.Env->GetTarget()->GetMovieImpl()->GetIMEManager();
@@ -1312,33 +1319,33 @@ void GAS_GlobalGetIMECandidateListStyle(const FnCall& fn)
         return;
     // Adopt the new object: the exe takes no extra reference (0x1428fa82f Object ctor, no AddRef)
     Ptr<Object>      pobj = *SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);
-    ASStringContext* psc = fn.Env->GetSC();
-    if (style.HasTextColor())
-        pobj->SetMemberRaw(psc, psc->CreateConstString("textColor"), Value((Number)style.GetTextColor()), PropFlags());
-    if (style.HasBackgroundColor())
-        pobj->SetMemberRaw(psc, psc->CreateConstString("backgroundColor"), Value((Number)style.GetBackgroundColor()), PropFlags());
-    if (style.HasIndexBackgroundColor())
-        pobj->SetMemberRaw(psc, psc->CreateConstString("indexBackgroundColor"), Value((Number)style.GetIndexBackgroundColor()), PropFlags());
-    if (style.HasSelectedTextColor())
-        pobj->SetMemberRaw(psc, psc->CreateConstString("selectedTextColor"), Value((Number)style.GetSelectedTextColor()), PropFlags());
-    if (style.HasSelectedBackgroundColor())
-        pobj->SetMemberRaw(psc, psc->CreateConstString("selectedTextBackgroundColor"), Value((Number)style.GetSelectedBackgroundColor()), PropFlags());
-    if (style.HasSelectedIndexBackgroundColor())
-        pobj->SetMemberRaw(psc, psc->CreateConstString("selectedIndexBackgroundColor"), Value((Number)style.GetSelectedIndexBackgroundColor()), PropFlags());
-    if (style.HasFontSize())
-        pobj->SetMemberRaw(psc, psc->CreateConstString("fontSize"), Value((Number)style.GetFontSize()), PropFlags());
-    if (style.HasReadingWindowTextColor())
-        pobj->SetMemberRaw(psc, psc->CreateConstString("readingWindowTextColor"), Value((Number)style.GetReadingWindowTextColor()), PropFlags());
-    if (style.HasReadingWindowBackgroundColor())
-        pobj->SetMemberRaw(psc, psc->CreateConstString("readingWindowBackgroundColor"), Value((Number)style.GetReadingWindowBackgroundColor()), PropFlags());
-    if (style.HasReadingWindowFontSize())
-        pobj->SetMemberRaw(psc, psc->CreateConstString("readingWindowFontSize"), Value((Number)style.GetReadingWindowFontSize()), PropFlags());
+    if ((bool)((style.Flags >> 0) & 1))
+        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "textColor", Value((Number)style.GetTextColor()));
+    if ((bool)((style.Flags >> 1) & 1))
+        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "backgroundColor", Value((Number)style.GetBackgroundColor()));
+    if ((bool)((style.Flags >> 2) & 1))
+        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "indexBackgroundColor", Value((Number)style.GetIndexBackgroundColor()));
+    if ((bool)((style.Flags >> 3) & 1))
+        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "selectedTextColor", Value((Number)style.GetSelectedTextColor()));
+    if ((bool)((style.Flags >> 4) & 1))
+        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "selectedTextBackgroundColor", Value((Number)style.GetSelectedBackgroundColor()));
+    if ((bool)((style.Flags >> 5) & 1))
+        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "selectedIndexBackgroundColor", Value((Number)style.GetSelectedIndexBackgroundColor()));
+    if ((bool)((style.Flags >> 6) & 1))
+        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "fontSize", Value((Number)style.GetFontSize()));
+    if ((bool)((style.Flags >> 7) & 1))
+        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "readingWindowTextColor", Value((Number)style.GetReadingWindowTextColor()));
+    if ((bool)((style.Flags >> 8) & 1))
+        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "readingWindowBackgroundColor", Value((Number)style.GetReadingWindowBackgroundColor()));
+    if ((bool)((style.Flags >> 9) & 1))
+        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "readingWindowFontSize", Value((Number)style.GetReadingWindowFontSize()));
     fn.Result->SetAsObject(pobj);
 }
 
 // Global setIMECandidateListStyle(object): the numeric members of the object become the style.
+// The exe sets each reading-window flag before storing the value.
 // @0x1428f9f50
-// MS2-FUNCTIONAL same members and conversions; the exe's temporaries and branch layout differ
+// MS2-FUNCTIONAL the exe schedules the style/val init stores inside holder's AddRef (48 bytes)
 void GAS_GlobalSetIMECandidateListStyle(const FnCall& fn)
 {
     if (fn.NArgs < 1)
@@ -1350,69 +1357,68 @@ void GAS_GlobalSetIMECandidateListStyle(const FnCall& fn)
     if (!pobjArg)
         return;
     Ptr<Object>         holder = pobjArg;
-    ObjectInterface*    pobj = pobjArg;
-    ASStringContext*    psc = fn.Env->GetSC();
     IMECandidateListStyle style;
     Value               val;
-    if (pobj->GetMember(fn.Env, psc->CreateConstString("textColor"), &val))
+    ObjectInterface*    pobj = pobjArg;
+    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("textColor"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
             style.SetTextColor((UInt32)(SInt64)n);
     }
-    if (pobj->GetMember(fn.Env, psc->CreateConstString("backgroundColor"), &val))
+    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("backgroundColor"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
             style.SetBackgroundColor((UInt32)(SInt64)n);
     }
-    if (pobj->GetMember(fn.Env, psc->CreateConstString("indexBackgroundColor"), &val))
+    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("indexBackgroundColor"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
             style.SetIndexBackgroundColor((UInt32)(SInt64)n);
     }
-    if (pobj->GetMember(fn.Env, psc->CreateConstString("selectedTextColor"), &val))
+    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("selectedTextColor"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
             style.SetSelectedTextColor((UInt32)(SInt64)n);
     }
-    if (pobj->GetMember(fn.Env, psc->CreateConstString("selectedTextBackgroundColor"), &val))
+    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("selectedTextBackgroundColor"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
             style.SetSelectedBackgroundColor((UInt32)(SInt64)n);
     }
-    if (pobj->GetMember(fn.Env, psc->CreateConstString("selectedIndexBackgroundColor"), &val))
+    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("selectedIndexBackgroundColor"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
             style.SetSelectedIndexBackgroundColor((UInt32)(SInt64)n);
     }
-    if (pobj->GetMember(fn.Env, psc->CreateConstString("fontSize"), &val))
+    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("fontSize"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
             style.SetFontSize((UInt32)(SInt64)n);
     }
-    if (pobj->GetMember(fn.Env, psc->CreateConstString("readingWindowTextColor"), &val))
+    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("readingWindowTextColor"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
-            style.SetReadingWindowTextColor((UInt32)(SInt64)n);
+            { style.Flags |= IMECandidateListStyle::Flag_ReadingWindowTextColor; style.ReadingWindowTextColor = (UInt32)(SInt64)n; }
     }
-    if (pobj->GetMember(fn.Env, psc->CreateConstString("readingWindowBackgroundColor"), &val))
+    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("readingWindowBackgroundColor"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
-            style.SetReadingWindowBackgroundColor((UInt32)(SInt64)n);
+            { style.Flags |= IMECandidateListStyle::Flag_ReadingWindowBackgroundColor; style.ReadingWindowBackgroundColor = (UInt32)(SInt64)n; }
     }
-    if (pobj->GetMember(fn.Env, psc->CreateConstString("readingWindowFontSize"), &val))
+    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("readingWindowFontSize"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
-            style.SetReadingWindowFontSize((UInt32)(SInt64)n);
+            { style.Flags |= IMECandidateListStyle::Flag_ReadingWindowFontSize; style.ReadingWindowFontSize = (UInt32)(SInt64)n; }
     }
     pime->SetCandidateListStyle(style);
 }
