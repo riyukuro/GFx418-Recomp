@@ -2491,7 +2491,6 @@ static __forceinline void SetCharBoundariesResult(const FnCall& fn, bool found, 
 }
 
 // getCharBoundaries(charIndex)
-// MS2-FUNCTIONAL the exe loads the document before the rect address for the call
 // @0x14290a180
 void AvmTextField::GetCharBoundaries(const FnCall& fn)
 {
@@ -2501,8 +2500,9 @@ void AvmTextField::GetCharBoundaries(const FnCall& fn)
     if (fn.NArgs < 1)
         return;
     unsigned idx = fn.Arg(0).ToUInt32(fn.Env);
+    Text::DocView* pdoc = ptf->GetDocument();
     RectF    rect(0);
-    bool     found = ptf->GetDocument()->GetCharBoundaries(&rect, idx);
+    bool     found = pdoc->GetCharBoundaries(&rect, idx);
     SetCharBoundariesResult(fn, found, rect);
 }
 
@@ -2525,7 +2525,6 @@ void AvmTextField::GetCharIndexAtPoint(const FnCall& fn)
 }
 
 // getExactCharBoundaries(charIndex)
-// MS2-FUNCTIONAL the exe loads the document before the rect address for the call
 // @0x14290a4b0
 void AvmTextField::GetExactCharBoundaries(const FnCall& fn)
 {
@@ -2535,8 +2534,9 @@ void AvmTextField::GetExactCharBoundaries(const FnCall& fn)
     if (fn.NArgs < 1)
         return;
     unsigned idx = fn.Arg(0).ToUInt32(fn.Env);
+    Text::DocView* pdoc = ptf->GetDocument();
     RectF    rect(0);
-    bool     found = ptf->GetDocument()->GetExactCharBoundaries(&rect, idx);
+    bool     found = pdoc->GetExactCharBoundaries(&rect, idx);
     SetCharBoundariesResult(fn, found, rect);
 }
 
