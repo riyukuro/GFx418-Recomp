@@ -10,6 +10,8 @@
 // MS2-RANGE: 0x1425ae790-0x1425ae804 .text$mn
 
 #include "../include/gfx/gfx_loaderimpl.h"
+#include "../include/gfx/gfx_imagecreator.h"
+#include "../include/gfx/gfx_imagefilehandlerregistry.h"
 #include "../include/gfx/gfx_imageresource.h"
 #include "../include/gfx/gfx_log.h"
 #include "../include/gfx/gfx_moviedef.h"
@@ -59,90 +61,98 @@ public:
     bool LoadingSucceeded() const { return pImageRes.GetPtr() != 0; }
 };
 
-// Reads the image file's source with the registry's reader for its format, wraps it in an ImageResource and turns the
-// movie data into a one-frame image movie; the binding is marked finished (or failed).
-// MS2-FUNCTIONAL: the registry is read through its Render base at +0x18 and refcounted by hand
-// @0x1425aa720
-void MovieImageLoadTask::Execute()
+// LoaderImpl::FileFormat2RenderImageFile and LoaderImpl::LoadBuiltinImage (sfr_gfx_02f), inlined here by the exe.
+static __forceinline Render::ImageFileFormat MS2_FileFormat2RenderImageFile(FileTypeConstants::FileFormatType format)
 {
-    MemoryHeap*       pheap = pLoadStates->pWeakResourceLib->GetImageHeap();
-    Log*              plog  = pLoadStates->GetLog();
-    Render::ImageSource* pimage = 0;
-    Render::ImageFileFormat format;
-    const char*       path = pImageFile->GetFilePath();
-
-    switch (ImageFormat)
+    switch (format)
     {
-    case FileTypeConstants::File_JPEG: format = Render::ImageFile_JPEG; break;
-    case FileTypeConstants::File_PNG:  format = Render::ImageFile_PNG; break;
-    case FileTypeConstants::File_TGA:  format = Render::ImageFile_TGA; break;
-    case FileTypeConstants::File_DDS:  format = Render::ImageFile_DDS; break;
-    case FileTypeConstants::File_PVR:  format = Render::ImageFile_PVR; break;
-    case FileTypeConstants::File_SIF:  format = Render::ImageFile_SIF; break;
-    case FileTypeConstants::File_GXT:  format = Render::ImageFile_GXT; break;
+    case Loader::File_TGA:  return Render::ImageFile_TGA;
+    case Loader::File_DDS:  return Render::ImageFile_DDS;
+    case Loader::File_JPEG: return Render::ImageFile_JPEG;
+    case Loader::File_PNG:  return Render::ImageFile_PNG;
+    case Loader::File_SIF:  return Render::ImageFile_SIF;
+    case Loader::File_GXT:  return Render::ImageFile_GXT;
+    case Loader::File_PVR:  return Render::ImageFile_PVR;
     default:
+        return Render::ImageFile_Unknown;
+    }
+}
+
+static __forceinline Render::ImageSource* MS2_LoadBuiltinImage(File* pfile, FileTypeConstants::FileFormatType format,
+                                                               LoadStates* pls, Log* plog, MemoryHeap* pimageHeap)
+{
+    Render::ImageSource*    pimageSrc = 0;
+    const char*             pfilePath = pfile->GetFilePath();
+    Render::ImageFileFormat imageFmt  = MS2_FileFormat2RenderImageFile(format);
+
+    if (imageFmt == Render::ImageFile_Unknown)
+    {
         if (plog)
-            plog->LogMessage("Default image loader failed to load '%s'", path);
-        format = Render::ImageFile_Unknown;
-        break;
+            plog->LogMessage("Default image loader failed to load '%s'", pfilePath);
+        return 0;
     }
 
-    if (format != Render::ImageFile_Unknown)
+    Ptr<ImageFileHandlerRegistry> pregistry = pls->GetImageFileHandlerRegistry();
+    if (!pregistry)
     {
-        void* pregistry = pLoadStates->GetImageFileHandlerRegistry();
-        if (!pregistry)
+        if (plog)
+            plog->LogError("Image file handler registry is not installed - can't load image data");
+    }
+    else
+    {
+        Render::ImageFileReader* preader = pregistry->GetReader(imageFmt);
+        if (!preader)
         {
             if (plog)
-                plog->LogError("Image file handler registry is not installed - can't load image data");
+                plog->LogError("Can't load image %s - appropriate reader is not installed.", pfilePath);
         }
         else
         {
-            FUN_14257dc30(pregistry);
-            Render::ImageFileReader* preader =
-                RawFieldPtr<Render::ImageFileHandlerRegistry>(pregistry, 0x18)->GetReader(format);
-            if (!preader)
-            {
-                if (plog)
-                    plog->LogError("Can't load image %s - appropriate reader is not installed.", path);
-            }
-            else
-            {
-                Render::ImageCreateArgs args;
-                args.pHeap = pheap;
-                pimage = preader->ReadImageSource(pImageFile, args); // slot 5, not Read: the exe keeps the source
-            }
-            FUN_14257dcb0(pregistry);
+            Render::ImageCreateArgs args;
+            args.pHeap = pimageHeap;
+            pimageSrc  = preader->ReadImageSource(pfile, args);
         }
-
-        if (pimage)
-            pImageRes = *SF_HEAP_NEW(pheap) ImageResource(pimage, Resource::Use_Bitmap);
     }
+    return pimageSrc;
+}
 
-    unsigned bindState;
+// StateBag::GetImageCreator.
+static __forceinline Ptr<ImageCreator> MS2_GetImageCreator(MovieDefImpl* pdefImpl)
+{
+    return *(ImageCreator*)pdefImpl->GetStateAddRef(State::State_ImageCreator);
+}
+
+// Reads the image file's source with the registry's reader for its format, wraps it in an ImageResource and turns the
+// movie data into a one-frame image movie; the binding is marked finished (or failed).
+// @0x1425aa720
+void MovieImageLoadTask::Execute()
+{
+    Ptr<Render::ImageSource> pimage;
+    MemoryHeap*              pimageHeap = pLoadStates->pWeakResourceLib->GetImageHeap();
+
+    pimage = *MS2_LoadBuiltinImage(pImageFile, ImageFormat, pLoadStates, pLoadStates->GetLog(), pimageHeap);
+
+    if (pimage)
+        pImageRes = *SF_HEAP_NEW(pimageHeap) ImageResource(pimage, Resource::Use_Bitmap);
+
     if (pImageRes)
     {
-        File*         pfile = pImageFile;
-        Log*          pimageLog = pLoadStates->GetLog();
-        ImageCreator* pcreator  = (ImageCreator*)pDefImpl->GetStateAddRef(State::State_ImageCreator);
-        bool ok = pDef->pData->InitImageFileMovieDef(pfile->GetLength(), pImageRes, pcreator, pimageLog, true);
-        if (pcreator)
-            FUN_14257dcb0(pcreator);
-        if (!ok)
+        if (pDef->InitImageFileMovieDef(pImageFile->GetLength(), pImageRes, MS2_GetImageCreator(pDefImpl),
+                                        pLoadStates->GetLog()))
+        {
+            unsigned fileBytes = pDef->GetFileBytes();
+            pDefImpl->pBindData->UpdateBindingFrame(pDef->GetLoadingFrame(), fileBytes);
+            pDefImpl->pBindData->SetBindState(MovieDefImpl::BS_Finished | MovieDefImpl::BSF_Frame1Loaded |
+                                              MovieDefImpl::BSF_LastFrameLoaded);
+        }
+        else
         {
             pDefImpl->pBindData->SetBindState(MovieDefImpl::BS_Error);
-            pImageRes = 0;
-            if (pimage)
-                pimage->Release();
-            return;
+            pImageRes = NULL;
         }
-        pDefImpl->pBindData->UpdateBindingFrame(pDef->GetLoadingFrame(), pDef->GetFileBytes());
-        bindState = MovieDefImpl::BS_Finished | MovieDefImpl::BSF_Frame1Loaded | MovieDefImpl::BSF_LastFrameLoaded;
     }
     else
-        bindState = MovieDefImpl::BS_Error;
-    pDefImpl->pBindData->SetBindState(bindState);
-    if (pimage)
-        pimage->Release();
+        pDefImpl->pBindData->SetBindState(MovieDefImpl::BS_Error);
 }
 
 }} // namespace Scaleform::GFx
