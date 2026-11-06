@@ -960,7 +960,6 @@ static inline const Render::PointF& MouseLastPositionOf(MovieImpl* proot, unsign
     return pms->GetLastPosition();
 }
 
-// MS2-FUNCTIONAL 0x1425b9cc0: same code; the exe loads the two identity-matrix rows in the other order
 // @0x1425b9cc0
 bool TextField::IsUrlUnderMouseCursor(unsigned mouseIndex, Render::PointF* ppnt, Range* purlRangePos)
 {

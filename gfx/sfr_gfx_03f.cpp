@@ -913,6 +913,14 @@ void TextField::SetYScale(Double yscale)
     DisplayObjectBase::SetYScale(yscale);
 }
 
+}} // namespace GFx, Scaleform
+// The exe calls the out-of-line copy (0x1424471c0, instantiated in sfr_as2_01) here, where other callers inline
+// the header body. Declaring the specialization keeps cl from inlining it in this unit.
+namespace Scaleform { namespace Render {
+template<> void Matrix2x4<float>::TransformByInverse(Point<float>* result, const Point<float>& p) const;
+}} // namespace Render, Scaleform
+namespace Scaleform { namespace GFx {
+
 // The display info's position (the current one when unset), in pixels relative to the text rectangle.
 // @0x1425be970
 Render::PointF TextField::TransformToTextRectSpace(const GFx::Value::DisplayInfo& info) const

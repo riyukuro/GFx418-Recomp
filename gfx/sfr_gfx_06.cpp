@@ -514,7 +514,6 @@ static __forceinline void Gfx06SetNormalizedScreenCoords(MovieImpl* pm, const Po
 }
 
 // The mouse position in local coordinates, in pixels.
-// MS2-FUNCTIONAL 0x1425f22e0: scheduling of the inlined SetNormalizedScreenCoords (as in sfr_gfx_01i HitTest)
 // @0x1425f22e0
 Double DisplayObject::GetMouseX() const
 {
@@ -526,7 +525,6 @@ Double DisplayObject::GetMouseX() const
     return Render::TwipsToPixels(floor(b.x + 0.5));
 }
 
-// MS2-FUNCTIONAL 0x1425f23e0: scheduling of the inlined SetNormalizedScreenCoords (as in sfr_gfx_01i HitTest)
 // @0x1425f23e0
 Double DisplayObject::GetMouseY() const
 {

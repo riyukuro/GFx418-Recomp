@@ -223,7 +223,7 @@ public:
     double GetXScaleDouble() const   { return sqrt(double(Sx()) * double(Sx()) + double(Shy()) * double(Shy())); }
     double GetYScaleDouble() const   { return sqrt(double(Shx()) * double(Shx()) + double(Sy()) * double(Sy())); }
     double GetRotationDouble() const { return atan2(double(Shy()), double(Sx())); }
-    // p mapped through the inverse (out of line, 0x1424471c0)
+    // p mapped through the inverse (out of line at 0x1424471c0; most callers inline it)
     void TransformByInverse(Point<T>* result, const Point<T>& p) const;
     // the x and y rows of a 3D matrix
     explicit Matrix2x4(const Matrix3x4<T>& m)
@@ -235,9 +235,9 @@ public:
     // (appended for the containers, sfr_gfx_06d) p mapped through the inverse, by value (its COMDAT: 0x142447090)
     Point<T> TransformByInverse(const Point<T>& p) const
     {
-        Matrix2x4 m(*this);
-        m.Invert();
-        return Point<T>(m.M[0][0] * p.x + m.M[0][1] * p.y + m.M[0][3], m.M[1][0] * p.x + m.M[1][1] * p.y + m.M[1][3]);
+        Point<T> pt;
+        TransformByInverse(&pt, p);
+        return pt;
     }
 
     // (appended for the bitmap fills, sfr_gfx_06e)
@@ -312,6 +312,27 @@ Matrix2x4<T>& Matrix2x4<T>::SetParlToParl(const T* src, const T* dst)
     Invert();
     Append(d);
     return *this;
+}
+
+template<class T> SF_FORCEINLINE void MS2_Transform(const Matrix2x4<T>& m, Point<T>* result, const Point<T>& p)
+{
+    result->x = m.M[0][0] * p.x + m.M[0][1] * p.y + m.M[0][3];
+    result->y = m.M[1][0] * p.x + m.M[1][1] * p.y + m.M[1][3];
+}
+template<class T> SF_FORCEINLINE void MS2_SetMatrix(Matrix2x4<T>& d, const Matrix2x4<T>& m)
+{
+    d.M[0][0] = m.M[0][0]; d.M[0][1] = m.M[0][1]; d.M[0][2] = m.M[0][2]; d.M[0][3] = m.M[0][3];
+    d.M[1][0] = m.M[1][0]; d.M[1][1] = m.M[1][1]; d.M[1][2] = m.M[1][2]; d.M[1][3] = m.M[1][3];
+}
+// The SDK steps: copy the matrix, copy that copy, SetInverse from the second copy into the first, then Transform.
+// The out-of-line copy (0x1424471c0) is explicitly instantiated in sfr_as2_01.
+template<class T>
+inline void Matrix2x4<T>::TransformByInverse(Point<T>* result, const Point<T>& p) const
+{
+    Matrix2x4<T> c(NoInit); MS2_SetMatrix(c, *this);
+    Matrix2x4<T> t(NoInit); MS2_SetMatrix(t, c);
+    c.SetInverse(t);
+    MS2_Transform(c, result, p);
 }
 
 typedef Matrix2x4<float> Matrix2F;

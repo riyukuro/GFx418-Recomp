@@ -4261,29 +4261,10 @@ template bool GCRootBase::PushBackSafe(const GCRootBase::ValueType& val);
 // ---- Matrix2x4 out-of-line copies ----
 namespace Scaleform { namespace Render {
 
-template<class T> static SF_FORCEINLINE void MS2_Transform(const Matrix2x4<T>& m, Point<T>* result, const Point<T>& p)
-{
-    result->x = m.M[0][0] * p.x + m.M[0][1] * p.y + m.M[0][3];
-    result->y = m.M[1][0] * p.x + m.M[1][1] * p.y + m.M[1][3];
-}
-template<class T> static SF_FORCEINLINE void MS2_SetMatrix(Matrix2x4<T>& d, const Matrix2x4<T>& m)
-{
-    d.M[0][0] = m.M[0][0]; d.M[0][1] = m.M[0][1]; d.M[0][2] = m.M[0][2]; d.M[0][3] = m.M[0][3];
-    d.M[1][0] = m.M[1][0]; d.M[1][1] = m.M[1][1]; d.M[1][2] = m.M[1][2]; d.M[1][3] = m.M[1][3];
-}
-// p mapped through the inverse of this matrix.
+// p mapped through the inverse of this matrix (the body is in render_matrix2x4.h).
 // @0x1424471c0
-template<class T>
-void Matrix2x4<T>::TransformByInverse(Point<T>* result, const Point<T>& p) const
-{
-    Matrix2x4<T> c(NoInit); MS2_SetMatrix(c, *this);
-    Matrix2x4<T> t(NoInit); MS2_SetMatrix(t, c);
-    c.SetInverse(t);
-    MS2_Transform(c, result, p);
-}
 template void Matrix2x4<float>::TransformByInverse(Point<float>*, const Point<float>&) const;
 // @0x142447090
-// MS2-FUNCTIONAL 0x142447090: same arithmetic; cl schedules the inverse's operands differently
 template Point<float> Matrix2x4<float>::TransformByInverse(const Point<float>&) const;
 // @0x1424eb700
 template Matrix2x4<float>& Matrix2x4<float>::AppendScaling(float, float);
