@@ -227,17 +227,17 @@ public:
             ++CurByteIndex;
         CurBitIndex = 0;
     }
-    // The bit, unshifted (non-zero when set).
-    unsigned ReadUInt1()
+    // The bit, as in the SDK.
+    SF_INLINE bool ReadUInt1()
     {
         unsigned v = pData[CurByteIndex] & (1 << (7 - CurBitIndex));
         ++CurBitIndex;
         if (CurBitIndex >= 8)
         {
-            ++CurByteIndex;
             CurBitIndex = 0;
+            ++CurByteIndex;
         }
-        return v;
+        return v != 0;
     }
     unsigned ReadUInt(unsigned bitcount);
     int      ReadSInt(unsigned bitcount)

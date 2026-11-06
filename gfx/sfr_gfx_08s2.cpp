@@ -163,7 +163,6 @@ SwfShapeDecoder::SwfShapeDecoder(ShapePosInfo* pos, const UByte* pdata, float sf
 }
 
 // A curve or a line from the last point; lines are general or axis aligned.
-// MS2-FUNCTIONAL: load order and register allocation differ.
 // @0x14265c280
 Render::PathEdgeType SwfShapeDecoder::ReadEdge(Edge* edge)
 {
@@ -220,7 +219,6 @@ Render::PathEdgeType SwfShapeDecoder::ReadEdge(Edge* edge)
 // A style change record: a move, new style indices (offset by the styles of the earlier layers) or a new set of
 // styles, which the reader left behind as their 24-bit bases. retVal is passed on unless the record ends the shape or
 // starts a layer.
-// MS2-FUNCTIONAL: load order and register allocation differ.
 // @0x14265c9a0
 Render::ShapePathType SwfShapeDecoder::ReadNonEdgeRec(Render::ShapePathType retVal)
 {
