@@ -24,6 +24,17 @@
 
 namespace Scaleform { namespace GFx {
 
+// The out-of-line copy of DisplayObjectBase::Is3D() (sfr_as3_18): the exe calls it for the mask.
+namespace AS3 { bool FUN_142513e50(const DisplayObjectBase* pobj); }
+
+// The SDK's GetWorldMatrix() by value.
+static inline Matrix2F SdkGetWorldMatrix(const DisplayObjectBase* pobj)
+{
+    Matrix2F m;
+    pobj->GetWorldMatrix(&m);
+    return m;
+}
+
 // ASMovieRootBase has no recovered virtuals yet; the two slots called here go through its vftable.
 typedef MovieDefRootNode* (*CreateMovieDefRootNodeFn)(ASMovieRootBase*, MemoryHeap*, MovieDefImpl*, bool);
 typedef void (*ResolveStickyVariablesFn)(ASMovieRootBase*, InteractiveObject*);
@@ -46,6 +57,12 @@ static inline void RemoveRootNode(MovieDefRootNode* p)
 {
     p->pPrev->pNext = p->pNext;
     p->pNext->pPrev = p->pPrev;
+}
+
+// List::IsNull: the list root passes for a node one base offset before it.
+static inline bool RootNodeIsNull(const MovieDefRootNodeLinks& root, const MovieDefRootNode* p)
+{
+    return p == static_cast<const MovieDefRootNode*>(&root);
 }
 
 static inline void PushFrontRootNode(MovieDefRootNodeLinks* proot, MovieDefRootNode* p)
@@ -109,27 +126,27 @@ DisplayObjContainer::~DisplayObjContainer()
 }
 
 // @0x1425fbe90
-// MS2-FUNCTIONAL: register allocation only (the exe keeps the movie in r14 across the search loop)
+// MS2-FUNCTIONAL: register allocation only (the list sentinel is in r9, the exe uses rdx); SDK break + re-test form
 void DisplayObjContainer::AssignRootNode(bool importFlag)
 {
     if (!pRootNode)
     {
         // Share the node of another root of the same movie def and import flag.
-        MovieImpl*        pmovie = GetMovieImpl();
-        MovieDefRootNode* pnode  = pmovie->RootMovieDefNodes.pNext;
-        while (pnode != static_cast<MovieDefRootNode*>(&pmovie->RootMovieDefNodes))
+        MovieDefRootNode* pnode = GetMovieImpl()->RootMovieDefNodes.pNext;
+        while (!RootNodeIsNull(GetMovieImpl()->RootMovieDefNodes, pnode))
         {
             if (pnode->pDefImpl == pDefImpl && pnode->ImportFlag == importFlag)
             {
                 pnode->SpriteRefCount++;
                 pRootNode = pnode;
-                return;
+                break;
             }
             pnode = pnode->pNext;
         }
 
+        if (!pRootNode)
         {
-            MemoryHeap* pheap = pmovie->GetMovieHeap();
+            MemoryHeap* pheap = GetMovieImpl()->GetMovieHeap();
 
             pRootNode = CreateMovieDefRootNode(pASRoot, pheap, pDefImpl, importFlag);
             // The bytes first: the loading thread keeps advancing both.
@@ -151,7 +168,6 @@ void DisplayObjContainer::AssignRootNode(bool importFlag)
 }
 
 // @0x1425fbff0
-// MS2-FUNCTIONAL: the inlined matrix inverse schedules its float registers differently
 void DisplayObjContainer::CalcDisplayListHitTestMaskArray(Array<UByte>* phitTest, const PointF& pt,
                                                           bool testShape) const
 {
@@ -169,7 +185,8 @@ void DisplayObjContainer::CalcDisplayListHitTestMaskArray(Array<UByte>* phitTest
                 memset(&(*phitTest)[0], 1, n);
             }
 
-            PointF p = pmaskch->GetMatrix().TransformByInverse(pt);
+            Matrix2F m = pmaskch->GetMatrix();
+            PointF   p = m.TransformByInverse(pt);
             (*phitTest)[i] = pmaskch->PointTestLocal(p, HitTest_TestShape);
 
             // The clip covers the children up to its clip depth.
@@ -277,13 +294,13 @@ ResourceId DisplayObjContainer::GetIdAtDepth(int depth)
 }
 
 // @0x1425fc5f0
-// MS2-FUNCTIONAL: register allocation and block layout around the shared epilogue that frees the hit-test array
+// MS2-FUNCTIONAL: register allocation in the child loop (ours spills i to a slot and tests it with jg, the exe keeps it in r12 with sub r12,r14; jns)
 DisplayObjectBase::TopMostResult DisplayObjContainer::GetTopMostMouseEntity(const PointF& pt, TopMostDescr* pdescr)
 {
     Sprite* phitAreaHolder = GetHitAreaHolder();
 
     // Hidden containers take no mouse events unless they are a hit area; masks never do.
-    if ((Flags & Mask_HitTestDisable) || (!GetVisible() && !phitAreaHolder) || IsUsedAsMask())
+    if (((UByte)(Flags >> 11) & 1) || (!GetVisible() && !phitAreaHolder) || IsUsedAsMask())
     {
         pdescr->pResult = 0;
         return TopMost_FoundNothing;
@@ -294,23 +311,19 @@ DisplayObjectBase::TopMostResult DisplayObjContainer::GetTopMostMouseEntity(cons
         return TopMost_FoundNothing;
     }
 
-    PointF localPt;
+    PointF localPt(PointF::NoInit);
     if (!TransformPointToLocalAndCheckBounds(&localPt, pt))
         return TopMost_FoundNothing;
 
     DisplayObject* pmask = GetMask();
     if (pmask && pmask->IsUsedAsMask() && !pmask->IsUnloaded())
     {
-        PointF pp;
-        if (!pmask->Is3D())
+        PointF pp(PointF::NoInit);
+        if (!AS3::FUN_142513e50(pmask))
         {
             Matrix2F matrix;
-            Matrix2F maskWorld;
-            pmask->GetWorldMatrix(&maskWorld);
-            matrix.SetInverse(maskWorld);
-            Matrix2F world;
-            GetWorldMatrix(&world);
-            matrix.Prepend(world);
+            matrix.SetInverse(SdkGetWorldMatrix(pmask));
+            matrix *= SdkGetWorldMatrix(this);
             pp.x = matrix.M[0][0] * localPt.x + matrix.M[0][1] * localPt.y + matrix.M[0][3];
             pp.y = matrix.M[1][0] * localPt.x + matrix.M[1][1] * localPt.y + matrix.M[1][3];
         }
@@ -344,7 +357,9 @@ DisplayObjectBase::TopMostResult DisplayObjContainer::GetTopMostMouseEntity(cons
     bool          foundButMouseDisabled = false;
 
     // Backwards: the higher objects first.
-    for (SPInt i = (SPInt)mDisplayList.GetCount() - 1; i >= 0; i--)
+    SPInt i, n;
+    n = (SPInt)mDisplayList.GetCount();
+    for (i = n - 1; i >= 0; i--)
     {
         DisplayObjectBase* ch = mDisplayList.GetDisplayObject(i);
 
@@ -356,9 +371,9 @@ DisplayObjectBase::TopMostResult DisplayObjContainer::GetTopMostMouseEntity(cons
         TopMostResult te = ch->GetTopMostMouseEntity(localPt, pdescr);
         if (te == TopMost_Found)
         {
-            if (Flags & Mask_MouseChildrenDisabled)
+            if ((UByte)(Flags >> 13) & 1)
                 pdescr->pResult = this;
-            if (pdescr->pResult && (pdescr->pResult->Flags & Mask_MouseDisabled))
+            if (pdescr->pResult && ((UByte)(pdescr->pResult->Flags >> 12) & 1))
             {
                 pdescr->pResult       = this;
                 foundButMouseDisabled = true;
