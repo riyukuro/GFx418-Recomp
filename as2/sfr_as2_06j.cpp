@@ -46,74 +46,89 @@ void RectangleObject::SetProperties(Environment* penv, const ASRect& r)
     }
 }
 
-// MS2-FUNCTIONAL: the exe compares the names with inlined byte loops in a different order
 // @0x142986d60
 bool RectangleObject::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
 {
     if (flags.Flags & PropFlags::PropFlag_ReadOnly)
         return false;
-    const char* pname = name.ToCStr();
-    ASRect      r(0, 0, 0, 0);
-    if (strcmp(pname, "left") == 0)
+    if (name == "left")
     {
+        ASRect r(0, 0, 0, 0);
         GetProperties(penv, r);
         r.x1 = val.ToNumber(penv);
+        SetProperties(penv, r);
+        return true;
     }
-    else if (strcmp(pname, "top") == 0)
+    else if (name == "top")
     {
+        ASRect r(0, 0, 0, 0);
         GetProperties(penv, r);
         r.y1 = val.ToNumber(penv);
+        SetProperties(penv, r);
+        return true;
     }
-    else if (strcmp(pname, "right") == 0)
+    else if (name == "right")
     {
+        ASRect r(0, 0, 0, 0);
         GetProperties(penv, r);
         r.x2 = val.ToNumber(penv);
+        SetProperties(penv, r);
+        return true;
     }
-    else if (strcmp(pname, "bottom") == 0)
+    else if (name == "bottom")
     {
+        ASRect r(0, 0, 0, 0);
         GetProperties(penv, r);
         r.y2 = val.ToNumber(penv);
+        SetProperties(penv, r);
+        return true;
     }
-    else if (strcmp(pname, "topLeft") == 0)
+    else if (name == "topLeft")
     {
+        ASRect r(0, 0, 0, 0);
         GetProperties(penv, r);
         Object* ppt = val.ToObject(penv);
         if (ppt)
         {
-            GASPoint pt;
+            GASPoint pt(GASPoint::NoInit);
             GFxObject_GetPointProperties(penv, ppt, pt);
             r.x1 = pt.x;
             r.y1 = pt.y;
         }
+        SetProperties(penv, r);
+        return true;
     }
-    else if (strcmp(pname, "bottomRight") == 0)
+    else if (name == "bottomRight")
     {
+        ASRect r(0, 0, 0, 0);
         GetProperties(penv, r);
         Object* ppt = val.ToObject(penv);
         if (ppt)
         {
-            GASPoint pt;
+            GASPoint pt(GASPoint::NoInit);
             GFxObject_GetPointProperties(penv, ppt, pt);
             r.x2 = pt.x;
             r.y2 = pt.y;
         }
+        SetProperties(penv, r);
+        return true;
     }
-    else if (strcmp(pname, "size") == 0)
+    else if (name == "size")
     {
+        ASRect r(0, 0, 0, 0);
         GetProperties(penv, r);
         Object* ppt = val.ToObject(penv);
         if (ppt)
         {
-            GASPoint pt;
+            GASPoint pt(GASPoint::NoInit);
             GFxObject_GetPointProperties(penv, ppt, pt);
-            r.y2 = r.y1 + pt.y;
-            r.x2 = pt.x + r.x1;
+            r.x2 = r.x1 + pt.x;
+            r.y2 = pt.y + r.y1;
         }
+        SetProperties(penv, r);
+        return true;
     }
-    else
-        return Object::SetMember(penv, name, val, flags);
-    SetProperties(penv, r);
-    return true;
+    return Object::SetMember(penv, name, val, flags);
 }
 
 }}} // namespace Scaleform::GFx::AS2
