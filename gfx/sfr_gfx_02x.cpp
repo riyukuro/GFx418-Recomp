@@ -168,115 +168,137 @@ void RefCountCollector<Stat>::AddRoot(BaseType* root)
 // Marks the buffered roots and what they reach "in cycle" (internal references subtracted), puts back in use
 // whatever is still referenced from outside together with what it reaches, and frees the rest. Survivors whose
 // release was delayed are released now; roots go back to the buffer, which may start another round.
-// MS2-FUNCTIONAL: written from the exe's control flow; register allocation and block order not checked
+// The SDK body.
 // @0x142592200
 template<int Stat>
-bool RefCountCollector<Stat>::Collect(Stats* pstats)
+bool RefCountCollector<Stat>::Collect(Stats* pstat)
 {
-    if ((Flags & 1) || Roots.GetSize() == 0)
+    if (IsCollecting() || Roots.GetSize() == 0)
     {
-        if (pstats)
-        {
-            pstats->RootsNumber     = 0;
-            pstats->RootsFreedTotal = 0;
-        }
+        if (pstat)
+            memset(pstat, 0, sizeof(*pstat));
         return false;
     }
 
-    UPInt rootsNumber = 0;
-    UPInt freed       = 0;
-    UPInt n           = Roots.GetSize();
+    // RefCountBaseGC::MarkInCycle and ClearInList (SDK inline members).
+    auto markInCycle = [](BaseType* p, RefCountCollector* prcc) {
+        if (!p->IsInState(BaseType::State_InCycle))
+        {
+            p->SetState(BaseType::State_InCycle);
+            p->ExecuteForEachChild_GC(prcc, BaseType::Operation_MarkInCycle);
+        }
+    };
+    auto clearInList = [](BaseType* p, RefCountCollector* prcc) {
+        p->RefCount &= ~BaseType::Flag_InList;
+        p->pRCC      = prcc;
+        p->ClearBuffered();
+    };
+
+    // RootArray::Resize when shrinking (inline here).
+    auto shrinkRoots = [](RootArray& r, UPInt newSize) {
+        if (newSize >= r.Size)
+            return;
+        r.Size = newSize;
+    };
+
+    UPInt initialNRoots     = 0;
+    UPInt totalKillListSize = 0;
+
     do
     {
+        // The SDK's Flags_Collecting pair. The bit lies outside the UByte, so only a byte store (and its reload
+        // below) is left, as in the exe.
+        Flags |= 0x100;
+
+        UPInt i, nroots = Roots.GetSize();
+        initialNRoots += (unsigned)nroots;
+
         pLastPtr       = &ListRoot;
-        rootsNumber   += (unsigned)n;
-        ListRoot.pPrev = &ListRoot;
-        ListRoot.pNext = &ListRoot;
+        ListRoot.pNext = ListRoot.pPrev = &ListRoot;
         ListRoot.SetInList();
 
         // 1. mark
-        for (UPInt i = 0; i < n; ++i)
+        for (i = 0; i < nroots; ++i)
         {
-            BaseType* proot = Roots[i];
-            if ((UPInt)proot & 1)
-                continue;
-            if (proot->IsInState(BaseType::State_Root))
+            union
             {
-                AddToList(proot);
-                for (BaseType* p = proot; p != &ListRoot; p = p->pNext)
+                BaseType* Ptr;
+                UPInt     PtrValue;
+            } u;
+            u.Ptr = Roots[i];
+            if (u.PtrValue & 1)
+                continue; // free root slot
+            BaseType* proot = u.Ptr;
+            BaseType* cur   = proot;
+            if (cur->IsInState(BaseType::State_Root))
+            {
+                AddToList(cur);
+                while (cur != &ListRoot)
                 {
-                    if (!p->IsInState(BaseType::State_InCycle))
-                    {
-                        p->SetState(BaseType::State_InCycle);
-                        p->ExecuteForEachChild_GC(this, BaseType::Operation_MarkInCycle);
-                    }
+                    markInCycle(cur, this);
+                    cur = cur->pNext;
                 }
             }
             else
-                proot->ClearBuffered();
+                cur->ClearBuffered();
         }
         FirstFreeRootIndex = SF_MAX_UPINT;
-        if (0 < Roots.Size)
-            Roots.Size = 0;
+        shrinkRoots(Roots, 0);
 
-        BaseType* p = ListRoot.pNext;
-        if (p != &ListRoot)
+        // 2. scan: referenced from outside means in use
+        BaseType* cur = ListRoot.pNext;
+        while (cur != &ListRoot)
         {
-            // 2. scan: referenced from outside means in use
-            do
+            if ((cur->RefCount & BaseType::Mask_RefCount) > 0)
             {
-                if ((p->RefCount & BaseType::Mask_RefCount) > 0)
-                {
-                    p->SetState(BaseType::State_InUse);
-                    pLastPtr = p;
-                    p->ExecuteForEachChild_GC(this, BaseType::Operation_ScanInUse);
-                }
-                else
-                    p->SetState(BaseType::State_Garbage);
-                p = p->pNext;
-            } while (p != &ListRoot);
-
-            // 3. free the garbage, hand the survivors back
-            p = ListRoot.pNext;
-            while (p != &ListRoot)
-            {
-                UInt32    rc    = p->RefCount;
-                BaseType* pnext = p->pNext;
-                if (((rc >> BaseType::Shift_State) & BaseType::Mask_State) == BaseType::State_Garbage)
-                {
-                    p->Finalize_GC();
-                    Memory::Free(p);
-                    ++freed;
-                }
-                else
-                {
-                    UInt32 nrc  = rc & ~(BaseType::Flag_Buffered | BaseType::Flag_InList);
-                    p->pRCC      = this;
-                    p->RefCount  = nrc;
-                    p->RootIndex = ~0u;
-                    if (nrc & BaseType::Flag_DelayedRelease)
-                    {
-                        p->RefCount = rc & ~(BaseType::Flag_Buffered | BaseType::Flag_InList | BaseType::Flag_DelayedRelease);
-                        p->ReleaseInternal();
-                    }
-                    else if (((rc >> BaseType::Shift_State) & BaseType::Mask_State) == BaseType::State_Root)
-                        AddRoot(p);
-                }
-                p = pnext;
+                cur->SetState(BaseType::State_InUse);
+                pLastPtr = cur; // to perform reinserting after cur
+                cur->ExecuteForEachChild_GC(this, BaseType::Operation_ScanInUse);
             }
+            else
+                cur->SetState(BaseType::State_Garbage);
+            cur = cur->pNext;
+        }
+
+        // 3. free the garbage, hand the survivors back
+        cur = ListRoot.pNext;
+        while (cur != &ListRoot)
+        {
+            BaseType* next = cur->pNext;
+            if (cur->IsInState(BaseType::State_Garbage))
+            {
+                cur->Finalize_GC();
+                Memory::Free(cur);
+                ++totalKillListSize;
+            }
+            else
+            {
+                clearInList(cur, this);
+                if (cur->IsDelayedRelease())
+                {
+                    cur->RefCount &= ~BaseType::Flag_DelayedRelease;
+                    cur->ReleaseInternal();
+                }
+                else
+                {
+                    if (cur->IsInState(BaseType::State_Root))
+                        AddRoot(cur);
+                    else
+                        cur->ClearBuffered();
+                }
+            }
+            cur = next;
         }
         pLastPtr = &ListRoot;
-        ListRoot.RefCount &= ~(BaseType::Flag_Buffered | BaseType::Flag_InList);
-        ListRoot.pRCC      = 0;
-        ListRoot.RootIndex = ~0u;
-        n                  = Roots.GetSize();
+        clearInList(&ListRoot, (RefCountCollector*)0);
+        Flags &= ~0x100;
         FirstFreeRootIndex = SF_MAX_UPINT;
-    } while (n != 0);
+    } while (Roots.GetSize() > 0);
 
-    if (pstats)
+    if (pstat)
     {
-        pstats->RootsNumber     = (unsigned)rootsNumber;
-        pstats->RootsFreedTotal = (unsigned)(rootsNumber < freed ? rootsNumber : freed);
+        pstat->RootsNumber     = (unsigned)initialNRoots;
+        pstat->RootsFreedTotal = (unsigned)Alg::PMin(initialNRoots, totalKillListSize);
     }
     return true;
 }
