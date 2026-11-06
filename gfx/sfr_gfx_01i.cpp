@@ -513,17 +513,19 @@ MemoryHeap* MovieImpl::GetHeap() const
 // @0x14256f890
 void MovieImpl::GetMouseState(unsigned mouseIndex, float* x, float* y, unsigned* buttons)
 {
-    if (mouseIndex >= MouseCursorCount)
-        return;
-    const MouseState& ms = mMouseState[mouseIndex];
-    float px = (Render::TwipsToPixels(ms.LastPosition.x) - ViewOffsetX) / ViewScaleX;
-    float py = (Render::TwipsToPixels(ms.LastPosition.y) - ViewOffsetY) / ViewScaleY;
-    if (x)
-        *x = px;
-    if (y)
-        *y = py;
-    if (buttons)
-        *buttons = ms.CurButtonsState;
+    if (mouseIndex < MouseCursorCount)
+    {
+        PointF p = mMouseState[mouseIndex].LastPosition;
+        // recalculate coords back to window
+        p.x = (Render::TwipsToPixels(p.x) - ViewOffsetX) / ViewScaleX;
+        p.y = (Render::TwipsToPixels(p.y) - ViewOffsetY) / ViewScaleY;
+        if (x)
+            *x = p.x;
+        if (y)
+            *y = p.y;
+        if (buttons)
+            *buttons = mMouseState[mouseIndex].CurButtonsState;
+    }
 }
 
 // @0x14256f880
@@ -4586,7 +4588,6 @@ MovieImpl::~MovieImpl()
 // The player TU emits the scalar deleting dtor of this refcount base (exe vftable 0x143183600).
 template class Scaleform::RefCountBaseStatImpl<Scaleform::RefCountNTSImpl, 0x143>;
 
-// MS2-FUNCTIONAL ?GetMouseState@MovieImpl@GFx@Scaleform@@UEAAXIPEAM0PEAI@Z: the exe computes both coordinates up front (no common 0.05 constant); this build sinks x into its branch
 // MS2-FUNCTIONAL ?Release@Movie@GFx@Scaleform@@QEAAXXZ: register allocation (the exe keeps this in rdi, this build in rbx)
 // MS2-FUNCTIONAL ?HitTest@MovieImpl@GFx@Scaleform@@UEAA_NMMW4HitTestType@Movie@23@I@Z: scheduling of the inlined SetNormalizedScreenCoords (same as sfr_gfx_06 GetMouseX)
 // MS2-FUNCTIONAL ?TranslateToScreen@MovieImpl@GFx@Scaleform@@UEAA?AV?$Point@M@Render@3@AEBV453@PEAV?$Matrix2x4@M@53@@Z: xmm register allocation of the inlined Prepend pair (same operations)
