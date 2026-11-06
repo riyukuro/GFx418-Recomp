@@ -17,20 +17,85 @@
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 namespace {
+struct InvokeInlineTag {};
+}
 
-// Looks the method up by name: the variable itself, the object or character it was found on (the receiver of the
-// call), and the character the path ended in. The messages are the exe's.
-struct FoundMethod
+// FunctionRefBase::SetLocalFrame (exe 0x142981e70), expanded in place as the exe has it here.
+static SF_FORCEINLINE void InvokeSetLocalFrame(FunctionRefBase* p, LocalFrame* localFrame, bool weakRef)
 {
-    Value              Method;
-    Value              Owner;
-    InteractiveObject* pNewTarget;
-    FoundMethod() : pNewTarget(0) {}
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->Release();
+    p->pLocalFrame = localFrame;
+    if (weakRef)
+        p->Flags |= FunctionRefBase::FuncRef_Weak;
+    else
+        p->Flags &= ~FunctionRefBase::FuncRef_Weak;
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->AddRef();
+}
+
+// FunctionRefBase::Init(orig) with the SetLocalFrame call expanded.
+template<>
+SF_FORCEINLINE FunctionRef::FunctionRef(const FunctionRefBase& orig, InvokeInlineTag)
+{
+    Flags    = 0;
+    Function = orig.Function;
+    if (!(Flags & FuncRef_Internal) && Function)
+        Function->AddRef();
+    pLocalFrame = 0;
+    if (orig.pLocalFrame)
+        InvokeSetLocalFrame(this, orig.pLocalFrame, (orig.Flags & FuncRef_Weak) != 0);
+}
+
+namespace {
+
+// Value::ToFunction (exe 0x142991190), inlined.
+struct InvokeValueAccess : Value
+{
+    static SF_FORCEINLINE FunctionRef ToFunction(const Value& v, const Environment* penv)
+    {
+        switch (v.T.Type)
+        {
+        case FUNCTIONNAME:
+            return static_cast<const InvokeValueAccess&>(v).ResolveFunctionName(penv);
+        case FUNCTION:
+            return FunctionRef(v.V.FunctionValue, InvokeInlineTag());
+        default:;
+        }
+        return FunctionRef();
+    }
 };
 
-bool FindMethod(FoundMethod* pfound, const char* pmethodName, ObjectInterface* pthis, Environment* penv)
+// Value::ToObjectInterface with ToCharacter and ToAvmCharacter inlined.
+static SF_FORCEINLINE ObjectInterface* InvokeToObjectInterface(const Value& v, const Environment* penv)
 {
-    if (!penv->GetVariable(penv->CreateString(pmethodName), &pfound->Method, 0, &pfound->pNewTarget, &pfound->Owner, 0))
+    if (v.T.Type == Value::CHARACTER)
+    {
+        InteractiveObject* pchar = 0;
+        if (penv && v.V.pCharHandle)
+        {
+            DisplayObject* pdisp = v.V.pCharHandle->ResolveCharacter(penv->GetTarget()->GetMovieImpl());
+            if (pdisp)
+                pchar = pdisp->IsInteractiveObject() ? static_cast<InteractiveObject*>(pdisp) : 0;
+        }
+        return pchar ? GFx::AS2::ToAvmCharacter(pchar) : 0;
+    }
+    return v.ToObject(penv);
+}
+
+} // namespace
+
+// The method by name, called with nargs values from the environment stack.
+// @0x142946fc0
+bool GAS_Invoke(const char* pmethodName, Value* presult, ObjectInterface* pthis, Environment* penv, int nargs,
+                int firstArgBottomIndex)
+{
+    if (!pmethodName || *pmethodName == '\0')
+        return false;
+
+    InteractiveObject* pnewTarget = 0;
+    Value              method, owner;
+    if (!penv->GetVariable(penv->CreateString(pmethodName), &method, NULL, &pnewTarget, &owner, 0))
     {
         if (pthis && pthis->IsASCharacter())
             penv->LogScriptError("Can't find method '%s.%s' to invoke.",
@@ -39,51 +104,23 @@ bool FindMethod(FoundMethod* pfound, const char* pmethodName, ObjectInterface* p
             penv->LogScriptError("Can't find method '%s' to invoke.", pmethodName);
         return false;
     }
-    return true;
-}
 
-// The object the method is called on: the owner found with it, else the character the path ended in, else pthis.
-ObjectInterface* ReceiverOf(FoundMethod& found, ObjectInterface* pthis, Environment* penv)
-{
-    if (found.Owner.IsCharacter())
-        return found.Owner.ToAvmCharacter(penv);
-    if (found.Owner.IsObject())
-        return found.Owner.ToObject(penv);
-    if (found.pNewTarget)
-        return static_cast<AvmCharacter*>(found.pNewTarget->GetAvmIntObj());
-    return pthis;
-}
-
-void LogNotFunction(const char* pmethodName, ObjectInterface* pthis, Environment* penv)
-{
-    if (pthis && pthis->IsASCharacter())
-        penv->LogScriptError("Invoked method '%s.%s' is not a function",
-                             pthis->ToCharacter_Call()->GetCharacterHandle()->NamePath.ToCStr(), pmethodName);
-    else
-        penv->LogScriptError("Invoked method '%s' is not a function", pmethodName);
-}
-
-} // namespace
-
-// The method by name, called with nargs values from the environment stack.
-// MS2-FUNCTIONAL: ref-counted function holders and the owner switch are scheduled differently
-// @0x142946fc0
-bool GAS_Invoke(const char* pmethodName, Value* presult, ObjectInterface* pthis, Environment* penv, int nargs,
-                int firstArgBottomIndex)
-{
-    if (!pmethodName || !*pmethodName)
-        return true;
-    FoundMethod found;
-    if (!FindMethod(&found, pmethodName, pthis, penv))
-        return false;
-    FunctionRef func = found.Method.ToFunction(penv);
+    FunctionRef func = InvokeValueAccess::ToFunction(method, penv);
     if (func.IsNull())
     {
-        LogNotFunction(pmethodName, pthis, penv);
+        if (pthis && pthis->IsASCharacter())
+            penv->LogScriptError("Invoked method '%s.%s' is not a function",
+                                 pthis->ToCharacter_Call()->GetCharacterHandle()->NamePath.ToCStr(), pmethodName);
+        else
+            penv->LogScriptError("Invoked method '%s' is not a function", pmethodName);
         return false;
     }
-    return GAS_Invoke(found.Method, presult, ReceiverOf(found, pthis, penv), penv, nargs, firstArgBottomIndex,
-                      pmethodName);
+
+    if (owner.IsCharacter() || owner.IsObject())
+        pthis = InvokeToObjectInterface(owner, penv);
+    else if (pnewTarget)
+        pthis = ToAvmCharacter(pnewTarget);
+    return GAS_Invoke(method, presult, pthis, penv, nargs, firstArgBottomIndex, pmethodName);
 }
 
 // The method value, its arguments pushed as the format string describes (%d %u %n %b %f %hf %s %ls), in reverse.
@@ -170,24 +207,41 @@ bool GAS_InvokeParsed(const Value& method, Value* presult, ObjectInterface* pthi
 }
 
 // The method by name, with the arguments of a format string.
-// MS2-FUNCTIONAL: ref-counted function holders and the owner switch are scheduled differently
 // @0x142947800
 bool GAS_InvokeParsed(const char* pmethodName, Value* presult, ObjectInterface* pthis, Environment* penv,
                       const char* pmethodArgFmt, va_list args)
 {
-    if (!pmethodName || !*pmethodName)
-        return true;
-    FoundMethod found;
-    if (!FindMethod(&found, pmethodName, pthis, penv))
+    if (!pmethodName || *pmethodName == '\0')
         return false;
-    FunctionRef func = found.Method.ToFunction(penv);
-    if (func.IsNull())
+
+    InteractiveObject* pnewTarget = 0;
+    Value              method, owner;
+    if (!penv->GetVariable(penv->CreateString(pmethodName), &method, NULL, &pnewTarget, &owner, 0))
     {
-        LogNotFunction(pmethodName, pthis, penv);
+        if (pthis && pthis->IsASCharacter())
+            penv->LogScriptError("Can't find method '%s.%s' to invoke.",
+                                 pthis->ToCharacter_Call()->GetCharacterHandle()->NamePath.ToCStr(), pmethodName);
+        else
+            penv->LogScriptError("Can't find method '%s' to invoke.", pmethodName);
         return false;
     }
-    return GAS_InvokeParsed(found.Method, presult, ReceiverOf(found, pthis, penv), penv, pmethodArgFmt, args,
-                            pmethodName);
+
+    FunctionRef func = InvokeValueAccess::ToFunction(method, penv);
+    if (func.IsNull())
+    {
+        if (pthis && pthis->IsASCharacter())
+            penv->LogScriptError("Invoked method '%s.%s' is not a function",
+                                 pthis->ToCharacter_Call()->GetCharacterHandle()->NamePath.ToCStr(), pmethodName);
+        else
+            penv->LogScriptError("Invoked method '%s' is not a function", pmethodName);
+        return false;
+    }
+
+    if (owner.IsCharacter() || owner.IsObject())
+        pthis = InvokeToObjectInterface(owner, penv);
+    else if (pnewTarget)
+        pthis = ToAvmCharacter(pnewTarget);
+    return GAS_InvokeParsed(method, presult, pthis, penv, pmethodArgFmt, args, pmethodName);
 }
 
 } } }
