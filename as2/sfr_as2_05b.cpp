@@ -44,6 +44,40 @@ SF_FORCEINLINE AS2::ObjectInterface* VoiObject(void* pdata, MovieImpl* pmovieRoo
     return pobj;
 }
 
+// The SDK's ToAvmCharacter, with its null check.
+SF_FORCEINLINE AS2::AvmCharacter* VoiToAvmCharacter(InteractiveObject* po)
+{
+    if (!po)
+        return NULL;
+    return static_cast<AS2::AvmCharacter*>(po->GetAvmIntObj());
+}
+
+// The SDK's Value_AS2ObjectData (its out-of-line ctor is inlined in the exe): the root, the _level0 environment and
+// the script object of a value.
+struct VoiObjectData
+{
+    AS2::ObjectInterface* pObject;
+    AS2::Environment*     pEnv;
+    AS2::MovieRoot*       pRoot;
+
+    SF_FORCEINLINE VoiObjectData(MovieImpl* pmovieImpl, void* pdata, bool isdobj)
+    {
+        pRoot   = VoiRoot(pmovieImpl);
+        pEnv    = VoiEnv(pRoot);
+        pObject = static_cast<AS2::ObjectInterface*>(pdata);
+        if (isdobj)
+        {
+            DisplayObject* d = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pmovieImpl);
+            if (!d)
+            {
+                pObject = 0;
+                return;
+            }
+            pObject = VoiToAvmCharacter(static_cast<InteractiveObject*>(d));
+        }
+    }
+};
+
 } // namespace
 
 // The 3D matrix of the character pdata with the translation in pixels.
@@ -61,18 +95,14 @@ bool AS2ValueObjectInterface::GetMatrix3D(void* pdata, Render::Matrix3F* pmat) c
     return true;
 }
 
-// The host user data of the object (or of the AS object of the character).
-// The movie is read once, as the exe keeps it in rbp.
-// MS2-FUNCTIONAL: the exe null-checks the character interface with cmove on a zero kept for the result
+// The host user data of the object (or of the AS object of the character), in the SDK's Value_AS2ObjectData shape.
 // @0x142956be0
 ASUserData* AS2ValueObjectInterface::GetUserData(void* pdata, bool isdobj) const
 {
-    MovieImpl* pmovie = pMovieRoot;
-    VoiEnv(VoiRoot(pmovie));
-    AS2::ObjectInterface* pobj = VoiObject(pdata, pmovie, isdobj);
-    if (pobj && pobj->pUserDataHolder)
-        return pobj->pUserDataHolder->pUserData;
-    return 0;
+    VoiObjectData v(pMovieRoot, pdata, isdobj);
+    if (v.pObject)
+        return v.pObject->pUserDataHolder ? v.pObject->pUserDataHolder->pUserData : NULL;
+    return NULL;
 }
 
 // The matrix of the character in the world with the translation in pixels.
