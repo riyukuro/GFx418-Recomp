@@ -5933,12 +5933,15 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 // The position of the first lookupswitch of the byte code (at +0x50 of its holder) from pos on, past which pos is
 // left; 0 when there is none (pos is then at the end).
-// MS2-FUNCTIONAL free function over a layout view of the byte code's holder (it has no caller in the exe)
+// MS2-FUNCTIONAL free function over a layout view of the byte code's holder (it has no caller in the exe), in the
+// SDK Tracer::GetNextSwitchStmt form (result + goto end); the exe keeps bcp in rbp (ours r14) and does not align
+// its loop heads
 // @0x14250c080
 UPInt FUN_14250c080(const void* self, UPInt& pos)
 {
     struct View { char pad[0x50]; const UInt8* data; UPInt size; };
     const View* c = static_cast<const View*>(self);
+    UPInt result = 0;
     while (pos < c->size)
     {
         const UPInt op_pos = pos;
@@ -5966,8 +5969,9 @@ UPInt FUN_14250c080(const void* self, UPInt& pos)
             const int n = Abc::ReadU30(c->data, pos);
             for (int i = 0; i <= n; ++i)
                 Abc::ReadS24(c->data, pos);
-            return op_pos;
+            result = op_pos;
         }
+            goto end;
         case 0x24:
             // pushbyte
             ++pos;
@@ -5994,7 +5998,8 @@ UPInt FUN_14250c080(const void* self, UPInt& pos)
             break;
         }
     }
-    return 0;
+end:
+    return result;
 }
 
 // The parent's slot table (its slots counted before the own ones, its name set copied) and its fixed value slot
