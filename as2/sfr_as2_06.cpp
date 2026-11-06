@@ -2415,7 +2415,10 @@ bool MemoryContextImpl::HeapLimit::OnExceedLimit(MemoryHeap* heap, UPInt overLim
     return true;
 }
 
-// MS2-FUNCTIONAL: SDK AS2_Value.cpp flow (ECMA-262 11.9.3): string/number/integer/boolean coercion, ToPrimitive for objects and functions, characters by path.
+// MS2-FUNCTIONAL: SDK AS2_Value.cpp flow (ECMA-262 11.9.3). 12 bytes off, all in the NUMBER NaN test. The exe keeps the first
+// IsNaN(NV) in bl (the LTCG pure-call CSE of the SDK double test) and tests bl before its second IsNaN(pv) call. With the
+// SDK form cl calls IsNaN 4 times; with `thisNaN || IsNaN(pv)` it merges the two IsNaN(pv) calls into one. The form here
+// keeps both call sites but makes the second call before the bl test. The result is the same, since IsNaN is pure.
 // @0x142965570
 bool Value::IsEqual(Environment* penv, const Value& other) const
 {
@@ -2439,7 +2442,7 @@ bool Value::IsEqual(Environment* penv, const Value& other) const
             else
                 return false;
         }
-        return ASString(V.pStringNode).GetNode() == other.ToString(penv).GetNode();
+        return ASString(V.pStringNode) == other.ToString(penv);
 
     case NUMBER:
     {
@@ -2456,9 +2459,11 @@ bool Value::IsEqual(Environment* penv, const Value& other) const
         }
         else
             pv = other.ToNumber(penv);
-        if (NumberUtil_IsNaN(NV.NumberValue) && NumberUtil_IsNaN(pv))
+        const bool thisNaN = NumberUtil_IsNaN(NV.NumberValue);
+        if (thisNaN && NumberUtil_IsNaN(pv))
             return true;
-        else if (NumberUtil_IsNaN(NV.NumberValue) || NumberUtil_IsNaN(pv))
+        const bool pvNaN = NumberUtil_IsNaN(pv);
+        if (thisNaN || pvNaN)
             return false;
         return NV.NumberValue == pv;
     }
@@ -2509,7 +2514,7 @@ bool Value::IsEqual(Environment* penv, const Value& other) const
             return false;
         if (!V.pCharHandle || !other.V.pCharHandle)
             return V.pCharHandle == other.V.pCharHandle;
-        return GetCharacterNamePath(penv).GetNode() == other.GetCharacterNamePath(penv).GetNode();
+        return GetCharacterNamePath(penv) == other.GetCharacterNamePath(penv);
 
     default:
         break;
