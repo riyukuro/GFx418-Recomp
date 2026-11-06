@@ -269,7 +269,7 @@ void MPVM2V_Init();
 void MPVM2V_Destroy(longlong a0);
 cri_u64 FUN_140062a40(cri_any,cri_any,cri_any);  // C3: the definition's signature
 void MPVM2V_RequestStop(cri_any);  // C3: the definition's signature
-unsigned __int64 FUN_140062ae0(cri_any, cri_any);  // C3: the definition's signature
+int MPVM2V_DecodePicAtr(cri_any, cri_any);  // 0x140062ae0 (sfr_cri_06b)
 int FUN_140062bc0(Any a0,Any a1,Any a2);
 void FUN_140064d90(Any a0,Any a1);
 void UTY_MemcpyDword(void *dst, const void *src, ulonglong n);  // C3: the definition's signature
@@ -3337,7 +3337,7 @@ cri_u32 FUN_140052ae0(longlong a1,longlong *a2)
   first.Data = ck.Data;
   first.Size = ck.Size;
   if (FUN_140051270(a1,(int *)&first) == 2) {
-    return FUN_140062ae0(a1,a2);
+    return MPVM2V_DecodePicAtr(a1,a2);
   }
   ret = FUN_140052950(a1,0xffffffff,(cri_u64)a2);
   while (ret == 0) {
