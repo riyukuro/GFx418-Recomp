@@ -142,6 +142,10 @@ void Log::LogMessageVarg(LogMessageId messageId, const char* fmt, va_list argLis
 {
     DefaultLogMessageVarg(messageId, fmt, argList);
 }
+// sfr_gfx_10's /Od stand-in base Unk_GfxLogBase is this class; its vftable slot names the stand-in, bound here.
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:?LogMessageVarg@Unk_GfxLogBase@@UEAAXVLogMessageId@Scaleform@@PEBDPEAD@Z=?LogMessageVarg@Log@Scaleform@@UEAAXVLogMessageId@2@PEBDPEAD@Z")
+#endif
 
 void Log::SetGlobalLog(Log* log)
 {
