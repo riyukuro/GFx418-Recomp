@@ -16,6 +16,7 @@
 #include "ms2/scaleform/include/gfx/gfx_fontlib.h"
 #include "ms2/scaleform/include/gfx/as2/as2_action.h"
 #include "ms2/scaleform/include/gfx/as2/as2_soundobject.h"
+#include "ms2/scaleform/include/gfx/xml/xml_support.h"   // XML::Support::ParseFile, folded with FUN_14259d950
 
 namespace Scaleform { namespace GFx {
 
@@ -301,9 +302,8 @@ void FUN_142591c90(void* self)
 }
 
 // @0x14259d950
-const char* FUN_14259d950(FontResource* resource)
-{
-    return RawField<RawFontIntf*>(resource, 0x18)->GetName();
-}
+const char* FUN_14259d950(FontResource* resource) { return RawField<RawFontIntf*>(resource, 0x18)->GetName(); }
+// The XML support state forwards to its parser; the exe folds it with the one above (same three instructions).
+bool XML::Support::ParseFile(const char* pfilename, FileOpenerBase* pfo, XML::ParserHandler* pdb) { return pParser->ParseFile(pfilename, pfo, pdb); }
 
 }} // namespace Scaleform::GFx
