@@ -1240,27 +1240,31 @@ void MPVBDEC_Init(cri_u8 arg1)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// The six 0x10-byte motion-compensation entries at +0x14d8 (pointer, block count). Stored as struct members, VC9
+// keeps the exe's store order; raw offset stores get the count stores hoisted above the mode store.
+struct McOiTaEntry { longlong p; cri_u4 n; cri_u4 pad; };
+
 // @0x140067390
 void mpvcmc_InitMcOiTa(longlong arg1)
 {
   longlong l_v1;
-  cri_u4 u_v2;
+  McOiTaEntry *t;
   
   l_v1 = arg1 + 0xc80;
   *(cri_u4 *)((char *)arg1 + 0x14d0) = (*(int *)((char *)arg1 + 0x1554) == 0) ? 0xffffffff : 4;
-  *(longlong *)((char *)arg1 + 0x14d8) = l_v1;
-  *(longlong *)((char *)arg1 + 0x14e8) = l_v1;
-  *(longlong *)((char *)arg1 + 0x14f8) = l_v1;
-  *(longlong *)((char *)arg1 + 0x1508) = l_v1;
-  *(longlong *)((char *)arg1 + 0x1518) = l_v1;
-  *(longlong *)((char *)arg1 + 0x1528) = l_v1;
-  *(cri_u4 *)((char *)arg1 + 0x14e0) = 8;
-  *(cri_u4 *)((char *)arg1 + 0x14f0) = 8;
-  *(cri_u4 *)((char *)arg1 + 0x1500) = 8;
-  *(cri_u4 *)((char *)arg1 + 0x1510) = 8;
-  *(cri_u4 *)((char *)arg1 + 0x1520) = 8;
-  *(cri_u4 *)((char *)arg1 + 0x1530) = 8;
+  t = (McOiTaEntry *)((char *)arg1 + 0x14d8);
+  t[0].p = l_v1;
+  t[1].p = l_v1;
+  t[2].p = l_v1;
+  t[3].p = l_v1;
+  t[4].p = l_v1;
+  t[5].p = l_v1;
+  t[0].n = 8;
+  t[1].n = 8;
+  t[2].n = 8;
+  t[3].n = 8;
+  t[4].n = 8;
+  t[5].n = 8;
   return;
 }
 
