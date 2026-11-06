@@ -2978,7 +2978,6 @@ struct TrReadValueObject : public TrReadValue
     Value ArgObject;
 };
 
-// MS2-FUNCTIONAL 0x1425401a0: register caching only: the exe keeps the second value's flags in ebx through the inlined weak release.
 // @0x1425401a0
 void Sfr31TracePop2Note(State* st, UInt32 arg)
 {
@@ -3612,8 +3611,6 @@ static __forceinline ASString TrInternedString(State* st, UInt32 index)
 }
 
 // Tracer: push the constant-pool string index as a String value (the empty string becomes a null object).
-// MS2-FUNCTIONAL 0x14253f690: same instructions and order; the exe puts the null-object temp of the inlined
-// Value(ASString) in the StringDataPtr's slot (frame 0x50 vs 0x60, the Value 0x10 lower).
 // @0x14253f690
 void Sfr31TracePushString(State* st, UInt32 index)
 {

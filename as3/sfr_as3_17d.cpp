@@ -170,7 +170,6 @@ void AvmDisplayObjContainer::FillTabableArray(InteractiveObject::FillTabablePara
     }
 }
 
-// MS2-FUNCTIONAL 0x142501920: the loop index starts from a copied zero register (mov edi,ebx) where the exe uses xor
 // @0x142501920
 InteractiveObject* AvmDisplayObjContainer::FindInsertToPlayList(InteractiveObject* ch)
 {

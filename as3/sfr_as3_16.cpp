@@ -183,7 +183,7 @@ void FUN_1424decc0(void* self)
 }
 
 namespace Scaleform {
-// MS2-FUNCTIONAL 0x1424e0e50: builds a temporary for each side and concatenates them, releasing both temporary strings afterward.
+// Builds a temporary for each side and concatenates them, releasing both temporary strings afterward.
 // @0x1424e0e50
 String operator+(const char* left, const GFx::ASString& right)
 {
@@ -192,7 +192,7 @@ String operator+(const char* left, const GFx::ASString& right)
 }
 
 namespace Scaleform { namespace GFx {
-// MS2-FUNCTIONAL 0x1424dd4d0: releases pASSupport and then runs the RefCountImplCore base destructor, matching the exe's order.
+// Releases pASSupport and then runs the RefCountImplCore base destructor, matching the exe's order.
 // @0x1424dd4d0
 ASMovieRootBase::~ASMovieRootBase() = default;
 }} // namespace Scaleform::GFx
@@ -1793,7 +1793,7 @@ ValueStack::Page* ValueStack::AllocPage(UInt16 pageSize)
 
 // ==== the load queue ====
 
-// MS2-FUNCTIONAL 0x1424dda00: clears queued actions, releases each recycled ActionEntry's references, then frees the same nodes.
+// Clears queued actions, releases each recycled ActionEntry's references, then frees the same nodes.
 // @0x1424dda00
 MovieRoot::ActionQueueType::~ActionQueueType()
 {
@@ -1948,19 +1948,19 @@ PropRef::operator bool() const
 ReadArgs::~ReadArgs() = default;
 
 namespace TR {
-// MS2-FUNCTIONAL 0x1424dea90: releases the CallArgs values, eight FixedArgs, and the StackReader references in the same order; cl inlines their member destructors.
+// Releases the CallArgs values, eight FixedArgs, and the StackReader references in the same order; cl inlines their member destructors.
 // @0x1424dea90
 ReadArgs::~ReadArgs() {}
 
-// MS2-FUNCTIONAL 0x1424ded40: releases ArgObject and the inherited multiname/string references; the compiler inlines the same member cleanup differently.
+// Releases ArgObject and the inherited multiname/string references.
 // @0x1424ded40
 ReadMnObject::~ReadMnObject() {}
 
-// MS2-FUNCTIONAL 0x1424dedc0: releases ArgValue with Value's destructor; the compiler emits it as a leaf inline sequence.
+// Releases ArgValue with Value's destructor.
 // @0x1424dedc0
 SF_NOINLINE ReadValue::~ReadValue() {}
 
-// MS2-FUNCTIONAL 0x1424dee30: releases ArgObject before the ReadValueMn base and its ArgValue/multiname members; codegen differs.
+// Releases ArgObject before the ReadValueMn base and its ArgValue/multiname members.
 // @0x1424dee30
 ReadValueMnObject::~ReadValueMnObject() {}
 }
@@ -2017,7 +2017,7 @@ bool XMLSupportImpl::Add(Value& result, Object& l, Object& r) const
 }}} // namespace Scaleform::GFx::AS3
 
 // AvmLoader's multiple-inheritance teardown, including its AS3 subobject.
-// MS2-FUNCTIONAL 0x1424ddc40: clears the loader state and tears down the same modeled bases; the compiler orders vft stores differently.
+// Clears the loader state and tears down the same modeled bases.
 // @0x1424ddc40
 Scaleform::GFx::AS3::AvmLoader::~AvmLoader()
 {
@@ -2435,7 +2435,7 @@ using Sfr16DisplayObjectWeakArray = Scaleform::ArrayLH<
     Scaleform::WeakPtr<Scaleform::GFx::DisplayObject>, 2, Scaleform::ArrayDefaultPolicy>;
 // The display object map destructor (0x1424dcbb0) is the SfrCx18DisplayObjectSet instantiation above.
 
-// MS2-FUNCTIONAL 0x1424e0340: transfers the source pointer and owner flag, releasing an owned destination first; the executable uses the same ownership behavior.
+// Transfers the source pointer and owner flag, releasing an owned destination first.
 // @0x1424e0340
 Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>&
     (Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>::* const pSfr16AutoPtrAssign)(
@@ -2499,7 +2499,7 @@ extern void* const AvmBitmap_vftable_90[];
 
 // AvmBitmap (a ShapeObject sibling): clear the AvmObjOffset byte, reinstall its three vftables, release the image
 // and definition resources, then the AvmDisplayObj and DisplayObject bases.
-// MS2-FUNCTIONAL 0x1424ddb00: AvmBitmap is not recovered; the teardown is written against raw member offsets.
+// AvmBitmap is not recovered; the teardown is written against raw member offsets.
 // @0x1424ddb00
 extern "C" void FUN_1424ddb00(void* self)
 {
@@ -2531,7 +2531,7 @@ ShapeObject::~ShapeObject()
 }
 }}}
 
-// MS2-FUNCTIONAL 0x1424ddcb0: AvmMovieClip has no additional state; release the AvmSprite base.
+// AvmMovieClip has no additional state; release the AvmSprite base.
 // @0x1424ddcb0
 extern "C" void FUN_1424ddcb0(void* self)
 {
