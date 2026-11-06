@@ -1585,7 +1585,7 @@ ClassTraits::Traits** Sfr33ClassTraitsCacheGet(TClassTraitsCache* self, const Mu
 
 // The class traits mn names. A namespace set takes the first namespace with cached or builtin class traits
 // (a builtin hit is cached); a single namespace goes through VM::Resolve2ClassTraits.
-// MS2-FUNCTIONAL 0x142500a60: the exe tests n once before the loop and ct at its bottom, and allocates registers and save slots differently (rbp/rsi pushed); same results
+// MS2-FUNCTIONAL 0x142500a60: register allocation only: the exe keeps the index in rsi (zeroed at entry, also the n == 0 result) and ct in rdi, saved inside the n != 0 region
 // @0x142500a60
 ClassTraits::Traits* Sfr33ResolveMnClassTraits(VM* vm, const Multiname& mn)
 {
@@ -1595,7 +1595,8 @@ ClassTraits::Traits* Sfr33ResolveMnClassTraits(VM* vm, const Multiname& mn)
     const NamespaceSet& nss = static_cast<const NamespaceSet&>(*mn.Obj);
     const ArrayLH<SPtr<Instances::Namespace> >& nsa = nss.GetNamespaces();
     const UPInt n = nsa.GetSize();
-    for (UPInt i = 0; ct == NULL && i < n; ++i)
+    UPInt i = 0;
+    if (n != 0) do
     {
         ASString name = mn.Name.AsString();
         const Instances::Namespace& ns = *nsa[i];
@@ -1607,7 +1608,7 @@ ClassTraits::Traits* Sfr33ResolveMnClassTraits(VM* vm, const Multiname& mn)
             if (made != NULL)
                 vm->ClassTraitsSet.Add(name, ns, made);
         }
-    }
+    } while (ct == NULL && ++i < n);
     return ct;
 }
 
