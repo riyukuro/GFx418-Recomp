@@ -2601,28 +2601,44 @@ SF_NOINLINE void ArrayDataDH<UInt32, AllocatorDH<UInt32, 2>, ArrayDefaultPolicy>
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
-// VectorBase<UInt32>::Set instance, emitted here for the pixel vector writers.
-// MS2-FUNCTIONAL: the exe tail-duplicates the size load of the range test and keeps ind + 1 in r14 across the
-// CheckFixed call. CheckFixed (0x14255b2d0) is called through a member pointer so that it stays out of line, as in the exe.
+// The SDK's inline VectorBase::GetSize() (32-bit) and GetVM() accessors, used by Set's range tests as in the SDK.
+struct Sfr06VecAccess
+{
+    static __forceinline UInt32 GetSize(const VectorBase<UInt32>::ValuesType& a) { return static_cast<UInt32>(a.GetSize()); }
+    static __forceinline VM& GetVM(VM& vm) { return vm; }
+};
+
+// VectorBase<UInt32>::Set instance, emitted here for the pixel vector writers. The two range tests are the SDK's
+// separate blocks. CheckFixed (0x14255b2d0) is called through a member pointer so that it stays out of line, as in the exe.
 // @0x142446540
 template <>
 CheckResult VectorBase<UInt32>::Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr)
 {
-    if ((Fixed && ind >= (UInt32)V.GetSize()) || ind > (UInt32)V.GetSize())
+    if (Fixed && ind >= Sfr06VecAccess::GetSize(V))
     {
-        VM& vm = VMRef;
-        vm.ThrowRangeError(VM::Error(VM::eInvalidRangeError, vm, (int)ind, (int)V.GetSize() - 1));
+        Sfr06VecAccess::GetVM(VMRef).ThrowRangeError(VM::Error(VM::eInvalidRangeError, Sfr06VecAccess::GetVM(VMRef), (int)ind, static_cast<int>(Sfr06VecAccess::GetSize(V) - 1)));
+        return false;
+    }
+    if (ind > Sfr06VecAccess::GetSize(V))
+    {
+        Sfr06VecAccess::GetVM(VMRef).ThrowRangeError(VM::Error(VM::eInvalidRangeError, Sfr06VecAccess::GetVM(VMRef), (int)ind, static_cast<int>(Sfr06VecAccess::GetSize(V) - 1)));
         return false;
     }
     if (ind == (UInt32)V.GetSize())
     {
+        const UPInt size = ind + 1;
+        bool ok = false;
         CheckResult (ArrayBase::*check)() const = &ArrayBase::CheckFixed;
-        if (!(this->*check)())
+        if ((this->*check)())
+        {
+            UPInt i = V.GetSize();
+            V.Resize(size);
+            for (; i < size; ++i)
+                V[i] = 0;
+            ok = true;
+        }
+        if (!ok)
             return false;
-        UPInt i = V.GetSize();
-        V.Resize(ind + 1);
-        for (; i < ind + 1; ++i)
-            V[i] = 0;
     }
     Value r;
     if (!CheckCoerce(tr, v, r))

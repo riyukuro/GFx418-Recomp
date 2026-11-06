@@ -203,16 +203,26 @@ namespace Scaleform { namespace GFx { namespace AS3
         static DataType& GetData(VectorBase<Value::Number>::ValuesType& v) { return v.*&Sfr11NumberValues::Data; }
     };
 
-    // MS2-FUNCTIONAL: CheckFixed and Resize are called out of line as in the exe; the range test differs: the exe keeps
-    // the 32-bit size in eax for the error argument, ours reloads it in the throw block
+    // The SDK's inline VectorBase::GetSize() (32-bit) and GetVM() accessors, used by Set's range tests as in the SDK.
+    struct Sfr11VecAccess
+    {
+        static __forceinline UInt32 GetSize(const VectorBase<Value::Number>::ValuesType& a) { return static_cast<UInt32>(a.GetSize()); }
+        static __forceinline VM& GetVM(VM& vm) { return vm; }
+    };
+
+    // CheckFixed and Resize are called out of line as in the exe. The two range tests are the SDK's separate blocks.
     // @0x1424864c0
     template <>
     __declspec(noinline) CheckResult VectorBase<Value::Number>::Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr)
     {
-        if ((Fixed && ind >= (UInt32)V.GetSize()) || ind > (UInt32)V.GetSize())
+        if (Fixed && ind >= Sfr11VecAccess::GetSize(V))
         {
-            VM& vm = VMRef;
-            vm.ThrowRangeError(VM::Error(VM::eInvalidRangeError, vm, (int)ind, (int)V.GetSize() - 1));
+            Sfr11VecAccess::GetVM(VMRef).ThrowRangeError(VM::Error(VM::eInvalidRangeError, Sfr11VecAccess::GetVM(VMRef), (int)ind, static_cast<int>(Sfr11VecAccess::GetSize(V) - 1)));
+            return false;
+        }
+        if (ind > Sfr11VecAccess::GetSize(V))
+        {
+            Sfr11VecAccess::GetVM(VMRef).ThrowRangeError(VM::Error(VM::eInvalidRangeError, Sfr11VecAccess::GetVM(VMRef), (int)ind, static_cast<int>(Sfr11VecAccess::GetSize(V) - 1)));
             return false;
         }
         if (ind == (UInt32)V.GetSize())
