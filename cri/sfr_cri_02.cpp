@@ -691,7 +691,6 @@ struct VideoThreadCreateParams
     int       Priority;
 };
 
-// MS2-FUNCTIONAL: the Thread::Start call loads its arguments in the other order
 // @0x14002c0e0
 void VideoDecoderThrd::StartDecoding(VideoPlayer* pp)
 {
@@ -711,14 +710,11 @@ void VideoDecoderThrd::StartDecoding(VideoPlayer* pp)
         if (pDecodeThread)
             FUN_14257dcb0(pDecodeThread);
         pDecodeThread = pthread;
-        // Thread::Start(Running), Thread::SetThreadName
-        typedef bool (*StartFunc)(RefCountImpl*, int);
-        typedef void (*SetNameFunc)(RefCountImpl*, const char*);
-        if ((*reinterpret_cast<StartFunc**>(pthread))[5](pthread, 1))
+        Ptr<Scaleform::Thread>& pt = *reinterpret_cast<Ptr<Scaleform::Thread>*>(&pDecodeThread);
+        if (pt->Start())
         {
-            RefCountImpl* t = (RefCountImpl*)(void*)pDecodeThread;
-            if (t)
-                (*(SetNameFunc**)(void*)t)[7](t, "Scaleform Video Decoder");
+            if (pt)
+                pt->SetThreadName("Scaleform Video Decoder");
         }
     }
 }
@@ -1169,13 +1165,10 @@ struct __declspec(novtable) VideoReaderThrdView : VideoReader
 
 // Lazily start the threaded reader service and allocate a reader on the configured heap. As in the exe, the new thread
 // is started without a null check.
-// MS2-FUNCTIONAL: the Thread::Start call loads its arguments in the other order, as in StartDecoding
 // @0x14002e050
 VideoReader* VideoReaderConfigThrd::CreateReader()
 {
     typedef void* (*AllocFunc)(void*, size_t, const void*);
-    typedef bool (*StartFunc)(void*, int);   // Thread::Start(Running)
-    typedef void (*SetNameFunc)(void*, const char*);
     void** config = (void**)this;
     if (!config[31])
     {
@@ -1185,8 +1178,9 @@ VideoReader* VideoReaderConfigThrd::CreateReader()
         if (config[31])
             FUN_14257dcb0(config[31]);
         config[31] = thread;
-        if ((*(StartFunc**)config[31])[5](config[31], 1))
-            (*(SetNameFunc**)config[31])[7](config[31], "Scaleform Video Reader");
+        Ptr<Scaleform::Thread>& pt = *reinterpret_cast<Ptr<Scaleform::Thread>*>(&config[31]);
+        if (pt->Start())
+            pt->SetThreadName("Scaleform Video Reader");
     }
     void* memory = (*(AllocFunc*)(*(CriUint8**)config[2] + 0x50))(config[2], 0x50, NULL);
     return memory ? ::new (memory) VideoReaderThrdView(this) : NULL;
