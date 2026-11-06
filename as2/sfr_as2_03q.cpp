@@ -11,27 +11,37 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-// MS2-FUNCTIONAL: the exe frame keeps the field's string node and prototype in different temporaries
+// AvmCharacter::GetASEnvironment (0x1429493c0, sfr_as2_05v), which the exe inlines here (as in the AvmButton ctor).
+static SF_FORCEINLINE Environment* MS2_CharEnv(AvmCharacter* pc)
+{
+    for (InteractiveObject* p = pc->GetDispObj()->GetParent(); p; p = p->GetParent())
+    {
+        if (p->IsSprite())
+            return static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(p->GetAvmObjImpl()))->GetASEnvironment();
+    }
+    return 0;
+}
+
+// The AvmCharacter ctor (0x142918930), which the exe also inlines here.
+inline AvmCharacter::AvmCharacter(InteractiveObject* pdispObj, ObjectInlineCtorTag)
+    : pDispObj(pdispObj)
+{
+    pdispObj->BindAvmObj(this);
+}
+
 // @0x142918b50
 AvmTextField::AvmTextField(TextField* ptf)
-    : AvmCharacter(reinterpret_cast<InteractiveObject*>(ptf)),
+    : AvmCharacter(reinterpret_cast<InteractiveObject*>(ptf), ObjectInlineCtorTag()),
       VariableName(reinterpret_cast<InteractiveObject*>(ptf)->GetStringManager()->CreateString(
-          (*reinterpret_cast<TextFieldDef**>(reinterpret_cast<UByte*>(ptf) + 0xd8))->VariableName.ToCStr(),
-          (*reinterpret_cast<TextFieldDef**>(reinterpret_cast<UByte*>(ptf) + 0xd8))->VariableName.GetSize()))
+          (*reinterpret_cast<TextFieldDef**>(reinterpret_cast<UByte*>(ptf) + 0xd8))->VariableName))
 {
-    if (VariableName.GetLength() != 0)
+    if (!VariableName.IsEmpty())
         *reinterpret_cast<UInt32*>(reinterpret_cast<UByte*>(ptf) + 0xfc) |= 0x8000;
-    Environment* penv = 0;
-    for (InteractiveObject* p = GetDispObj()->GetParent(); p; p = p->GetParent())
-        if (p->IsSprite())
-        {
-            penv = AS2::ToAvmCharacter(p)->GetASEnvironment();
-            break;
-        }
-    pProto = GetAS2Root()->pGlobalContext->GetActualPrototype(penv, ASBuiltin_TextField);
-    AsBroadcaster::InitializeInstance(this->GetASEnvironment()->GetSC(), static_cast<ObjectInterface*>(this));
-    AsBroadcaster::AddListener(this->GetASEnvironment(), static_cast<ObjectInterface*>(this),
-                               static_cast<ObjectInterface*>(this));
+    pProto = GetAS2Root()->pGlobalContext->GetActualPrototype(MS2_CharEnv(this), ASBuiltin_TextField);
+    AsBroadcaster::InitializeInstance(FromCharacter(reinterpret_cast<InteractiveObject*>(ptf))->GetASEnvironment()->GetSC(),
+                                      static_cast<ObjectInterface*>(this));
+    AsBroadcaster::AddListener(FromCharacter(reinterpret_cast<InteractiveObject*>(ptf))->GetASEnvironment(),
+                               static_cast<ObjectInterface*>(this), static_cast<ObjectInterface*>(this));
 }
 
 // @0x142956080
@@ -50,3 +60,4 @@ unsigned AvmTextField::GetStandardMemberBitMask() const
 // MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
 // MS2-PIN: ??_7AvmInteractiveObjBase@GFx@Scaleform@@6B@ 0x14317bfe8
 // MS2-PIN: ??_7AvmTextFieldBase@GFx@Scaleform@@6B@ 0x14317e508
+// MS2-PIN: ??_7ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215410
