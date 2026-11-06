@@ -67,7 +67,7 @@ U FUN_14261fc40(void*, const unsigned char*);   // multiname key hash
 void FUN_142624020(U*, void*, U);               // Array<0x18-byte record>::Resize
 void FUN_142623f80(U*, void*, U);               // Array<8-byte>::Reserve
 void FUN_14261ee70(U**, void*, NodeRef*, U);
-void FUN_142623820(char*, unsigned, U, const char*, int, int, char);
+__declspec(noinline) void FUN_142623820(char*, unsigned, U, const char*, int, int, char);
 void FUN_142623050(char*, int, int, U);
 void FUN_1426237c0(char*);
 
@@ -858,28 +858,6 @@ struct AmpViewStatsView
 
 static inline void RawPublishTopScope(char* self) { ((AmpViewStatsView*)self)->RefreshActiveLine(); }
 
-// Pushes a new scope {id, arg} onto the scope stack.
-static __forceinline void RawPushScopeBody(char* self, U id, U arg)
-{
-    char* o = RawNewScope(self);
-    RawField<U>(o, 0x18) = arg;
-    RawField<U>(o, 0x10) = id;
-    RawField<int>(self, 0x60) += 1;
-    RawField<int>(o, 0x28) = RawField<int>(self, 0x60);
-    FUN_14257dc30(o);
-    FUN_142624020(RawFieldPtr<U>(self, 0x30), self + 0x30, RawField<U>(self, 0x38) + 1);
-    char* slot = (char*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) * 0x18;
-    FUN_14257dc30(o);
-    *(char**)(slot - 0x18) = o;
-    *(U*)(slot - 0x10) = 0;
-    *(int*)(slot - 8) = 0;
-    FUN_14257dcb0(o);
-    RawPublishTopScope(self);
-    FUN_14257dcb0(o);
-}
-
-static __declspec(noinline) void RawPushScope(char* self, U id, U arg) { RawPushScopeBody(self, id, arg); }
-
 // @0x142622c90
 void FUN_142622c90(char* self, U arg)
 {
@@ -892,13 +870,36 @@ void FUN_142622c90(char* self, U arg)
     }
 }
 
+// ViewStats::PushCallstack body, also inlined into NativePushCallstack (0x142622d00).
+static __forceinline void RawPushCallstack(char* self, UInt32 swdHandle, UInt32 swfOffset, U funcTime)
+{
+    RawLocker locker(self + 0xe0);
+    Ptr<AMP::FuncTreeItem> newCall = *SF_HEAP_AUTO_NEW(self) AMP::FuncTreeItem();
+    newCall->BeginTime = funcTime;
+    newCall->FunctionId = ((UInt64)swdHandle << 32) + swfOffset;
+    RawField<int>(self, 0x60) += 1;
+    newCall->TreeItemId = RawField<int>(self, 0x60);
+    {
+        struct CallInfo
+        {
+            Ptr<AMP::FuncTreeItem> FunctionInfo; U FileId; UInt32 LineNumber;
+            CallInfo(AMP::FuncTreeItem* f, U file, UInt32 line) : FunctionInfo(f), FileId(file), LineNumber(line) {}
+        } call(newCall, 0, 0);
+        FUN_142624020(RawFieldPtr<U>(self, 0x30), self + 0x30, RawField<U>(self, 0x38) + 1);
+        CallInfo* slot = (CallInfo*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) - 1;
+        new (slot) CallInfo(call);
+    }
+    RawPublishTopScope(self);
+}
+
 // Opens a named scope: interns the name (assigning the next id) and pushes it.
-// MS2-FUNCTIONAL 0x142622d00: same interning and push; the exe inlines the name-hash insert (844 vs 741 bytes, frame differs).
+// MS2-FUNCTIONAL 0x142622d00: same length (844); scheduling only (r13 save order, the hash mask movabs, and r8d vs r8 for the RegisterScriptFunction id in the else path).
 // @0x142622d00
 void FUN_142622d00(char* self, const char* name, unsigned id, U arg)
 {
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    if (id == 0xffffffffu)
+    UInt32 handle = id;
+    if ((int)id == -1)
     {
         U** names = RawFieldPtr<U*>(self, 0x20);
         U it[2];
@@ -917,17 +918,16 @@ void FUN_142622d00(char* self, const char* name, unsigned id, U arg)
             }
             {
                 String key(name);
-                FUN_1426223c0(names, it, &key);
+                U found[2];
+                memcpy(it, FUN_1426223c0(names, found, &key), sizeof(it));
             }
             RawField<int>(self, 0x28) += 1;
         }
-        id = *(unsigned*)(*(U*)it[0] + 0x10 + it[1] * 0x20 + 0x18);
+        handle = *(UInt32*)(*(U*)it[0] + 0x10 + it[1] * 0x20 + 0x18);
     }
     else
-        FUN_142623820(self, 1, id, name, 0, 0, 0);
-    EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    RawPushScope(self, (U)id + 0x100000000ULL, arg);
-    LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
+        FUN_142623820(self, 1, handle, name, 0, 0, 0);
+    RawPushCallstack(self, 1, handle, arg);
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
 
@@ -1021,23 +1021,7 @@ void FUN_142623050(char* self, int hi, int lo, U arg)
 // @0x1426233e0
 void FUN_1426233e0(char* self, UInt32 swdHandle, UInt32 swfOffset, U funcTime)
 {
-    RawLocker locker(self + 0xe0);
-    Ptr<AMP::FuncTreeItem> newCall = *SF_HEAP_AUTO_NEW(self) AMP::FuncTreeItem();
-    newCall->BeginTime = funcTime;
-    newCall->FunctionId = ((UInt64)swdHandle << 32) + swfOffset;
-    RawField<int>(self, 0x60) += 1;
-    newCall->TreeItemId = RawField<int>(self, 0x60);
-    {
-        struct CallInfo
-        {
-            Ptr<AMP::FuncTreeItem> FunctionInfo; U FileId; UInt32 LineNumber;
-            CallInfo(AMP::FuncTreeItem* f, U file, UInt32 line) : FunctionInfo(f), FileId(file), LineNumber(line) {}
-        } call(newCall, 0, 0);
-        FUN_142624020(RawFieldPtr<U>(self, 0x30), self + 0x30, RawField<U>(self, 0x38) + 1);
-        CallInfo* slot = (CallInfo*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) - 1;
-        new (slot) CallInfo(call);
-    }
-    RawPublishTopScope(self);
+    RawPushCallstack(self, swdHandle, swfOffset, funcTime);
 }
 
 // Adds `delta` to the byte counter kept per (scope, count) multiname key.
