@@ -1511,22 +1511,45 @@ template<> void Scaleform::GFx::AS2::PagedStack<Scaleform::GFx::AS2::Value, 32>:
     }
 }
 
-// MS2-FUNCTIONAL: returns the last page to the free list and restores the preceding stack page.
+// SDK PagedStack::ReleasePage / Pages.PopBack(); PopBack is the module's out-of-line Resize (0x140005c20)
+template<class S, class P> static __forceinline void Video01ReleasePage(S* s, P* ppage)
+{
+    ppage->pNext = s->pReserved;
+    s->pReserved = ppage;
+}
+template<class A> static __forceinline void Video01PopBackPages(A* a)
+{
+    FUN_140005c20(reinterpret_cast<void**>(a), a->GetSize() - 1);
+}
+
+// SDK PopPage: returns the last page to the free list and restores the preceding stack page.
 // @0x140006cf0
 template<> void Scaleform::GFx::AS2::PagedStack<Scaleform::GFx::AS2::Value, 32>::PopPage()
 {
-    if (Pages.GetSize() > 1) {
-        Page* page = Pages.Back();
-        page->pNext = pReserved;
-        pReserved = page;
-        FUN_140005c20(reinterpret_cast<void**>(&Pages), Pages.GetSize() - 1);
-        pPageStart = Pages.Back()->Values;
-        pPageEnd = pPageStart + 32;
-        pCurrent = pPageEnd - 1;
-        pPrevPageTop = Pages.GetSize() > 1 ? Pages[Pages.GetSize() - 2]->Values + 31 : pPageStart;
-    } else {
+    if (Pages.GetSize() > 1)
+    {
+        Video01ReleasePage(this, Pages.Back());
+        Video01PopBackPages(&Pages);
+
+        Page* ppage = Pages.Back();
+
+        pPageStart  = ppage->Values;
+        pPageEnd    = pPageStart + 32;
+        pCurrent    = pPageEnd - 1;
+
+        if (Pages.GetSize() > 1)
+        {
+            pPrevPageTop = Pages[Pages.GetSize() - 2]->Values + 32 - 1;
+        }
+        else
+        {
+            pPrevPageTop = pPageStart;
+        }
+    }
+    else
+    {
         pCurrent++;
-        if (pCurrent) *reinterpret_cast<unsigned char*>(pCurrent) = 0;
+        Construct<Scaleform::GFx::AS2::Value>(pCurrent);
     }
 }
 
