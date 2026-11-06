@@ -473,49 +473,54 @@ void HAL::beginMaskDisplay()
     DepthBufferAvailable = false;
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// SDK form (early PushBack for a null target); the depth surface is read into a local
 // @0x142733b90
 void HAL::PushRenderTarget(const RectF& frameRect, RenderTarget* prt, unsigned flags)
 {
     // ended by the scope in PopRenderTarget
     GetEvent(Event_RenderTarget).Begin(__FUNCTION__);
     HALState |= HS_InRenderTarget;
-
     RenderTargetEntry entry = { prt, Matrices, ViewRect, VP };
     Matrices.SetUserMatrix(Matrix2F::Identity);
 
-    if (prt)
+    if (!prt)
     {
-        pTextureManager->SetSamplerState(0, 0, D3DTEXF_POINT, D3DTADDRESS_CLAMP);
-        pTextureManager->SetSamplerState(1, 0, D3DTEXF_POINT, D3DTADDRESS_CLAMP);
-        RenderTargetData* phd = (RenderTargetData*)prt->GetRenderTargetData();
-        pDevice->SetRenderTarget(0, phd->pRenderSurface);
-        IDirect3DSurface9* pds = phd->pDSSurface;
-        if (pds)
-            pDevice->SetDepthStencilSurface(pds);
-        else
-            pDevice->SetDepthStencilSurface(0);
-        ++AccumulatedStats.RTChanges;
-
-        // bit 0: keep the target's contents
-        if (!(flags & 1))
-            pDevice->Clear(0, 0, D3DCLEAR_TARGET, 0, 1.0f, 0);
-
-        // the view is the target's rectangle; the frame rectangle maps onto it
-        VP         = Viewport(prt->GetBufferSize(), prt->GetRect());
-        ViewRect.x1 = (int)frameRect.x1;
-        ViewRect.y1 = (int)frameRect.y1;
-        ViewRect.x2 = (int)frameRect.x2;
-        ViewRect.y2 = (int)frameRect.y2;
-        Matrices.ViewRectOriginal.Offset(-entry.OldViewport.Left, -entry.OldViewport.Top);
-        HALState |= HS_ViewValid;
-        Matrices.UVPOChanged = true;
-        updateViewport();
+        RenderTargetStack.PushBack(entry);
+        return;
     }
+
+    pTextureManager->SetSamplerState(0, 0, D3DTEXF_POINT, D3DTADDRESS_CLAMP);
+    pTextureManager->SetSamplerState(1, 0, D3DTEXF_POINT, D3DTADDRESS_CLAMP);
+    RenderTargetData* phd = (RenderTargetData*)prt->GetRenderTargetData();
+    pDevice->SetRenderTarget(0, phd->pRenderSurface);
+    IDirect3DSurface9* pds = phd->pDSSurface;
+    if (pds)
+        pDevice->SetDepthStencilSurface(pds);
+    else
+        pDevice->SetDepthStencilSurface(0);
+    ++AccumulatedStats.RTChanges;
+
+    // bit 0: keep the target's contents
+    if (!(flags & 1))
+        pDevice->Clear(0, 0, D3DCLEAR_TARGET, 0, 1.0f, 0);
+
+    // the view is the target's rectangle; the frame rectangle maps onto it
+    VP          = Viewport(prt->GetBufferSize(), prt->GetRect());
+    ViewRect.x1 = (int)frameRect.x1;
+    ViewRect.y1 = (int)frameRect.y1;
+    ViewRect.x2 = (int)frameRect.x2;
+    ViewRect.y2 = (int)frameRect.y2;
+    Matrices.ViewRectOriginal.Offset(-entry.OldViewport.Left, -entry.OldViewport.Top);
+    Matrices.UVPOChanged = true;
+    HALState |= HS_ViewValid;
+    updateViewport();
+
     RenderTargetStack.PushBack(entry);
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// MS2-FUNCTIONAL: SDK form; the bottom entry is assigned member-wise (the exe copies the rect field by field and
+// keeps the target in a register). Left: the exe sinks the entry's Rect/Viewport ctor stores past the surface
+// load and hoists the viewport loads above the rect stores (scheduling).
 // @0x142736240
 bool HAL::SetRenderTarget(RenderTarget* target, bool setState)
 {
@@ -525,10 +530,10 @@ bool HAL::SetRenderTarget(RenderTarget* target, bool setState)
     if (HALState & HS_InScene)
         Flush();
 
+    D3DSURFACE_DESC    desc;
     RenderTargetEntry  entry;
     RenderTargetData*  phd     = (RenderTargetData*)target->GetRenderTargetData();
     IDirect3DSurface9* surface = phd->pRenderSurface;
-    D3DSURFACE_DESC    desc;
     if (FAILED(surface->GetDesc(&desc)))
         return false;
     if (setState)
@@ -542,7 +547,16 @@ bool HAL::SetRenderTarget(RenderTarget* target, bool setState)
     // the target replaces the bottom of the stack
     entry.pRenderTarget = target;
     if (RenderTargetStack.GetSize() > 0)
-        RenderTargetStack[0] = entry;
+    {
+        RenderTargetEntry& bottom = RenderTargetStack[0];
+        bottom.pRenderTarget  = entry.pRenderTarget.GetPtr();
+        bottom.OldMatrixState = entry.OldMatrixState;
+        bottom.OldViewRect.x1 = entry.OldViewRect.x1;
+        bottom.OldViewRect.y1 = entry.OldViewRect.y1;
+        bottom.OldViewRect.x2 = entry.OldViewRect.x2;
+        bottom.OldViewRect.y2 = entry.OldViewRect.y2;
+        bottom.OldViewport    = entry.OldViewport;
+    }
     else
         RenderTargetStack.PushBack(entry);
     return true;
@@ -1202,7 +1216,7 @@ void HAL::drawCachedFilter(FilterPrimitive* primitive)
     }
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// SDK form; the frame rectangle reads the matrix through T& accessors (the SDK's const ones return const T&)
 // @0x142732ec0
 void HAL::PushFilters(FilterPrimitive* prim)
 {
@@ -1239,10 +1253,12 @@ void HAL::PushFilters(FilterPrimitive* prim)
         if (prim->GetCacheState() == FilterPrimitive::Cache_Uncached)
         {
             // draw the content into a target of the filtered area's size
-            const Matrix2F& m = prim->GetFilterAreaMatrix().GetMatrix2D();
+            const Matrix2F& m = e.pPrimitive->GetFilterAreaMatrix().GetMatrix2D();
             e.pRenderTarget   = *CreateTempRenderTarget(ImageSize((UInt32)(SInt64)m.Sx(), (UInt32)(SInt64)m.Sy()),
                                                       prim->GetMaskPresent());
-            RectF frameRect(m.Tx(), m.Ty(), m.Tx() + m.Sx(), m.Ty() + m.Sy());
+            // the SDK's const accessors return const T&
+            Matrix2F& mr = const_cast<Matrix2F&>(m);
+            RectF frameRect(mr.Tx(), mr.Ty(), mr.Tx() + mr.Sx(), mr.Ty() + mr.Sy());
             PushRenderTarget(frameRect, e.pRenderTarget);
             applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, false, true);
 
