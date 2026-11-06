@@ -19,6 +19,8 @@
 // MS2-PIN: ??_GLoadBinaryTask@GFx@Scaleform@@UEAAPEAXI@Z 0x142639df0
 // MS2-PIN: ?IsPreloadingFinished@LoadQueueEntryMT@GFx@Scaleform@@UEAA_NXZ 0x14263a800
 
+#define SF_GFX_PLAYERIMPL   // the real MovieImpl bases: StateBag calls go through the +0x10 base as in the exe
+#include "../include/gfx/gfx_interactiveobject.h"
 #include "../include/gfx/gfx_playertasks.h"
 #include "../include/gfx/gfx_loaderimpl.h"
 #include "../include/gfx/gfx_moviedef.h"
@@ -68,7 +70,7 @@ public:
 
 static inline ASMovieRootLoadSink* GetLoadSink(MovieImpl* pmovieImpl)
 {
-    return (ASMovieRootLoadSink*)pmovieImpl->pASMovieRoot;
+    return (ASMovieRootLoadSink*)pmovieImpl->pASMovieRoot.GetPtr();
 }
 
 // @0x14263a750
@@ -87,12 +89,12 @@ String GetUrlStrGfx(const String& url)
 // ---------------------------------------------------------------------------------------------------------------------
 // MoviePreloadTask
 
-// MS2-FUNCTIONAL the exe loads the StateBag vftable straight from the movie (+0x10) before the loader pointer; the MovieImpl bases are placeholders here. The GetUrlStrGfx temporary's release tests (count - 1) == 0 in the exe
+// The load states take the movie's state bag through MovieImpl::GetStateBagImpl (the StateBag base at +0x10).
 // @0x142639b20
 MoviePreloadTask::MoviePreloadTask(MovieImpl* pmovieImpl, const String& url, bool stripped, bool quietOpen)
     : Task(Task::Id_MovieDataLoad), Url(url), Done(0)
 {
-    pLoadStates = *new LoadStates(pmovieImpl->pMainMovieDef->pLoaderImpl, pmovieImpl->GetStateBag()->GetStateBagImpl());
+    pLoadStates = *new LoadStates(pmovieImpl->pMainMovieDef->pLoaderImpl, pmovieImpl->GetStateBagImpl());
     LoadFlags   = pmovieImpl->pMainMovieDef->GetLoadFlags() | Loader::LoadImageFiles;
     LoadFlags  &= ~(Loader::LoadWaitFrame1 | Loader::LoadWaitCompletion);
     if (quietOpen)
@@ -191,17 +193,16 @@ bool LoadVarsTask::GetData(String* data, int* fileLen, bool* succeeded) const
     return true;
 }
 
-// MS2-FUNCTIONAL the exe loads the movie's StateBag vftable before pMainMovieDef->pLoaderImpl (MovieImpl bases are placeholders)
+// As in the SDK: MovieImpl::GetStateBagImpl for the load states, the task manager through StateBag::GetTaskManager.
 // @0x1426398a0
 LoadQueueEntryMT_LoadVars::LoadQueueEntryMT_LoadVars(LoadQueueEntry* pqueueEntry, MovieImpl* pmovieImpl)
     : LoadQueueEntryMT(pqueueEntry, pmovieImpl)
 {
-    pLoadStates = *new LoadStates(pMovieImpl->pMainMovieDef->pLoaderImpl, pMovieImpl->GetStateBag()->GetStateBagImpl());
+    pLoadStates = *new LoadStates(pMovieImpl->pMainMovieDef->pLoaderImpl, pMovieImpl->GetStateBagImpl());
     String level0Path;
     pMovieImpl->GetMainMoviePath(&level0Path);
     pTask = *SF_NEW LoadVarsTask(pLoadStates, level0Path, pqueueEntry->URL);
-    Ptr<TaskManager> ptaskManager = *(TaskManager*)pMovieImpl->GetStateBag()->GetStateAddRef(State::State_TaskManager);
-    ptaskManager->AddTask(pTask);
+    pMovieImpl->GetTaskManager()->AddTask(pTask);
 }
 
 // @0x142639d90
@@ -265,17 +266,16 @@ bool LoadBinaryTask::GetData(ArrayPOD<UByte>* data, int* fileLen, bool* succeede
     return true;
 }
 
-// MS2-FUNCTIONAL the exe loads the movie's StateBag vftable before pMainMovieDef->pLoaderImpl (MovieImpl bases are placeholders)
+// As in the SDK: MovieImpl::GetStateBagImpl for the load states, the task manager through StateBag::GetTaskManager.
 // @0x1426396d0
 LoadQueueEntryMT_LoadBinary::LoadQueueEntryMT_LoadBinary(LoadQueueEntry* pqueueEntry, MovieImpl* pmovieImpl)
     : LoadQueueEntryMT(pqueueEntry, pmovieImpl)
 {
-    pLoadStates = *new LoadStates(pMovieImpl->pMainMovieDef->pLoaderImpl, pMovieImpl->GetStateBag()->GetStateBagImpl());
+    pLoadStates = *new LoadStates(pMovieImpl->pMainMovieDef->pLoaderImpl, pMovieImpl->GetStateBagImpl());
     String level0Path;
     pMovieImpl->GetMainMoviePath(&level0Path);
     pTask = *SF_NEW LoadBinaryTask(pLoadStates, level0Path, pqueueEntry->URL);
-    Ptr<TaskManager> ptaskManager = *(TaskManager*)pMovieImpl->GetStateBag()->GetStateAddRef(State::State_TaskManager);
-    ptaskManager->AddTask(pTask);
+    pMovieImpl->GetTaskManager()->AddTask(pTask);
 }
 
 // @0x142639d30
