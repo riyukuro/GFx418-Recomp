@@ -739,6 +739,13 @@ void MaskBundle::RemoveEntries(UPInt index, UPInt count)
 }
 
 }} // namespace Scaleform::Render
+// The mask key statics keep no symbol row (06e takes their addresses in static data, so a row would make the hook DLL
+// rebind them to the exe); sfr_atexit_01's dtor thunks name them by their DAT_ addresses, bound here.
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:DAT_143a2fd28=?Instance@SKI_MaskStart@Render@Scaleform@@2V123@A")
+#pragma comment(linker, "/alternatename:DAT_143a2fd38=?InstanceClipped@SKI_MaskStart@Render@Scaleform@@2V123@A")
+#pragma comment(linker, "/alternatename:DAT_143a2fd50=?Instance@SKI_MaskEnd@Render@Scaleform@@2V123@A")
+#endif
 
 // the scalar deleting destructors (the key interfaces' are folded copies) and the vftables
 // MS2-PIN: ??_GSKI_Primitive@Render@Scaleform@@UEAAPEAXI@Z 0x1426bb7c0

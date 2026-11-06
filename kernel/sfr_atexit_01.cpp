@@ -92,8 +92,8 @@ extern "C" char DAT_143b15780[];
 extern "C" char DAT_143a2f650[];
 // SKI_MaskStart::Instance / InstanceClipped and SKI_MaskEnd::Instance (sfr_render_06e) stay DAT_ names: 06e takes
 // their addresses in static data (the mask key table), so a real-name row would make the hook DLL rebind the
-// definitions to the exe (ADDR64 against an exe global). The full exe aliases these to the definitions
-// (tools/fullexe/alias-manual.tsv).
+// definitions to the exe (ADDR64 against an exe global). sfr_render_06e binds these names to the definitions
+// (definer-form /alternatename, full exe only).
 extern "C" char DAT_143a2fd28[];
 extern "C" char DAT_143a2fd38[];
 extern "C" char DAT_143a2fd50[];
