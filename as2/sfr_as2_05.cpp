@@ -869,13 +869,33 @@ FunctionRef ObjectInterface::Get_constructor(ASStringContext* psc)
     return 0;
 }
 
-// MS2-FUNCTIONAL the exe AddRefs the copied function in memory (inc / and) and indexes the builtin as (id + 0x27) * 8
+// Value::ToFunction, which the exe inlines here (ResolveFunctionName stays out of line).
+struct GetConstructor_ValueView : Value { using Value::ResolveFunctionName; };
+static SF_FORCEINLINE FunctionRef GetConstructor_ToFunction(const Value& v, const Environment* penv)
+{
+    switch(v.T.Type)
+    {
+    case Value::FUNCTIONNAME:
+        return static_cast<const GetConstructor_ValueView&>(v).ResolveFunctionName(penv);
+    case Value::FUNCTION:
+        return FunctionRef(v.V.FunctionValue);
+    default:;
+    }
+    return FunctionRef();
+}
+
+// MS2-FUNCTIONAL scheduling only: the exe forms the global's ObjectInterface pointer and the builtin address before &ctor
 // @0x14294a0f0
 FunctionRef Environment::GetConstructor(ASBuiltinType className)
 {
     Value ctor;
-    if (GetSC()->pContext->pGlobal->GetMemberRaw(GetSC(), GetBuiltin(className), &ctor) && ctor.IsFunction())
-        return ctor.ToFunction(this);
+    // GlobalContext::GetStringManager (ToAS2Root(pMovieRoot)), inlined by the exe.
+    MovieRoot* proot = (MovieRoot*)GetSC()->pContext->pMovieRoot->pASMovieRoot;
+    if (GetSC()->pContext->pGlobal->GetMemberRaw(GetSC(), proot->GetStringManager()->GetBuiltin(className), &ctor) &&
+        ctor.IsFunction())
+    {
+        return GetConstructor_ToFunction(ctor, this);
+    }
     return 0;
 }
 
@@ -2371,22 +2391,23 @@ static inline StringManager* GetStrings(const GlobalContext* pgc)
     return ((MovieRoot*)pgc->pMovieRoot->pASMovieRoot)->GetStringManager();
 }
 
-// MS2-FUNCTIONAL the builtin-name address is scheduled two instructions apart from the exe's
 // @0x142949660
 Object* GlobalContext::GetActualPrototype(Environment* penv, ASBuiltinType type)
 {
-    Ptr<Object> proto = GetPrototype(type);
-    Value       val;
-    if (pGlobal->GetMemberRaw(penv->GetSC(), GetStrings(this)->GetBuiltin(type), &val))
+    // force registration
+    Ptr<Object> result = GetPrototype(type);
+
+    // need to check constructor function's "prototype" prop.
+    Value v;
+    // GetBuiltin's GlobalContext::GetStringManager, inlined by the exe.
+    MovieRoot* proot = (MovieRoot*)pMovieRoot->pASMovieRoot;
+    if (pGlobal->GetMemberRaw(penv->GetSC(), proot->GetStringManager()->GetBuiltin(type), &v))
     {
-        Ptr<Object> ctor = val.ToObject(penv);
-        if (ctor)
-        {
-            if (ctor->GetMemberRaw(penv->GetSC(), GetStrings(this)->GetBuiltin(ASBuiltin_prototype), &val))
-                proto = val.ToObject(penv);
-        }
+        Ptr<Object> o = v.ToObject(penv);
+        if (o && o->GetMemberRaw(penv->GetSC(), GetStrings(this)->GetBuiltin(ASBuiltin_prototype), &v))
+            result = v.ToObject(penv);
     }
-    return proto;
+    return result;
 }
 
 static inline AvmCharacter* SpriteAvm(Sprite* psprite)
