@@ -294,19 +294,25 @@ Scaleform::GFx::AS3::Value& FUN_1423f1b90(Scaleform::GFx::AS3::Value* self, Scal
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
-// The exe inlines SparseArray::At and PushBack into the Array natives (out-of-line copies in sfr_as3_03/04).
+// The exe inlines SparseArray::At (the SDK body) and PushBack into the Array natives (out-of-line copies in sfr_as3_03/04).
 static SF_INLINE const Value& saAt(const SparseArray& sa, UPInt ind)
 {
     if (ind < sa.ValueA.GetSize())
+        // ValueA
         return sa.ValueA[ind];
-    if (ind >= sa.ValueHLowInd && ind <= sa.ValueHHighInd)
+    else if (ind < sa.ValueHLowInd || ind > sa.ValueHHighInd)
+        return sa.DefaultValue;
+    else
     {
-        const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = sa.ValueH.mHash.GetAlt(ind);
-        const Value* v = p ? &p->Second : 0;
-        if (v)
-            return *v;
+        const Value* vp;
+
+        // ValueH
+
+        if ((vp = sa.ValueH.Get(ind)) != NULL)
+            return *vp;
+        else
+            return sa.DefaultValue;
     }
-    return sa.DefaultValue;
 }
 
 // ArrayDataDH::PushBack, which the exe's map body inlines (filter keeps the call).
@@ -465,7 +471,7 @@ namespace Instances { namespace fl
         }
     }
 
-    // MS2-FUNCTIONAL: the exe keeps the inlined At's node-to-value null select as a cmove
+    // The SDK body (At is SparseArray::At, inlined).
     // @0x1423fb1a0
     void Array::AS3indexOf(SInt32& result, const Value& searchElement, SInt32 fromIndex)
     {
