@@ -1618,10 +1618,17 @@ inline MemberSet::Iterator MemberHash_FindNoCase(ASStringHash_GC<Member>* phash,
         return MemberSet::Iterator(reinterpret_cast<MemberSet*>(phash), index);
     return MemberSet::Iterator(0, 0);
 }
+static SF_FORCEINLINE MemberSet::Iterator MemberHash_FindOut(ASStringHash_GC<Member>* phash, const ASString& key)
+{
+    SPInt index = MemberHash_FindIndex(phash, key);
+    if (index >= 0)
+        return MemberSet::Iterator(reinterpret_cast<MemberSet*>(phash), index);
+    return MemberSet::Iterator(0, 0);
+}
 inline MemberSet::Iterator MemberHash_FindCaseCheck(ASStringHash_GC<Member>* phash, const ASString& key,
                                                     bool caseSensitive)
 {
-    return caseSensitive ? MemberHash_Find(phash, key) : MemberHash_FindNoCase(phash, key);
+    return caseSensitive ? MemberHash_FindOut(phash, key) : MemberHash_FindNoCase(phash, key);
 }
 
 // Hash::Remove of the member table: unlinks the slot of key (the chain successor moves into a freed head slot).
@@ -1671,7 +1678,7 @@ static SF_FORCEINLINE void MemberHash_Remove(ASStringHash_GC<Member>* phash, con
     pTable->EntryCount--;
 }
 
-// MS2-FUNCTIONAL cl lays out the merged find-index test after the case-sensitive branch; same code otherwise
+// MS2-FUNCTIONAL block layout only: the exe jumps from the case-sensitive findIndexAlt call to a shared index test placed after the no-case call; ours places it after the case-sensitive call
 // @0x1429388e0
 bool Object::DeleteMember(ASStringContext* psc, const ASString& name)
 {
