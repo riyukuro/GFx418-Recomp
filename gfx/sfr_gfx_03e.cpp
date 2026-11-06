@@ -126,15 +126,15 @@ namespace Scaleform { namespace Render { namespace Text {
 // @0x1425b5e40
 FontHandle::~FontHandle()
 {
-    if (pFont)
-        pFont->Release();
+    // the SDK member is Ptr<Font>: its dtor runs after the vtable store
+    reinterpret_cast<Ptr<Font>&>(pFont).~Ptr();
 }
 }}} // namespace Scaleform::Render::Text
 
 namespace Scaleform { namespace GFx {
 
 // (the exe has only the deleting dtor, 0x1425b61f0, with this body inlined)
-// MS2-FUNCTIONAL 0x1425b61f0: the deleting dtor (pinned) inlines this body; the exe stores the base vtable before it reloads pFont (a barrier in the base dtor fixes that but stubs its deleting dtor 0x1425b62d0)
+// (0x1425b61f0, the pinned deleting dtor, inlines this body and the base dtor; the base dtor releases pFont through its SDK Ptr<Font> view so the vtable store comes first, as in the exe)
 // (inline: sfr_gfx_05d has the same inline body; the exe has no out-of-line copy)
 inline FontHandle::~FontHandle()
 {
