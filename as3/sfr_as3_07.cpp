@@ -2001,24 +2001,56 @@ namespace Instances { namespace fl_display
                           (cx + rx) * 20.0f, cy * 20.0f);
     }
 
-    // MS2-FUNCTIONAL: xmm register allocation of the inlined ellipse expansion
     // @0x14244a2e0
     void Graphics::drawCircle(const Value& result, Value::Number x, Value::Number y, Value::Number radius)
     {
         SF_UNUSED(result);
-        GraphicsDrawEllipse(pDrawing, float(x), float(y), float(radius), float(radius));
+        float fx = (float)x, fy = (float)y, fradius = (float)radius;
+        GraphicsDrawEllipse(pDrawing, fx, fy, fradius, fradius);
         pDispObj->InvalidateHitResult();
     }
 
-    // MS2-FUNCTIONAL: xmm register allocation of the inlined ellipse expansion
     // @0x14244a5c0
     void Graphics::drawEllipse(const Value& result, Value::Number x, Value::Number y,
                                Value::Number width, Value::Number height)
     {
         SF_UNUSED(result);
-        float rx = float(width) * 0.5f;
-        float ry = float(height) * 0.5f;
-        GraphicsDrawEllipse(pDrawing, float(x) + rx, float(y) + ry, rx, ry);
+        float fx = (float)x, fy = (float)y, fxradius = (float)width * 0.5f, fyradius = (float)height * 0.5f;
+        fx = fx + fxradius;
+        fy = fy + fyradius;
+        pDrawing->MoveTo(Render::PixelsToTwips(fx + fxradius), Render::PixelsToTwips(fy));
+        pDrawing->CurveTo(Render::PixelsToTwips(fx + fxradius), 
+                          Render::PixelsToTwips(GraphicsTanPi8 * fyradius + fy),
+                          Render::PixelsToTwips(GraphicsSinPi4 * fxradius + fx),
+                          Render::PixelsToTwips(GraphicsSinPi4 * fyradius + fy));
+        pDrawing->CurveTo(Render::PixelsToTwips(GraphicsTanPi8 * fxradius + fx), 
+                          Render::PixelsToTwips(fy + fyradius),
+                          Render::PixelsToTwips(fx),
+                          Render::PixelsToTwips(fy + fyradius));
+        pDrawing->CurveTo(Render::PixelsToTwips(-GraphicsTanPi8 * fxradius + fx), 
+                          Render::PixelsToTwips(fy + fyradius),
+                          Render::PixelsToTwips(-GraphicsSinPi4 * fxradius + fx),
+                          Render::PixelsToTwips(GraphicsSinPi4 * fyradius + fy));
+        pDrawing->CurveTo(Render::PixelsToTwips(fx - fxradius), 
+                          Render::PixelsToTwips(GraphicsTanPi8 * fyradius + fy),
+                          Render::PixelsToTwips(fx - fxradius),
+                          Render::PixelsToTwips(fy));
+        pDrawing->CurveTo(Render::PixelsToTwips(fx - fxradius), 
+                          Render::PixelsToTwips(-GraphicsTanPi8 * fyradius + fy),
+                          Render::PixelsToTwips(-GraphicsSinPi4 * fxradius + fx),
+                          Render::PixelsToTwips(-GraphicsSinPi4 * fyradius + fy));
+        pDrawing->CurveTo(Render::PixelsToTwips(-GraphicsTanPi8 * fxradius + fx), 
+                          Render::PixelsToTwips(fy - fyradius),
+                          Render::PixelsToTwips(fx),
+                          Render::PixelsToTwips(fy - fyradius));
+        pDrawing->CurveTo(Render::PixelsToTwips(GraphicsTanPi8 * fxradius + fx), 
+                          Render::PixelsToTwips(fy - fyradius),
+                          Render::PixelsToTwips(GraphicsSinPi4 * fxradius + fx),
+                          Render::PixelsToTwips(-GraphicsSinPi4 * fyradius + fy));
+        pDrawing->CurveTo(Render::PixelsToTwips(fx + fxradius), 
+                          Render::PixelsToTwips(-GraphicsTanPi8 * fyradius + fy),
+                          Render::PixelsToTwips(fx + fxradius),
+                          Render::PixelsToTwips(fy));
         pDispObj->InvalidateHitResult();
     }
 
