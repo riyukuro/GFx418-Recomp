@@ -22,6 +22,15 @@
 
 namespace Scaleform {
 namespace GFx { namespace Video { class VideoDecoder; class VideoReader; class VideoSoundSystem; class VideoSound; struct SyncObjectTag; } }
+// The exe has no RefCountBaseNTS<VideoReaderConfig> vftable: the base vptr store in ??0VideoReaderConfig is dead.
+namespace GFx { namespace Video { class VideoReaderConfig; } }
+template<> class __declspec(novtable) RefCountBaseNTS<GFx::Video::VideoReaderConfig, Stat_Default_Mem>
+    : public RefCountBaseStatImpl<RefCountNTSImpl, Stat_Default_Mem>
+{
+public:
+    enum { StatType = Stat_Default_Mem };
+    RefCountBaseNTS() : RefCountBaseStatImpl<RefCountNTSImpl, Stat_Default_Mem>() {}
+};
 
 // The exe has no vftable for the RefCountBaseNTS layer of VideoDecoder / VideoReader nor for the abstract VideoDecoder itself, VideoSoundSystem, VideoSound
 // (the derived constructors store only their final vftable): novtable keeps them out of the object file.
@@ -369,6 +378,7 @@ class VideoReaderConfig : public RefCountBaseNTS<VideoReaderConfig, Stat_Default
 public:
     typedef VideoBase::ReadCallback ReadCallback;
 
+    VideoReaderConfig(MemoryHeap* pheap, FileOpenerBase* pfileOpener);   // 0x14002b070
     virtual VideoReader* CreateReader() = 0;                    // 1
     virtual void         SetReadCallback(ReadCallback*) {}      // 2
     virtual void         DetachReader(VideoReader* preader);    // 3

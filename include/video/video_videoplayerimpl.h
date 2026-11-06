@@ -214,6 +214,7 @@ class VideoReaderConfigSmp : public VideoReaderConfig
 {
 public:
     VideoReaderConfigSmp(MemoryHeap* pheap, FileOpenerBase* pfileOpener);   // 0x14002b150
+    virtual ~VideoReaderConfigSmp();                                         // 0x14002b1b0
     virtual VideoReader* CreateReader();
 };
 static_assert(sizeof(VideoReaderConfigSmp) == 0x40, "VideoReaderConfigSmp size"); // (sfr24) its allocation is 0x40

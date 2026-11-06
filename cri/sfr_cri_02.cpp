@@ -505,7 +505,6 @@ bool VideoDecoderThrd::IsDecodingStopped(VideoPlayer* pp)
 //
 //
 //
-//
 
 class __declspec(novtable) VideoImageView : public Render::TextureImage
 {
@@ -1683,50 +1682,50 @@ void* FUN_14002b0f0(void* object, CriUint32 flags)
     return object;
 }
 
+namespace Scaleform { namespace GFx { namespace Video {
 // @0x14002b070
-void* FUN_14002b070(void* object, void* heap, void* opener)
+VideoReaderConfig::VideoReaderConfig(MemoryHeap* pheap, FileOpenerBase* pfileOpener)
+    : pHeap(pheap), pFileOpener(pfileOpener), IOEnabled(true)
 {
-    void** fields = (void**)object;
-    fields[0] = (void*)DAT_1431b91b0;
-    *((CriUint32*)fields + 2) = 1;
-    fields[2] = heap;
-    if (opener)
-        FUN_14257dc30(opener);
-    fields[3] = opener;
-    _ReadWriteBarrier();   // the member initializers run in order: Ptr<FileOpenerBase>, then Readers
-    fields[4] = NULL;
-    fields[5] = NULL;
-    fields[6] = NULL;
-    _ReadWriteBarrier();   // IOEnabled is set after the inlined Array ctor
-    *((CriUint8*)object + 0x38) = 1;
-    return object;
 }
+}}} // namespace Scaleform::GFx::Video
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
+namespace Scaleform { namespace GFx { namespace Video {
 // @0x14002b1b0
-void FUN_14002b1b0(void* object)
+VideoReaderConfigSmp::~VideoReaderConfigSmp()
 {
-    void** fields = (void**)object;
-    fields[0] = (void*)DAT_1431b91d8;
-    _ReadWriteBarrier();   // a dtor's vftable store is not moved past the member reads
-    if (fields[4])
-        FUN_14002d3f0(fields[4]);
-    if (fields[3])
-        FUN_14257dcb0(fields[3]);
-    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
+    _ReadWriteBarrier();   // keeps the vftable store ahead of the member dtors
 }
 
 // @0x14002b150
-void* FUN_14002b150(void* object, void* heap, void* opener)
+VideoReaderConfigSmp::VideoReaderConfigSmp(MemoryHeap* pheap, FileOpenerBase* pfileOpener)
+    : VideoReaderConfig(pheap, pfileOpener)
 {
-    FUN_14002b070(object, heap, opener);
-    *(void**)object = (void*)DAT_1431b91d8;
-    return object;
 }
+}}} // namespace Scaleform::GFx::Video
+//
+//
+//
+//
+//
+//
+//
 
 // @0x14002b200
 void* FUN_14002b200(void* object, CriUint32 flags)
 {
-    FUN_14002b1b0(object);
+    reinterpret_cast<Scaleform::GFx::Video::VideoReaderConfigSmp*>(object)->Scaleform::GFx::Video::VideoReaderConfigSmp::~VideoReaderConfigSmp();
     if (flags & 1)
         FUN_14002d3f0(object);
     return object;
@@ -2376,6 +2375,7 @@ void FUN_14002e010(CriMvRequestPoolView* pool)
 // MS2-PIN: ??_7VideoReader@Video@GFx@Scaleform@@6BRefCountImplCore@Scaleform@@@ 0x1431b93b0
 // MS2-PIN: ??_7VideoReader@Video@GFx@Scaleform@@6BCriMvFileReaderInterface@@@ 0x1431b9360
 // MS2-PIN: ??_7VideoReaderConfigSmp@Video@GFx@Scaleform@@6B@ 0x1431b91d8
+// MS2-PIN: ??_7VideoReaderConfig@Video@GFx@Scaleform@@6B@ 0x1431b91b0
 // MS2-PIN: ??0VideoPlayerImpl@Video@GFx@Scaleform@@QEAA@PEAVMemoryHeap@3@@Z 0x14002c810
 // ---- full-exe unresolved: leaves without .pdata that data_cri's tables reference as ?FUN_<va>@@YAXXZ ----
 
