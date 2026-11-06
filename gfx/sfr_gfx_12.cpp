@@ -5,9 +5,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1423b1920-0x1423b1d3d .text$mn
 // MS2-RANGE: 0x142747bc0-0x142747d98 .text$mn
-// MS2-RANGE: 0x142747da0-0x142747ed0 .text$mn
-// MS2-RANGE: 0x142747f30-0x142748080 .text$mn
-// MS2-RANGE: 0x1427480e0-0x142748150 .text$mn
+// MS2-RANGE: 0x142747da0-0x142748150 .text$mn
 // MS2-RANGE: 0x142748230-0x1427485e6 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
@@ -368,3 +366,7 @@ bool SoundInfo::SetSoundData(SoundDataBase* psound)
 // MS2-PIN: ??_7SoundFile@Sound@Scaleform@@6B@ 0x1431bef80
 // MS2-PIN: ??_7SoundInfo@Sound@Scaleform@@6B@ 0x14318ffa8
 // MS2-PIN: ??_GSoundData@Sound@Scaleform@@UEAAPEAXI@Z 0x142747ff0
+// MS2-PIN: ??_7?$RefCountBaseNTS@VSoundDataBase@Sound@Scaleform@@$03@Scaleform@@6B@ 0x1431bef60
+// MS2-PIN: ??_7SoundDataBase@Sound@Scaleform@@6B@ 0x1431bef68
+// MS2-PIN: ??_G?$RefCountBaseNTS@VSoundDataBase@Sound@Scaleform@@$03@Scaleform@@UEAAPEAXI@Z 0x142747ed0
+// MS2-PIN: ??_GSoundDataBase@Sound@Scaleform@@UEAAPEAXI@Z 0x142748080

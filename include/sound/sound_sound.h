@@ -16,10 +16,11 @@
 namespace Scaleform {
 namespace Sound { class SoundDataBase; }
 
-// The exe has no vftable for the RefCountBaseNTS / RefCountBaseStatImpl layers of SoundDataBase (the derived constructors
-// overwrite the pointer): this specialisation keeps its own chain out of the object file.
+// The exe keeps vftables for the RefCountBaseNTS layer (0x1431bef60) and SoundDataBase (0x1431bef68), each with its
+// own scalar deleting dtor (0x142747ed0, 0x142748080), though no code stores them (the derived constructors overwrite
+// the pointer). This specialisation keeps the RefCountBaseStatImpl layer out of the chain.
 template<>
-class __declspec(novtable) RefCountBaseNTS<Sound::SoundDataBase, 4> : public RefCountNTSImpl
+class RefCountBaseNTS<Sound::SoundDataBase, 4> : public RefCountNTSImpl
 {
 public:
     enum { StatType = 4 };
@@ -33,7 +34,7 @@ namespace Scaleform { namespace Sound {
 enum { Stat_Sound_Mem = 4 };
 
 // Sample data description (RefCountBaseNTS, 0x20 bytes).
-class __declspec(novtable) SoundDataBase : public RefCountBaseNTS<SoundDataBase, Stat_Sound_Mem>
+class SoundDataBase : public RefCountBaseNTS<SoundDataBase, Stat_Sound_Mem>
 {
 public:
     enum SampleFormat
