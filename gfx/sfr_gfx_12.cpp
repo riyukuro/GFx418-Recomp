@@ -267,7 +267,7 @@ SoundFile::~SoundFile()
     Memory::pGlobalHeap->Free(pFileName);
 }
 
-// MS2-FUNCTIONAL: positions the read cursor on the chunk holding the given byte offset.
+// Positions the read cursor on the chunk holding the given byte offset.
 // @0x1427483a0
 bool AppendableSoundData::SetReadPosition(unsigned pos)
 {
@@ -276,15 +276,18 @@ bool AppendableSoundData::SetReadPosition(unsigned pos)
         return false;
     pReadChunk   = pFirstChunk;
     unsigned end = pReadChunk->Used;
-    while (pos >= end)
+    for (;;)
     {
+        if (pos < end)
+        {
+            ReadPos = pReadChunk->Used - end + pos;
+            return true;
+        }
         if (!pReadChunk->pNext)
             return false;
         pReadChunk = pReadChunk->pNext;
         end += pReadChunk->Used;
     }
-    ReadPos = pReadChunk->Used - end + pos;
-    return true;
 }
 
 // MS2-FUNCTIONAL: releases the chunk lock taken by LockDataForAppend.
