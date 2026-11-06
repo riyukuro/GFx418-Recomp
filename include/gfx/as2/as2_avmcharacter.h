@@ -20,6 +20,8 @@ public:
         EventHandlers; // +0x28
 
     AvmCharacter(InteractiveObject* pdispObj); // exe 0x142918930
+    // The same ctor, defined inline in the units whose exe code inlines it (the AvmButton ctor).
+    AvmCharacter(InteractiveObject* pdispObj, ObjectInlineCtorTag);
     virtual ~AvmCharacter(); // exe 0x1429253d0 (sfr32)
     InteractiveObject* GetDispObj() const { return pDispObj; }
     MovieRoot*         GetAS2Root() const { return ToAS2Root(pDispObj); }

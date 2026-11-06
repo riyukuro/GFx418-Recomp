@@ -82,22 +82,31 @@ public:
     void RecreateCharacters(ButtonRecord::MouseState mouseState);
 };
 
-// The prototype comes from the environment of the nearest movie clip above the button.
-// MS2-FUNCTIONAL: the exe stores the intermediate vftables and schedules the loop differently
+// AvmCharacter::GetASEnvironment (0x1429493c0, sfr_as2_05v), which the exe inlines into the AvmButton ctor:
+// the environment of the nearest sprite above the character.
+static SF_FORCEINLINE Environment* MS2_CharEnv(AvmCharacter* pc)
+{
+    for (InteractiveObject* p = pc->GetDispObj()->GetParent(); p; p = p->GetParent())
+    {
+        if (p->IsSprite())
+            return static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(p->GetAvmObjImpl()))->GetASEnvironment();
+    }
+    return 0;
+}
+
+// The AvmCharacter ctor (0x142918930), which the exe also inlines here.
+inline AvmCharacter::AvmCharacter(InteractiveObject* pdispObj, ObjectInlineCtorTag)
+    : pDispObj(pdispObj)
+{
+    pdispObj->BindAvmObj(this);
+}
+
+// The SDK body: the prototype comes from GetGC()->GetActualPrototype(GetASEnvironment(), ASBuiltin_Button).
 // @0x142918830
 AvmButton::AvmButton(Button* pbutton)
-    : AvmCharacter(pbutton)
+    : AvmCharacter(pbutton, ObjectInlineCtorTag())
 {
-    Environment* penv = 0;
-    for (InteractiveObject* pparent = pbutton->GetParent(); pparent; pparent = pparent->GetParent())
-    {
-        if (pparent->InteractiveObject::Flags & InteractiveObject::Mask_MovieClip)
-        {
-            penv = AS2::ToAvmCharacter(pparent)->GetASEnvironment();
-            break;
-        }
-    }
-    pProto = GetAS2Root()->pGlobalContext->GetActualPrototype(penv, ASBuiltin_Button);
+    pProto = GetAS2Root()->pGlobalContext->GetActualPrototype(MS2_CharEnv(this), ASBuiltin_Button);
 }
 
 // The exe folds this with AvmCharacter::OnEventLoadBase (0x14296b820, sfr_as2_06), the same body.
@@ -114,3 +123,6 @@ void AvmButton::OnEventLoad()
 // MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
 // MS2-PIN: ??_7AvmInteractiveObjBase@GFx@Scaleform@@6B@ 0x14317bfe8
 // MS2-PIN: ??_7AvmButtonBase@GFx@Scaleform@@6B@ 0x14317db08
+// MS2-PIN: ??_7AvmCharacter@AS2@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x143215b00
+// MS2-PIN: ??_7AvmCharacter@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215c48
+// MS2-PIN: ??_7ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215410
