@@ -3285,8 +3285,6 @@ namespace Classes { namespace fl_text
 // ---- fl_text: by-value overloads of the result-reference natives ----
 // Each makes an empty result, fills it through the reference form and returns it.
 
-// SPtr<Array>::operator=(const SPtr<Array>&), kept out of line by the exe.
-Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Array>& FUN_1424aa450(Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Array>& dst, const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Array>& src);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -3376,7 +3374,9 @@ namespace Instances { namespace fl_text
     SPtr<Instances::fl::Array> TextFormat::tabStopsGet()
     {
         SPtr<Instances::fl::Array> result;
-        ::FUN_1424aa450(result, tabStops);
+#pragma inline_depth(0)
+        reinterpret_cast<SPtr<Instances::fl::Object>&>(result).Set(reinterpret_cast<const SPtr<Instances::fl::Object>&>(tabStops));
+#pragma inline_depth()
         return result;
     }
 
