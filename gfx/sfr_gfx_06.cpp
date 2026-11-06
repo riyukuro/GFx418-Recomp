@@ -460,7 +460,6 @@ DisplayObjectBase::GeomDataType& DisplayObjectBase::GetGeomData(GeomDataType& ge
 }
 
 // @0x1425f1f60
-// MS2-FUNCTIONAL: frame layout (the exe keeps the bounds rect in a /GS-checked slot)
 Double DisplayObjectBase::GetHeight() const
 {
     RectF r = GetBounds(GetMatrix());
@@ -629,7 +628,6 @@ unsigned DisplayObjectBase::GetVersion() const
 }
 
 // @0x1425f2a40
-// MS2-FUNCTIONAL: frame layout (the exe keeps the bounds rect in a /GS-checked slot)
 Double DisplayObjectBase::GetWidth() const
 {
     RectF r = GetBounds(GetMatrix());
@@ -859,7 +857,6 @@ PointF DisplayObjectBase::Local3DToGlobal(const Point3F& ptIn) const
 
 
 // @0x1425f39b0
-// MS2-FUNCTIONAL: the exe inlines the base OnEventLoad as a leaf, ours calls it
 void DisplayObject::OnEventLoad()
 {
     DisplayObjectBase::OnEventLoad();
@@ -1504,8 +1501,27 @@ void DisplayObjectBase::SetMatrix3D(const Matrix3F& m)
     }
 }
 
+// The SDK's Matrix3x4::Translation: the identity, then the three offsets.
+static inline Matrix3F SdkTranslation3F(float tX, float tY, float tZ)
+{
+    Matrix3F mat;
+    mat.M[0][3] = tX;
+    mat.M[1][3] = tY;
+    mat.M[2][3] = tZ;
+    return mat;
+}
+
+// The SDK's Matrix3x4::Scaling: the identity, then the three scales.
+static inline Matrix3F SdkScaling3F(float sX, float sY, float sZ)
+{
+    Matrix3F mat;
+    mat.M[0][0] = sX;
+    mat.M[1][1] = sY;
+    mat.M[2][2] = sZ;
+    return mat;
+}
+
 // @0x1425f4d70
-// MS2-FUNCTIONAL: the exe keeps the matrix temporaries 16-byte aligned (movaps), frame layout differs
 void DisplayObject::SetMatrix3D(const Matrix3F& m)
 {
     if (!pScrollRect)
@@ -1517,12 +1533,14 @@ void DisplayObject::SetMatrix3D(const Matrix3F& m)
     pScrollRect->OrigTransformMatrix = m;
     pScrollRect->IsOrig3D            = true;
 
-    Matrix3F m1(pScrollRect->OrigTransformMatrix);
-    m1.Prepend(Matrix3F::Translation(float(-pScrollRect->Rectangle.x1), float(-pScrollRect->Rectangle.y1), 0));
+    Matrix3F m1 = pScrollRect->OrigTransformMatrix;
+    Matrix3F tr = SdkTranslation3F((float)-pScrollRect->Rectangle.x1, (float)-pScrollRect->Rectangle.y1, 0);
+    m1.Prepend(tr);
     GetRenderNode()->SetMatrix3D(m1);
 
     Matrix3F mm;
-    mm.Prepend(Matrix3F::Translation(float(pScrollRect->Rectangle.x1), float(pScrollRect->Rectangle.y1), 0));
+    Matrix3F trm = SdkTranslation3F((float)pScrollRect->Rectangle.x1, (float)pScrollRect->Rectangle.y1, 0);
+    mm.Prepend(trm);
     pScrollRect->Mask->GetTreeNode()->SetMatrix3D(mm);
 }
 
@@ -1626,7 +1644,6 @@ void DisplayObjectBase::SetProjectionMatrix3D(const Matrix4F& m)
 
 // The view matrix is kept as set (for the hit tests); the node gets it with the viewport scale and offset undone.
 // @0x1425f5e70
-// MS2-FUNCTIONAL: the exe keeps the matrix temporaries 16-byte aligned (movaps), frame layout differs
 void DisplayObjectBase::SetViewMatrix3D(const Matrix3F& m)
 {
     bool hasViewMat = pRenNode && pRenNode->HasViewMatrix3D();
@@ -1638,8 +1655,8 @@ void DisplayObjectBase::SetViewMatrix3D(const Matrix3F& m)
     pPerspectiveData->ViewMatrix3D = m;
 
     MovieImpl* pmovie = GetMovieImpl();
-    Matrix3F viewportInv(Matrix3F::Translation(pmovie->VisibleFrameRect.x1, pmovie->VisibleFrameRect.y1, 0),
-                         Matrix3F::Scaling(1.0f / (pmovie->mViewport.Width / pmovie->VisibleFrameRect.Width()),
+    Matrix3F viewportInv(SdkTranslation3F(pmovie->VisibleFrameRect.x1, pmovie->VisibleFrameRect.y1, 0),
+                         SdkScaling3F(1.0f / (pmovie->mViewport.Width / pmovie->VisibleFrameRect.Width()),
                                            1.0f / (pmovie->mViewport.Height / pmovie->VisibleFrameRect.Height()), 1.0f));
     Matrix3F view(m, viewportInv);
 
@@ -1817,24 +1834,65 @@ static inline float DegToRad(Double deg)
 }
 
 // The node matrix from the AS 3D properties: scale, then the x, y and z rotations, then the translation.
+// The SDK's Matrix3x4::RotationX/Y/Z: the identity, then the rotation's 3x3 part.
+static inline Matrix3F SdkRotationX3F(float angle)
+{
+    Matrix3F mat;
+    float c = cosf(angle);
+    float s = sinf(angle);
+    mat.M[0][0] = 1.0f; mat.M[1][0] = 0.0f; mat.M[2][0] = 0.0f;
+    mat.M[0][1] = 0.0f; mat.M[1][1] = c;    mat.M[2][1] = s;
+    mat.M[0][2] = 0.0f; mat.M[1][2] = -s;   mat.M[2][2] = c;
+    return mat;
+}
+static inline Matrix3F SdkRotationY3F(float angle)
+{
+    Matrix3F mat;
+    float c = cosf(angle);
+    float s = sinf(angle);
+    mat.M[0][0] = c;    mat.M[1][0] = 0.0f; mat.M[2][0] = -s;
+    mat.M[0][1] = 0.0f; mat.M[1][1] = 1;    mat.M[2][1] = 0.0f;
+    mat.M[0][2] = s;    mat.M[1][2] = 0.0f; mat.M[2][2] = c;
+    return mat;
+}
+static inline Matrix3F SdkRotationZ3F(float angle)
+{
+    Matrix3F mat;
+    float c = cosf(angle);
+    float s = sinf(angle);
+    mat.M[0][0] = c;    mat.M[1][0] = s;    mat.M[2][0] = 0.0f;
+    mat.M[0][1] = -s;   mat.M[1][1] = c;    mat.M[2][1] = 0.0f;
+    mat.M[0][2] = 0.0f; mat.M[1][2] = 0.0f; mat.M[2][2] = 1.0f;
+    return mat;
+}
+
+// The SDK's Matrix3x4::IsValid: the twelve finite tests, unrolled.
+#define SDK_ISFINITE_F(x) ((x) >= -FLT_MAX && (x) <= FLT_MAX)
+static inline bool SdkIsValid3F(const Matrix3F& m)
+{
+    return SDK_ISFINITE_F(m.M[0][0]) && SDK_ISFINITE_F(m.M[0][1]) && SDK_ISFINITE_F(m.M[0][2]) && SDK_ISFINITE_F(m.M[0][3])
+        && SDK_ISFINITE_F(m.M[1][0]) && SDK_ISFINITE_F(m.M[1][1]) && SDK_ISFINITE_F(m.M[1][2]) && SDK_ISFINITE_F(m.M[1][3])
+        && SDK_ISFINITE_F(m.M[2][0]) && SDK_ISFINITE_F(m.M[2][1]) && SDK_ISFINITE_F(m.M[2][2]) && SDK_ISFINITE_F(m.M[2][3]);
+}
+#undef SDK_ISFINITE_F
+
 // @0x1425f75c0
-// MS2-FUNCTIONAL: SIMD matrix construction, the exe keeps the temporaries aligned
 void DisplayObjectBase::UpdateTransform3D()
 {
     Matrix3F rotXMat(Matrix3F::NoInit), transMat(Matrix3F::NoInit), scaleMat(Matrix3F::NoInit),
              rotYMat(Matrix3F::NoInit), rotZMat(Matrix3F::NoInit);
 
-    transMat = Matrix3F::Translation((float)pGeomData->X, (float)pGeomData->Y, (float)pGeomData->Z);
-    scaleMat = Matrix3F::Scaling((float)pGeomData->XScale / 100.f, (float)pGeomData->YScale / 100.f,
+    transMat = SdkTranslation3F((float)pGeomData->X, (float)pGeomData->Y, (float)pGeomData->Z);
+    scaleMat = SdkScaling3F((float)pGeomData->XScale / 100.f, (float)pGeomData->YScale / 100.f,
                                  (float)pGeomData->ZScale / 100.f);
 
-    rotXMat = pGeomData->XRotation != 0.0 ? Matrix3F::RotationX(DegToRad(pGeomData->XRotation)) : Matrix3F::Identity;
-    rotYMat = pGeomData->YRotation != 0.0 ? Matrix3F::RotationY(DegToRad(pGeomData->YRotation)) : Matrix3F::Identity;
-    rotZMat = pGeomData->Rotation != 0.0 ? Matrix3F::RotationZ(DegToRad(pGeomData->Rotation)) : Matrix3F::Identity;
+    rotXMat = pGeomData->XRotation != 0.0 ? SdkRotationX3F(DegToRad(pGeomData->XRotation)) : Matrix3F::Identity;
+    rotYMat = pGeomData->YRotation != 0.0 ? SdkRotationY3F(DegToRad(pGeomData->YRotation)) : Matrix3F::Identity;
+    rotZMat = pGeomData->Rotation != 0.0 ? SdkRotationZ3F(DegToRad(pGeomData->Rotation)) : Matrix3F::Identity;
 
     Matrix3F m(transMat, Matrix3F(Matrix3F(rotZMat, rotYMat), Matrix3F(rotXMat, scaleMat)));
 
-    if (m.IsValid())
+    if (SdkIsValid3F(m))
         SetMatrix3D(m);
 }
 
