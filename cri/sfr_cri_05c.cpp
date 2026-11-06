@@ -1189,7 +1189,6 @@ void FUN_1400540d0(void *ctx)   /* the exe callers pass the decoder context; unu
 
 // The DC rounding callback FUN_140054250 stores in the decoder (sfr_cri_06 keeps it as LAB_140054100; Ghidra made
 // no function here): when rounding is on, each enabled block's DC coefficient is divided by 8, rounded half away from 0.
-// MS2-FUNCTIONAL: written from the exe (VS2008 build, our toolset differs).
 // @0x140054100
 void FUN_140054100(char *ctx)
 {
@@ -1199,7 +1198,7 @@ void FUN_140054100(char *ctx)
   for (int i = 0; i < 6; i++) {
     if ((CriAt<cri_u32>(ctx, 0x71c) & (1u << i)) != 0) {
       short *p = &CriAt<short>(ctx, 0x780 + i * 0x80);
-      int c = *p;
+      short c = *p;
       if (c >= 0) {
         *p = (short)((c + 4) / 8);
       }
