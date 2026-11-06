@@ -1947,11 +1947,86 @@ bool ClassTraits::Traits::Coerce(const Value& value, Value& result) const
     return Sfr33CoerceClassValue(*this, value, result);
 }
 
-// MS2-FUNCTIONAL 0x1424f01c0: the exe places the shared Assign tail after the kind switch and orders the type tests differently; same results
+// The SDK body written out (not the forceinline helper): the out-of-line copy lays out its blocks as the exe does.
 // @0x1424f01c0
 bool ClassTraits::Traits::CoerceValue(const Value& value, Value& result) const
 {
-    return Sfr33CoerceClassValue(*this, value, result);
+    VM& vm = GetVM();
+    const BuiltinTraitsType tt = GetTraitsType();
+
+    switch (value.GetKind())
+    {
+    case Value::kUndefined:
+        result.SetNull();
+        break;
+    case Value::kInt:
+        if (this != &vm.GetClassTraitsObject() && tt != Traits_Number && tt != Traits_SInt)
+            return false;
+        result.SetNumber(value.AsInt());
+        break;
+    case Value::kUInt:
+        if (this != &vm.GetClassTraitsObject() && tt != Traits_Number && tt != Traits_UInt)
+            return false;
+        result.SetNumber(value.AsUInt());
+        break;
+    case Value::kThunk:
+    case Value::kVTableInd:
+        if (this != &vm.GetClassTraitsObject() && tt != Traits_Function)
+            return false;
+        result = value;
+        break;
+    case Value::kBoolean:
+        if (this != &vm.GetClassTraitsObject() && tt != Traits_Boolean)
+            return false;
+        result = value;
+        break;
+    case Value::kNumber:
+        if (this != &vm.GetClassTraitsObject() && tt != Traits_Number)
+            return false;
+        result = value;
+        break;
+    case Value::kString:
+        if (this != &vm.GetClassTraitsObject() && tt != Traits_String)
+            return false;
+        result = value;
+        break;
+    case Value::kNamespace:
+        if (this != &vm.GetClassTraitsObject() && tt != Traits_Namespace)
+            return false;
+        result = value;
+        break;
+    case Value::kFunction:
+    case Value::kObject:
+    case Value::kThunkFunction:
+        if (value.GetObject())
+        {
+            const ClassTraits::Traits& other = vm.GetClassTraits(value);
+
+            if (FUN_1425149a0(*this, other))
+                result = value;
+            else
+                return false;
+        }
+        else
+            result = value;
+
+        break;
+    case Value::kThunkClosure:
+    case Value::kVTableIndClosure:
+        result = value;
+        break;
+    case Value::kClass:
+        if (FUN_1425149a0(*this, value.AsClass().GetClassTraits()))
+            result = value;
+        else
+            return false;
+
+        break;
+    default:
+        break;
+    }
+
+    return true;
 }
 
 // Wraps the thunk held by v in a closure that checks 'this' against this class.
