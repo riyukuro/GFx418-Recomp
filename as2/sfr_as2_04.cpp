@@ -1666,7 +1666,6 @@ template void MS2_AS2_STRING_SET(GFx::AS2::Member, GFx::HashsetNodeEntry_GC)::Cl
 template void decltype(HashLH<GFx::EventId, ArrayLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>, GFx::EventIdHashFunctor,
                               GFx::AS2::StatMV_ActionScript_Mem>::mHash)::BaseType::Clear();
 // @0x1429342b0
-// MS2-FUNCTIONAL register allocation differs (key / value String release order kept)
 template void HashsetCachedNodeEntry<HashNode<String, String, String::NoCaseHashFunctor>,
                                      HashNode<String, String, String::NoCaseHashFunctor>::NodeHashF>::Clear();
 template void GFx::HashsetNodeEntry_GC<HashNode<GFx::ASString, GFx::AS2::Object::Watchpoint, GFx::ASStringHashFunctor>,
