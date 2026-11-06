@@ -12,6 +12,7 @@
 #include "ms2/scaleform/include/kernel/sf_refcount.h"
 #include <intrin.h>
 #include "ms2/scaleform/include/kernel/sf_array.h"
+#include "ms2/scaleform/include/kernel/sf_hash.h"
 void __empty_global_delete(void*, size_t);   // the sized operator delete the compiler pairs with ::new
 
 namespace Scaleform { namespace GFx {
@@ -21,12 +22,27 @@ extern "C" void* const DAT_143192190[1];   // vftable of the summary object (def
 void FUN_14261f8b0(U*);                             // Hash<key8, 0x20-byte value>::Clear
 void FUN_14261f940(U*);                             // Hash<ResourceId, StringLH>::Clear
 extern "C" void FUN_142687170(void*);               // ~ the record's hash at +0x40
-extern "C" void FUN_142689aa0(void*, void*, const void*);       // Hash copy (dst, heap ctx, src)
-extern "C" void FUN_14268a450(void*, void*, const void*);       // Hash find (hash, iterator out, key)
-extern "C" void FUN_1426899e0(void*, const void*, const void*); // Hash add (hash, key, value)
-extern "C" void FUN_142686440(void*, void*);                    // visits a child record into the grouping
-namespace AMP { struct MovieFunctionStats { struct FuncStats; }; } typedef ArrayDataBase<AMP::MovieFunctionStats::FuncStats, AllocatorLH<AMP::MovieFunctionStats::FuncStats, 2>, ArrayDefaultPolicy> Sfr03nFuncStatsArr; } template<> void GFx::Sfr03nFuncStatsArr::Reserve(const void*, UPInt); namespace GFx { static __forceinline void FUN_142623bc0(U* a, void* o, U n) { reinterpret_cast<Sfr03nFuncStatsArr*>(a)->Reserve(o, n); }   // (C3) = Array<FuncStats>::Reserve (0x142623bc0, sfr_gfx_07i; name-only view of FuncStats)
-extern "C" void FUN_1426871f0(void*);                           // ~ the grouping hash
+// Name-only views of the AMP types (Amp_ProfileFrame.h): the full SDK classes (RefCountBase types with inline ctors)
+// make cl define __empty_global_delete in this TU and fold the deleting destructors' sized-delete calls.
+namespace AMP {
+struct MovieFunctionStats { struct FuncStats { UInt64 FunctionId; UInt64 CallerId; UInt32 TimesCalled; UInt64 TotalTime; }; };
+struct FunctionDesc;
+struct FunctionTreeVisitor;
+class FuncTreeItem { public: template<typename T> void Visit(T& visitor); };
+}
+} // namespace GFx
+// The AMP hash COMDATs of MovieFunctionTreeStats::Accumulate, defined in sfr_as3_22 (FunctionTreeVisitor::FuncMap,
+// MovieFunctionTreeStats::FunctionInfo).
+typedef Hash<UInt64, GFx::AMP::MovieFunctionStats::FuncStats> Sfr03nFuncStatsHash;
+typedef decltype(Sfr03nFuncStatsHash::mHash)::BaseType Sfr03nFuncStatsSet;
+typedef decltype(HashLH<UInt64, Ptr<GFx::AMP::FunctionDesc> >::mHash)::BaseType Sfr03nFunctionDescSet;
+template<> void Sfr03nFunctionDescSet::Assign(void* pmemAddr, const Sfr03nFunctionDescSet& src);    // 0x142689aa0
+template<> template<> Sfr03nFuncStatsSet::Iterator Sfr03nFuncStatsSet::FindAlt<UInt64>(const UInt64& key);   // 0x14268a450
+template<> void Sfr03nFuncStatsHash::Add(const UInt64& key, const GFx::AMP::MovieFunctionStats::FuncStats& value); // 0x1426899e0
+template<> Sfr03nFuncStatsSet::~HashSetBase();                                                       // 0x1426871f0
+template<> void GFx::AMP::FuncTreeItem::Visit<GFx::AMP::FunctionTreeVisitor>(GFx::AMP::FunctionTreeVisitor& visitor); // 0x142686440
+namespace GFx {
+typedef ArrayDataBase<AMP::MovieFunctionStats::FuncStats, AllocatorLH<AMP::MovieFunctionStats::FuncStats, 2>, ArrayDefaultPolicy> Sfr03nFuncStatsArr; } template<> void GFx::Sfr03nFuncStatsArr::Reserve(const void*, UPInt); namespace GFx { static __forceinline void FUN_142623bc0(U* a, void* o, U n) { reinterpret_cast<Sfr03nFuncStatsArr*>(a)->Reserve(o, n); }   // (C3) = Array<FuncStats>::Reserve (0x142623bc0, sfr_gfx_07i; name-only view of FuncStats)
 
 // The RefCount base calls, made directly as the exe makes them.
 static inline void RawRefCountRelease(void* p)
@@ -227,7 +243,7 @@ __declspec(noinline) void* FUN_142689640(void* movie, bool all)
         RawField<U>(summary, 0x20) = 0;
         RawField<U>(summary, 0x28) = 0;
     }
-    FUN_142689aa0(summary + 0x28, summary + 0x28, RawFieldPtr<void>(movie, 0x30));
+    reinterpret_cast<Sfr03nFunctionDescSet*>(summary + 0x28)->Assign(summary + 0x28, *RawFieldPtr<const Sfr03nFunctionDescSet>(movie, 0x30));
 
     Sfr21ImageGrouping grouping;
     grouping.Table = 0;
@@ -237,8 +253,8 @@ __declspec(noinline) void* FUN_142689640(void* movie, bool all)
         char* record = RawField<char**>(movie, 0x18)[i];
         if (grouping.All || (RawField<U>(record, 0x10) >> 32) == 1)
         {
-            struct { U** Hash; SPInt Index; } it;
-            FUN_14268a450(&grouping, &it, record + 0x10);
+            Sfr03nFuncStatsSet::Iterator found = reinterpret_cast<Sfr03nFuncStatsSet*>(&grouping)->FindAlt(RawField<UInt64>(record, 0x10));
+            struct { U** Hash; SPInt Index; }& it = reinterpret_cast<decltype(it)>(found);
             U bytes = RawField<U>(record, 0x20) - RawField<U>(record, 0x18);
             if (it.Hash && *it.Hash && it.Index <= (SPInt)(*it.Hash)[1])
             {
@@ -253,11 +269,11 @@ __declspec(noinline) void* FUN_142689640(void* movie, bool all)
                 g.Zero = 0;
                 g.Count = 1;
                 g.Bytes = bytes;
-                FUN_1426899e0(&grouping, record + 0x10, &g);
+                reinterpret_cast<Sfr03nFuncStatsHash*>(&grouping)->Add(RawField<UInt64>(record, 0x10), reinterpret_cast<const AMP::MovieFunctionStats::FuncStats&>(g));
             }
         }
         for (U j = 0; j < RawField<U>(record, 0x38); j++)
-            FUN_142686440(RawField<void**>(record, 0x30)[j], &grouping);
+            RawField<AMP::FuncTreeItem**>(record, 0x30)[j]->Visit(reinterpret_cast<AMP::FunctionTreeVisitor&>(grouping));
     }
 
     if (U* table = grouping.Table)
@@ -273,7 +289,7 @@ __declspec(noinline) void* FUN_142689640(void* movie, bool all)
                 ;
         }
     }
-    FUN_1426871f0(&grouping);
+    reinterpret_cast<Sfr03nFuncStatsSet*>(&grouping)->Sfr03nFuncStatsSet::~Sfr03nFuncStatsSet();
     return summary;
 }
 
