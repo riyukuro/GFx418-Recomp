@@ -870,126 +870,124 @@ namespace Instances { namespace fl
 
 namespace InstanceTraits { namespace fl
 {
-    // MS2-FUNCTIONAL: block layout differs (the exe places the exec part after the epilogue) and re's release keeps its dead store
+    // RegExp::AS3exec in its SDK form, which returns the match object.
+    static __forceinline SPtr<Instances::fl::Object> reExec(Instances::fl::RegExp& re, const ASString& str)
+    {
+        SPtr<Instances::fl::Object> m;
+        re.AS3exec(m, str);
+        return m;
+    }
+
+    // SDK shape (AS3_Obj_String.cpp): re lives in the argc block.
     // @0x1423fbf90
     void String::AS3match(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
         StringManager& sm = vm.GetStringManager();
         ASString str = sm.CreateEmptyString();
-        if (!_this.Convert2String(str) || argc < 1)
-            return;
-        const Value& pattern = argv[0];
-        if (pattern.IsNullOrUndefined())
+        if (!_this.Convert2String(str))
             return;
 
-        SPtr<Instances::fl::RegExp> re;
-        if (pattern.IsObject() && FUN_1425145d0(vm, pattern, "RegExp"))
-            re = static_cast<Instances::fl::RegExp*>(pattern.GetObject());
-        else
+        if (argc >= 1 && !argv[0].IsNullOrUndefined())
         {
-            ASString source = sm.CreateEmptyString();
-            if (!pattern.Convert2String(source))
-                return;
-            Value arg(source);
-            if (!vm.ConstructBuiltinObject(re, "RegExp", 1, &arg))
-                return;
-        }
-
-        if (re->IsGlobal)
-        {
-            SPtr<Instances::fl::Array> arr = vm.MakeArray();
-            for (;;)
+            SPtr<Instances::fl::RegExp> re;
+            if (argv[0].IsObject() && FUN_1425145d0(vm, argv[0], "RegExp"))
+                re = static_cast<Instances::fl::RegExp*>(argv[0].GetObject());
+            else
             {
-                SPtr<Instances::fl::Object> m;
-                re->AS3exec(m, str);
-                if (!m)
-                    break;
-                pushBack(arr->SA, Value(m));
+                ASString source = sm.CreateEmptyString();
+                if (!argv[0].Convert2String(source))
+                    return;
+                Value args[] = { Value(source) };
+                if (!vm.ConstructBuiltinObject(re, "RegExp", 1, args))
+                    return;
             }
-            result.Assign(arr);
-        }
-        else
-        {
-            SPtr<Instances::fl::Object> m;
-            re->AS3exec(m, str);
-            result.Assign(m);
+
+            if (re->IsGlobal)
+            {
+                SPtr<Instances::fl::Array> arr = vm.MakeArray();
+                for (;;)
+                {
+                    SPtr<Instances::fl::Object> m = reExec(*re, str);
+                    if (!m)
+                        break;
+                    pushBack(arr->SA, Value(m));
+                }
+                result.Assign(arr);
+            }
+            else
+                result.Assign(reExec(*re, str));
         }
     }
 
-    // MS2-FUNCTIONAL: regalloc/block layout in the RegExp construct path (the exe keeps the source string address in r8)
+    // SDK shape (AS3_Obj_String.cpp): re lives in the argc block.
     // @0x1423fd8f0
     void String::AS3replace(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
         StringManager& sm = vm.GetStringManager();
         ASString str = sm.CreateEmptyString();
-        if (!_this.Convert2String(str) || argc < 1)
-            return;
-        const Value& pattern = argv[0];
-        if (pattern.IsNullOrUndefined())
+        if (!_this.Convert2String(str))
             return;
 
-        SPtr<Instances::fl::RegExp> re;
-        if (pattern.IsObject() && FUN_1425145d0(vm, pattern, "RegExp"))
-            re = static_cast<Instances::fl::RegExp*>(pattern.GetObject());
-        else
+        if (argc >= 1 && !argv[0].IsNullOrUndefined())
         {
-            ASString source = sm.CreateEmptyString();
-            if (!pattern.Convert2String(source))
-                return;
-            Value arg(source);
-            if (!vm.ConstructBuiltinObject(re, "RegExp", 1, &arg))
-                return;
-        }
-
-        if (argc < 2 || argv[1].IsNullOrUndefined())
-            return;
-        ASString repl = sm.CreateEmptyString();
-        if (!argv[1].Convert2String(repl))
-            return;
-        do
-        {
+            SPtr<Instances::fl::RegExp> re;
+            if (argv[0].IsObject() && FUN_1425145d0(vm, argv[0], "RegExp"))
+                re = static_cast<Instances::fl::RegExp*>(argv[0].GetObject());
+            else
             {
-                SPtr<Instances::fl::Object> m;
-                re->AS3exec(m, str);
-                if (!m)
-                    break;
+                ASString source = sm.CreateEmptyString();
+                if (!argv[0].Convert2String(source))
+                    return;
+                Value args[] = { Value(source) };
+                if (!vm.ConstructBuiltinObject(re, "RegExp", 1, args))
+                    return;
             }
-            const SInt32 offset = re->MatchOffset;
-            const SInt32 length = re->MatchLength;
-            str = ASString(str.SubstringNode(0, offset)) + repl + ASString(str.SubstringNode(offset + length, str.GetLength()));
-        } while (re->IsGlobal);
-        result.Assign(str);
+
+            if (argc >= 2 && !argv[1].IsNullOrUndefined())
+            {
+                ASString repl = sm.CreateEmptyString();
+                if (!argv[1].Convert2String(repl))
+                    return;
+                while (reExec(*re, str))
+                {
+                    const SInt32 offset = re->MatchOffset;
+                    const SInt32 length = re->MatchLength;
+                    const int strLen = str.GetLength();
+                    str = ASString(str.SubstringNode(0, offset)) + repl + ASString(str.SubstringNode(offset + length, strLen));
+                    if (!re->IsGlobal)
+                        break;
+                }
+                result.Assign(str);
+            }
+        }
     }
 
-    // MS2-FUNCTIONAL: block layout (the exe duplicates the string releases into each exit) and regalloc
+    // SDK shape (AS3_Obj_String.cpp): re lives in the argc block and the exec result is a temporary in the if.
     // @0x1423fdfa0
     void String::AS3search(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
         StringManager& sm = vm.GetStringManager();
         ASString str = sm.CreateEmptyString();
-        if (!_this.Convert2String(str) || argc < 1)
-            return;
-        const Value& pattern = argv[0];
-        if (pattern.IsNullOrUndefined())
+        if (!_this.Convert2String(str))
             return;
 
-        SPtr<Instances::fl::RegExp> re;
-        if (pattern.IsObject() && FUN_1425145d0(vm, pattern, "RegExp"))
-            re = static_cast<Instances::fl::RegExp*>(pattern.GetObject());
-        else
+        if (argc >= 1 && !argv[0].IsNullOrUndefined())
         {
-            ASString source = sm.CreateEmptyString();
-            if (!pattern.Convert2String(source))
-                return;
-            Value arg(source);
-            if (!vm.ConstructBuiltinObject(re, "RegExp", 1, &arg))
-                return;
+            SPtr<Instances::fl::RegExp> re;
+            if (argv[0].IsObject() && FUN_1425145d0(vm, argv[0], "RegExp"))
+                re = static_cast<Instances::fl::RegExp*>(argv[0].GetObject());
+            else
+            {
+                ASString source = sm.CreateEmptyString();
+                if (!argv[0].Convert2String(source))
+                    return;
+                Value args[] = { Value(source) };
+                if (!vm.ConstructBuiltinObject(re, "RegExp", 1, args))
+                    return;
+            }
+            if (reExec(*re, str))
+                result = Value(re->MatchOffset);
         }
-
-        SPtr<Instances::fl::Object> m;
-        re->AS3exec(m, str);
-        if (m)
-            result = Value(re->MatchOffset);
     }
 }} // namespace InstanceTraits::fl
 
