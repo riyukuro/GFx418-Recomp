@@ -1629,20 +1629,20 @@ void FUN_14002ab90(void* object)
         FUN_14257dcb0(fields[3]);
     reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
 }
-
+class __declspec(novtable) ImageCtorView : public Scaleform::Render::Image { public: ImageCtorView(Scaleform::Render::Texture* t, Scaleform::Render::ImageUpdateSync* s) : Scaleform::Render::Image(t, s) {} virtual Scaleform::Render::ImageFormat GetFormat() const; virtual unsigned GetUse() const; virtual Scaleform::Render::ImageSize GetSize() const; virtual unsigned GetMipmapCount() const; virtual Scaleform::Render::Image* GetAsImage(); };   // the Image(Texture*, ImageUpdateSync*) ctor, built in place
 // @0x14002aab0
 void* FUN_14002aab0(void* object, void* first, void* second)
 {
-    void** fields = (void**)object;
+    //
     __assume(object != NULL); // no null test on the placement new
-    ::new (object) Scaleform::RefCountImplCore;
-    fields[0] = (void*)DAT_143149940;
-    _ReadWriteBarrier();
-    fields[2] = first;
-    fields[3] = second;
-    fields[4] = NULL;
-    if (first)
-        FUN_14257dc30(first);
+    ::new (object) ImageCtorView((Scaleform::Render::Texture*)first, (Scaleform::Render::ImageUpdateSync*)second);   // Image vftable
+    //
+    //
+    //
+    //
+    //
+    //
+    //
     return object;
 }
 
@@ -1736,14 +1736,14 @@ void* FUN_14002b200(void* object, CriUint32 flags)
 // @0x14002ad30
 void FUN_14002ad30(void* object)
 {
-    void** fields = (void**)object;
-    fields[0] = (void*)DAT_1431b9170;
-    _ReadWriteBarrier();   // a dtor's vftable store is not moved past the member reads
-    if (fields[6])
-        FUN_14002d3f0(fields[6]);
-    if (fields[3])
-        FUN_14002d3f0(fields[3]);
-    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
+    reinterpret_cast<Scaleform::GFx::Video::VideoDecoderSmp*>(object)->VideoDecoderSmp::~VideoDecoderSmp();   // stores its vftable, frees both player arrays
+    //
+    //
+    //
+    //
+    //
+    //
+    //
 }
 
 // @0x14002b350
