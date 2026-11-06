@@ -2185,7 +2185,7 @@ void GFx_GenerateFontBitmaps(FontPackParams* params, const Array<FontResource*>&
                              Log* plog, ResourceId* ptextureIdGen, MemoryHeap* pheap, bool threadedLoading);
 
 // @0x1425cd920
-// MS2-FUNCTIONAL: register allocation and block order around the import loop and the bind state updates
+// (the resource loop sets bd.pBinding, then bd.pResource = 0, as in the SDK: the exe stores the binding first)
 MovieBindProcess::BindStateType MovieBindProcess::BindNextFrame()
 {
     // A cancel can leave us without bind data.
@@ -2363,7 +2363,7 @@ MovieBindProcess::BindStateType MovieBindProcess::BindNextFrame()
             continue;
 
         ResourceBindData bd;
-        bd.pBinding = &resourceBinding;
+        bd.pBinding = &resourceBinding; bd.pResource = 0;
         if (presData->Data.CreateResource(&bd, pls, pheap))
         {
             if (pImagePacker && bd.pResource->GetResourceType() == Resource::RT_Image &&
