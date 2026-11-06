@@ -23,6 +23,7 @@
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp AddRefWeakRef and AS3_Value.cpp AddRefInternal inline (as3_value.h)
 #define MS2_AS3_SCU_ADDREF_ONLY
 #define SF_GFX_FOCUSKEY_MEMBERS   // MovieImpl::InitFocusKeyInfo/ProcessFocusKey/FinalizeProcessFocusKey (gfx_movieimpl.h)
+#define MS2_SF_TEXT_ALLOCATOR_CTOR_INLINE __forceinline   // the exe builds the Text::Allocator at 0x1424d61c0 inline (text_core.h)
 #include "ms2/scaleform/include/gfx/gfx_input.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_xml.h"
