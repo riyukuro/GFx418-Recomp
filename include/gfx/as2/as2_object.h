@@ -27,6 +27,10 @@ public:
     void* pTable;
 
     ASStringHash_GC() : pTable(0) {}
+#ifdef MS2_AS2_STRINGHASH_GC_DTOR
+    // Declared in a unit whose exe destroys an object's member hash as a member (after the later members).
+    ~ASStringHash_GC() { reinterpret_cast<SetType*>(this)->~HashSetBase(); }
+#endif
 
     void* operator new(UPInt sz, MemoryHeap* heap) { return Memory::AllocInHeap(heap, sz); }
     void  operator delete(void* p, MemoryHeap*) { SF_FREE(p); }

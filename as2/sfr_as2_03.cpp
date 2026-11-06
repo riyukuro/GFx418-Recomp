@@ -189,6 +189,7 @@
 
 // The node dtor is declared, so the FunctionRef node one can be kept out of line below.
 #define MS2_SF_HASHNODE_DTOR
+#define MS2_AS2_STRINGHASH_GC_DTOR
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
@@ -1338,16 +1339,16 @@ ObjectInterface::~ObjectInterface()
     }
 }
 
-// MS2-FUNCTIONAL the hash table goes before ResolveHandler here, the exe drops ResolveHandler first
+// Members is destroyed as a member (MS2_AS2_STRINGHASH_GC_DTOR), after ResolveHandler.
 // @0x142925cf0
 Object::~Object()
 {
-    if (pWatchpoints)
+    ASStringHash_GC<Object::Watchpoint>* pw = pWatchpoints;
+    if (pw)
     {
-        reinterpret_cast<ASStringHash_GC<Object::Watchpoint>::SetType*>(pWatchpoints)->~HashSetBase();
-        SF_FREE(pWatchpoints);
+        pw->~ASStringHash_GC();
+        SF_FREE(pw);
     }
-    reinterpret_cast<ASStringHash_GC<Member>::SetType*>(&Members)->~HashSetBase();
 }
 
 // Inlined in the exe: no out-of-line copy.
@@ -2077,3 +2078,4 @@ bool FUN_142926ab0(const ASString* pthis, const ASString& str)
 // MS2-PIN: ??_GMouseCtorFunction@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x14292beb0
 // MS2-PIN: ??_7UserDefinedFunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143221ff8
 // MS2-PIN: ??_7UserDefinedFunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143222080
+// MS2-PIN: ??_7SharedObjectPtr@AS2@GFx@Scaleform@@6B@ 0x14321dd78
