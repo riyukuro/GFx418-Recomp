@@ -1279,6 +1279,10 @@ namespace Classes { namespace fl
         Catch(ClassTraits::Traits& t);
         // @0x142414d60
         virtual const char* GetAS3ObjectType() const { return "Classes::fl::Catch"; }
+
+        // the traits of a catch scope (sfr_as3_04)
+        // @0x14241b920
+        SPtr<InstanceTraits::fl::Catch> MakeInstanceTraits(VMAbcFile& file, const Abc::MethodBodyInfo::ExceptionInfo& e);
     };
 
     class Date : public Class

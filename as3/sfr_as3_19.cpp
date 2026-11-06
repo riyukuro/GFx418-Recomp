@@ -152,7 +152,6 @@ inline void FUN_1424f03f0(unsigned char* self, void* heap) { ::FUN_1424f03f0(sel
 inline void FUN_14241a500(Scaleform::UPInt traits, Scaleform::UPInt* ret, Scaleform::UPInt t) { ::new (static_cast<void*>(ret)) Scaleform::Pickable<Scaleform::GFx::AS3::Instances::fl::Array>(reinterpret_cast<Scaleform::GFx::AS3::InstanceTraits::fl::Array*>(traits)->MakeInstance(*reinterpret_cast<Scaleform::GFx::AS3::InstanceTraits::fl::Array*>(t))); }   // InstanceTraits::Array::MakeInstance
 void FUN_14241d980(Scaleform::GFx::AS3::SparseArray*, Scaleform::GFx::AS3::ValueStack*, unsigned long long);
 inline void FUN_14241d980(Scaleform::UPInt arr, Scaleform::UPInt stack, Scaleform::UInt32 n) { ::FUN_14241d980(reinterpret_cast<Scaleform::GFx::AS3::SparseArray*>(arr), reinterpret_cast<Scaleform::GFx::AS3::ValueStack*>(stack), n); }
-void FUN_14241b920(Scaleform::UPInt tbl, void* ret, Scaleform::UPInt a, Scaleform::UPInt b);   // class table: find interface traits
 inline void* FUN_14250fa80(const Scaleform::GFx::AS3::Traits* tr) { return &tr->GetVT(); }   // Traits::GetVT
 inline void FUN_1424e6aa0(Scaleform::UPInt tracer, Scaleform::UPInt a, Scaleform::SPInt idx, int b, int c) { Scaleform::GFx::AS3::FUN_1424e6aa0(reinterpret_cast<Scaleform::GFx::AS3::Tracer*>(tracer), reinterpret_cast<const void*>(a), static_cast<unsigned long long>(idx), b, c != 0); }
 namespace Scaleform { namespace GFx { namespace AS3 { using ::FUN_1424e6aa0; } } }
@@ -3353,9 +3352,9 @@ void Sfr31ExecPushInterfaceInstance(UPInt vm, UPInt a, UPInt b)
         reinterpret_cast<Init>(Sfr31Rd(Sfr31Rd(owner, 0), 0x68))(owner);
         tbl = Sfr31Rd(owner, 0x80);
     }
-    // FUN_14241b920 builds the catch scope's traits; the exe makes a Catch instance of them (0x14241a5b0)
-    SPtr<InstanceTraits::fl::Catch> tr;
-    FUN_14241b920(tbl, &tr, a, b);
+    // Classes::fl::Catch::MakeInstanceTraits builds the catch scope's traits; the exe makes a Catch instance of them (0x14241a5b0)
+    SPtr<InstanceTraits::fl::Catch> tr = reinterpret_cast<Classes::fl::Catch*>(tbl)->MakeInstanceTraits(
+        *reinterpret_cast<VMAbcFile*>(a), *reinterpret_cast<const Abc::MethodBodyInfo::ExceptionInfo*>(b));
     Value v(tr->MakeInstance(*tr));
     ExecPushCopy(reinterpret_cast<VM*>(vm), v);
 }

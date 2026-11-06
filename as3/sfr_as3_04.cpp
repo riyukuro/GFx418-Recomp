@@ -5108,17 +5108,16 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace InstanceTraits {
 }}}}}
 
 // the traits of a catch scope: one slot named by the exception variable, typed by the exception type
-// MS2-FUNCTIONAL: the exe returns the result pointer (sret); ours is void
-// @0x14241b920
-void FUN_14241b920(Scaleform::UPInt selfAddr, void* retp, Scaleform::UPInt fileAddr, Scaleform::UPInt excAddr)
-{
-    AS3::Object* self = reinterpret_cast<AS3::Object*>(selfAddr);
-    VMAbcFile& file = *reinterpret_cast<VMAbcFile*>(fileAddr);
-    const AS3::Abc::MethodBodyInfo::ExceptionInfo& e = *reinterpret_cast<const AS3::Abc::MethodBodyInfo::ExceptionInfo*>(excAddr);
-    // the SDK's SF_HEAP_AUTO_NEW_ID(this, StatMV_VM)
-    *static_cast<InstanceTraits::fl::Catch**>(retp) =
-        new((Scaleform::MemAddressPtr)((void*)self), AS3::StatMV_VM, __FILE__, __LINE__) InstanceTraits::fl::Catch(file, self->GetVM(), e);
-}
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Classes { namespace fl {
+    // @0x14241b920
+    SPtr<InstanceTraits::fl::Catch> Catch::MakeInstanceTraits(VMAbcFile& file, const Abc::MethodBodyInfo::ExceptionInfo& e)
+    {
+        // the SDK's SF_HEAP_AUTO_NEW_ID(this, StatMV_VM)
+        SPtr<InstanceTraits::fl::Catch> tr = MakePickable(
+            new((Scaleform::MemAddressPtr)((void*)this), StatMV_VM, __FILE__, __LINE__) InstanceTraits::fl::Catch(file, GetVM(), e));
+        return tr;
+    }
+}}}}}
 
 // E4X: the "prefix:" of a namespace in an XML string, unless it is the default xml namespace
 // @0x14241bc30 (out of line, as the exe calls it from ToXMLString)
