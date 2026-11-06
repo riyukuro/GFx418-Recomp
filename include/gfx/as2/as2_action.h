@@ -499,6 +499,8 @@ public:
 private:
     // The variables, the previous frame, callee and caller (defined in sfr_as2_02).
     template<class Functor> void ForEachChild_GC(Collector* prcc) const;
+    // ExecuteForEachChild_GC stand-in (sfr_as2_05p) calls the three instantiations.
+    friend void FUN_142941190(const LocalFrame* pframe, Collector* prcc, OperationGC operation);
 };
 
 // Per movie AS2 state: builtin prototypes, registered classes, the _global object. 0x78 bytes.

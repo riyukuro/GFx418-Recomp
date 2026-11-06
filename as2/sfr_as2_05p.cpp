@@ -70,10 +70,7 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 
 // LocalFrame's ExecuteForEachChild_GC and Finalize_GC overrides. as2_action.h does not declare them (adding them would
 // rebuild every AS2 unit), so they stand in here as free functions.
-// LocalFrame's out-of-line ForEachChild_GC<Functor> instantiations (sfr_as2_02; this in rcx).
-void FUN_142910cf0(const LocalFrame* pframe, ASRefCountBaseType::Collector* prcc); // ReleaseFunctor
-void FUN_14290dbd0(const LocalFrame* pframe, ASRefCountBaseType::Collector* prcc); // MarkInCycleFunctor
-void FUN_142913b00(const LocalFrame* pframe, ASRefCountBaseType::Collector* prcc); // ScanInUseFunctor
+// It calls LocalFrame's out-of-line ForEachChild_GC<Functor> instantiations (sfr_as2_02).
 
 // @0x142941190
 void FUN_142941190(const LocalFrame* pframe, ASRefCountBaseType::Collector* prcc,
@@ -82,13 +79,13 @@ void FUN_142941190(const LocalFrame* pframe, ASRefCountBaseType::Collector* prcc
     switch (operation)
     {
     case ASRefCountBaseType::Operation_Release:
-        FUN_142910cf0(pframe, prcc);
+        pframe->ForEachChild_GC<LocalFrame::ReleaseFunctor>(prcc);
         break;
     case ASRefCountBaseType::Operation_MarkInCycle:
-        FUN_14290dbd0(pframe, prcc);
+        pframe->ForEachChild_GC<LocalFrame::MarkInCycleFunctor>(prcc);
         break;
     case ASRefCountBaseType::Operation_ScanInUse:
-        FUN_142913b00(pframe, prcc);
+        pframe->ForEachChild_GC<LocalFrame::ScanInUseFunctor>(prcc);
         break;
     default:;
     }
