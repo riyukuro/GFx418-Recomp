@@ -18,7 +18,7 @@
 // MS2-RANGE: 0x1424c9270-0x1424c9630 .text$mn
 // MS2-RANGE: 0x1424c91f0-0x1424c9270 .text$mn
 // MS2-RANGE: 0x1424c9630-0x1424c96a0 .text$mn
-// MS2-RANGE: 0x1423dbde0-0x1423dbe60 .text$mn
+// MS2-RANGE: 0x1423dbde0-0x1423dbea0 .text$mn
 // MS2-RANGE: 0x1423dbea0-0x1423dc0b0 .text$mn
 // MS2-RANGE: 0x1428eb050-0x1428ebd60 .text$mn
 // MS2-RANGE: 0x1428ec0b0-0x1428ec780 .text$mn
@@ -3601,6 +3601,17 @@ void Matrix2F_SetInverse(Render::Matrix2F* m, const Render::Matrix2F& src)
 }}} // namespace Scaleform::GFx::AS2
 
 namespace Scaleform { namespace GFx {
+
+// A second copy of RefCountImpl's scalar deleting destructor (the RefCountImplCore dtor, then the CRT's sized delete).
+// No vftable or code in the exe points at it; the live copy is 0x14243fa00 (sfr_as3_06), slot 0 of 0x1431496d0.
+// @0x1423dbe60
+void* FUN_1423dbe60(RefCountImplCore* object, unsigned flags)
+{
+    object->RefCountImplCore::~RefCountImplCore();
+    if (flags & 1)
+        ::operator delete(object, 0x10);
+    return object;
+}
 
 // ---- AS3Support tag allocation ----
 
