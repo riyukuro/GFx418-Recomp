@@ -21,6 +21,8 @@
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/as2/as2_object.h"
 
+// The exe calls the ASString ArrayCC Resize out of line (0x142524390).
+template <> void Scaleform::ArrayBase<Scaleform::ArrayDataCC<Scaleform::GFx::ASString, Scaleform::AllocatorLH<Scaleform::GFx::ASString, 323>, Scaleform::ArrayDefaultPolicy> >::Resize(UPInt);
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The _global object (sfr_as2_03g, 0x70 bytes); only its constructor is used here.
@@ -58,7 +60,6 @@ void GlobalContext::PreClean(bool preserveBuiltinProps)
     pMovieRoot = 0;
 }
 
-// MS2-FUNCTIONAL: register allocation differs.
 // @0x142970210
 void ActionBuffer::ProcessDeclDict(ASStringContext* psc, unsigned startPc, unsigned stopPc, ActionLogger& log)
 {
