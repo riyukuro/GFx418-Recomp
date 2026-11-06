@@ -105,6 +105,39 @@ template<> SF_NOINLINE Prototype<ColorMatrixFilterObject, Environment>::~Prototy
 template<> SF_NOINLINE Prototype<DropShadowFilterObject, Environment>::~Prototype();  // 0x142924f50
 template<> SF_NOINLINE Prototype<GlowFilterObject, Environment>::~Prototype();  // 0x142924fc0
 
+// The deleting dtors below inline these destructors (the vftable stores and member releases).
+// Out of line at 0x142925560 in sfr_as2_03 (`inline` there under cl, so both copies are COMDAT-any).
+inline BitmapFilterObject::~BitmapFilterObject()
+{
+}
+// The dtor is protected: a derived view runs it.
+struct Sfr04b_BitmapFilterObjectDtor : BitmapFilterObject
+{
+    static void Destroy(void* p)
+    {
+        static_cast<Sfr04b_BitmapFilterObjectDtor*>(p)->BitmapFilterObject::~BitmapFilterObject();
+    }
+};
+
+// Inlined in the exe (no out-of-line copy), as in sfr_as2_03 and sfr_as2_03s.
+inline BitmapData::~BitmapData()
+{
+}
+
+// The _global object (sfr_as2_03g, 0x70 bytes); same virtuals as there, so the same vftable.
+class GASGlobalObject : public Object
+{
+public:
+    GlobalContext* pContext; // +0x68
+    GASGlobalObject(GlobalContext* pcontext); // exe 0x14291c160
+
+    // Empty but user-declared: the deleting dtor 0x14292ade0 (sfr_as2_04b) stores the vftables.
+    virtual ~GASGlobalObject() {}
+    virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val); // exe 0x142953210
+    virtual bool SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags =
+                                                                                          PropFlags()); // exe 0x142985ef0
+};
+
 
 // The base vftables the inlined destructors store.
 extern const void* DAT_1432155c0[];
@@ -116,12 +149,6 @@ extern const void* DAT_143216050[];
 extern const void* DAT_143217750[];
 extern const void* DAT_143217780[];
 extern const void* DAT_1432177b0[];
-extern const void* DAT_143219cf0[];
-extern const void* DAT_143219d38[];
-extern const void* DAT_14321e808[];
-extern const void* DAT_14321e850[];
-extern const void* DAT_143220278[];
-extern const void* DAT_1432202c0[];
 
 // The Prototype<X> destructors called by name emit these vftables here as well.
 // MS2-PIN: ??_7?$Prototype@VBooleanObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321b730
@@ -156,10 +183,7 @@ void* DeleteAs2_1429297a0(void* p, unsigned flags)
 // @0x142929810
 void* DeleteAs2_142929810(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321e808;
-    *(const void**)((char*)p+0x20) = DAT_14321e850;
-    if (*(void**)((char*)p+0x68)) FUN_14257dcb0(*(void**)((char*)p+0x68));
-    static_cast<Object*>(p)->Object::~Object();
+    Sfr04b_BitmapFilterObjectDtor::Destroy(p);
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -187,11 +211,7 @@ void* DeleteAs2_142929890(void* p, unsigned flags)
 // @0x1429298f0
 void* DeleteAs2_1429298f0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_143219cf0;
-    *(const void**)((char*)p+0x20) = DAT_143219d38;
-    if (*(void**)((char*)p+0x70)) static_cast<Resource*>(*(void**)((char*)p+0x70))->Release();
-    if (*(void**)((char*)p+0x68)) static_cast<Resource*>(*(void**)((char*)p+0x68))->Release();
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<BitmapData*>(p)->BitmapData::~BitmapData();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -251,10 +271,7 @@ void* DeleteAs2_142929a50(void* p, unsigned flags)
 // @0x142929ac0
 void* DeleteAs2_142929ac0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321e808;
-    *(const void**)((char*)p+0x20) = DAT_14321e850;
-    if (*(void**)((char*)p+0x68)) FUN_14257dcb0(*(void**)((char*)p+0x68));
-    static_cast<Object*>(p)->Object::~Object();
+    Sfr04b_BitmapFilterObjectDtor::Destroy(p);
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -298,10 +315,7 @@ void* DeleteAs2_142929ba0(void* p, unsigned flags)
 // @0x142929c10
 void* DeleteAs2_142929c10(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321e808;
-    *(const void**)((char*)p+0x20) = DAT_14321e850;
-    if (*(void**)((char*)p+0x68)) FUN_14257dcb0(*(void**)((char*)p+0x68));
-    static_cast<Object*>(p)->Object::~Object();
+    Sfr04b_BitmapFilterObjectDtor::Destroy(p);
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -453,10 +467,7 @@ void* DeleteAs2_14292a2b0(void* p, unsigned flags)
 // @0x14292a320
 void* DeleteAs2_14292a320(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321e808;
-    *(const void**)((char*)p+0x20) = DAT_14321e850;
-    if (*(void**)((char*)p+0x68)) FUN_14257dcb0(*(void**)((char*)p+0x68));
-    static_cast<Object*>(p)->Object::~Object();
+    Sfr04b_BitmapFilterObjectDtor::Destroy(p);
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -588,10 +599,7 @@ void* DeleteAs2_14292a860(void* p, unsigned flags)
 // @0x14292a8d0
 void* DeleteAs2_14292a8d0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321e808;
-    *(const void**)((char*)p+0x20) = DAT_14321e850;
-    if (*(void**)((char*)p+0x68)) FUN_14257dcb0(*(void**)((char*)p+0x68));
-    static_cast<Object*>(p)->Object::~Object();
+    Sfr04b_BitmapFilterObjectDtor::Destroy(p);
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -728,9 +736,7 @@ void* DeleteAs2_14292acb0(void* p, unsigned flags)
 // @0x14292ade0
 void* DeleteAs2_14292ade0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_143220278;
-    *(const void**)((char*)p+0x20) = DAT_1432202c0;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<GASGlobalObject*>(p)->GASGlobalObject::~GASGlobalObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -859,10 +865,7 @@ void* DeleteAs2_14292b590(void* p, unsigned flags)
 // @0x14292b600
 void* DeleteAs2_14292b600(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321e808;
-    *(const void**)((char*)p+0x20) = DAT_14321e850;
-    if (*(void**)((char*)p+0x68)) FUN_14257dcb0(*(void**)((char*)p+0x68));
-    static_cast<Object*>(p)->Object::~Object();
+    Sfr04b_BitmapFilterObjectDtor::Destroy(p);
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -922,3 +925,10 @@ void* DeleteAs2_14292b7a0(void* p, unsigned flags)
 
 // The implicit ~IntervalTimer inlined above stores ASIntervalTimerIntf's table; see sfr_as2_03r.
 // MS2-PIN: ??_7ASIntervalTimerIntf@GFx@Scaleform@@6B@ 0x14317c9f8
+// The inlined BitmapFilterObject, BitmapData and GASGlobalObject destructors emit these vftables here as well.
+// MS2-PIN: ??_7BitmapFilterObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321e808
+// MS2-PIN: ??_7BitmapFilterObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321e850
+// MS2-PIN: ??_7BitmapData@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143219cf0
+// MS2-PIN: ??_7BitmapData@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219d38
+// MS2-PIN: ??_7GASGlobalObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143220278
+// MS2-PIN: ??_7GASGlobalObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432202c0

@@ -1422,10 +1422,23 @@ void Sfr03_TextSnapshotObjectDtor::Destroy(TextSnapshotObject* p)
 }
 #pragma inline_depth()
 
+// `inline` under cl (COMDAT-any): sfr_as2_04b inlines the same body into six deleting dtors.
+// Sfr03_BitmapFilterObjectDtor::Destroy (uncalled anchor) keeps it emitted here.
 // @0x142925560
-BitmapFilterObject::~BitmapFilterObject()
+SFR03_TEXTFIELDOBJECT_DTOR BitmapFilterObject::~BitmapFilterObject()
 {
 }
+// The dtor is protected: a derived view runs it.
+struct Sfr03_BitmapFilterObjectDtor : BitmapFilterObject
+{
+    static void Destroy(BitmapFilterObject* p);
+};
+#pragma inline_depth(0)
+void Sfr03_BitmapFilterObjectDtor::Destroy(BitmapFilterObject* p)
+{
+    static_cast<Sfr03_BitmapFilterObjectDtor*>(p)->BitmapFilterObject::~BitmapFilterObject();
+}
+#pragma inline_depth()
 
 // @0x142925640
 BevelFilterObject::~BevelFilterObject()

@@ -32,6 +32,8 @@ public:
     GlobalContext* pContext; // +0x68
     GASGlobalObject(GlobalContext* pcontext);
 
+    // Empty but user-declared: the deleting dtor 0x14292ade0 (sfr_as2_04b) stores the vftables.
+    virtual ~GASGlobalObject() {}
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val); // exe 0x142953210
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags =
                                                                                           PropFlags()); // exe 0x142985ef0
