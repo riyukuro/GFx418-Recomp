@@ -1990,47 +1990,34 @@ void MovieRoot::DoActions()
 }
 
 // Walks the queue like ActionQueueIterator but hands out (and unlinks) only the entries of one session.
-struct ActionQueueSessionIterator
+struct ActionQueueSessionIterator : public MovieRoot::ActionQueueIterator
 {
     typedef MovieRoot::ActionQueueType ActionQueueType;
     typedef MovieRoot::ActionEntry     ActionEntry;
 
-    int              ModId;
-    ActionQueueType* pActionQueue;
-    ActionEntry*     pLastEntry;
-    int              CurrentPrio;
-    unsigned         SessionId;
+    unsigned SessionId;
 
     ActionQueueSessionIterator(ActionQueueType* pactionQueue, unsigned sessionId)
+        : ActionQueueIterator(pactionQueue), SessionId(sessionId)
     {
-        pActionQueue = pactionQueue;
-        ModId        = 0;
-        CurrentPrio  = 0;
-        pLastEntry   = 0;
-        SessionId    = sessionId;
-    }
-    ~ActionQueueSessionIterator()
-    {
-        if (pLastEntry)
-            pActionQueue->AddToFreeList(pLastEntry);
     }
 
     const ActionEntry* getNext()
     {
         if (pActionQueue->ModId != ModId)
         {
-            ModId       = pActionQueue->ModId;
             CurrentPrio = 0;
+            ModId       = pActionQueue->ModId;
         }
         ActionEntry* pentry = 0;
         for (; CurrentPrio < ActionQueueType::AL_Count; ++CurrentPrio)
         {
+            pentry = pActionQueue->Levels[CurrentPrio].pActionRoot;
             ActionEntry* pprev = 0;
-            for (pentry = pActionQueue->Levels[CurrentPrio].pActionRoot; pentry;
-                 pprev = pentry, pentry = pentry->pNextEntry)
+            while (pentry && pentry->SessionId != SessionId)
             {
-                if (pentry->SessionId == SessionId)
-                    break;
+                pprev  = pentry;
+                pentry = pentry->pNextEntry;
             }
             if (pentry)
             {
@@ -2041,7 +2028,12 @@ struct ActionQueueSessionIterator
                 if (!pentry->pNextEntry)
                     pActionQueue->Levels[CurrentPrio].pLastEntry = pprev;
                 if (pentry == pActionQueue->Levels[CurrentPrio].pInsertEntry)
-                    pActionQueue->Levels[CurrentPrio].pInsertEntry = !pentry->pNextEntry ? pprev : pentry->pNextEntry;
+                {
+                    if (!pentry->pNextEntry)
+                        pActionQueue->Levels[CurrentPrio].pInsertEntry = pprev;
+                    else
+                        pActionQueue->Levels[CurrentPrio].pInsertEntry = pentry->pNextEntry;
+                }
                 pentry->pNextEntry = 0;
                 break;
             }
@@ -2053,7 +2045,7 @@ struct ActionQueueSessionIterator
     }
 };
 
-// MS2-FUNCTIONAL cl keeps the iterator ModId in a different register; same code otherwise
+// Runs the queued actions of one session (SDK body; the session iterator derives from ActionQueueIterator).
 // @0x142938c40
 void MovieRoot::DoActionsForSession(unsigned sessionId)
 {
