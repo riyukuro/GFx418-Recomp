@@ -2121,14 +2121,19 @@ void CSSFileLoaderAndParserImpl::Load(const String& fileName, FileOpener* opener
     }
 }
 
-// MS2-FUNCTIONAL: records the completion status, pushes the result, and broadcasts onLoad to listeners.
+// Records the completion status, pushes the result, and broadcasts onLoad to listeners.
 // noinline: CSSFileLoaderAndParserImpl::Init tail-calls it.
 // @0x142969aa0
 __declspec(noinline) void StyleSheetObject::NotifyOnLoad(Environment* penv, bool success)
 {
-    *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(this) + 0x90) = success ? 2u : 3u;
+    Text::StyleManager& CSS = *reinterpret_cast<Text::StyleManager*>(Data68);
+    if (success)
+        CSS.SetState(Text::StyleManager::LoadingFinished);
+    else
+        CSS.SetState(Text::StyleManager::Error);
     penv->Push(success);
-    AsBroadcaster::BroadcastMessage(penv, this, penv->CreateConstString("onLoad"), 1, penv->GetTopIndex());
+    BroadcastMessageLocal(penv, this,
+        penv->CreateConstString("onLoad"), 1, penv->GetTopIndex());
     penv->Drop1();
 }
 
