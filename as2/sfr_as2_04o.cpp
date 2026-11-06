@@ -26,12 +26,20 @@
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_movieimpl.h"
 
+namespace Scaleform {
+// The Value array grows out of line (0x14297e710, explicit instantiation in sfr_as2_07).
+template<> void ArrayDataBase<GFx::AS2::Value, AllocatorGH<GFx::AS2::Value, 2>, ArrayDefaultPolicy>::ResizeNoConstruct(
+    const void* pheapAddr, UPInt newSize);
+}
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // MovieImpl::ActivateFocusCapture (0x14256bbf0) is called through gfx_movieimpl.h's declaration
 //
 // AvmSprite::FindClassAndInitializeClassInstance (gap of sfr_as2_05)
 void FUN_142943480(const FnCall& fn);
+// Array<Value>::operator= (exe 0x142926200, defined in sfr_as2_03).
+const Array<Value>& FUN_142926200(Array<Value>* pthis, const Array<Value>& src);
 
 // Calls each listener's onSetFocus with the arguments already on the stack.
 class SetFocusInvokeCallback : public AsBroadcaster::InvokeCallback
@@ -391,52 +399,82 @@ class AvmButton : public AvmCharacter
     void ConstructCharacter(InteractiveObject* pchar, const ButtonRecord& rec);
 };
 
-// MS2-FUNCTIONAL: the queued entries are filled member by member in the exe's order
-// @0x142935820
-void AvmButton::ConstructCharacter(InteractiveObject* pchar, const ButtonRecord& rec)
+// The SDK's Ptr<C>::operator=(C*) is SF_INLINE (__forceinline).
+static __forceinline void AvmButton_SetCharacter(Ptr<InteractiveObject>& dst, InteractiveObject* psrc)
 {
-    if (!(*reinterpret_cast<UInt16*>(reinterpret_cast<UByte*>(pchar) + 0x6a) & 0x400))
-        return;
-    GlobalContext* pcontext = GetASEnvironment()->StringContext.pContext;
-    const String*  pname    = pchar->GetResourceMovieDef()->GetNameOfExportedResource(rec.CharacterId);
-    if (!pname)
-        return;
-    ASString         name = GetASEnvironment()->GetSC()->CreateString(pname->ToCStr(), pname->GetSize());
-    FunctionRef      ctor;
-    FunctionRef*     pfound = pcontext->RegisteredClasses.GetCaseCheck(name, GetASEnvironment()->IsCaseSensitive());
-    MovieRoot*       proot  = GetAS2Root();
-    if (!pfound)
+    if (psrc) psrc->AddRef();
+    if (dst) dst->Release();
+    *reinterpret_cast<InteractiveObject**>(&dst) = psrc;
+}
+
+// GlobalContext::FindRegisteredClass (inline in the exe).
+static __forceinline bool AvmButton_FindRegisteredClass(GlobalContext* gctxt, ASStringContext* psc, const ASString& className, FunctionRef* pctorFunction)
+{
+    const FunctionRef* ctor = gctxt->RegisteredClasses.GetCaseCheck(className, psc->IsCaseSensitive());
+    if (ctor == 0)
+        return false;
+    if (pctorFunction)
+        *pctorFunction = *ctor;
+    return true;
+}
+
+// The SDK body with ActionEntry::SetAction expanded in place.
+// MS2-FUNCTIONAL: register allocation and the FunctionRef dtor (the exe keeps ctorFunc's Flags in r15b and its
+// Function in rsi across the Release calls, and drops the dead Function = 0 store)
+// @0x142935820
+void AvmButton::ConstructCharacter(InteractiveObject* pscriptCh, const ButtonRecord& rec)
+{
+    if (pscriptCh->IsSprite())
     {
-        Array<Value> args;
-        args.PushBack(Value(name));
-        MovieRoot::ActionEntry* pe = proot->InsertEmptyAction(ActionPriority::AP_Construct);
-        if (pe)
+        GlobalContext* gctxt = this->GetGC();
+
+        FunctionRef   ctorFunc;
+        const String* psymbolName = pscriptCh->GetResourceMovieDef()->GetNameOfExportedResource(rec.CharacterId);
+
+        if (psymbolName)
         {
-            pe->Type          = MovieRoot::ActionEntry::Entry_CFunction;
-            pe->pCharacter    = pchar;
-            pe->pActionBuffer = 0;
-            pe->CFunction     = FUN_142943480;
-            pe->FunctionParams = args;
+            ASString symbolName = GetASEnvironment()->CreateString(*psymbolName);
+
+            if (AvmButton_FindRegisteredClass(gctxt, GetASEnvironment()->GetSC(), symbolName, &ctorFunc))
+            {
+                AS2::ToAvmCharacter(pscriptCh)->SetProtoToPrototypeOf(ctorFunc.GetObjectPtr());
+                {
+                    MovieRoot::ActionEntry* pe = GetAS2Root()->InsertEmptyAction(ActionPriority::AP_Construct);
+                    if (pe)
+                    {
+                        pe->Type          = MovieRoot::ActionEntry::Entry_Event;
+                        AvmButton_SetCharacter(pe->pCharacter, pscriptCh);
+                        pe->pActionBuffer = 0;
+                        pe->mEventId      = EventId(EventId::Event_Construct);
+                    }
+                }
+                MovieRoot::ActionEntry* pe = GetAS2Root()->InsertEmptyAction(ActionPriority::AP_Construct);
+                if (pe)
+                {
+                    pe->Type          = MovieRoot::ActionEntry::Entry_Function;
+                    AvmButton_SetCharacter(pe->pCharacter, pscriptCh);
+                    pe->pActionBuffer = 0;
+                    pe->Function      = ctorFunc;
+                }
+            }
+            else
+            {
+                Array<Value> params;
+                params.PushBack(Value(symbolName));
+
+                MovieRoot::ActionEntry* pe = GetAS2Root()->InsertEmptyAction(ActionPriority::AP_Construct);
+                if (pe)
+                {
+                    pe->Type          = MovieRoot::ActionEntry::Entry_CFunction;
+                    AvmButton_SetCharacter(pe->pCharacter, pscriptCh);
+                    pe->pActionBuffer = 0;
+                    pe->CFunction     = FUN_142943480;
+                    const Array<Value>* pparams = &params;
+                    if (pparams)
+                        FUN_142926200(&pe->FunctionParams, *pparams);
+                }
+            }
         }
-        return;
-    }
-    ctor = *pfound;
-    AS2::ToAvmCharacter(pchar)->SetProtoToPrototypeOf(ctor.IsNull() ? 0 : static_cast<ObjectInterface*>(ctor.GetObjectPtr()));
-    MovieRoot::ActionEntry* pe = proot->InsertEmptyAction(ActionPriority::AP_Construct);
-    if (pe)
-    {
-        pe->Type          = MovieRoot::ActionEntry::Entry_Event;
-        pe->pCharacter    = pchar;
-        pe->pActionBuffer = 0;
-        pe->mEventId      = EventId(EventId::Event_Construct);
-    }
-    pe = proot->InsertEmptyAction(ActionPriority::AP_Construct);
-    if (pe)
-    {
-        pe->Type          = MovieRoot::ActionEntry::Entry_Function;
-        pe->pCharacter    = pchar;
-        pe->pActionBuffer = 0;
-        pe->Function      = ctor;
     }
 }
 
