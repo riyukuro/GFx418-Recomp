@@ -4967,14 +4967,14 @@ CheckResult ClassTraits::Traits::FUN_142418970()
 }
 // ClassTraits::UserDefined::RegisterSlots: the class's static slots (after the Classes::UserDefined object), then the
 // interface slots of an interface class
-// MS2-FUNCTIONAL: free function (not declared on the shared class)
 // @0x14241e6b0
 CheckResult ClassTraits::UserDefined::FUN_14241e6b0()
 {
     ClassTraits::UserDefined* self = this;
-    VMAbcFile* file = &self->GetFile();
-    const char* ci = (const char*)&self->GetClassInfo();
-    if (!self->AddSlots(*(const Scaleform::GFx::AS3::Abc::HasTraits*)(ci + 0x48), *file, self->GetFixedMemSize()))
+    VMAbcFile& file = self->GetFile();
+    const Scaleform::GFx::AS3::Abc::ClassInfo& ci = *reinterpret_cast<const Scaleform::GFx::AS3::Abc::ClassInfo*>(&self->GetClassInfo());
+    const Scaleform::GFx::AS3::Abc::HasTraits& st = ci.stat_info;
+    if (!self->AddSlots(st, file, self->GetFixedMemSize()))
         return false;
     const char* ci2 = (const char*)&self->GetClassInfo();
     if (*(const Scaleform::UInt8*)(ci2 + 0x20) & 4)
