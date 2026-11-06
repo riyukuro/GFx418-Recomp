@@ -3046,8 +3046,23 @@ void AvmTextField::SetNewTextFormat(const FnCall& fn)
     }
 }
 
+void TextFormat_Destruct(Render::Text::TextFormat* p);           // exe 0x1424aa0f0 (~TextFormat)
+void ParagraphFormat_Destruct(Render::Text::ParagraphFormat* p); // exe 0x142606690 (~ParagraphFormat)
+// The formats of the Text library: this TU calls their destructors out of line.
+struct TextFormatLocal02
+{
+    union { Render::Text::TextFormat F; };
+    SF_FORCEINLINE TextFormatLocal02(MemoryHeap* pheap) : F(pheap) {}
+    SF_FORCEINLINE ~TextFormatLocal02() { TextFormat_Destruct(&F); }
+};
+struct ParagraphFormatLocal02
+{
+    union { Render::Text::ParagraphFormat F; };
+    SF_FORCEINLINE ParagraphFormatLocal02() : F() {}
+    SF_FORCEINLINE ~ParagraphFormatLocal02() { ParagraphFormat_Destruct(&F); }
+};
+
 // getTextFormat([beginIndex, [endIndex]]): a TextFormat with what the characters of the range have in common.
-// MS2-FUNCTIONAL the exe calls the format destructors out of line
 // @0x1429096e0
 void AvmTextField::GetTextFormat(const FnCall& fn)
 {
@@ -3080,9 +3095,12 @@ void AvmTextField::GetTextFormat(const FnCall& fn)
     }
     if (beginIndex <= endIndex)
     {
-        Render::Text::TextFormat      textFmt(fn.Env->GetHeap());
-        Render::Text::ParagraphFormat paraFmt;
-        reinterpret_cast<Render::Text::StyledText*>(DocView_GetStyledText(ptf->GetDocument()))->GetTextAndParagraphFormat(&textFmt, &paraFmt, beginIndex, endIndex);
+        TextFormatLocal02      textFmtL(fn.Env->GetHeap());
+        ParagraphFormatLocal02 paraFmtL;
+        Render::Text::TextFormat&      textFmt = textFmtL.F;
+        Render::Text::ParagraphFormat& paraFmt = paraFmtL.F;
+        reinterpret_cast<Render::Text::StyledText*>(DocView_GetStyledText(ptf->GetDocument()))
+            ->GetTextAndParagraphFormat(&textFmt, &paraFmt, beginIndex, endIndex);
         Ptr<TextFormatObject> pfmtObj = *SF_HEAP_NEW(fn.Env->GetHeap()) TextFormatObject(fn.Env);
         pfmtObj->SetTextFormat(fn.Env->GetSC(), textFmt);
         pfmtObj->SetParagraphFormat(fn.Env->GetSC(), paraFmt);
