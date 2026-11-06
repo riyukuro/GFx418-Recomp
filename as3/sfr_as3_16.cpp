@@ -2627,8 +2627,8 @@ void* DeleteAs3_1424e2a10(void* p, unsigned flags);
 void* DeleteAs3_1424e2ac0(void* p, unsigned flags);
 void* DeleteAs3_1424e33f0(void* p, unsigned flags);
 void* DeleteAs3_1424e3890(void* p, unsigned flags);
-
-// The object's own AS3 constructor.
+// @0x1424e4290
+void Object::AS3Constructor(unsigned, const Value*) {}   // the base does nothing; the traits call the object's own
 // @0x1424e42a0
 void InstanceTraits::Traits::AS3Constructor(const AS3::Traits&, const Value& _this, unsigned argc, const Value* argv) const
 {
