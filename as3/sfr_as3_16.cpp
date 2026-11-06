@@ -2581,17 +2581,17 @@ ShapeObject::~ShapeObject()
 
 // AvmMovieClip has no additional state; release the AvmSprite base.
 // @0x1424ddcb0
-extern "C" void FUN_1424ddcb0(void* self)
+Scaleform::GFx::AS3::AvmMovieClip::~AvmMovieClip()
 {
-    auto* bytes = static_cast<unsigned char*>(self);
-    *reinterpret_cast<void* const**>(bytes + 0x00) = Scaleform::GFx::AS3::AvmMovieClip_vftable;
-    *reinterpret_cast<void* const**>(bytes + 0x30) = Scaleform::GFx::AS3::AvmMovieClip_vftable_30;
-    *reinterpret_cast<void* const**>(bytes + 0x40) = Scaleform::GFx::AS3::AvmMovieClip_vftable_40;
-    *reinterpret_cast<void* const**>(bytes + 0x48) = Scaleform::GFx::AS3::AvmMovieClip_vftable_48;
-    reinterpret_cast<Scaleform::GFx::AS3::AvmSprite*>(self)->Scaleform::GFx::AS3::AvmSprite::~AvmSprite();
 }
+//
+//
 
-// MS2-PIN: FUN_1424ddcb0 0x1424ddcb0
+//
+// MS2-PIN: ??_7AvmMovieClip@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14313bcd8
+// MS2-PIN: ??_7AvmMovieClip@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14313bdd0
+// MS2-PIN: ??_7AvmMovieClip@AS3@GFx@Scaleform@@6BAvmDisplayObjContainer@123@@ 0x14313be88
+// MS2-PIN: ??_7AvmMovieClip@AS3@GFx@Scaleform@@6BAvmSpriteBase@23@@ 0x14313bf48
 // MS2-PIN: ??_7ASMovieRootBase@GFx@Scaleform@@6B@ 0x14317bde0
 // MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@6B@ 0x14313f368
 // MS2-PIN: ??_7GASRefCountBase@AS3@GFx@Scaleform@@6B@ 0x14313f398

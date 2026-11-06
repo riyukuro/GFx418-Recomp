@@ -476,11 +476,15 @@ public:
 static_assert(sizeof(AvmBitmap) == 0xd0, "AvmBitmap size");
 #endif // SF_AS3_SHAPEOBJECT_MODEL
 
-// AvmSprite of a timeline sprite. Its constructor is inlined into its users: AvmSprite's, then its own vftables.
+// AvmSprite of a timeline sprite (flash.display.MovieClip), no state of its own. Its constructor is inlined into its
+// users (AvmSprite's, then its own vftables 0x14313bcd8, 0x14313bdd0, 0x14313be88, 0x14313bf48; the other slots and the
+// adjustor thunks are AvmSprite's). Deleting destructor 0x1423dbb60 (thunks 0x1423db880/88c/898, sfr_ime_01).
 class AvmMovieClip : public AvmSprite
 {
 public:
-    static void Construct(AvmMovieClip* p, Sprite* pspr);
+    AvmMovieClip(Sprite* pspr) : AvmSprite(pspr) {}
+    virtual ~AvmMovieClip();                                            // 0x1424ddcb0
+    virtual const char* GetDefaultASClassName() const;                  // "flash.display.MovieClip" 0x1423dccb0
 };
 
 #ifndef SF_AS3_AVMBUTTON_MODEL
@@ -655,22 +659,6 @@ public:
 };
 static_assert(sizeof(AvmStaticText) == 0x30, "AvmStaticText size");
 #endif // SF_AS3_AVMBUTTON_MODEL
-
-// The exe's AvmMovieClip vftables (main, AvmInteractiveObj, AvmDisplayObjContainer, AvmSpriteBase parts).
-extern void* const AvmMovieClip_vftable[];
-extern void* const AvmMovieClip_vftable_30[];
-extern void* const AvmMovieClip_vftable_40[];
-extern void* const AvmMovieClip_vftable_48[];
-
-inline void AvmMovieClip::Construct(AvmMovieClip* p, Sprite* pspr)
-{
-    new (p) AvmSprite(pspr);
-    UByte* pb = (UByte*)p;
-    *(void* const**)(pb + 0x00) = AvmMovieClip_vftable;
-    *(void* const**)(pb + 0x30) = AvmMovieClip_vftable_30;
-    *(void* const**)(pb + 0x40) = AvmMovieClip_vftable_40;
-    *(void* const**)(pb + 0x48) = AvmMovieClip_vftable_48;
-}
 
 }}} // namespace Scaleform::GFx::AS3
 

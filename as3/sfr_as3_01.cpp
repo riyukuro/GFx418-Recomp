@@ -45,8 +45,8 @@ static UByte* AllocWithAvm(MemoryHeap* pheap)
     return (UByte*)pheap->Alloc(((sizeof(D) + 3) & ~3) + sizeof(A), (const AllocInfo*)0);
 }
 
-// AvmMovieClip's constructor is inlined in the exe (AvmSprite constructor + 4 vftables); its vftables are the exe's,
-// stored through AS3::AvmMovieClip::Construct. The cases are in the exe's block order.
+// AvmMovieClip's constructor is inlined in the exe (AvmSprite constructor + its 4 vftables, emitted and pinned here).
+// The cases are in the exe's block order.
 // @0x1423dc160
 DisplayObjectBase* AS3Support::CreateCharacterInstance(MovieImpl* proot, const CharacterCreateInfo& ccinfo,
                                                        InteractiveObject* pparent, ResourceId rid,
@@ -67,7 +67,7 @@ DisplayObjectBase* AS3Support::CreateCharacterInstance(MovieImpl* proot, const C
                                             proot->pASMovieRoot, pparent, rid) : 0;
         AS3::AvmMovieClip* pavm = (AS3::AvmMovieClip*)(pm + ((sizeof(Sprite) + 3) & ~3));
         if (pavm)
-            AS3::AvmMovieClip::Construct(pavm, pspr);
+            new (pavm) AS3::AvmMovieClip(pspr);
         return pspr;
     }
     case CharacterDef::EmptySprite:
@@ -632,7 +632,7 @@ bool AvmInteractiveObj::OnLosingKeyboardFocus(InteractiveObject*, unsigned, Focu
 // AvmMovieClip's default AS3 class name (slot 16 of the AvmMovieClip vftable 0x14313bcd8).
 // MS2-FUNCTIONAL: the exe returns its own .rdata copy of the name (0x14313c060).
 // @0x1423dccb0
-const char* FUN_1423dccb0(const void*)
+const char* AvmMovieClip::GetDefaultASClassName() const
 {
     return "flash.display.MovieClip";
 }
@@ -654,14 +654,10 @@ UByte FUN_1423dcc40(const void*)
 }
 
 // @0x1423dcab0
-void FUN_1423dcab0(void*, LoadProcess*, const TagInfo&)
-{
-}
+void FUN_1423dcab0(void*, LoadProcess*, const TagInfo&) {}
 
 // @0x1423dcad0
-void FUN_1423dcad0(void*, LoadProcess*, const TagInfo&)
-{
-}
+void FUN_1423dcad0(void*, LoadProcess*, const TagInfo&) {}
 
 // @0x1423dd070
 void FUN_1423dd070(void*, LoadProcess*, ButtonDef*, TagType)
@@ -679,6 +675,10 @@ void FUN_1423dd060(void*, LoadProcess*, ButtonDef*, TagType)
 // MS2-PIN: ??_7?$RefCountBase@VMemoryContext@GFx@Scaleform@@$01@Scaleform@@6B@ 0x14313ba60
 // MS2-PIN: ??_7MemoryContext@GFx@Scaleform@@6B@ 0x14313ba60
 // MS2-PIN: ??_7ExecuteTag@GFx@Scaleform@@6B@ 0x14313ba68
+// MS2-PIN: ??_7AvmMovieClip@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14313bcd8
+// MS2-PIN: ??_7AvmMovieClip@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14313bdd0
+// MS2-PIN: ??_7AvmMovieClip@AS3@GFx@Scaleform@@6BAvmDisplayObjContainer@123@@ 0x14313be88
+// MS2-PIN: ??_7AvmMovieClip@AS3@GFx@Scaleform@@6BAvmSpriteBase@23@@ 0x14313bf48
 // MS2-PIN: ??_7HeapLimit@MemoryContextImpl@AS3@GFx@Scaleform@@6B@ 0x14313c090
 // MS2-PIN: ??_7MemoryContextImpl@AS3@GFx@Scaleform@@6B@ 0x14313c0a8
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BAI@@Scaleform@@6B@ 0x14318ccd8

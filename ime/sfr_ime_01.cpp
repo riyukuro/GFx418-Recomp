@@ -26,7 +26,7 @@
 #include "../include/gfx/gfx_imemanager.h"
 #include "../include/gfx/gfx_event.h"
 #include "../include/gfx/gfx_textfield.h"
-#include "../include/gfx/as3/as3_support.h"
+#include "../include/gfx/as3/as3_avm.h"   // AvmMovieClip (and as3_support.h)
 #include "../include/gfx/xml/xml_object.h"
 #include "ms2/scaleform/kernel/sf_wstring.h"
 
@@ -140,7 +140,7 @@ static __forceinline BOOL cx18_ImmSetCompositionStringW(HIMC context, DWORD inde
 }
 
 extern "C" void FUN_14015b310(void*, unsigned long long);
-extern "C" void FUN_1424ddcb0(void* self);   // the in-place AvmDisplayObj destructor (sfr_as3_16)
+// AvmMovieClip::~AvmMovieClip 0x1424ddcb0 (sfr_as3_16) is the in-place destructor of FUN_1423dbb60 below.
 // The RefCount base destructors, called directly as the exe calls them.
 static inline void RawRefCountCoreDtor(void* p) { static_cast<Scaleform::RefCountImplCore*>(p)->Scaleform::RefCountImplCore::~RefCountImplCore(); }
 static inline void RawRefCountNTSCoreDtor(void* p) { static_cast<Scaleform::RefCountNTSImplCore*>(p)->Scaleform::RefCountNTSImplCore::~RefCountNTSImplCore(); }
@@ -3320,7 +3320,7 @@ selected_entry:
 // @0x1423dbb60
 void* FUN_1423dbb60(void* object, unsigned flags)
 {
-    FUN_1424ddcb0(object);
+    static_cast<AS3::AvmMovieClip*>(object)->AS3::AvmMovieClip::~AvmMovieClip();
     if ((flags & 5) == 5)
         FUN_14015b310(object, 0x68);
     return object;
