@@ -22,6 +22,10 @@
 // the exe calls the CRT strcpy_s import thunk (0x14280f246) directly rather than through the import table, so the
 // thunk goes by its own name
 extern "C" errno_t __cdecl sfr_strcpy_s_thunk(char* dest, rsize_t size, const char* src);
+// the full exe resolves the thunk name to the CRT strcpy_s (the real dllimport decl would call [__imp_] and lose 0x142747cf0)
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:sfr_strcpy_s_thunk=strcpy_s")
+#endif
 
 // The exe functions and globals this unit uses but does not define, declared by their FUN_<va> / DAT_<va> names: the
 // hook DLL binds them to the exe, the full exe to the recovered definition at that VA (tools/fullexe/alias.py).
