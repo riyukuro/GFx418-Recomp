@@ -60,7 +60,7 @@ SF_FORCEINLINE GlobalContext::ClassRegEntry* BuiltinRegistrarOf(GlobalContext* p
 
 // The frame a goto value names: a number counts from 1, a string is a label, "path:label" looked up in the clip
 // the path names; the clip the label belongs to goes to *pchar.
-// MS2-FUNCTIONAL: register allocation (the exe keeps the prefix string node in rbx and saves r12/r15); same behavior
+// MS2-FUNCTIONAL: LTCG register allocation (the exe keeps the target-path string node in rbx across FindTarget(const ASString&) and releases it from the register; ours reloads it from its slot); same behavior
 // @0x14297e870
 bool ActionBuffer::ResolveFrameNumber(Environment* env, const Value& frameValue, InteractiveObject** pchar,
                                       unsigned* frameNumber)
@@ -70,32 +70,36 @@ bool ActionBuffer::ResolveFrameNumber(Environment* env, const Value& frameValue,
 
     if (frameValue.GetType() == Value::STRING)
     {
-        ASString str = frameValue.ToString(env);
-        int      len = (int)str.GetLength();
-        for (int i = 0; i < len; i++)
+        ASString str(frameValue.ToString(env));
+        int      len = str.GetLength();
+        int      i;
+        for (i = 0; i < len; i++)
         {
             if (str.GetCharAt(i) == ':')
             {
                 ASString targetStr(str.SubstringNode(0, i));
-                target = env->FindTarget(targetStr);
-                if (target)
+                if ((target = env->FindTarget(targetStr)) != 0)
                 {
-                    if (i < len)
+                    if (i >= len)
+                        target = 0;
+                    else
                     {
                         str = ASString(str.SubstringNode(i + 1, len + 1));
                         break;
                     }
-                    target = 0;
                 }
             }
         }
         if (target && target->GetLabeledFrame(str.ToCStr(), frameNumber))
             success = true;
     }
+    else if (frameValue.GetType() == Value::OBJECT)
+    {
+    }
     else if (frameValue.IsNumber())
     {
+        *frameNumber = int(frameValue.ToNumber(env) - 1);
         success      = true;
-        *frameNumber = (int)(frameValue.ToNumber(env) - 1);
     }
     if (success && pchar)
         *pchar = target;
