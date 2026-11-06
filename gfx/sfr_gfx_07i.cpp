@@ -1012,12 +1012,30 @@ void FUN_142623050(char* self, int hi, int lo, U arg)
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
 
+// ViewStats::PushCallstack(swdHandle, swfOffset, funcTime): the new FuncTreeItem is value-initialised and pushed as a
+// CallInfo {item, 0, 0}. Its vftable (folded with the RefCountBase<FuncTreeItem, 2> one) is DAT_14318f040.
+// MS2-PIN: ??_7FuncTreeItem@AMP@GFx@Scaleform@@6B@ 0x14318f040
+// MS2-PIN: ??_7?$RefCountBase@VFuncTreeItem@AMP@GFx@Scaleform@@$01@Scaleform@@6B@ 0x14318f040
 // @0x1426233e0
-void FUN_1426233e0(char* self, U hi, U lo, U arg)
+void FUN_1426233e0(char* self, UInt32 swdHandle, UInt32 swfOffset, U funcTime)
 {
-    EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    RawPushScopeBody(self, ((U)(unsigned)hi << 32) + (unsigned)lo, arg);
-    LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
+    RawLocker locker(self + 0xe0);
+    Ptr<AMP::FuncTreeItem> newCall = *SF_HEAP_AUTO_NEW(self) AMP::FuncTreeItem();
+    newCall->BeginTime = funcTime;
+    newCall->FunctionId = ((UInt64)swdHandle << 32) + swfOffset;
+    RawField<int>(self, 0x60) += 1;
+    newCall->TreeItemId = RawField<int>(self, 0x60);
+    {
+        struct CallInfo
+        {
+            Ptr<AMP::FuncTreeItem> FunctionInfo; U FileId; UInt32 LineNumber;
+            CallInfo(AMP::FuncTreeItem* f, U file, UInt32 line) : FunctionInfo(f), FileId(file), LineNumber(line) {}
+        } call(newCall, 0, 0);
+        FUN_142624020(RawFieldPtr<U>(self, 0x30), self + 0x30, RawField<U>(self, 0x38) + 1);
+        CallInfo* slot = (CallInfo*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) - 1;
+        new (slot) CallInfo(call);
+    }
+    RawPublishTopScope(self);
 }
 
 // Adds `delta` to the byte counter kept per (scope, count) multiname key.
