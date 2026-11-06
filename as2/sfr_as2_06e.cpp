@@ -63,15 +63,15 @@ SF_FORCEINLINE bool LeIsKeyboardFocused(const MovieImpl* pmovie, const Interacti
     return focused.GetPtr() == ch && pmovie->FocusGroups[group].FocusRectShown;
 }
 
-// The index of the clip in the hit area array of the movie root; -1 when it has no hit area or is not there.
-SF_FORCEINLINE int LeHitAreaIndex(AvmSprite* pavm)
+// AvmSprite::GetHitAreaIndex, inlined in the exe: the index of the clip in the hit area array of the movie root, -1
+// when it has no hit area or is not there. The array is read again on each pass.
+SF_FORCEINLINE int LeHitAreaIndex(const AvmSprite* pavm)
 {
-    Sprite*       psprite = pavm->GetSprite();
-    HitAreaArray& ha      = LeHitAreas(pavm->GetAS2Root());
-    if (psprite->pHitAreaHandle)
+    UPInt spriteArraySize = LeHitAreas(pavm->GetAS2Root()).GetSize();
+    if (pavm->GetSprite()->pHitAreaHandle)
     {
-        for (unsigned i = 0; i < ha.GetSize(); i++)
-            if (ha[i] == psprite)
+        for (unsigned i = 0; i < spriteArraySize; i++)
+            if (LeHitAreas(pavm->GetAS2Root())[i] == pavm->GetSprite())
                 return i;
     }
     return -1;
@@ -95,11 +95,7 @@ SF_FORCEINLINE void LeSetEventAction(MovieRoot::ActionEntry* pe, InteractiveObje
 SF_FORCEINLINE void LeSetEventAction(MovieRoot::ActionEntry* pe, InteractiveObject* pch, UInt32 id)
 {
     pe->Type = MovieRoot::ActionEntry::Entry_Event;
-    if (pch)
-        pch->AddRef();
-    if (pe->pCharacter)
-        pe->pCharacter->Release();
-    pe->pCharacter.GetRawRef() = pch;
+    pe->pCharacter = pch;
     if (pe->pActionBuffer)
         pe->pActionBuffer->Release();
     pe->pActionBuffer.GetRawRef() = 0;
@@ -307,8 +303,6 @@ void AvmSprite::OnEventLoad()
 
 // The clip leaves the hit area array. It may go at once only when mayRemove and it has no unload handler;
 // otherwise its unload event is queued (after a load event, for a clip from attachMovie whose load has not run).
-// MS2-FUNCTIONAL: register allocation (this and the sprite swap rsi/rdi), and the exe reloads the hit area array data
-// on each pass of the search loop.
 // @0x14296d140
 bool AvmSprite::OnUnloading(bool mayRemove)
 {
@@ -320,18 +314,17 @@ bool AvmSprite::OnUnloading(bool mayRemove)
         mayRemove = false;
     if (!mayRemove)
     {
-        Sprite* psprite = GetSprite();
-        if (LeIsJustLoaded(psprite) && !psprite->IsAcceptAnimMovesFlagSet())
+        if (LeIsJustLoaded(GetSprite()) && !GetSprite()->IsAcceptAnimMovesFlagSet())
         {
             MovieRoot::ActionEntry* pe = GetAS2Root()->InsertEmptyAction();
             if (pe)
-                LeSetEventAction(pe, GetSprite(), EventId::Event_Load);
+                LeSetEventAction(pe, pDispObj, EventId::Event_Load);
         }
         MovieRoot::ActionEntry* pe = GetAS2Root()->InsertEmptyAction();
         if (pe)
-            LeSetEventAction(pe, GetSprite(), EventId::Event_Unload);
+            LeSetEventAction(pe, pDispObj, EventId::Event_Unload);
     }
-    GetSprite()->RemoveFromPlayList();
+    pDispObj->RemoveFromPlayList();
     return mayRemove;
 }
 
