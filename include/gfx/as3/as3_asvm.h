@@ -143,7 +143,7 @@ public:
         unsigned            FreeEntriesCount;   // +0xb8
         MemoryHeap*         pHeap;              // +0xc0
 
-        ActionQueueType(MemoryHeap* pheap) : ModId(1), pFreeEntry(NULL), FreeEntriesCount(0), pHeap(pheap) {}
+        ActionQueueType(MemoryHeap* pheap) : pHeap(pheap) { ModId = 1; pFreeEntry = NULL; FreeEntriesCount = 0; }
         ~ActionQueueType();                                 // 0x1424dda00
 
         MemoryHeap*  GetMovieHeap() const { return pHeap; }

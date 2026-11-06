@@ -3953,16 +3953,36 @@ extern const void* DAT_14317d8d8[];      // MovieRoot vftable
 extern const void* DAT_14317da88[];      // MovieRoot secondary vftable (+0x28)
 extern const void* DAT_14317daa0[];      // MovieRoot keyboard-listener vftable (+0x38)
 extern const void* DAT_14317eff8[];      // keyboard-listener forwarder vftable
+extern const void* DAT_142dc9d48[];      // RefCountNTSImplCore vftable, then the ASMovieRootBase one (dead stores)
+extern const void* DAT_14317bde0[];
+namespace {
+// MovieRoot::MouseState as its inline ctor builds it: the rollover array and object cleared, each click time zeroed.
+struct Sfr15MouseStateInit
+{
+    void* Rollover[3]; void* LastObj; struct { UInt32 Time; float X, Y; } Dbl[16];
+    Sfr15MouseStateInit() { Rollover[0] = 0; Rollover[1] = 0; Rollover[2] = 0; LastObj = 0; for (unsigned i = 0; i < 16; ++i) Dbl[i].Time = 0; }
+};
+}
 
-// MS2-FUNCTIONAL: raw words over MovieRoot (several of its members are unrecovered gaps); the exe's dead store of the
-// ASMovieRootBase vftable ahead of the final one is omitted
+// MovieRoot::MovieRoot, over raw words (several of its members are unrecovered gaps). The exe's shape:
+// - the base ctors' vftable stores (RefCountNTSImplCore, then ASMovieRootBase) are kept as dead stores, so the
+//   vptr stores and the refcount store are volatile;
+// - the ActionQueue is built by its own inline ctor (pHeap first), with the Entries fully unrolled;
+// - the 61 builtin string holders are an array of ASStringNodeHolder, cleared in an unrolled run;
+// - the four mouse states are an array of their inline ctor, with the 16 click times each unrolled;
+// - the keyboard forwarder is a placement new: the object, or null when the heap returns null;
+// - the MovieImpl flags word is read, masked and written back as one store.
+// The stores and the values they write are the exe's, so behaviour does not change.
+// It is reached as ??0MovieRoot (alias to FUN_1424d8640), from the AS3 support's
+// CreateASMovieRoot (call at 0x1423dc77d).
 // @0x1424d8640
 void* FUN_1424d8640(void* self, MemoryContextImpl* pctx, MovieImpl* pmovie, ASSupport* psupport)
 {
     UPInt* w = static_cast<UPInt*>(self);
     UByte* b = static_cast<UByte*>(self);
-    w[0] = reinterpret_cast<UPInt>(DAT_14317d8d8);
-    *reinterpret_cast<unsigned*>(b + 8) = 1;
+    *reinterpret_cast<const void* volatile*>(w) = DAT_142dc9d48;
+    *reinterpret_cast<const void* volatile*>(w) = DAT_14317bde0;
+    *reinterpret_cast<volatile unsigned*>(b + 8) = 1;
     w[2] = 0;
     if (psupport)
         reinterpret_cast<RefCountImpl*>(psupport)->AddRef();
@@ -3970,6 +3990,7 @@ void* FUN_1424d8640(void* self, MemoryContextImpl* pctx, MovieImpl* pmovie, ASSu
     b[0x20] = reinterpret_cast<UByte (*)(void*)>((*reinterpret_cast<void***>(psupport))[0x30 / 8])(psupport);
     *reinterpret_cast<unsigned*>(b + 0x30) = 0;
     b[0x34] = 0;
+    *reinterpret_cast<const void* volatile*>(w) = DAT_14317d8d8;
     w[5] = reinterpret_cast<UPInt>(DAT_14317da88);
     w[7] = reinterpret_cast<UPInt>(DAT_14317daa0);
     if (pctx)
@@ -3980,38 +4001,16 @@ void* FUN_1424d8640(void* self, MemoryContextImpl* pctx, MovieImpl* pmovie, ASSu
     *reinterpret_cast<unsigned*>(b + 0x58) = 0;
     w[0xc] = 0;
     w[0xf] = 0;
-    UPInt ctxw10 = reinterpret_cast<UPInt*>(pctx)[2];
-    for (unsigned o = 0x88; o <= 0x118; o += 0x18)
-    {
-        w[o / 8] = 0;
-        w[o / 8 + 1] = 0;
-        w[o / 8 + 2] = 0;
-    }
-    // (the loop above covers the 7 three-word groups 0x88..0x120)
-    w[0x148 / 8] = ctxw10;
-    *reinterpret_cast<unsigned*>(b + 0x130) = 1;
-    w[0x138 / 8] = 0;
-    *reinterpret_cast<unsigned*>(b + 0x140) = 0;
+    ::new (b + 0x88) MovieRoot::ActionQueueType(reinterpret_cast<MemoryHeap**>(pctx)[2]);
     w[0x150 / 8] = 0;
     w[0x158 / 8] = 0;
     UPInt* sm = w + 0x160 / 8;
     UPInt asm_ = reinterpret_cast<UPInt*>(w[8])[3];
-    for (unsigned i = 0; i < 0x3d; ++i)
-        sm[i] = 0;
+    ::new (sm) ASStringNodeHolder[0x3d];
     sm[0x3d] = asm_;
     sm[0x3e] = reinterpret_cast<UPInt>(DAT_143a2d3d0);
     reinterpret_cast<ASStringManager*>(asm_)->InitBuiltinArray(reinterpret_cast<ASStringNodeHolder*>(sm), DAT_143a2d3d0, 0x3d);
-    for (unsigned i = 0; i < 4; ++i)
-    {
-        UByte* e = b + 0x360 + i * 0xe0;
-        *reinterpret_cast<UPInt*>(e) = 0;
-        *reinterpret_cast<UPInt*>(e + 8) = 0;
-        *reinterpret_cast<UPInt*>(e + 0x10) = 0;
-        *reinterpret_cast<UPInt*>(e + 0x18) = 0;
-        *reinterpret_cast<unsigned*>(e + 0x20) = 0;
-        for (unsigned o = 0x2c; o <= 0xdc; o += 0xc)
-            *reinterpret_cast<unsigned*>(e + o) = 0;
-    }
+    ::new (b + 0x360) Sfr15MouseStateInit[4];
     b[0x6e0] = 0;
     w[0x6e8 / 8] = 0;
     b[0x6f0] = 0;
@@ -4019,17 +4018,18 @@ void* FUN_1424d8640(void* self, MemoryContextImpl* pctx, MovieImpl* pmovie, ASSu
     w[2] = reinterpret_cast<UPInt>(pmovie);
     pmovie->SetASMovieRoot(reinterpret_cast<ASMovieRootBase*>(self));
     UPInt heap = reinterpret_cast<UPInt*>(w[2])[8];   // MovieImpl +0x40: its heap
-    UPInt* fwd = reinterpret_cast<UPInt*>(reinterpret_cast<void* (*)(UPInt, UPInt, UPInt)>((*reinterpret_cast<void***>(heap))[0x50 / 8])(heap, 0x10, 0));
-    if (fwd)
-    {
-        fwd[1] = reinterpret_cast<UPInt>(pmovie);
-        fwd[0] = reinterpret_cast<UPInt>(DAT_14317eff8);
-    }
+    UPInt* mem = reinterpret_cast<UPInt*>(reinterpret_cast<void* (*)(UPInt, UPInt, UPInt)>((*reinterpret_cast<void***>(heap))[0x50 / 8])(heap, 0x10, 0));
+    // a placement new of the forwarder: the object, or null if the heap failed
+    UPInt* fwd = mem
+        ? (mem[1] = reinterpret_cast<UPInt>(pmovie),
+           mem[0] = reinterpret_cast<UPInt>(DAT_14317eff8), mem)
+        : 0;
+    //
     reinterpret_cast<UPInt*>(pmovie)[7] = reinterpret_cast<UPInt>(fwd);
     reinterpret_cast<MovieImpl*>(pmovie)->SetKeyboardListener(reinterpret_cast<KeyboardState::IListener*>(b + 0x38));
     w[0x80 / 8] = 0;
     unsigned* fl = reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(pmovie) + 0x3490);
-    *fl = (*fl & 0xdf7fffffu) | 0x10400000u;
+    unsigned fv = *fl; fv &= 0xdf7fffffu; fv |= 0x10400000u; *reinterpret_cast<volatile unsigned*>(fl) = fv;
     b[0x6e1] = 0;
     return self;
 }
