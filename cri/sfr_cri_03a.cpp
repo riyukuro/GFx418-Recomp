@@ -394,8 +394,11 @@ void criAtomic_Finalize()
 // @0x14003a0b4
 CriUint64 FUN_14003a0b4(CriUint64 value, CriUint32 alignment)
 {
-    CriUint64 rem = value % alignment;
-    return rem ? value + alignment - rem : value;
+    CriUint64 a = (CriSint32)alignment;
+    CriUint64 rem = value % a;
+    if (rem == 0)
+        return value;
+    return value + (a - rem);
 }
 
 // @0x14003a0f8
