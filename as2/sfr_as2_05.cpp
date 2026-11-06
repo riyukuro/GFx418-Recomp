@@ -262,6 +262,22 @@ Scaleform::GFx::ASStringHashBase<Scaleform::GFx::AS2::FunctionRef, Scaleform::Ha
     return caseSensitive ? BaseType::Get(key) : GetCaseInsensitive(key);
 }
 
+// Matrix2x4<float>::Prepend is out of line in the exe (same body as sfr_as3_06); TransformObject::GetMember calls it.
+namespace Scaleform { namespace Render {
+template <> __declspec(noinline) inline Matrix2x4<float>& Matrix2x4<float>::Prepend(const Matrix2x4<float>& m)
+{
+    Matrix2x4 t(*this);
+    M[0][0] = t.M[0][0] * m.M[0][0] + t.M[0][1] * m.M[1][0];
+    M[1][0] = t.M[1][0] * m.M[0][0] + t.M[1][1] * m.M[1][0];
+    M[0][1] = t.M[0][0] * m.M[0][1] + t.M[0][1] * m.M[1][1];
+    M[1][1] = t.M[1][0] * m.M[0][1] + t.M[1][1] * m.M[1][1];
+    M[0][2] = M[1][2] = 0;
+    M[0][3] = t.M[0][0] * m.M[0][3] + t.M[0][1] * m.M[1][3] + t.M[0][3];
+    M[1][3] = t.M[1][0] * m.M[0][3] + t.M[1][1] * m.M[1][3] + t.M[1][3];
+    return *this;
+}
+}}
+
 // The text format destructor (the exe calls it; cl inlines the empty ~TextFormat).
 void FUN_1424aa0f0(void* pformat);                                                 // exe 0x1424aa0f0
 
@@ -3171,62 +3187,73 @@ static SF_FORCEINLINE void ColorTransform_SetCxform(ColorTransformObject* pct, c
     pct->mColorTransform.M[1][3] *= 255.0f;
 }
 
-// MS2-FUNCTIONAL the exe calls the out-of-line Matrix2x4::Prepend and keeps the result flag in a register
+// MS2-FUNCTIONAL regalloc only: the exe gives the matrix branch the colorTransform registers (ch rdi, rv bl) and cross-jumps into its tail; a 16-byte Matrix2F copy gets the movups pair but not the registers
 // @0x1429505d0
 bool TransformObject::GetMember(Environment* penv, const ASString& name, Value* val)
 {
     const char* pname = name.ToCStr();
     if (strcmp(pname, "pixelBounds") == 0)
     {
+        bool rv = true;
         if (pMovieRoot)
         {
             Ptr<DisplayObject> ch = TargetHandle->ResolveCharacter(pMovieRoot);
             if (ch)
             {
                 Render::RectF b = ch->GetBounds(ch->GetMatrix());
-                int           h = Alg::IRound(Render::TwipsToPixels(b.y2 - b.y1));
-                int           w = Alg::IRound(Render::TwipsToPixels(b.x2 - b.x1));
-                int           y = Alg::IRound(Render::TwipsToPixels(b.y1));
-                int           x = Alg::IRound(Render::TwipsToPixels(b.x1));
-                ASRect        r(Double(x), Double(y), Double(x) + Double(w), Double(y) + Double(h));
+                ASRect r((Number)Alg::IRound(Render::TwipsToPixels(b.x1)), (Number)Alg::IRound(Render::TwipsToPixels(b.y1)),
+                         Render::Size<Number>((Number)Alg::IRound(Render::TwipsToPixels(b.Width())),
+                                      (Number)Alg::IRound(Render::TwipsToPixels(b.Height()))));
                 static_cast<RectangleObject*>(PixelBounds.GetPtr())->SetProperties(penv, r);
                 val->SetAsObject(PixelBounds);
-                return true;
             }
+            else
+                rv = false;
         }
-        val->SetUndefined();
-        return false;
+        else
+            rv = false;
+        if (!rv) val->SetUndefined();
+        return rv;
     }
     else if (strcmp(pname, "colorTransform") == 0)
     {
+        bool rv = true;
         if (pMovieRoot)
         {
             Ptr<DisplayObject> ch = TargetHandle->ResolveCharacter(pMovieRoot);
             if (ch)
             {
-                ColorTransform_SetCxform(static_cast<ColorTransformObject*>(pColorTransform.GetPtr()), ch->GetCxform());
+                Render::Cxform ct = ch->GetCxform();
+                ColorTransform_SetCxform(static_cast<ColorTransformObject*>(pColorTransform.GetPtr()), ct);
                 val->SetAsObject(pColorTransform);
-                return true;
             }
+            else
+                rv = false;
         }
-        val->SetUndefined();
-        return false;
+        else
+            rv = false;
+        if (!rv) val->SetUndefined();
+        return rv;
     }
     else if (strcmp(pname, "matrix") == 0)
     {
+        bool rv = true;
         if (pMovieRoot)
         {
             Ptr<DisplayObject> ch = TargetHandle->ResolveCharacter(pMovieRoot);
             if (ch)
             {
-                Render::Matrix2F m = ch->GetMatrix();
+                const Render::Matrix2F& m = ch->GetMatrix();
                 static_cast<MatrixObject*>(Matrix.GetPtr())->SetMatrixTwips(penv->GetSC(), m);
                 val->SetAsObject(Matrix);
-                return true;
             }
+            else
+                rv = false;
         }
-        val->SetUndefined();
-        return false;
+        else
+            rv = false;
+        if (!rv) val->SetUndefined();
+        return rv;
     }
     else if (strcmp(pname, "concatenatedColorTransform") == 0)
     {
@@ -3234,8 +3261,15 @@ bool TransformObject::GetMember(Environment* penv, const ASString& name, Value* 
         if (pMovieRoot)
         {
             Ptr<DisplayObject> ch = TargetHandle->ResolveCharacter(pMovieRoot);
-            for (DisplayObjectBase* p = ch; p; p = p->GetParent())
-                cx.Prepend(p->GetCxform());
+            if (ch)
+            {
+                DisplayObjectBase* curr = ch.GetPtr();
+                while (curr != NULL)
+                {
+                    cx.Prepend(curr->GetCxform());
+                    curr = curr->GetParent();
+                }
+            }
         }
         Ptr<ColorTransformObject> pct = *SF_HEAP_NEW(penv->GetHeap()) ColorTransformObject(penv);
         ColorTransform_SetCxform(pct, cx);
@@ -3248,8 +3282,15 @@ bool TransformObject::GetMember(Environment* penv, const ASString& name, Value* 
         if (pMovieRoot)
         {
             Ptr<DisplayObject> ch = TargetHandle->ResolveCharacter(pMovieRoot);
-            for (DisplayObjectBase* p = ch; p; p = p->GetParent())
-                m.Prepend(p->GetMatrix());
+            if (ch)
+            {
+                DisplayObjectBase* curr = ch.GetPtr();
+                while (curr != NULL)
+                {
+                    m.Prepend(curr->GetMatrix());
+                    curr = curr->GetParent();
+                }
+            }
         }
         Ptr<MatrixObject> pmo = *SF_HEAP_NEW(penv->GetHeap()) MatrixObject(penv);
         pmo->SetMatrixTwips(penv->GetSC(), m);
