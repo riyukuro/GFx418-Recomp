@@ -535,9 +535,42 @@ namespace Instances { namespace fl_events {
         return rv;
     }
 
+    // EventDispatcher::ExecuteCapturePhase / ExecuteBubblePhase (SDK), inlined into Dispatch by the exe
+    typedef ArrayStaticBuff<SPtr<Instances::fl_display::DisplayObject>, 32> Sfr09EventFlowArray;
+    static __forceinline bool Sfr09ExecuteCapturePhase(Instances::fl_events::Event* evt, Sfr09EventFlowArray& chain)
+    {
+        evt->Phase = 1;
+        for (SPInt i = (SPInt)chain.GetSize() - 1; i >= 0; --i)
+        {
+            if (!chain[i]->DispatchSingleEvent(evt, true))
+            {
+                if (chain[i]->pDispObj)
+                    chain[i]->pDispObj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
+                return false;
+            }
+            if (evt->PropagationStopped || evt->ImmPropagationStopped)
+                return false;
+        }
+        return true;
+    }
+    static __forceinline bool Sfr09ExecuteBubblePhase(Instances::fl_events::Event* evt, Sfr09EventFlowArray& chain)
+    {
+        evt->Phase = 3;
+        for (UPInt i = 0, n = chain.GetSize(); i < n; ++i)
+        {
+            if (!chain[i]->DispatchSingleEvent(evt, false))
+            {
+                if (chain[i]->pDispObj)
+                    chain[i]->pDispObj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
+                return false;
+            }
+            if (evt->PropagationStopped || evt->ImmPropagationStopped)
+                return false;
+        }
+        return true;
+    }
+
     // @0x142468fa0
-    // MS2-FUNCTIONAL: the exe keeps this in rbp (rsi here) and lays the no-display-object call out before the
-    // epilogue; same blocks and dispatch order
     void EventDispatcher::Dispatch(Instances::fl_events::Event* evt, GFx::DisplayObject* dobj)
     {
         if (dobj)
@@ -547,46 +580,29 @@ namespace Instances { namespace fl_events {
             ArrayStaticBuff<SPtr<Instances::fl_display::DisplayObject>, 32> chain(GetVM().GetMemoryHeap());
             GetParentChain(dobj, chain);
 
-            // capture: from the root down to the parent
-            evt->Phase = 1;
-            for (SPInt i = (SPInt)chain.GetSize() - 1; i >= 0; --i)
-            {
-                if (!chain[i]->DispatchSingleEvent(evt, true))
-                {
-                    if (chain[i]->pDispObj)
-                        chain[i]->pDispObj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
-                    return;
-                }
-                if (evt->PropagationStopped || evt->ImmPropagationStopped)
-                    return;
-            }
+            bool status = Sfr09ExecuteCapturePhase(evt, chain);
 
-            // target
-            evt->Phase = 2;
-            if (!DispatchSingleEvent(evt, false))
+            if (status)
             {
-                dobj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
-                return;
-            }
-            if (evt->PropagationStopped || evt->ImmPropagationStopped || !evt->Bubbles)
-                return;
-
-            // bubble: from the parent up to the root
-            evt->Phase = 3;
-            for (UPInt i = 0, n = chain.GetSize(); i < n; ++i)
-            {
-                if (!chain[i]->DispatchSingleEvent(evt, false))
+                evt->Phase = 2;
+                if (!DispatchSingleEvent(evt, false))
                 {
-                    if (chain[i]->pDispObj)
-                        chain[i]->pDispObj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
-                    break;
+                    if (dobj)
+                        dobj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
+                    status = false;
                 }
-                if (evt->PropagationStopped || evt->ImmPropagationStopped)
-                    break;
+                if (status)
+                {
+                    if (!(evt->PropagationStopped || evt->ImmPropagationStopped) && evt->Bubbles)
+                        Sfr09ExecuteBubblePhase(evt, chain);
+                }
             }
         }
         else
-            DispatchSingleEvent(evt, false);
+        {
+            if (!DispatchSingleEvent(evt, false) && dobj)
+                dobj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
+        }
     }
 
     // ---- Clone: a new event of the same class from (type, bubbles, cancelable), with the state copied -----------------
