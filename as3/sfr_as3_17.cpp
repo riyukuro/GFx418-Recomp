@@ -962,43 +962,59 @@ void Traits::ForEachChild_GC(Collector* prcc, GcOp op) const
         AS3::ForEachChild_GC(prcc, InitScope[i], op, *this);
 }
 
-// Visits the counted pointer at offset off of every used entry of a raw hash table (0x10-byte header: entry
-// count, size mask; an entry's first word is its chain link, -2 when empty).
-static SF_INLINE void Sfr33GcRawHash(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const void* table, UPInt esize,
-                                     UPInt off, ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner)
+// AbcMultinameHash::ForEachChild_GC as the SDK has it (a ConstIterator walk over Entries, non-null values visited).
+template <class H>
+static __forceinline void Sfr33GcHash(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const H& h,
+                                      ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner)
 {
     typedef void (*GcOpWithOwner)(RefCountCollector<StatMV_ActionScript_Mem>*, const ASRefCountBaseType**,
                                   const ASRefCountBaseType&);
-    if (!table)
-        return;
-    const char* t = static_cast<const char*>(table);
-    const UPInt mask = *reinterpret_cast<const UPInt*>(t + 8);
-    for (UPInt i = 0; i <= mask; ++i)
+    typename H::ConstIterator it = h.Begin();
+    while (!it.IsEnd())
     {
-        const char* e = t + 0x10 + i * esize;
-        if (*reinterpret_cast<const SPInt*>(e) == -2)
-            continue;
-        const ASRefCountBaseType** pchild = (const ASRefCountBaseType**)(e + off);
-        if (*pchild)
-            reinterpret_cast<GcOpWithOwner>(op)(prcc, pchild, owner);
+        const typename H::ValueType& v = it->Second;
+        if (v)
+            reinterpret_cast<GcOpWithOwner>(op)(prcc, (const ASRefCountBaseType**)(v.GetRawPtr()), owner);
+        ++it;
     }
 }
 
+// The same walk over a hash set of counted pointers (the element itself is visited).
+template <class H>
+static __forceinline void Sfr33GcHashSet(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const H& h,
+                                         ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner)
+{
+    typedef void (*GcOpWithOwner)(RefCountCollector<StatMV_ActionScript_Mem>*, const ASRefCountBaseType**,
+                                  const ASRefCountBaseType&);
+    typename H::ConstIterator it = h.Begin();
+    while (!it.IsEnd())
+    {
+        const auto& v = *it;
+        if (v)
+            reinterpret_cast<GcOpWithOwner>(op)(prcc, (const ASRefCountBaseType**)(v.GetRawPtr()), owner);
+        ++it;
+    }
+}
+
+// Views of the raw table members: HashSetLH<SPtr<...>> (AbsObjects, GlobalObjects; 0x18-byte cached entries) and
+// HashLH<UInt32, SPtr<...>> (the activation and function traits caches; 0x20-byte cached node entries).
+typedef HashSetLH<SPtr<GASRefCountBase> > Sfr33GcPtrSetView;
+typedef HashLH<UInt32, SPtr<GASRefCountBase>, FixedSizeHash<UInt32> > Sfr33GcPtrMapView;
+
 // VMAbcFile::ForEachChild_GC: the interned namespaces, the absolute objects, the namespace sets, the global
 // objects, the child files, the activation and function traits caches and the loaded classes.
-// MS2-FUNCTIONAL 0x142503ff0: the exe inlines the hash iterators; same visits
 // @0x142503ff0
 void VMAbcFile::ForEachChild_GC(Collector* prcc, GcOp op) const
 {
-    Sfr33GcRawHash(prcc, *reinterpret_cast<void* const*>(&IntNamespaces), 0x28, 0x20, op, *this);
-    Sfr33GcRawHash(prcc, AbsObjectsTable, 0x18, 0x10, op, *this);
+    Sfr33GcHash(prcc, IntNamespaces.Entries, op, *this);
+    Sfr33GcHashSet(prcc, reinterpret_cast<const Sfr33GcPtrSetView&>(AbsObjectsTable), op, *this);
     for (UPInt i = 0, n = IntNamespaceSets.GetSize(); i < n; ++i)
         Sfr33GcPtr(prcc, IntNamespaceSets[i], op, *this);
-    Sfr33GcRawHash(prcc, GlobalObjectsTable, 0x18, 0x10, op, *this);
+    Sfr33GcHashSet(prcc, reinterpret_cast<const Sfr33GcPtrSetView&>(GlobalObjectsTable), op, *this);
     for (UPInt i = 0, n = Children.GetSize(); i < n; ++i)
         Sfr33GcPtr(prcc, Children[i], op, *this);
-    Sfr33GcRawHash(prcc, ActivationTraitsCacheTable, 0x20, 0x18, op, *this);
-    Sfr33GcRawHash(prcc, FunctionTraitsCacheTable, 0x20, 0x18, op, *this);
+    Sfr33GcHash(prcc, reinterpret_cast<const Sfr33GcPtrMapView&>(ActivationTraitsCacheTable), op, *this);
+    Sfr33GcHash(prcc, reinterpret_cast<const Sfr33GcPtrMapView&>(FunctionTraitsCacheTable), op, *this);
     for (UPInt i = 0, n = LoadedClasses.GetSize(); i < n; ++i)
         Sfr33GcPtr(prcc, LoadedClasses[i], op, *this);
 }
