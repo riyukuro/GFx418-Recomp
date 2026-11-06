@@ -843,32 +843,42 @@ void SparseArray::Reverse()
     }
 }
 
-// MS2-FUNCTIONAL: the exe's trim loop of the hash tail reads its key through a null node pointer (it faults when
-// reached); ours drops the hash entries past the new length instead
+// SDK 4.3 branch structure. The CutHash branch reproduces an exe bug on purpose: when truncating below
+// ValueHHighInd the shipped client reads the hash node key through a null node pointer and crashes. The SDK's
+// fixed form is the Remove(ValueHHighInd--) loop.
 // @0x14241fe30
 void SparseArray::Resize(UPInt newLength)
 {
     if (newLength == 0)
-        ValueA.Clear();
-    else if (newLength <= ValueA.GetSize() && ValueA.GetSize() != 0)
-        ValueA.Resize(newLength);
-    else if (newLength >= ValueHLowInd)
     {
-        if (newLength < ValueHHighInd)
-        {
-            while (newLength < ValueHHighInd)
-            {
-                ValueH.Remove(ValueHHighInd);
-                --ValueHHighInd;
-            }
-        }
-        Length = newLength;
-        return;
+        ValueA.Clear();
+        ValueH.Clear();
+        ValueHLowInd = 0;
+        ValueHHighInd = 0;
     }
-    ValueH.Clear();
+    else if (newLength <= ValueA.GetSize() && ValueA.GetSize() != 0)
+    {
+        ValueA.Resize(newLength);
+        ValueH.Clear();
+        ValueHLowInd = 0;
+        ValueHHighInd = 0;
+    }
+    else if (newLength < ValueHLowInd)
+    {
+        ValueH.Clear();
+        ValueHLowInd = 0;
+        ValueHHighInd = 0;
+    }
+    else if (newLength < ValueHHighInd)
+    {
+        UPInt* volatile* node = NULL;
+        do
+        {
+            ValueH.Remove(*(const UPInt*)((const char*)*node + 0x20));
+        } while (newLength < ValueHHighInd);
+        ValueHHighInd = *(const UPInt*)((const char*)*(UPInt**)NULL + 0x20);
+    }
     Length = newLength;
-    ValueHLowInd = 0;
-    ValueHHighInd = 0;
 }
 
 // @0x1424213b0
