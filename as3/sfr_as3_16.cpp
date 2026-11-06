@@ -2631,12 +2631,15 @@ void InstanceTraits::Traits::AS3Constructor(const AS3::Traits&, const Value& _th
 bool AvmDisplayObjContainer::ActsAsButton() const { return false; }
 
 // No AS3 object yet: a button; otherwise whether it has a mouse/button listener.
+// AvmDisplayObj::HasAS3Obj (SDK header inline).
+static __forceinline bool Sfr16HasAS3Obj(const AvmDisplayObj* p) { return p->pAS3RawPtr || p->pAS3CollectiblePtr.pObject; }
+
 // @0x1424e5480
 bool AvmInteractiveObj::ActsAsButton() const
 {
-    if (!pAS3RawPtr && !pAS3CollectiblePtr)
-        return true;
-    return GetAS3Obj()->HasButtonHandlers();
+    if (Sfr16HasAS3Obj(this))
+        return GetAS3Obj()->HasButtonHandlers();
+    return true;
 }
 
 // @0x1424e54b0
@@ -2644,7 +2647,7 @@ bool AvmSprite::ActsAsButton() const
 {
     if (SprFlags & Flag_ButtonMode)
         return true;
-    if (!pAS3RawPtr && !pAS3CollectiblePtr)
+    if (!Sfr16HasAS3Obj(this))
         return false;
     return AvmInteractiveObj::ActsAsButton();
 }
