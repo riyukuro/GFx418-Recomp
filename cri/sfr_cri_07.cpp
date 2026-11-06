@@ -692,7 +692,7 @@ void cft_sse_Ycc420plnToArgb8888Int1smp(cri_u8 *arg1, longlong *arg2, longlong a
 void cft_sse_Ycc420plnToArgb8888Prg1smp(cri_u8 *arg1, longlong *arg2, longlong arg3, cri_u8 arg4);
 void FUN_1400b1e50(cri_u8 *arg1, longlong *arg2, cri_u8 arg3, cri_u8 arg4);
 int FUN_14029dd60(const char *, const char *, ...);   // game code's legacy inline sscanf
-cri_u8 * FUN_142096410(cri_any = cri_any());
+namespace efd { class Category { cri_u8 m_value; public: Category(); }; Category GenerateAssetResponseCategory(); }   // C3: was cri_u8 * FUN_142096410(cri_any); called through a cast below, the hidden result pointer = &cat
 
 // @0x140066180
 // Stores the 64 double table entries at 0x143d4abf0 as floats in zigzag (seq2dctfsir) order.
@@ -37291,7 +37291,7 @@ LAB_140095c75:
     case 0x56:
       {
         cri_u8 cat;  // the callee returns its 8-byte value through a hidden pointer in rcx
-        CVar6 = FUN_142096410(&cat);
+        CVar6 = ((cri_u8 *(*)(cri_u8 *))&efd::GenerateAssetResponseCategory)(&cat);
         *(cri_u8 *)(pu_v13 + 200) = *(cri_u8 *)CVar6;
       }
       (**(cri_code **)(**(longlong **)((char *)pu_v13 + 0x20) + 0xe0))
@@ -40582,7 +40582,7 @@ LAB_14009e994:
     case 0x56:
       {
         cri_u8 cat;  // the callee returns its 8-byte value through a hidden pointer in rcx
-        CVar6 = FUN_142096410(&cat);
+        CVar6 = ((cri_u8 *(*)(cri_u8 *))&efd::GenerateAssetResponseCategory)(&cat);
         *(cri_u8 *)(pu_v13 + 200) = *(cri_u8 *)CVar6;
       }
       (**(cri_code **)(**(longlong **)((char *)pu_v13 + 0x20) + 0xe0))
@@ -44093,7 +44093,7 @@ LAB_1400a3658:
     case 0x56:
       {
         cri_u8 cat;  // the callee returns its 8-byte value through a hidden pointer in rcx
-        CVar6 = FUN_142096410(&cat);
+        CVar6 = ((cri_u8 *(*)(cri_u8 *))&efd::GenerateAssetResponseCategory)(&cat);
         *(cri_u8 *)((char *)arg2 + 0x32) = *(cri_u8 *)CVar6;
       }
       (**(cri_code **)(**(longlong **)(arg2 + 8) + 0xe0))
@@ -47368,7 +47368,7 @@ LAB_1400a3a60:
     case 0x56:
       {
         cri_u8 cat;  // the callee returns its 8-byte value through a hidden pointer in rcx
-        CVar7 = FUN_142096410(&cat);
+        CVar7 = ((cri_u8 *(*)(cri_u8 *))&efd::GenerateAssetResponseCategory)(&cat);
         *(cri_u8 *)(pu_v15 + 200) = *(cri_u8 *)CVar7;
       }
       (**(cri_code **)(**(longlong **)((char *)pu_v15 + 0x20) + 0xe0))
@@ -50746,7 +50746,7 @@ LAB_1400ad9b0:
     case 0x56:
       {
         cri_u8 cat;  // the callee returns its 8-byte value through a hidden pointer in rcx
-        CVar7 = FUN_142096410(&cat);
+        CVar7 = ((cri_u8 *(*)(cri_u8 *))&efd::GenerateAssetResponseCategory)(&cat);
         *(cri_u8 *)(pu_v15 + 200) = *(cri_u8 *)CVar7;
       }
       (**(cri_code **)(**(longlong **)((char *)pu_v15 + 0x20) + 0xe0))
@@ -52062,7 +52062,7 @@ LAB_1400af497:
   case 0x56:
     {
       cri_u8 cat;  // the callee returns its 8-byte value through a hidden pointer in rcx
-      CVar5 = FUN_142096410(&cat);
+      CVar5 = ((cri_u8 *(*)(cri_u8 *))&efd::GenerateAssetResponseCategory)(&cat);
       *(cri_u8 *)((char *)arg2 + 0x32) = *(cri_u8 *)CVar5;
     }
     (**(cri_code **)(**(longlong **)(arg2 + 8) + 0xe0))

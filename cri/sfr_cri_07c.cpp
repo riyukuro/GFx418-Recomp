@@ -461,7 +461,7 @@ void cft_sse_Ycc420plnToArgb8888Int1smp(cri_any = cri_any(), cri_any = cri_any()
 void cft_sse_Ycc420plnToArgb8888Prg1smp(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), ...);
 void FUN_1400b1e50(cri_any = cri_any(), cri_any = cri_any(), ...);
 int FUN_14029dd60(const char *, const char *, ...);   // game code's legacy inline sscanf
-cri_u8 * FUN_142096410(cri_any = cri_any());
+// C3: was cri_u8 * FUN_142096410(cri_any) (= efd::GenerateAssetResponseCategory); unused here
 
 void DCT_FsriInitScaleTbl(longlong arg1);
 
