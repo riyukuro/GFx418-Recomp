@@ -5019,31 +5019,26 @@ static UPInt FUN_CurrScopeBase(const VM* vm)
 
 // ClassTraits::UserDefined::MakeClass: the class object, its static slots and the scope its methods run in, then the
 // static initializer
-// MS2-FUNCTIONAL: written from the exe; the exe inlines the Classes::UserDefined constructor
+// The exe inlines the Classes::UserDefined constructor. The SDK's placement new is null-checked, so the class
+// pointer comes from a ?: on Alloc(); the ctor's StoreScopeStack goes through the new class's own traits.
 // @0x142419e50
 SPtr<Class> ClassTraits::Traits::FUN_142419e50()
 {
     ClassTraits::Traits* self = this;
     void* mem = self->Alloc();
-    Class* cls = NULL;
-    if (mem)
-    {
-        static_cast<AS3::Classes::UserDefined*>(mem)->UserDefined::UserDefined(*self, AS3::Classes::UserDefined::InlineCtorTag());
-        // the vptr store (??_7UserDefined, 0x143144040) is the inlined ctor's
-        cls = (Class*)mem;
-        if (self->SetupSlotValues(*cls))
-        {
-            VM* vm = self->pVM;
-            AS3::Sfr31StoreScopeStack(reinterpret_cast<UPInt>(static_cast<AS3::Traits*>(self)), FUN_CurrScopeBase(vm), reinterpret_cast<UPInt*>(&vm->ScopeStack));
-        }
-    }
-    SPtr<Class> result(cls);
+    Class* cls = mem
+        ? (static_cast<AS3::Classes::UserDefined*>(mem)->UserDefined::UserDefined(*self, AS3::Classes::UserDefined::InlineCtorTag()),
+           (self->SetupSlotValues(*(Class*)mem)
+                ? AS3::Sfr31StoreScopeStack(reinterpret_cast<UPInt>(&((Class*)mem)->GetTraits()), FUN_CurrScopeBase(&((Class*)mem)->GetTraits().GetVM()), reinterpret_cast<UPInt*>(&((Class*)mem)->GetTraits().GetVM().ScopeStack))
+                : (void)0),
+           (Class*)mem)
+        : NULL;
     InstanceTraits::Traits& itr = self->GetInstanceTraits();
+    SPtr<Class> result(cls);
     itr.SetConstructor(Pickable<Class>(cls));
-    VM* vm = self->pVM;
-    AS3::Sfr31StoreScopeStack(reinterpret_cast<UPInt>(static_cast<AS3::Traits*>(&itr)), FUN_CurrScopeBase(vm), reinterpret_cast<UPInt*>(&vm->ScopeStack));
-    itr.Add2StoredScopeStack(AS3::Value(cls));
-    static_cast<Scaleform::GFx::AS3::Classes::UserDefined*>(cls)->CallStaticConstructor();
+    AS3::Sfr31StoreScopeStack(reinterpret_cast<UPInt>(static_cast<AS3::Traits*>(&itr)), FUN_CurrScopeBase(self->pVM), reinterpret_cast<UPInt*>(&self->pVM->ScopeStack));
+    itr.Add2StoredScopeStack(AS3::Value(result.GetPtr()));
+    static_cast<Scaleform::GFx::AS3::Classes::UserDefined*>(result.GetPtr())->CallStaticConstructor();
     return result;
 }
 
