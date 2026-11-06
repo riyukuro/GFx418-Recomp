@@ -183,7 +183,7 @@ template unsigned LoadFilters<Stream>(Stream* ps, FilterSet* filters);
 
 }} // namespace Scaleform::GFx
 
-// MS2-PIN: ??_7?$RefCountBase@VFilter@Render@Scaleform@@$01@Scaleform@@6B@ 0x14318ccd8
+// MS2-PIN: ??_7?$RefCountBase@VFilter@Render@Scaleform@@$01@Scaleform@@6B@ 0x14315ac70
 // MS2-PIN: ??_7Filter@Render@Scaleform@@6B@ 0x14315ac78
 // MS2-PIN: ??_7BlurFilterImpl@Render@Scaleform@@6B@ 0x14315ac90
 // MS2-PIN: ??_7BlurFilter@Render@Scaleform@@6B@ 0x14315aca8

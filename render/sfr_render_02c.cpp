@@ -169,9 +169,9 @@ bool FilterSet::IsContributing() const
 }} // namespace Scaleform::Render
 
 // MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x1425e7aa0
-// MS2-PIN: ??_G?$RefCountBase@VFilter@Render@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x1425e7aa0
+// MS2-PIN: ??_G?$RefCountBase@VFilter@Render@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x142478480
 // MS2-PIN: ??_G?$RefCountBase@VFilterSet@Render@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x1425e7aa0
-// MS2-PIN: ??_7?$RefCountBase@VFilter@Render@Scaleform@@$01@Scaleform@@6B@ 0x14318ccd8
+// MS2-PIN: ??_7?$RefCountBase@VFilter@Render@Scaleform@@$01@Scaleform@@6B@ 0x14315ac70
 // MS2-PIN: ??_7?$RefCountBase@VFilterSet@Render@Scaleform@@$01@Scaleform@@6B@ 0x14318ccd8
 // MS2-PIN: ??_7Filter@Render@Scaleform@@6B@ 0x14315ac78
 // MS2-PIN: ??_7BlurFilterImpl@Render@Scaleform@@6B@ 0x14315ac90

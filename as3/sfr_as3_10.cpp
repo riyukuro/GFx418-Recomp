@@ -2492,6 +2492,8 @@ namespace Instances { namespace fl_geom
 // MS2-PIN: ??_7GradientBevelFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315c000
 // MS2-PIN: ??_7GradientGlowFilter@fl_filters@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14315c0a0
 // MS2-PIN: ??_GFilter@Render@Scaleform@@UEAAPEAXI@Z 0x1424790d0
+// MS2-PIN: ??_G?$RefCountBase@VFilter@Render@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x142478480
+// MS2-PIN: ??_7?$RefCountBase@VFilter@Render@Scaleform@@$01@Scaleform@@6B@ 0x14315ac70
 // MS2-PIN: ??_GBlurFilterImpl@Render@Scaleform@@UEAAPEAXI@Z 0x142478ba0
 // MS2-PIN: ??_GBlurFilter@Render@Scaleform@@UEAAPEAXI@Z 0x1424789e0
 // MS2-PIN: ??_GShadowFilter@Render@Scaleform@@UEAAPEAXI@Z 0x142479410
