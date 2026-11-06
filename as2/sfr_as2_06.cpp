@@ -1049,8 +1049,9 @@ Value Environment::PrimitiveToTempObject(const Value& v)
 }
 
 
+// The exe calls this from Environment::IsAvailable rather than inlining it.
 // @0x14296e790
-int MovieRoot::ParseLevelName(const char* pname, const char** ptail, bool caseSensitive)
+__declspec(noinline) int MovieRoot::ParseLevelName(const char* pname, const char** ptail, bool caseSensitive)
 {
     if (pname[0] >= '0' && pname[0] <= '9')
     {
@@ -2587,12 +2588,12 @@ bool IntervalTimer::IsActive() const
     return Active;
 }
 
-// MS2-FUNCTIONAL: a raw lookup, then a path ("a.b", "/a:b") through FindTarget, the with-stack, the locals, the
-// target, the names this/_root/_global, _levelN and the global object; nothing is logged.
+// A raw lookup, then a path ("a.b", "/a:b") through FindTarget, the with-stack, the locals, the target, the names
+// this/_root/_global, _levelN and the global object; nothing is logged.
 // @0x142964e50
 bool Environment::IsAvailable(const ASString& name, const WithStackArray* withStack) const
 {
-    if (name.GetLength() == 0)
+    if (name.GetSize() == 0)
         return false;
 
     ASStringContext* psc = const_cast<ASStringContext*>(&StringContext);
@@ -2634,10 +2635,9 @@ bool Environment::IsAvailable(const ASString& name, const WithStackArray* withSt
     else
     {
         name.ResolveLowercase();
-        ASStringNode* plower = name.GetNode()->pLower;
-        if (GetBuiltin(ASBuiltin_this).GetNode()->pLower == plower ||
-            GetBuiltin(ASBuiltin__root).GetNode()->pLower == plower ||
-            GetBuiltin(ASBuiltin__global).GetNode()->pLower == plower)
+        if (GetBuiltin(ASBuiltin_this).GetNode()->pLower == name.GetNode()->pLower ||
+            GetBuiltin(ASBuiltin__root).GetNode()->pLower == name.GetNode()->pLower ||
+            GetBuiltin(ASBuiltin__global).GetNode()->pLower == name.GetNode()->pLower)
             return true;
     }
 
@@ -2647,7 +2647,7 @@ bool Environment::IsAvailable(const ASString& name, const WithStackArray* withSt
         int         level = MovieRoot::ParseLevelName(name.ToCStr(), &ptail, IsCaseSensitive());
         if (level != -1 && !*ptail)
         {
-            if (GetAS2Root()->GetLevelMovie(level))
+            if (static_cast<MovieRoot*>(Target->GetMovieImpl()->pASMovieRoot)->GetLevelMovie(level))
                 return true;
         }
     }
