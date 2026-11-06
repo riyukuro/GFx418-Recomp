@@ -2277,15 +2277,20 @@ bool Reader::Read(TraitInfo::MetaInfo& obj)
 }
 
 // @0x1425669b0
-// MS2-FUNCTIONAL: 1 prologue byte, rbx/item home-slot assignment swapped
 bool Reader::Read(MetadataInfo& obj)
 {
-    // The name is not kept.
-    SInt32 name_ind;
-    Read(name_ind);
+    bool result = true;
 
-    SInt32 count;
-    Read(count);
+    SInt32 count = 0;
+    // The name is not kept.
+    SInt32 name_ind = 0;
+
+    result = result &&
+        Read(name_ind) &&
+        Read(count);
+
+    if (!result)
+        return result;
 
     obj.Items.Reserve(count);
     for (int i = 0; i < count; ++i)
@@ -2299,20 +2304,32 @@ bool Reader::Read(MetadataInfo& obj)
 }
 
 // @0x142566a80
-// MS2-FUNCTIONAL: inlined Read(MetadataInfo) home-slot assignment differs (same as 0x1425669b0)
 bool Reader::Read(MetadataTable& obj)
 {
-    SInt32 count;
-    Read(count);
+    bool result = true;
+
+    SInt32 count = 0;
+
+    result = result && Read(count);
+    if (!result)
+        return result;
 
     obj.Info.Reserve(count);
     for (int i = 0; i < count; ++i)
     {
+        // obj.Info stores pointers.
         obj.Info.PushBack(SF_HEAP_AUTO_NEW(this) MetadataInfo());
-        Read(*obj.Info.Back());
+
+        result = result && Read(*obj.Info.Back());
+        if (!result)
+        {
+            delete obj.Info.Back();
+            obj.Info.PopBack();
+            break;
+        }
     }
 
-    return true;
+    return result;
 }
 
 // @0x142566c30
