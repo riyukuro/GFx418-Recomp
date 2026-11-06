@@ -1840,54 +1840,12 @@ VertexShaderDesc::ShaderIndex VertexShaderDesc::GetShaderIndexForComboIndex(unsi
 
 // ==== D3D9_Shader ====================================================================================================
 
-void D3DVertexDeclBuilder::Add(int, unsigned attr, int, int)
-{
-    // the shader's attribute with the same usage and index
-    int slot = 0;
-    for (; slot < VertexDesc->NumAttribs; slot++)
-        if ((VertexDesc->Attributes[slot].Attr & (VET_Usage_Mask | VET_Index_Mask)) ==
-            (attr & (VET_Usage_Mask | VET_Index_Mask)))
-            break;
-
-    int  type   = D3DDECLTYPE_UNUSED;
-    WORD bytes  = 0;
-    WORD stream = 0;
-    switch (attr & (VET_CompType_Mask | VET_Components_Mask))
-    {
-    case VET_U8N | 1: case VET_U8N | 2: case VET_U8N | 4:
-        bytes = 4; type = D3DDECLTYPE_UBYTE4N; break;
-    case VET_I8 | 1:
-        // the batch index rides in the instancing stream
-        stream = 1;
-        // fall through
-    case VET_U8 | 1: case VET_U8 | 2: case VET_U8 | 4:
-        bytes = 4; type = D3DDECLTYPE_UBYTE4; break;
-    case VET_U32 | 1:
-        type = D3DDECLTYPE_D3DCOLOR; bytes = 4; break;
-    case VET_S16 | 2:
-        bytes = 4; type = D3DDECLTYPE_SHORT2; break;
-    case VET_F32 | 2:
-        bytes = 8; type = D3DDECLTYPE_FLOAT2; break;
-    }
-
-    const BYTE usageIndex = VertexDesc->Attributes[slot].UsageIndex;
-    const BYTE usage      = VertexDesc->Attributes[slot].Usage;
-    D3DVERTEXELEMENT9& e = Elements[Count++];
-    e.Stream     = stream;
-    e.Offset     = Size[stream];
-    e.Type       = (BYTE)type;
-    e.Method     = D3DDECLMETHOD_DEFAULT;
-    e.Usage      = usage;
-    e.UsageIndex = usageIndex;
-    Size[stream] = Size[stream] + bytes;
-}
 
 }}} // namespace Scaleform::Render::D3D9
 
 namespace Scaleform { namespace Render {
 
-// MS2-FUNCTIONAL: own builder walk (pinned at the end); left: the second pair test ORs e[2] into a fresh register,
-// the exe ORs it into e[0]'s (or ecx,[rdi])
+// the walk inlines D3DVertexDeclBuilder::Add (SDK in-class body, d3d9_shader.h); pinned at the end
 template void BuildVertexArray<D3D9::D3DVertexDeclBuilder>(const VertexFormat*, D3D9::D3DVertexDeclBuilder&);
 
 }} // namespace Scaleform::Render
@@ -2053,7 +2011,6 @@ bool VertexShader::Init(HAL* phal, const VertexShaderDesc* pd)
     return true;
 }
 
-// MS2-FUNCTIONAL: the Location test addresses [rax + rdi] where the exe has [rdi + rax]
 // @0x142741430
 bool FragShader::Init(HAL* phal, const FragShaderDesc* pd)
 {
@@ -2085,15 +2042,16 @@ bool FragShader::Init(HAL* phal, const FragShaderDesc* pd)
         if (!hconstant || FAILED(constantTable->GetConstantDesc(hconstant, descs, &descCount)))
         {
             // walk the table's constants (the debug build prints them here)
-            D3DXCONSTANTTABLE_DESC tdesc;
-            if (SUCCEEDED(constantTable->GetDesc(&tdesc)))
+            D3DXCONSTANTTABLE_DESC csDesc;
+            if (SUCCEEDED(constantTable->GetDesc(&csDesc)))
             {
-                for (unsigned c = 0; c < tdesc.Constants; c++)
+                for (unsigned cs = 0; cs < csDesc.Constants; ++cs)
                 {
-                    D3DXCONSTANT_DESC one;
-                    UINT n = 1;
-                    D3DXHANDLE hc = constantTable->GetConstant(0, c);
-                    constantTable->GetConstantDesc(hc, &one, &n);
+                    D3DXCONSTANT_DESC constDesc;
+                    UINT count = 1;
+                    hconstant = constantTable->GetConstant(0, cs);
+                    if (FAILED(constantTable->GetConstantDesc(hconstant, &constDesc, &count)))
+                        continue;
                 }
             }
             constantTable->GetConstant(0, 0);

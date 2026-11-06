@@ -177,18 +177,88 @@ public:
 // instance index).
 struct D3DVertexDeclBuilder
 {
-    D3DVERTEXELEMENT9       Elements[8];
-    WORD                    Size[2];   // +0x40, next offset in each stream
-    WORD                    Count;     // +0x44
-    const VertexShaderDesc* VertexDesc;  // +0x48
+    static const unsigned   MaxElements = 8;
+    D3DVERTEXELEMENT9       Elements[MaxElements];
+    WORD                    Size[2], Count;
+    const VertexShaderDesc* VertexDesc;
 
-    D3DVertexDeclBuilder(const VertexShaderDesc* vdesc) : Count(0), VertexDesc(vdesc) { Size[0] = Size[1] = 0; }
 
-    void Add(int, unsigned attr, int, int);
-    void Finish(int)
+    D3DVertexDeclBuilder(const VertexShaderDesc* vdesc) : Count(0), VertexDesc(vdesc)
+    { Size[0] = Size[1] = 0; }
+
+    void    Add(int, unsigned attr, int, int)
     {
-        D3DVERTEXELEMENT9 end = D3DDECL_END();
-        Elements[Count++] = end;
+        // Find the matching vertex attribute within the vertex desc.
+        int attrIndex;
+        for ( attrIndex = 0; attrIndex < VertexDesc->NumAttribs; ++attrIndex )
+        {
+            if ( (VertexDesc->Attributes[attrIndex].Attr&(VET_Usage_Mask|VET_Index_Mask)) == (attr&(VET_Usage_Mask|VET_Index_Mask)))
+                break;
+        }
+
+        unsigned type = D3DDECLTYPE_UNUSED;
+        WORD byteSize = 0;
+        WORD stream = 0;
+        getD3DType(attr, type, byteSize, stream);
+
+        AddD3DElement(stream, type, byteSize, VertexDesc->Attributes[attrIndex].Usage, (BYTE)VertexDesc->Attributes[attrIndex].UsageIndex );
+    }
+
+
+    void    AddD3DElement(WORD stream, unsigned type, WORD size,
+                unsigned usage, BYTE usageIndex = 0)
+    {
+
+        D3DVERTEXELEMENT9 &e = Elements[Count++];
+        e.Stream    = stream;
+        e.Offset    = Size[stream];
+        e.Type      = (BYTE)type;
+        e.Method    = D3DDECLMETHOD_DEFAULT;
+        e.Usage     = (BYTE)usage;
+        e.UsageIndex= usageIndex;
+        Size[stream]= Size[stream] + size;
+    }
+
+    void    Finish(int)
+    {
+        D3DVERTEXELEMENT9 e = D3DDECL_END();
+        Elements[Count++] = e;
+    }
+
+    void getD3DType( unsigned attr, unsigned &type, WORD &byteSize, WORD& stream) 
+    {
+        stream = 0;
+        switch( attr & (VET_CompType_Mask|VET_Components_Mask) )
+        {
+        case VET_U8N|1:
+        case VET_U8N|2:
+        case VET_U8N|4:
+            type = D3DDECLTYPE_UBYTE4N; 
+            byteSize = 4*sizeof(UByte);
+            break;
+        case VET_I8|1:
+            stream = 1; // fallthough.
+        case VET_U8|1:
+        case VET_U8|2:
+        case VET_U8|4:
+            type = D3DDECLTYPE_UBYTE4; 
+            byteSize = 4*sizeof(UByte);
+            break;
+        case VET_U32|1:
+            type = D3DDECLTYPE_D3DCOLOR; 
+            byteSize = 4*sizeof(UByte);
+            break;
+        case VET_S16|2:
+            type = D3DDECLTYPE_SHORT2; 
+            byteSize = 2*sizeof(short);
+            break;
+        case VET_F32|2:
+            type = D3DDECLTYPE_FLOAT2; 
+            byteSize = 2*sizeof(float);
+            break;
+
+        default: break;
+        }
     }
 };
 
