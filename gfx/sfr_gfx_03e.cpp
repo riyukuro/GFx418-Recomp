@@ -696,20 +696,18 @@ Render::RectF TextField::GetCursorBounds(UPInt charIndex, float* phitTestX, floa
 
 // The style sheet's URL zones: one per run of adjacent text with the same link, each keeping a copy of its text
 // for the hover / press styles.
-// MS2-FUNCTIONAL 0x1425b72a0: same logic; the exe frames off r11 and keeps a larger frame (register / stack allocation)
 // @0x1425b72a0
 void TextField::CollectUrlZones()
 {
     if (!pCSSData)
         return;
-    for (unsigned i = 0; i < MaxMiceSupported; ++i)
-        pCSSData->MouseState[i] = CSSHolderBase::MouseStateType();
+    memset(pCSSData->MouseState, 0, sizeof(pCSSData->MouseState));
     pCSSData->UrlZones.RemoveAll();
 
     Render::Text::StyledText* ptext = pDocument->GetStyledText();
     String  url;
     UPInt   urlStart = 0, urlLen = 0;
-    for (unsigned i = 0; i < ptext->GetParagraphsCount(); ++i)
+    for (unsigned i = 0, n = ptext->GetParagraphsCount(); i < n; ++i)
     {
         const Render::Text::Paragraph* ppara = ptext->GetParagraph(i);
         for (Render::Text::Paragraph::FormatRunIterator it = ppara->GetIterator(); !it.IsFinished(); ++it)
@@ -720,20 +718,20 @@ void TextField::CollectUrlZones()
             if (!url.IsEmpty())
             {
                 if (runPos == urlStart + urlLen && url == it->pFormat->GetUrl())
-                {
                     urlLen += it->Length;
-                    continue;
+                else
+                {
+                    CSSHolderBase::UrlZone zone;
+                    zone.SavedFmt = *pDocument->GetStyledText()->CopyStyledText(urlStart, urlStart + urlLen);
+                    pCSSData->UrlZones.InsertRange(urlStart, urlLen, zone);
+                    url.Clear();
                 }
-                CSSHolderBase::UrlZone zone;
-                zone.SavedFmt = *pDocument->GetStyledText()->CopyStyledText(urlStart, urlStart + urlLen);
-                pCSSData->UrlZones.InsertRange(urlStart, urlLen, zone);
-                url.Clear();
             }
             if (url.IsEmpty())
             {
+                urlStart = runPos;
                 urlLen   = it->Length;
                 url      = it->pFormat->GetUrl();
-                urlStart = runPos;
             }
         }
     }
@@ -1205,48 +1203,55 @@ static inline unsigned TextFilterFlagsToMode(UInt8 flags)
 
 // The filters of the text node as a filter set, made once from up to three text filters (blur, glow, drop
 // shadow); NULL when the text has none.
-// MS2-FUNCTIONAL 0x1425b8250: same filters made from the text node's; the exe keeps the filter temporaries in a different frame
 // @0x1425b8250
 const Render::FilterSet* TextField::GetFilters() const
 {
-    if (!GetRenderNode() || pFilters)
-        return pFilters;
-    Render::TreeText* ptextNode = static_cast<Render::TreeText*>(GetRenderNode());
-    Render::TreeText::Filter filters[3];
-    UPInt n = ptextNode->GetFilters(filters, 3);
-    if (n == 0)
+    if (GetRenderNode() && !pFilters)
     {
-        pFilters = NULL;
-        return NULL;
-    }
-    pFilters = *SF_NEW Render::FilterSet;
-    for (UPInt i = 0; i < n; ++i)
-    {
-        const Render::TreeText::Filter& tf = filters[i];
-        if (tf.Type == Render::TreeText::Filter_DropShadow)
+        Render::TreeText* ptextNode = static_cast<Render::TreeText*>(GetRenderNode());
+        Render::TreeText::Filter filters[3];
+        UPInt n = ptextNode->GetFilters(filters, 3);
+        if (n > 0)
         {
-            Ptr<Render::ShadowFilter> pf = *SF_NEW Render::ShadowFilter(
-                float(tf.DropShadow.Angle * 3.14159265358979323846 / 180.0), tf.DropShadow.Distance,
-                tf.DropShadow.BlurX, tf.DropShadow.BlurY);
-            pf->GetParams().Strength  = tf.DropShadow.Strength / 100.f;
-            pf->GetParams().Colors[0] = tf.DropShadow.Color;
-            pf->GetParams().Mode      = TextFilterFlagsToMode(tf.DropShadow.Flags);
-            pFilters->AddFilter(pf);
+            pFilters = *SF_NEW Render::FilterSet;
+            for (UPInt i = 0; i < n; ++i)
+            {
+                const Render::TreeText::Filter& tf = filters[i];
+                switch (tf.Type)
+                {
+                case Render::TreeText::Filter_Blur:
+                    {
+                        Ptr<Render::BlurFilter> pf = *SF_NEW Render::BlurFilter(tf.Blur.BlurX, tf.Blur.BlurY);
+                        pf->GetParams().Strength = tf.Blur.Strength / 100.f;
+                        pFilters->AddFilter(pf);
+                    }
+                    break;
+                case Render::TreeText::Filter_DropShadow:
+                    {
+                        Ptr<Render::ShadowFilter> pf = *SF_NEW Render::ShadowFilter(
+                            float(tf.DropShadow.Angle * 3.14159265358979323846 / 180.0), tf.DropShadow.Distance,
+                            tf.DropShadow.BlurX, tf.DropShadow.BlurY);
+                        pf->GetParams().Strength  = tf.DropShadow.Strength / 100.f;
+                        pf->GetParams().Colors[0] = tf.DropShadow.Color;
+                        pf->GetParams().Mode      = TextFilterFlagsToMode(tf.DropShadow.Flags);
+                        pFilters->AddFilter(pf);
+                    }
+                    break;
+                case Render::TreeText::Filter_Glow:
+                    {
+                        Ptr<Render::GlowFilter> pf = *SF_NEW Render::GlowFilter(tf.Glow.BlurX, tf.Glow.BlurY);
+                        pf->GetParams().Strength  = tf.Glow.Strength / 100.f;
+                        pf->GetParams().Colors[0] = tf.Glow.Color;
+                        pf->GetParams().Mode      = TextFilterFlagsToMode(tf.Glow.Flags);
+                        pFilters->AddFilter(pf);
+                    }
+                    break;
+                default:;
+                }
+            }
         }
-        else if (tf.Type == Render::TreeText::Filter_Blur)
-        {
-            Ptr<Render::BlurFilter> pf = *SF_NEW Render::BlurFilter(tf.Blur.BlurX, tf.Blur.BlurY);
-            pf->GetParams().Strength = tf.Blur.Strength / 100.f;
-            pFilters->AddFilter(pf);
-        }
-        else if (tf.Type == Render::TreeText::Filter_Glow)
-        {
-            Ptr<Render::GlowFilter> pf = *SF_NEW Render::GlowFilter(tf.Glow.BlurX, tf.Glow.BlurY);
-            pf->GetParams().Strength  = tf.Glow.Strength / 100.f;
-            pf->GetParams().Colors[0] = tf.Glow.Color;
-            pf->GetParams().Mode      = TextFilterFlagsToMode(tf.Glow.Flags);
-            pFilters->AddFilter(pf);
-        }
+        else
+            pFilters = NULL;
     }
     return pFilters;
 }
