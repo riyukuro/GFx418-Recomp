@@ -159,8 +159,8 @@ ExeDecl<void(void*, void*, const void*, void*, unsigned, void*, unsigned)>::type
 ExeDecl<void(void*, void*, double)>::type FUN_1424d2150;   // SoundTransform setter (Value const&, double): the value travels in xmm2
 ExeDecl<void(void*)>::type FUN_140026ed0;
 ExeDecl<void()>::type FUN_140026db0;
-extern ExeDecl<void*>::type DAT_14317bf80;
-#define AvmInteractiveVtable DAT_14317bf80
+// FUN_14001b3a0 below resets the AvmDisplayObjBase vptr at +0x40 through that class's inline destructor.
+static __forceinline void Sfr03ResetDisplayObjBase(void* p) { static_cast<Scaleform::GFx::AvmDisplayObjBase*>(p)->Scaleform::GFx::AvmDisplayObjBase::~AvmDisplayObjBase(); }
 extern ExeDecl<void*>::type DAT_1431b7c70;
 #define VideoTraitsVtable DAT_1431b7c70
 extern ExeDecl<void*>::type DAT_1431b7f60;
@@ -1243,7 +1243,7 @@ __declspec(noinline) void FUN_14001b0e0(void* object, uint32_t event, void* targ
 // @0x14001b3a0
 __declspec(noinline) void* FUN_14001b3a0(void* object)
 {
-    *reinterpret_cast<void***>(static_cast<unsigned char*>(object) + 0x40) = &AvmInteractiveVtable;
+    Sfr03ResetDisplayObjBase(static_cast<unsigned char*>(object) + 0x40);
     reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(object)->Scaleform::GFx::AS3::AvmInteractiveObj::~AvmInteractiveObj();
     return object;
 }
