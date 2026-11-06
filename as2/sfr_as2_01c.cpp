@@ -26,6 +26,7 @@
 #include "../include/gfx/gfx_movieimplstates.h"
 #include "../include/gfx/gfx_loaderimpl.h"
 #include "../include/gfx/gfx_imemanager.h"
+#include "../include/gfx/gfx_imemanagerwin32.h"
 #include "../kernel/sf_log.h"
 #include "../include/video/video_video.h"
 #define XML_STATIC  // the exe links expat statically (libgfxexpat)
@@ -63,6 +64,19 @@ inline R VCall(void* obj, size_t off, A... a)
     typedef R (*Fn)(void*, A...);
     return (*reinterpret_cast<Fn*>(*static_cast<unsigned char**>(obj) + off))(obj, a...);
 }
+
+// The language bar's slot 28 (+0xe0) returns its input language as a String (member sret ABI: rcx = this,
+// rdx = result). Only the slot position is known; never instantiated.
+struct ImeBarView
+{
+#define IMEBAR_SLOT(n) virtual void Slot##n() = 0;
+    IMEBAR_SLOT(0) IMEBAR_SLOT(1) IMEBAR_SLOT(2) IMEBAR_SLOT(3) IMEBAR_SLOT(4) IMEBAR_SLOT(5) IMEBAR_SLOT(6)
+    IMEBAR_SLOT(7) IMEBAR_SLOT(8) IMEBAR_SLOT(9) IMEBAR_SLOT(10) IMEBAR_SLOT(11) IMEBAR_SLOT(12) IMEBAR_SLOT(13)
+    IMEBAR_SLOT(14) IMEBAR_SLOT(15) IMEBAR_SLOT(16) IMEBAR_SLOT(17) IMEBAR_SLOT(18) IMEBAR_SLOT(19) IMEBAR_SLOT(20)
+    IMEBAR_SLOT(21) IMEBAR_SLOT(22) IMEBAR_SLOT(23) IMEBAR_SLOT(24) IMEBAR_SLOT(25) IMEBAR_SLOT(26) IMEBAR_SLOT(27)
+#undef IMEBAR_SLOT
+    virtual const String GetInputLanguage() = 0;    // +0xe0
+};
 
 } // namespace
 
@@ -146,8 +160,9 @@ void FUN_1423c93f0(void* self, const char* name)
 // The manager vtable slots that pass the call on to the language bar at +0x70 (the exe tail-jumps).
 // ClearCandidateListPath (slot 5).
 // @0x1423c92f0
-void FUN_1423c92f0(void* self)
+void GFxIMEManagerWin32::ClearCandidateListPath()
 {
+    void* self = this;
     void* bar = At<void*>(self, 0x70);
     if (bar)
         VCall<void>(bar, 0x20);
@@ -155,8 +170,9 @@ void FUN_1423c92f0(void* self)
 
 // GetConversionMode (slot 7): "UNKNOWN" without a language bar.
 // @0x1423c9570
-const char* FUN_1423c9570(void* self)
+const char* GFxIMEManagerWin32::GetConversionMode()
 {
+    void* self = this;
     void* bar = At<void*>(self, 0x70);
     if (bar)
         return VCall<const char*>(bar, 0x108);
@@ -165,26 +181,26 @@ const char* FUN_1423c9570(void* self)
 
 // GetEnabled (slot 9).
 // @0x1423c9590
-bool FUN_1423c9590(void* self)
+bool GFxIMEManagerWin32::GetEnabled()
 {
+    void* self = this;
     void* bar = At<void*>(self, 0x70);
     if (bar)
         return VCall<bool>(bar, 0xf0);
     return false;
 }
 
-// GetIMEName: the language bar's name, "UNKNOWN" without one.
+// GetInputLanguage (slot 10): the language bar's input language, "UNKNOWN" without one.
 // @0x1423c95b0
-String* FUN_1423c95b0(void* self, String* out)
+const String GFxIMEManagerWin32::GetInputLanguage()
 {
+    void* self = this;
     void* bar = At<void*>(self, 0x70);
     if (bar)
     {
-        VCall<void>(bar, 0xe0, out);
-        return out;
+        return static_cast<ImeBarView*>(bar)->GetInputLanguage();
     }
-    new (out) String("UNKNOWN");
-    return out;
+    return String("UNKNOWN");
 }
 
 // an empty string.
@@ -212,25 +228,23 @@ String* FUN_1423c9610(void*, String* out)
 
 // The OS family name for the version GetOSVersion stored at +0xbc.
 // @0x1423c9670
-String* FUN_1423c9670(void* self, String* out)
+String GFxIMEManagerWin32::GetWindowsVersion()
 {
+    void* self = this;
     switch (At<int>(self, 0xbc))
     {
     case 0:
-        new (out) String("XP");
-        return out;
+        return String("XP");
     case 1:
-        new (out) String("Vista");
-        return out;
+        return String("Vista");
     default:
-        new (out) String("Unknown");
-        return out;
+        return String("Unknown");
     }
 }
 
 // Classifies the OS: 0 XP/2003, 1 Vista+, 2 Windows 2000, 3 Win32s/9x.
 // @0x1423c96d0
-void FUN_1423c96d0(void*, int* os)
+void GFxIMEManagerWin32::GetOSVersion(int* os)
 {
     OSVERSIONINFOW info;
     info.dwOSVersionInfoSize = sizeof(info);
@@ -279,8 +293,11 @@ namespace Scaleform { namespace GFx { namespace IME {
 // MS2-FUNCTIONAL: HandleIMEEvent (0 = not handled, 1 = handled, 2 = handled and eaten); the exe tail-calls
 // the composition-start slot.
 // @0x1423c9780
-unsigned FUN_1423c9780(void* self, MovieImpl* movie, const IMEEventView* ev)
+unsigned GFxIMEManagerWin32::HandleIMEEvent(Movie* pmovie, const IMEEvent& imeEvent)
 {
+    void* self = this;
+    MovieImpl* movie = reinterpret_cast<MovieImpl*>(pmovie);
+    const IMEEventView* ev = reinterpret_cast<const IMEEventView*>(&imeEvent);
     if (!At<unsigned char>(self, 0xb9))
     {
         if (movie)
@@ -385,8 +402,10 @@ unsigned FUN_1423c9780(void* self, MovieImpl* movie, const IMEEventView* ev)
 // MS2-FUNCTIONAL: Init: picks the XP or Vista candidate/language-bar objects, loads the IME list XML (relative
 // paths under %GFXSDK%\Bin\Data\), falls back to the built-in list, and reports whether the list is usable.
 // @0x1423c9ba0
-bool FUN_1423c9ba0(void* self, Log* log, void* opener, const char* xmlPath, bool flag)
+UInt32 GFxIMEManagerWin32::Init(Log* log, FileOpener* fileOpener, const char* xmlPath, bool flag)
 {
+    void* self = this;
+    void* opener = fileOpener;
     unsigned long long* w = static_cast<unsigned long long*>(self);
     w[0xc] = reinterpret_cast<unsigned long long>(log);
     VCall<void>(self, 0x128, B(self) + 0xbc);
@@ -528,16 +547,18 @@ namespace Scaleform { namespace GFx { namespace IME {
 
 // IsTextFieldOnTopLevel-style checks: is the path inside the IME candidate/status levels.
 // @0x1423ca060
-bool FUN_1423ca060(void*, const char* path) { return strstr(path, "_level9999") != 0; }
+bool GFxIMEManagerWin32::IsCandidateListPath(const char* path) { return strstr(path, "_level9999") != 0; }
 // @0x1423ca080
-bool FUN_1423ca080(void*, const char* path) { return strstr(path, "_level9998") != 0; }
+bool GFxIMEManagerWin32::IsStatusWindowPath(const char* path) { return strstr(path, "_level9998") != 0; }
 // @0x1423ca0a0
-bool FUN_1423ca0a0(void*, const char* path) { return strstr(path, "_level9997") != 0; }
+bool GFxIMEManagerWin32::IsLangBarPath(const char* path) { return strstr(path, "_level9997") != 0; }
 
 // forwards to the owner (+0x18 slot 0x88) and the language bar (slot 0x18).
 // @0x1423ca100
-void FUN_1423ca100(void* self, void* arg)
+void GFxIMEManagerWin32::OnCandidateListLoaded(const char* pcandidateListPath)
 {
+    void* self = this;
+    void* arg = const_cast<char*>(pcandidateListPath);
     VCall<void>(At<void*>(self, 0x18), 0x88, arg);
     void* bar = At<void*>(self, 0x70);
     if (bar)
@@ -546,11 +567,12 @@ void FUN_1423ca100(void* self, void* arg)
 
 // forwards to the language bar (slot 0xd8) and, for Japanese, resets the candidate position.
 // @0x1423ca160
-void FUN_1423ca160(void* self, void* arg)
+void GFxIMEManagerWin32::OnEnableIME(bool enable)
 {
+    void* self = this;
     void* bar = At<void*>(self, 0x70);
     if (bar)
-        VCall<void>(bar, 0xd8, arg);
+        VCall<void>(bar, 0xd8, enable);
     if (strcmp(At<String>(self, 0xb0).ToCStr(), "Japanese") == 0)
         VCall<void>(At<void*>(self, 0x78), 0x50, -1);
 }

@@ -24,6 +24,7 @@
 #include "../include/gfx/gfx_state.h"
 #include "../include/gfx/gfx_value.h"
 #include "../include/gfx/gfx_imemanager.h"
+#include "../include/gfx/gfx_imemanagerwin32.h"
 #include "../include/gfx/gfx_event.h"
 #include "../include/gfx/gfx_textfield.h"
 #include "../include/gfx/as3/as3_avm.h"   // AvmMovieClip (and as3_support.h)
@@ -215,86 +216,38 @@ namespace Scaleform { namespace GFx { namespace IME {
 
 unsigned long long* FUN_1423cabb0(unsigned long long*, unsigned long long);
 
-class GFxIMEManagerWin32
-{
-public:
-    volatile int refCount;
-    unsigned int refPad;
-    unsigned int state;
-    unsigned int statePad;
-    // The IMEManagerBase state. Its destructor runs ~IMEManagerBase (0x1425b3fb0) on the whole manager; as the first
-    // member with a destructor it is destroyed last, after the String members, as in the exe.
-    struct BaseState { unsigned char pad[0x48]; ~BaseState(); };
-    BaseState pad_18;
-    void* p60;
-    ::HWND__* hwnd;
-    void* p70;
-    void* p78;
-    unsigned char pad_80[8];
-    String language;
-    String imeName;
-    String displayName;
-    unsigned char pad_a0[0x10];
-    String conversionMode;
-    unsigned char pad_b8[0x10];
-public:
-    explicit GFxIMEManagerWin32(::HWND__* hwnd);
-    virtual ~GFxIMEManagerWin32();
-    // GFxManager::InitIME news the manager in the Scaleform heap (IMEManagerBase is a State), so the deleting
-    // destructor 0x1423c8ce0 frees it there too, not through the CRT.
-    static void operator delete(void* p) { Memory::Free(p); }
-};
-
-static_assert(offsetof(GFxIMEManagerWin32, p60) == 0x60, "IME layout");
-static_assert(offsetof(GFxIMEManagerWin32, hwnd) == 0x68, "IME layout");
-static_assert(offsetof(GFxIMEManagerWin32, language) == 0x88, "IME layout");
-static_assert(offsetof(GFxIMEManagerWin32, conversionMode) == 0xb0, "IME layout");
-static_assert(sizeof(GFxIMEManagerWin32) == 0xc8, "IME layout");   // the deleting destructor frees 0xc8 bytes
-static_assert(offsetof(GFxIMEManagerWin32, pad_18) == 0x18, "IME layout");
+// The class (base IMEManagerBase, the members the slot functions read) is in gfx_imemanagerwin32.h.
 
 #ifndef MS2_HOOK_DLL
-// The IMEManagerBase constructor (sfr_gfx_03d) and the manager's own vtable (data_rdata_sf_a): this stand-in class
-// has no IMEManagerBase base, so the constructor builds the base part and installs the exe's 38-slot vtable itself,
-// and the pad_18 member tears the base part down (~IMEManagerBase).
+// The manager's own vtable (data_rdata_sf_a): the slots are the class's overrides now, but the constructor and
+// destructor still install the exe's 38-slot image by hand until our ??_7 takes its place.
 extern "C" void* DAT_1431383e0[];
 #endif
 
-// MS2-FUNCTIONAL: constructor frame differs; the base part and the vtable are set up by hand (see above).
+// MS2-FUNCTIONAL: constructor frame differs; the vtable is set up by hand (see above).
 // @0x1423c8a50
 GFxIMEManagerWin32::GFxIMEManagerWin32(::HWND__* window)
-    : refCount(1), refPad(0), state(0), statePad(0), p60(0), hwnd(window), p70(0), p78(0)
+    : hwnd(window), p70(0), p78(0)
 {
 #ifndef MS2_HOOK_DLL
-    reinterpret_cast<IMEManagerBase*>(this)->IMEManagerBase::IMEManagerBase();
     *reinterpret_cast<void***>(this) = DAT_1431383e0;
-    p60 = 0;
-    hwnd = window;
-    p70 = 0;
-    p78 = 0;
 #endif
+    pLog = 0;
 }
 
 // @0x1423c8ac0
 GFxIMEManagerWin32::~GFxIMEManagerWin32()
 {
 #ifndef MS2_HOOK_DLL
-    // the exe's 38-slot vtable, as the constructor installs it; the view's own ??_7 has the deleting dtor only
+    // the exe's 38-slot vtable, as the constructor installs it (our ??_7 is not pinned to it yet)
     *reinterpret_cast<void***>(this) = DAT_1431383e0;
 #endif
     if (p70)
         (*reinterpret_cast<void (***)(void*, unsigned int)>(p70))[0](p70, 1);
     if (p78)
         (*reinterpret_cast<void (***)(void*, unsigned int)>(p78))[0](p78, 1);
-    // the String members are released next, then pad_18 runs ~IMEManagerBase (the exe's tail call)
+    // the String members are released next, then ~IMEManagerBase (the exe's tail call)
 }
-
-GFxIMEManagerWin32::BaseState::~BaseState()
-{
-#ifndef MS2_HOOK_DLL
-    reinterpret_cast<IMEManagerBase*>(reinterpret_cast<unsigned char*>(this) - 0x18)->IMEManagerBase::~IMEManagerBase();
-#endif
-}
-
 
 }}}
 
@@ -991,16 +944,19 @@ static inline R BarCall(void* bar, unsigned off, A... a)
 
 // OnCandidateListStyleChanged (vtable slot 25).
 // @0x1423ca140
-void FUN_1423ca140(GFxIMEManagerWin32* self, const void* style)
+void GFxIMEManagerWin32::OnCandidateListStyleChanged(const IMECandidateListStyle& st)
 {
+    GFxIMEManagerWin32* self = this;
+    const void* style = &st;
     if (self->p70)
         BarCall<void>(self->p70, 0xc8, style);
 }
 
 // OnFinalize (slot 24).
 // @0x1423ca1c0
-void FUN_1423ca1c0(GFxIMEManagerWin32* self)
+void GFxIMEManagerWin32::OnFinalize()
 {
+    GFxIMEManagerWin32* self = this;
     if (self->p70)
         BarCall<void>(self->p70, 0x78);
 }
@@ -1015,8 +971,9 @@ unsigned FUN_1423ca1e0(GFxIMEManagerWin32* self, void* a, unsigned b, unsigned c
 
 // OnShutdown (slot 23).
 // @0x1423ca210
-void FUN_1423ca210(GFxIMEManagerWin32* self)
+void GFxIMEManagerWin32::OnShutdown()
 {
+    GFxIMEManagerWin32* self = this;
     if (self->p70)
         BarCall<void>(self->p70, 0x90);
 }
@@ -1051,8 +1008,9 @@ void FUN_1423ca290(GFxIMEManagerWin32* self, void* a)
 
 // SetCompositionString (slot 21).
 // @0x1423ca520
-bool FUN_1423ca520(GFxIMEManagerWin32* self, const char* compString)
+bool GFxIMEManagerWin32::SetCompositionString(const char* compString)
 {
+    GFxIMEManagerWin32* self = this;
     if (self->p70)
         return BarCall<bool>(self->p70, 0xf8, compString);
     return false;
@@ -1060,8 +1018,9 @@ bool FUN_1423ca520(GFxIMEManagerWin32* self, const char* compString)
 
 // SetConversionMode (slot 6).
 // @0x1423ca540
-bool FUN_1423ca540(GFxIMEManagerWin32* self, unsigned convMode)
+bool GFxIMEManagerWin32::SetConversionMode(const UInt32 convMode)
 {
+    GFxIMEManagerWin32* self = this;
     if (self->p70)
         return BarCall<bool>(self->p70, 0x100, convMode);
     return false;
@@ -1069,8 +1028,9 @@ bool FUN_1423ca540(GFxIMEManagerWin32* self, unsigned convMode)
 
 // SetEnabled (slot 8).
 // @0x1423ca620
-bool FUN_1423ca620(GFxIMEManagerWin32* self, bool enable)
+bool GFxIMEManagerWin32::SetEnabled(bool enable)
 {
+    GFxIMEManagerWin32* self = this;
     if (self->p70)
         return BarCall<bool>(self->p70, 0xe8, enable);
     return false;
@@ -1411,7 +1371,7 @@ void FUN_1423ca350(void* self)
 // Attaches the movie: notifies the object at +0x18 (vtable slot 0x90) and the current IME child at +0x70 (slot 1,
 // with the movie), then publishes the operating-system label to an AVM version 1 movie as _global.gfx_ime_os_version.
 // @0x1423ca410
-void FUN_1423ca410(void* self, void* movie)
+static __forceinline void cx18_SetActiveMovie(void* self, void* movie)
 {
     // IMEManagerBase::SetActiveMovie(self, movie)
     static_cast<Scaleform::GFx::IMEManagerBase*>(self)->Scaleform::GFx::IMEManagerBase::SetActiveMovie(
@@ -1440,6 +1400,10 @@ void FUN_1423ca410(void* self, void* movie)
     if (static_cast<Scaleform::GFx::Movie*>(movie)->GetAVMVersion() == 1)
         (*reinterpret_cast<Scaleform::GFx::Movie**>(p + 0xa0))->SetVariable("_global.gfx_ime_os_version", value,
                                                                          Scaleform::GFx::Movie::SV_Sticky);
+}
+void GFxIMEManagerWin32::SetActiveMovie(Movie* pmovie)
+{
+    cx18_SetActiveMovie(this, pmovie);
 }
 
 // stores the manager vftable, destroys the XML node chain, then releases the arrays, the packed string, the four member
@@ -2285,8 +2249,9 @@ HRESULT FUN_1423dadd0(long long* object, const unsigned long long* iid, void** o
 }
 
 // @0x1423ccfc0
-void FUN_1423ccfc0(void*, long long owner, const char* command, const char* value)
+void GFxIMEManagerWin32::IMECommand(Movie* pmovie, const char* command, const char* value)
 {
+    long long owner = reinterpret_cast<long long>(pmovie);
     auto* bag = reinterpret_cast<Scaleform::GFx::StateBag*>(owner + 0x10);
     auto log = bag->GetLog();
     if (!log) return;
@@ -5004,8 +4969,8 @@ static __forceinline void cx18_DispatchLangBarEvent(unsigned long long* self, co
 // Dispatches the language-bar and status-window callbacks by event name; the rest go to
 // cx18_DispatchLangBarEvent with the argument as the default.
 // @0x1423cd6b0
-void FUN_1423cd6b0(unsigned long long* self, unsigned long long payload,
-                   unsigned long long* commandCell, unsigned long long* argumentCell)
+static __forceinline void cx18_SendLangBarMessage(unsigned long long* self, unsigned long long payload,
+                   const unsigned long long* commandCell, const unsigned long long* argumentCell)
 {
     const char* argument = *reinterpret_cast<const char**>(*argumentCell);
     const char* command = *reinterpret_cast<const char**>(*commandCell);
@@ -5027,6 +4992,12 @@ void FUN_1423cd6b0(unsigned long long* self, unsigned long long payload,
 }
 #undef vtable
 #undef provider
+void GFxIMEManagerWin32::SendLangBarMessage(DisplayObject* mc, const ASString& cmd, const ASString& msg)
+{
+    cx18_SendLangBarMessage(reinterpret_cast<unsigned long long*>(this), reinterpret_cast<unsigned long long>(mc),
+                            reinterpret_cast<const unsigned long long*>(&cmd),
+                            reinterpret_cast<const unsigned long long*>(&msg));
+}
 
 // MS2-FUNCTIONAL: decodes the external callback's Value array and dispatches its event by name. The OnInit events
 // keep the second Value in the owner at +0x28/+0x58. CandidateList_OnItemSelect passes the selected index (a
@@ -5042,8 +5013,10 @@ void FUN_1423cd6b0(unsigned long long* self, unsigned long long payload,
 //   and matches, so this follows from cl's branch-size estimate for this caller.
 // fe4 tried these on 11-06 and left them.
 // @0x1423cd0a0
-void FUN_1423cd0a0(unsigned long long* self, const unsigned char* event)
+void GFxIMEManagerWin32::ProcessIMEMessage(const FunctionHandler::Params& params)
 {
+    unsigned long long* self = reinterpret_cast<unsigned long long*>(this);
+    const unsigned char* event = reinterpret_cast<const unsigned char*>(&params);
     using Scaleform::GFx::Value;
     const unsigned count = *reinterpret_cast<const unsigned*>(event + 0x28);
     const unsigned long long payload = *reinterpret_cast<const unsigned long long*>(event + 8);
