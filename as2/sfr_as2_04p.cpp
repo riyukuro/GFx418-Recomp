@@ -95,7 +95,7 @@ bool AsBroadcaster::BroadcastMessageWithCallback(Environment* penv, ObjectInterf
                 {
                     Value*           pelem = parrObj->GetElementPtr(i);
                     ObjectInterface* plistener;
-                    if (pelem && (plistener = pelem->ToObjectInterface(penv)) != NULL)
+                    if (pelem && (plistener = pelem->ToObjectInterface_Call(penv)) != NULL)
                     {
                         Ptr<Object>            objHolder;
                         Ptr<InteractiveObject> charHolder;
@@ -119,26 +119,71 @@ bool AsBroadcaster::BroadcastMessageWithCallback(Environment* penv, ObjectInterf
     return true;
 }
 
+// The SDK's inline Value::ToFunction and FunctionRef copy (as in sfr_as2_06s1).
+struct SetLocalFrameInlineTag04p {};
+static SF_FORCEINLINE void FunctionRefSetLocalFrame04p(FunctionRefBase* p, LocalFrame* localFrame, bool weakRef)
+{
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->Release();
+    p->pLocalFrame = localFrame;
+    if (weakRef)
+        p->Flags |= FunctionRefBase::FuncRef_Weak;
+    else
+        p->Flags &= ~FunctionRefBase::FuncRef_Weak;
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->AddRef();
+}
+template<>
+SF_FORCEINLINE FunctionRef::FunctionRef(const FunctionRefBase& orig, SetLocalFrameInlineTag04p)
+{
+    Flags    = 0;
+    Function = orig.Function;
+    if (!(Flags & FuncRef_Internal) && Function)
+        Function->AddRef();
+    pLocalFrame = 0;
+    if (orig.pLocalFrame)
+        FunctionRefSetLocalFrame04p(this, orig.pLocalFrame, (orig.Flags & FuncRef_Weak) != 0);
+}
+struct ValueAccess04p : Value
+{
+    using Value::ResolveFunctionName;
+};
+static SF_FORCEINLINE FunctionRef ValueToFunction04p(const Value& v, const Environment* penv, UByte vtype)
+{
+    switch (vtype)
+    {
+    case Value::FUNCTION:
+        return FunctionRef(v.V.FunctionValue, SetLocalFrameInlineTag04p());
+    case Value::FUNCTIONNAME:
+        return static_cast<const ValueAccess04p&>(v).ResolveFunctionName(penv);
+    }
+    return FunctionRef();
+}
+
 // The 'cast' opcode (ExecutionContext::CastOpCode, the context is not modelled: +0 the environment, +0x40 the
 // logger, +0x62 the verbose flag): the object below the constructor stays when it is an instance of it, null otherwise.
-// MS2-FUNCTIONAL: the context is read by address
+// The environment is re-read from the context after each call, and the logger is addressed in place. The
+// constructor's type is read once, before rv is built, and the inline ToFunction switches on that read.
 // @0x142932d20
 void FUN_142932d20(void* pctx)
 {
-    UByte*        pc    = static_cast<UByte*>(pctx);
-    Environment*  penv  = *reinterpret_cast<Environment**>(pc);
-    ActionLogger* plog  = reinterpret_cast<ActionLogger*>(pc + 0x40);
-    bool          verbose = (pc[0x62] & 1) != 0;
+    UByte*        pc   = static_cast<UByte*>(pctx);
+    Environment*& penv = *reinterpret_cast<Environment**>(pc);
+#define plog reinterpret_cast<ActionLogger*>(pc + 0x40) // a local pointer costs a callee-saved register
 
+    Value& ctorVal = *((penv->Stack.pCurrent > penv->Stack.pPageStart) ? (penv->Stack.pCurrent - 1)
+                                                                         : penv->Stack.pPrevPageTop);
+    UByte  ctype   = ctorVal.GetType();
+    Value& objVal  = *penv->Stack.Top0();
     Value  rv(Value::NULLTYPE);
-    Value& objVal  = penv->Top(0);
-    Value& ctorVal = penv->Top(1);
-    if (ctorVal.IsFunction())
+    if (ctype == Value::FUNCTION || ctype == Value::FUNCTIONNAME)
     {
-        FunctionRef ctorFunc = ctorVal.ToFunction(penv);
+        FunctionRef ctorFunc = ValueToFunction04p(ctorVal, penv, ctype);
         if (!ctorFunc.IsNull())
         {
-            ObjectInterface* pobj = objVal.ToObjectInterface(penv);
+            ObjectInterface* pobj = objVal.IsCharacter()
+                                        ? static_cast<ObjectInterface*>(objVal.ToAvmCharacter(penv))
+                                        : static_cast<ObjectInterface*>(objVal.ToObject(penv));
             if (pobj)
             {
                 Value protoVal;
@@ -148,17 +193,18 @@ void FUN_142932d20(void* pctx)
                     if (pobj->InstanceOf(penv, pproto))
                         rv.SetAsObjectInterface(pobj);
                 }
-                else if (verbose)
+                else if (pc[0x62] & 1)
                     plog->LogScriptError("The constructor function in 'cast' should have 'prototype'.");
             }
         }
     }
-    else if (verbose)
+    else if (pc[0x62] & 1)
         plog->LogScriptError("The parameter of 'cast' should be a function.");
 
-    penv->Drop(2);
+    penv->Drop2();
     penv->Push(rv);
 }
+#undef plog
 
 }}} // namespace Scaleform::GFx::AS2
 
