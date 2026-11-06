@@ -3304,7 +3304,8 @@ void MovieImpl::AdvanceFrame(bool nextFrame, float framePos)
 }
 
 // @0x14256fde0
-// MS2-FUNCTIONAL: register allocation (the exe keeps the result in r15 and spills ignoreMC).
+// MS2-FUNCTIONAL: one addressing byte: the exe encodes MovieLevels[movieIndex - 1] as [rbx+rax+8] (base = the index
+// offset), ours as [rax+rbx+8]; source spellings of the index, a level ref and the inline call do not flip it.
 InteractiveObject* MovieImpl::GetTopMostEntity(const Render::PointF& mousePos, unsigned controllerIdx, bool testAll,
                                                const InteractiveObject* ignoreMC)
 {
@@ -3326,9 +3327,10 @@ InteractiveObject* MovieImpl::GetTopMostEntity(const Render::PointF& mousePos, u
     // The topmost characters first, the last one on top; their points are in their parents' space.
     for (int i = (int)TopmostLevelCharacters.GetSize() - 1; i >= 0; --i)
     {
-        InteractiveObject* pch = TopmostLevelCharacters[i];
+        InteractiveObject* pch    = TopmostLevelCharacters[i];
+        InteractiveObject* parent = pch->GetParent();
         Render::Matrix2F m;
-        pch->GetParent()->GetWorldMatrix(&m);
+        parent->GetWorldMatrix(&m);
         Render::PointF p(Render::PointF::NoInit);
         m.TransformByInverse(&p, mousePos);
         DisplayObjectBase::TopMostDescr descr;
@@ -3352,7 +3354,10 @@ InteractiveObject* MovieImpl::GetTopMostEntity(const Render::PointF& mousePos, u
             descr.TestAll       = testAll;
             descr.ControllerIdx = controllerIdx;
             if (pmovie->GetTopMostMouseEntity(mousePos, &descr) == DisplayObjectBase::TopMost_Found)
-                return descr.pResult;
+            {
+                ptopMouseCharacter = descr.pResult;
+                break;
+            }
         }
     }
     return ptopMouseCharacter;
