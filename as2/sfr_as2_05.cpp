@@ -2974,15 +2974,15 @@ bool MouseCtorFunction::GetMember(Environment* penv, const ASString& name, Value
     return GetMemberRaw(psc, name, val);
 }
 
-// MS2-FUNCTIONAL the stack index of Arg(2) is copied to another register before the chunk split (allocation only)
 // @0x142956760
 void MouseCtorFunction::GetTopMostEntity(const FnCall& fn)
 {
     fn.Result->SetUndefined();
     MovieImpl* proot = fn.Env->GetTarget()->GetMovieImpl();
-    bool testAll = true;
-    unsigned mouseIndex = 0;
     Render::PointF pt;
+    bool testAll = true;
+    int params = 0;
+    unsigned mouseIndex = 0;
     if (fn.NArgs >= 1)
     {
         if (fn.Arg(0).GetType() == Value::BOOLEAN)
@@ -2990,30 +2990,38 @@ void MouseCtorFunction::GetTopMostEntity(const FnCall& fn)
             testAll = fn.Arg(0).ToBool(fn.Env);
             if (fn.NArgs >= 2)
                 mouseIndex = (int)fn.Arg(1).ToNumber(fn.Env);
+            params = 2;
         }
         else if (fn.NArgs == 1)
+        {
             mouseIndex = (int)fn.Arg(0).ToNumber(fn.Env);
+            params = 1;
+        }
         else if (fn.NArgs >= 2)
         {
-            // A point in _level0 coordinates (pixels).
             if (fn.NArgs >= 3)
                 testAll = fn.Arg(2).ToBool(fn.Env);
-            float x = (float)(fn.Arg(0).ToNumber(fn.Env) * 20);
-            Number y = fn.Arg(1).ToNumber(fn.Env);
-            if (!proot->pMainMovie)
-                return;
-            Render::Matrix2F m;
-            proot->pMainMovie->GetWorldMatrix(&m);
-            float ty = (float)(y * 20);
-            pt.x = m.M[0][0] * x + m.M[0][1] * ty + m.M[0][3];
-            pt.y = m.M[1][0] * x + m.M[1][1] * ty + m.M[1][3];
-            goto found;
+            params = 3;
         }
     }
-    if (mouseIndex >= AsMovieSlots(proot)->GetMouseCursorCount())
-        return;
-    pt = GetMovieMouseState(proot, mouseIndex)->GetLastPosition();
-found:
+    if (params <= 2)
+    {
+        if (mouseIndex >= AsMovieSlots(proot)->GetMouseCursorCount())
+            return;
+        pt = GetMovieMouseState(proot, mouseIndex)->GetLastPosition();
+    }
+    else
+    {
+        float x = (float)(fn.Arg(0).ToNumber(fn.Env) * 20);
+        Number y = fn.Arg(1).ToNumber(fn.Env);
+        if (!proot->pMainMovie)
+            return;
+        Render::Matrix2F m;
+        proot->pMainMovie->GetWorldMatrix(&m);
+        float ty = (float)(y * 20);
+        pt.x = m.M[0][0] * x + m.M[0][1] * ty + m.M[0][3];
+        pt.y = m.M[1][0] * x + m.M[1][1] * ty + m.M[1][3];
+    }
     if (InteractiveObject* ptop = proot->GetTopMostEntity(pt, mouseIndex, testAll))
         fn.Result->SetAsCharacter(ptop);
 }
