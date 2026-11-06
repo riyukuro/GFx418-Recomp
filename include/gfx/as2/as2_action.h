@@ -122,7 +122,8 @@ public:
     void Pop1()
     {
         pCurrent->~T();
-        if (--pCurrent < pPageStart)
+        pCurrent--;
+        if (pCurrent < pPageStart)
             PopPage();
     }
     void Pop(unsigned n)

@@ -1516,7 +1516,6 @@ inline void GFx::AS2::PagedStack<Ptr<GFx::AS2::FunctionObject>, 32>::Pop1()
 }
 // @0x142924b70
 template GFx::AS2::PagedStack<Ptr<GFx::AS2::FunctionObject>, 32>::~PagedStack();
-// MS2-FUNCTIONAL register allocation of the pop loop (the exe reloads the top pointer each iteration)
 // @0x142924c60
 template GFx::AS2::PagedStack<GFx::AS2::Value, 32>::~PagedStack();
 

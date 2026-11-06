@@ -4254,6 +4254,7 @@ static const int DateMonthEnds[2][12] = {
 // Date(...) / new Date(...): the current time, ms since 1970 (one argument) or the local date of the year, month[,
 // date[, hours[, minutes[, seconds[, ms]]]]] arguments (years 0..99 are 1900 based). Called as a function it gives
 // the date string.
+// MS2-FUNCTIONAL regalloc only: cl reassociates the two inlined Date_StartOfYear sums differently (exe starts the year sum from the /400 term and computes LJDate from days, ours starts from /100); SDK body, store order and a TU-local static inline copy tried
 // @0x142959f10
 void DateCtorFunction::GlobalCtor(const FnCall& fn)
 {
