@@ -125,7 +125,7 @@ ExeDecl<void(void*)>::type FUN_14257dcd0;
 ExeDecl<void(void*)>::type FUN_14257dcb0;
 ExeDecl<bool(void*, void*)>::type FUN_142518c70;
 ExeDecl<void(void*)>::type FUN_142519860;
-ExeDecl<bool(const void*, const void*)>::type FUN_142510dc0;
+__declspec(noinline) bool FUN_142510dc0(const void*, const void*) { return false; }   // @0x142510dc0: the exe ICF-folds this with LogBase<DisplayObjectBase>::IsLogNotNull and the AvmDisplayObj/AvmInteractiveObj HasEventHandler (xor al,al; ret)
 ExeDecl<bool(const void*)>::type FUN_142514f70;
 ExeDecl<const char*(void*, void*)>::type FUN_142506e10;
 ExeDecl<void(void*, void*, const void*)>::type FUN_1424d6750;
