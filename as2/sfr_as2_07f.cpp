@@ -259,189 +259,247 @@ void AS2ValueObjectInterface::VisitElements(void* pdata, ArrVisitor* visitor, un
 }
 
 // Applies the display properties set in info; the 2D ones go through the geometry the AS properties keep.
-// MS2-FUNCTIONAL: exe calls DisplayObjectBase::Is3D out of line (0x142513e50); xmm register allocation and frame size differ
 // @0x142980790
-bool AS2ValueObjectInterface::SetDisplayInfo(void* pdata, const Value::DisplayInfo& info)
+bool AS2ValueObjectInterface::SetDisplayInfo(void* pdata, const Value::DisplayInfo& cinfo)
 {
-    DisplayObject* pch = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pMovieRoot);
-    if (!pch)
-        return false;
+    typedef Value::DisplayInfo DisplayInfo;
+    CharacterHandle* pch = static_cast<CharacterHandle*>(pdata);
+    DisplayObject*   pd  = pch->ResolveCharacter(pMovieRoot);
+    if (!pd) return false;
 
-    bool is3D = false;
-    bool isTF = pch->GetType() == CharacterDef::TextField;
-    if (info.IsFlagSet(Value::DisplayInfo::V_edgeaaMode))
-        pch->GetRenderNode()->SetEdgeAAMode(info.EdgeAAMode);
-    if (info.IsFlagSet(Value::DisplayInfo::V_alpha) && !NumberUtil::IsNaN(info.Alpha))
+    bool Update3DTransforms = false;
+
+    bool       istf = (pd->GetType() == CharacterDef::TextField);
+    TextField* ptf  = reinterpret_cast<TextField*>(pd);
+
+    if (cinfo.IsFlagSet(DisplayInfo::V_edgeaaMode))
     {
-        Render::Cxform cx = pch->GetCxform();
-        cx.M[0][3]        = float(info.Alpha / 100.);
-        pch->SetCxform(cx);
-        pch->SetAcceptAnimMoves(false);
+        pd->GetRenderNode()->SetEdgeAAMode(cinfo.GetEdgeAAMode());
     }
-    if (info.IsFlagSet(Value::DisplayInfo::V_visible))
-        pch->SetVisible(info.Visible);
-    if (info.IsFlagSet(Value::DisplayInfo::V_z))
+
+    if (cinfo.IsFlagSet(DisplayInfo::V_alpha))
     {
-        Double z = info.Z;
-        if (NumberUtil::IsNaN(z))
-            z = 0;
-        if (NumberUtil::IsNEGATIVE_INFINITY(z) || NumberUtil::IsPOSITIVE_INFINITY(z))
-            z = 0;
-        if (z != pch->pGeomData->Z)
+        if (!NumberUtil::IsNaN(cinfo.GetAlpha()))
         {
-            pch->pGeomData->Z = z;
-            is3D              = true;
+            Render::Cxform cx = pd->GetCxform();
+            cx.M[0][3] = float(cinfo.GetAlpha() / 100.);
+            pd->SetCxform(cx);
+            pd->SetAcceptAnimMoves(0);
         }
     }
-    if (info.IsFlagSet(Value::DisplayInfo::V_zscale))
+    if (cinfo.IsFlagSet(DisplayInfo::V_visible))
     {
-        Double zscale = info.ZScale;
-        if (NumberUtil::IsNaN(zscale) || NumberUtil::IsNEGATIVE_INFINITY(zscale) ||
-            NumberUtil::IsPOSITIVE_INFINITY(zscale))
-            zscale = 100.;
-        if (pch->pGeomData->ZScale != zscale)
+        pd->SetVisible(cinfo.GetVisible());
+    }
+
+    if (cinfo.IsFlagSet(DisplayInfo::V_z))
+    {
+        Double zval = cinfo.GetZ();
+        if (NumberUtil::IsNaN(zval))
+            zval = 0;
+        if (NumberUtil::IsNEGATIVE_INFINITY(zval) || NumberUtil::IsPOSITIVE_INFINITY(zval))
+            zval = 0;
+        DisplayObjectBase::GeomDataType* tfgeomData = pd->pGeomData;
+        if (zval != tfgeomData->Z)
         {
-            pch->pGeomData->ZScale = zscale;
-            is3D                   = true;
+            tfgeomData->Z = zval;
+            Update3DTransforms = true;
         }
     }
-    if (info.IsFlagSet(Value::DisplayInfo::V_xrotation) && info.XRotation != pch->pGeomData->XRotation)
-    {
-        pch->pGeomData->XRotation = VoiNormalizeAngle(info.XRotation);
-        is3D                      = true;
-    }
-    if (info.IsFlagSet(Value::DisplayInfo::V_yrotation) && info.YRotation != pch->pGeomData->YRotation)
-    {
-        pch->pGeomData->YRotation = VoiNormalizeAngle(info.YRotation);
-        is3D                      = true;
-    }
-    if (is3D)
-        pch->UpdateTransform3D();
-    if (info.IsFlagSet(Value::DisplayInfo::V_FOV))
-    {
-        Double fov = info.FOV;
-        if (fov != pch->GetFOV())
-            pch->SetFOV(fmod(fov, 180.));
-    }
-    if (info.IsFlagSet(Value::DisplayInfo::V_projMatrix3D))
-        pch->SetProjectionMatrix3D(info.ProjectionMatrix3D);
-    if (info.IsFlagSet(Value::DisplayInfo::V_viewMatrix3D))
-        pch->SetViewMatrix3D(info.ViewMatrix3D);
 
-    if (info.IsFlagSet(Value::DisplayInfo::V_x | Value::DisplayInfo::V_y | Value::DisplayInfo::V_rotation |
-                       Value::DisplayInfo::V_xscale | Value::DisplayInfo::V_yscale))
+    if (cinfo.IsFlagSet(DisplayInfo::V_zscale))
     {
-        if (isTF)
+        Double newZScale = cinfo.GetZScale();
+        if (NumberUtil::IsNaN(newZScale) ||
+            NumberUtil::IsNEGATIVE_INFINITY(newZScale) || NumberUtil::IsPOSITIVE_INFINITY(newZScale))
         {
-            TextField* ptf = reinterpret_cast<TextField*>(pch);
+            newZScale = 100.;
+        }
+        DisplayObjectBase::GeomDataType* tfgeomData = pd->pGeomData;
+        if (tfgeomData->ZScale != newZScale)
+        {
+            tfgeomData->ZScale = newZScale;
+            Update3DTransforms = true;
+        }
+    }
+
+    if (cinfo.IsFlagSet(DisplayInfo::V_xrotation))
+    {
+        Double rval = cinfo.GetXRotation();
+        DisplayObjectBase::GeomDataType* tfgeomData = pd->pGeomData;
+        if (rval != tfgeomData->XRotation)
+        {
+            Double r = fmod((Double)rval, (Double)360.);
+            if (r > 180)
+                r -= 360;
+            else if (r < -180)
+                r += 360;
+            tfgeomData->XRotation = r;
+            Update3DTransforms = true;
+        }
+    }
+
+    if (cinfo.IsFlagSet(DisplayInfo::V_yrotation))
+    {
+        Double rval = cinfo.GetYRotation();
+        DisplayObjectBase::GeomDataType* tfgeomData = pd->pGeomData;
+        if (rval != tfgeomData->YRotation)
+        {
+            Double r = fmod((Double)rval, (Double)360.);
+            if (r > 180)
+                r -= 360;
+            else if (r < -180)
+                r += 360;
+            tfgeomData->YRotation = r;
+            Update3DTransforms = true;
+        }
+    }
+
+    if (Update3DTransforms)
+        pd->UpdateTransform3D();
+
+    if (cinfo.IsFlagSet(DisplayInfo::V_FOV))
+    {
+        Double rval = cinfo.GetFOV();
+        if (rval != pd->GetFOV())
+        {
+            Double r = fmod((Double)rval, (Double)180.);
+            pd->SetFOV(r);
+        }
+    }
+    {
+        if (cinfo.IsFlagSet(DisplayInfo::V_projMatrix3D))
+        {
+            pd->SetProjectionMatrix3D(*cinfo.GetProjectionMatrix3D());
+        }
+        if (cinfo.IsFlagSet(DisplayInfo::V_viewMatrix3D))
+        {
+            pd->SetViewMatrix3D(*cinfo.GetViewMatrix3D());
+        }
+    }
+
+    if (cinfo.IsFlagSet(DisplayInfo::V_x|DisplayInfo::V_y|DisplayInfo::V_rotation|
+                       DisplayInfo::V_xscale|DisplayInfo::V_yscale))
+    {
+        if (istf)
+        {
             ptf->FlagsRef() |= 0x2000;
             ptf->SetDirtyFlag();
         }
-        pch->SetAcceptAnimMoves(false);
-        DisplayObjectBase::GeomDataType& geom = *pch->pGeomData;
-        Render::Matrix2F                 m    = pch->GetMatrix();
 
-        Double newX = 0, newY = 0;
-        if (!isTF || !info.IsFlagSet(Value::DisplayInfo::V_x | Value::DisplayInfo::V_y))
+        pd->SetAcceptAnimMoves(0);
+        DisplayObjectBase::GeomDataType* tfgeomData = pd->pGeomData;
+
+        Render::Matrix2F m = pd->GetMatrix();
+
+        // Not zeroed: the exe reads the unset coordinate from the uninitialised slot.
+        struct { Double x, y; } pt;
+        if (istf && cinfo.IsFlagSet(DisplayInfo::V_x|DisplayInfo::V_y))
         {
-            if (info.IsFlagSet(Value::DisplayInfo::V_x))
-                newX = info.X;
-            if (info.IsFlagSet(Value::DisplayInfo::V_y))
-                newY = info.Y;
+            Render::PointF tpt = ptf->TransformToTextRectSpace(cinfo);
+            pt.x = tpt.x;
+            pt.y = tpt.y;
         }
         else
         {
-            Render::PointF pt = reinterpret_cast<TextField*>(pch)->TransformToTextRectSpace(info);
-            newX              = pt.x;
-            newY              = pt.y;
+            if (cinfo.IsFlagSet(DisplayInfo::V_x))
+                pt.x = cinfo.GetX();
+            if (cinfo.IsFlagSet(DisplayInfo::V_y))
+                pt.y = cinfo.GetY();
         }
 
-        if (info.IsFlagSet(Value::DisplayInfo::V_rotation | Value::DisplayInfo::V_xscale |
-                           Value::DisplayInfo::V_yscale))
+        if (cinfo.IsFlagSet(DisplayInfo::V_rotation|DisplayInfo::V_xscale|DisplayInfo::V_yscale))
         {
-            Render::Matrix2F om          = geom.OrigMatrix;
-            om.Tx()                      = m.Tx();
-            om.Ty()                      = m.Ty();
-            Double           origRotation = geom.OrigMatrix.GetRotationDouble();
-            Double           origXScale   = geom.OrigMatrix.GetXScaleDouble();
-            Double           origYScale   = geom.OrigMatrix.GetYScaleDouble();
-            Double           newRotation  = geom.Rotation * SF_MATH_PI;
-            Double           newXScale    = geom.XScale / 100.;
-            Double           newYScale    = geom.YScale / 100.;
+            Render::Matrix2F om = tfgeomData->OrigMatrix;
+            om.Tx() = m.Tx();
+            om.Ty() = m.Ty();
+            Double origRotation = om.GetRotationDouble();
+            Double origXScale = om.GetXScaleDouble();
+            Double origYScale = om.GetYScaleDouble();
 
-            Double r = info.IsFlagSet(Value::DisplayInfo::V_rotation) ? info.Rotation : NumberUtil::NaN();
-            if (!NumberUtil::IsNaN(r))
+            Double newXScale = tfgeomData->XScale / 100;
+            Double newYScale = tfgeomData->YScale / 100;
+            Double newRotation = SF_DEGTORAD(tfgeomData->Rotation);
+
+            Double rval = cinfo.IsFlagSet(DisplayInfo::V_rotation) ? cinfo.GetRotation() : NumberUtil::NaN();
+            if (!NumberUtil::IsNaN(rval))
             {
-                geom.Rotation = VoiNormalizeAngle(r);
-                newRotation   = geom.Rotation * SF_MATH_PI;
+                newRotation = fmod((Double)rval, (Double)360.);
+                if (newRotation > 180)
+                    newRotation -= 360;
+                else if (newRotation < -180)
+                    newRotation += 360;
+                tfgeomData->Rotation = newRotation;
+                newRotation = SF_DEGTORAD(newRotation);
             }
-            Double xs = info.IsFlagSet(Value::DisplayInfo::V_xscale) ? info.XScale / 100. : NumberUtil::NaN();
-            if (xs != newXScale && !NumberUtil::IsNaNOrInfinity(xs))
+            Double nx = cinfo.IsFlagSet(DisplayInfo::V_xscale) ? (cinfo.GetXScale()/100) : NumberUtil::NaN();
+            if ((nx != newXScale) && !NumberUtil::IsNaNOrInfinity(nx))
             {
-                geom.XScale = info.XScale;
-                if (origXScale == 0 || xs > 1e16)
+                tfgeomData->XScale = cinfo.GetXScale();
+                if (origXScale == 0 || nx > 1E+16)
                 {
-                    newXScale  = 0;
+                    nx = 0;
                     origXScale = 1;
                 }
-                else
-                    newXScale = xs;
+                newXScale = nx;
             }
-            Double ys = info.IsFlagSet(Value::DisplayInfo::V_yscale) ? info.YScale / 100. : NumberUtil::NaN();
-            if (ys != newYScale && !NumberUtil::IsNaNOrInfinity(ys))
+            Double ny = cinfo.IsFlagSet(DisplayInfo::V_yscale) ? (cinfo.GetYScale()/100) : NumberUtil::NaN();
+            if ((ny != newYScale) && !NumberUtil::IsNaNOrInfinity(ny))
             {
-                geom.YScale = info.YScale;
-                if (origYScale == 0 || ys > 1e16)
+                tfgeomData->YScale = cinfo.GetYScale();
+                if (origYScale == 0 || ny > 1E+16)
                 {
-                    newYScale  = 0;
+                    ny = 0;
                     origYScale = 1;
                 }
-                else
-                    newYScale = ys;
+                newYScale = ny;
             }
-            ASCharacter_MatrixScaleAndRotate2x2(om, float(newXScale / origXScale), float(newYScale / origYScale),
-                                                float(newRotation / 180. - origRotation));
+
+            ASCharacter_MatrixScaleAndRotate2x2(om,
+                float(newXScale/origXScale),
+                float(newYScale/origYScale),
+                float(newRotation - origRotation));
+
             m = om;
         }
 
-        Double x = info.IsFlagSet(Value::DisplayInfo::V_x) ? newX : NumberUtil::NaN();
-        if (!NumberUtil::IsNaN(x))
+        Double xval = cinfo.IsFlagSet(DisplayInfo::V_x) ? pt.x : NumberUtil::NaN();
+        if (!NumberUtil::IsNaN(xval))
         {
-            if (NumberUtil::IsNEGATIVE_INFINITY(x) || NumberUtil::IsPOSITIVE_INFINITY(x))
-                x = 0;
-            geom.X  = int(floor(x * 20.));
-            m.Tx() = float(geom.X);
+            if (NumberUtil::IsNEGATIVE_INFINITY(xval) || NumberUtil::IsPOSITIVE_INFINITY(xval))
+                xval = 0;
+            tfgeomData->X = int(floor(Render::PixelsToTwips(xval)));
+            m.Tx() = (float) tfgeomData->X;
         }
-        Double y = info.IsFlagSet(Value::DisplayInfo::V_y) ? newY : NumberUtil::NaN();
-        if (!NumberUtil::IsNaN(y))
+        Double yval = cinfo.IsFlagSet(DisplayInfo::V_y) ? pt.y : NumberUtil::NaN();
+        if (!NumberUtil::IsNaN(yval))
         {
-            if (NumberUtil::IsNEGATIVE_INFINITY(y) || NumberUtil::IsPOSITIVE_INFINITY(y))
-                y = 0;
-            geom.Y  = int(floor(y * 20.));
-            m.Ty() = float(geom.Y);
+            if (NumberUtil::IsNEGATIVE_INFINITY(yval) || NumberUtil::IsPOSITIVE_INFINITY(yval))
+                yval = 0;
+            tfgeomData->Y = int(floor(Render::PixelsToTwips(yval)));
+            m.Ty() = (float) tfgeomData->Y;
         }
+
         if (m.IsValid())
         {
-            if (pch->Is3D())
-                pch->UpdateTransform3D();
+            // The exe calls Is3D out of line (0x142513e50) and keeps the vtable in rbx across it, so its body was
+            // visible to cl. The member pointer keeps the call and emits the body here.
+            bool (DisplayObjectBase::*const is3d)() const = &DisplayObjectBase::Is3D;
+            if ((pd->*is3d)())
+                pd->UpdateTransform3D();
             else
-                pch->SetMatrix(m);
+                pd->SetMatrix(m);
         }
-        if (isTF)
+
+        if (istf)
         {
-            // The text field keeps the requested position, rounded to twips.
-            if (info.IsFlagSet(Value::DisplayInfo::V_x))
-            {
-                Double tx = newX * 20.;
-                geom.X    = int(tx > 0 ? tx + 0.5 : tx - 0.5);
-            }
-            if (info.IsFlagSet(Value::DisplayInfo::V_y))
-            {
-                Double ty = newY * 20.;
-                geom.Y    = int(ty > 0 ? ty + 0.5 : ty - 0.5);
-            }
+            if (cinfo.IsFlagSet(Value::DisplayInfo::V_x))
+                tfgeomData->X = Alg::IRound(Render::PixelsToTwips(pt.x));
+            if (cinfo.IsFlagSet(Value::DisplayInfo::V_y))
+                tfgeomData->Y = Alg::IRound(Render::PixelsToTwips(pt.y));
         }
     }
+
     return true;
 }
 
