@@ -43,38 +43,56 @@ SF_FORCEINLINE AS2::Environment* InvMainEnv(AS2::MovieRoot* proot)
 
 } // namespace
 
+// The SDK's Value_AS2ObjectData: the root, the main environment and the object (0 if the display object is gone).
+struct Inv_ObjData
+{
+    AS2::ObjectInterface* pObject;
+    AS2::Environment*     pEnv;
+    AS2::MovieRoot*       pRoot;
+    SF_FORCEINLINE Inv_ObjData(MovieImpl* pmovieImpl, void* pdata, bool isdobj)
+    {
+        pRoot   = InvRoot(pmovieImpl);
+        pEnv    = InvMainEnv(pRoot);
+        pObject = static_cast<AS2::ObjectInterface*>(pdata);
+        if (isdobj)
+        {
+            DisplayObject* d = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pmovieImpl);
+            if (!d)
+            {
+                pObject = 0;
+                return;
+            }
+            pObject = AS2::ToAvmCharacter(static_cast<InteractiveObject*>(d));
+        }
+    }
+};
+
 // Calls the member function name of the object (or display object) with the arguments converted to AS2 values.
-// MS2-FUNCTIONAL: register allocation and scheduling differ (the movie root is kept in a register in the exe).
+// MS2-FUNCTIONAL: register allocation only: the exe keeps the result in bpl (rbp saved before the name lookup) and reloads asArg's type byte into dil after the push loop
 // @0x142962710
 bool AS2ValueObjectInterface::Invoke(void* pdata, Value* presult, const char* name, const Value* pargs, UPInt nargs,
                                      bool isdobj)
 {
-    AS2::MovieRoot*   proot = InvRoot(pMovieRoot);
-    AS2::Environment* penv  = InvMainEnv(proot);
-    AS2::ObjectInterface* pobj = static_cast<AS2::ObjectInterface*>(pdata);
-    if (isdobj)
-    {
-        DisplayObject* pdobj = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pMovieRoot);
-        if (!pdobj)
-            return false;
-        pobj = AS2::ToAvmCharacter(static_cast<InteractiveObject*>(pdobj));
-    }
+    Inv_ObjData o(pMovieRoot, pdata, isdobj);
+    AS2::MovieRoot*   proot = o.pRoot;
+    AS2::Environment* penv  = o.pEnv;
+    AS2::ObjectInterface* pobj = o.pObject;
     if (!pobj)
         return false;
 
     AS2::Value member;
     AS2::Value result;
-    if (!pobj->GetMemberRaw(penv->GetSC(), penv->CreateConstString(name), &member))
+    bool found = pobj->GetMemberRaw(penv->GetSC(), penv->CreateConstString(name), &member);
+    if (!found)
         return false;
     AS2::Value asArg;
-    for (int i = (int)nargs - 1; i >= 0; --i)
+    for (int i = (int)nargs - 1; i > -1; i--)
     {
         proot->Value2ASValue(pargs[i], &asArg);
         penv->Push(asArg);
     }
     bool ok = AS2::GAS_Invoke(member, &result, pobj, penv, (int)nargs, penv->GetTopIndex(), 0);
-    for (int n = (int)nargs; n; n--)
-        penv->Drop1();
+    penv->Drop((unsigned)nargs);
     if (presult)
         proot->ASValue2GFxValue(penv, result, presult);
     return ok;
