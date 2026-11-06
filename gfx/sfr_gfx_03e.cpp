@@ -1431,93 +1431,118 @@ void TextField::GetInitialFormats(Render::Text::TextFormat* ptextFmt, Render::Te
 // The images of <img> tags: each url names an exported image (or a protocol image the image creator loads); the
 // image goes into the tag's image descriptor, sized by the tag (or the image, in twips) and moved up by its height
 // plus the vertical space, and the document is reformatted.
+// MS2-FUNCTIONAL 0x1425ba7d0: same code and frame; the exe keeps resBindData and pimgRes out of the cookie-guarded slots
+#pragma strict_gs_check(push, on)
 // @0x1425ba7d0
 void TextField::ProcessImageTags(Render::Text::StyledText::HTMLImageTagInfoArray& imageInfoArray)
 {
     UPInt n = imageInfoArray.GetSize();
+
     if (n > 0)
         static_cast<Render::TreeText*>(GetRenderNode())->NotifyLayoutChanged();
+
     for (UPInt i = 0; i < n; ++i)
     {
         Render::Text::StyledText::HTMLImageTagInfo& imgTagInfo = imageInfoArray[i];
+
         ResourceBindData resBindData;
         Ptr<MovieDefImpl> md = GetResourceMovieDef();
-        if (!md)
-            continue;
-        // img:// and imgps:// urls go to the image creator, the others are export names.
-        bool userImageProtocol = LoaderImpl::IsProtocolImage(imgTagInfo.Url);
-        if (!userImageProtocol && !GetMovieImpl()->FindExportedResource(md, &resBindData, imgTagInfo.Url))
+        if (md)
         {
-            if (GetLog())
-                GetLog()->LogWarning("ProcessImageTags: can't find a resource for export name '%s'\n",
-                                     imgTagInfo.Url.ToCStr());
-            continue;
-        }
-        if (userImageProtocol || resBindData.pResource->GetResourceType() == Resource::RT_Image)
-        {
-            Ptr<Render::Image> img;
+            // img:// and imgps:// urls go to the image creator, the others are export names.
+            bool userImageProtocol = LoaderImpl::IsProtocolImage(imgTagInfo.Url);
             if (!userImageProtocol)
             {
-                Ptr<ImageResource> pimgRes = GetMovieImpl()->GetImageResourceByLinkageId(GetResourceMovieDef(),
-                                                                                         imgTagInfo.Url.ToCStr());
-                if (!pimgRes)
+                if (!GetMovieImpl()->FindExportedResource(md, &resBindData, imgTagInfo.Url))
                 {
                     if (GetLog())
-                        GetLog()->LogWarning("ProcessImageTags: can't load the image '%s'\n", imgTagInfo.Url.ToCStr());
+                        GetLog()->LogWarning("ProcessImageTags: can't find a resource for export name '%s'\n",
+                                             imgTagInfo.Url.ToCStr());
                     continue;
                 }
-                if (pimgRes->GetImage()->GetImageType() != Render::ImageBase::Type_ImageBase)
-                    img = static_cast<Render::Image*>(pimgRes->GetImage());
-                else if (!Ptr<ImageCreator>(*static_cast<ImageCreator*>(md->GetStateAddRef(State::State_ImageCreator))))
-                    LogDebugMessage(Log_Warning, "ImageCreator is null in ProcessImageTags");
+            }
+            if (userImageProtocol || resBindData.pResource->GetResourceType() == Resource::RT_Image)
+            {
+                Ptr<Render::Image> img;
+                if (!userImageProtocol)
+                {
+                    Ptr<ImageResource> pimgRes = GetMovieImpl()->GetImageResourceByLinkageId(GetResourceMovieDef(),
+                                                                                             imgTagInfo.Url.ToCStr());
+                    if (!pimgRes)
+                    {
+                        if (GetLog())
+                            GetLog()->LogWarning("ProcessImageTags: can't load the image '%s'\n",
+                                                 imgTagInfo.Url.ToCStr());
+                        continue;
+                    }
+                    if (pimgRes->GetImage()->GetImageType() != Render::ImageBase::Type_ImageBase)
+                        img = static_cast<Render::Image*>(pimgRes->GetImage());
+                    else
+                    {
+                        if (!Ptr<ImageCreator>(*static_cast<ImageCreator*>(md->GetStateAddRef(State::State_ImageCreator))))
+                            LogDebugMessage(Log_Warning, "ImageCreator is null in ProcessImageTags");
+                        else
+                        {
+                            ImageCreateInfo cinfo(ImageCreateInfo::Create_SourceImage, Memory::GetHeapByAddress(this),
+                                                  1, Resource::Use_Bitmap);
+                            img = *Ptr<ImageCreator>(*static_cast<ImageCreator*>(md->GetStateAddRef(State::State_ImageCreator)))
+                                       ->CreateImage(cinfo, static_cast<Render::ImageSource*>(pimgRes->GetImage()));
+                        }
+                    }
+                }
                 else
                 {
-                    ImageCreateInfo cinfo(ImageCreateInfo::Create_SourceImage, Memory::GetHeapByAddress(this), 1,
-                                          Resource::Use_Bitmap);
-                    img = *Ptr<ImageCreator>(*static_cast<ImageCreator*>(md->GetStateAddRef(State::State_ImageCreator)))
-                               ->CreateImage(cinfo, static_cast<Render::ImageSource*>(pimgRes->GetImage()));
+                    MemoryHeap* pimageHeap = md->GetWeakLib()->GetImageHeap();
+                    ImageCreateInfo cinfo(ImageCreateInfo::Create_FileImage, pimageHeap, 0, Resource::Use_Bitmap);
+                    Ptr<State> pregistry = *md->GetStateAddRef(State::State_ImageFileHandlerRegistry);
+                    Ptr<State> popener   = *md->GetStateAddRef(State::State_FileOpener);
+                    cinfo.SetStates(md->GetLog(), popener, reinterpret_cast<ImageFileHandlerRegistry*>(pregistry.GetPtr()));
+                    cinfo.pMovie = GetMovieImpl();
+
+                    ImageCreator* pcreator =
+                        Ptr<ImageCreator>(*static_cast<ImageCreator*>(md->GetStateAddRef(State::State_ImageCreator)));
+                    if (pcreator)
+                        img = *pcreator->LoadProtocolImage(cinfo, imgTagInfo.Url);
+                    else
+                        LogDebugMessage(Log_Warning, "Image resource creation failed - ImageCreator not installed");
                 }
-            }
-            else
-            {
-                ImageCreateInfo cinfo(ImageCreateInfo::Create_FileImage, md->GetWeakLib()->GetImageHeap(), 0,
-                                      Resource::Use_Bitmap);
-                Ptr<State> pregistry = *md->GetStateAddRef(State::State_ImageFileHandlerRegistry);
-                Ptr<State> popener   = *md->GetStateAddRef(State::State_FileOpener);
-                cinfo.SetStates(md->GetLog(), popener, reinterpret_cast<ImageFileHandlerRegistry*>(pregistry.GetPtr()));
-                cinfo.pMovie = GetMovieImpl();
-                ImageCreator* pcreator =
-                    Ptr<ImageCreator>(*static_cast<ImageCreator*>(md->GetStateAddRef(State::State_ImageCreator)));
-                if (pcreator)
-                    img = *pcreator->LoadProtocolImage(cinfo, imgTagInfo.Url);
+                if (!img)
+                {
+                    LogDebugMessage(Log_Warning, "Image '%s' wasn't created in ProcessImageTags", imgTagInfo.Url.ToCStr());
+                    continue;
+                }
+                Render::ImageRect dimr = img->GetRect();
+                imgTagInfo.pTextImageDesc->pImage = img;
+                float origWidth = (float)dimr.Width(), origHeight = (float)dimr.Height();
+                float screenWidth = 0, screenHeight = 0;
+                if (imgTagInfo.Width)
+                    screenWidth = float(imgTagInfo.Width);
                 else
-                    LogDebugMessage(Log_Warning, "Image resource creation failed - ImageCreator not installed");
+                    screenWidth = (float)(dimr.Width() * 20);
+
+                if (imgTagInfo.Height)
+                    screenHeight = float(imgTagInfo.Height);
+                else
+                    screenHeight = (float)(dimr.Height() * 20);
+
+                float baseLineY = Render::PixelsToTwips(origHeight);
+                baseLineY += imgTagInfo.VSpace;
+                imgTagInfo.pTextImageDesc->ScreenWidth  = screenWidth;
+                imgTagInfo.pTextImageDesc->ScreenHeight = screenHeight;
+                imgTagInfo.pTextImageDesc->BaseLineY    = Render::TwipsToPixels(baseLineY);
+                imgTagInfo.pTextImageDesc->Matrix.AppendTranslation(0, -imgTagInfo.pTextImageDesc->BaseLineY);
+                imgTagInfo.pTextImageDesc->Matrix.AppendScaling(screenWidth / origWidth, screenHeight / origHeight);
+
+                pDocument->SetCompleteReformatReq();
             }
-            if (!img)
+            else if (resBindData.pResource->GetResourceType() == Resource::RT_SpriteDef)
             {
-                LogDebugMessage(Log_Warning, "Image '%s' wasn't created in ProcessImageTags", imgTagInfo.Url.ToCStr());
-                continue;
+                // a sprite: not supported
             }
-            Render::ImageRect dimr = img->GetRect();
-            imgTagInfo.pTextImageDesc->pImage = img;
-            float origWidth = float(dimr.Width()), origHeight = float(dimr.Height());
-            float screenWidth  = float(imgTagInfo.Width ? imgTagInfo.Width : dimr.Width() * 20);
-            float screenHeight = float(imgTagInfo.Height ? imgTagInfo.Height : dimr.Height() * 20);
-            float baseLineY    = origHeight * 20.f + float(imgTagInfo.VSpace);
-            Render::Text::ImageDesc* pdesc = imgTagInfo.pTextImageDesc;
-            pdesc->ScreenWidth  = screenWidth;
-            pdesc->ScreenHeight = screenHeight;
-            pdesc->BaseLineY    = Render::TwipsToPixels(baseLineY);
-            pdesc->Matrix.AppendTranslation(0, -pdesc->BaseLineY);
-            pdesc->Matrix.AppendScaling(screenWidth / origWidth, screenHeight / origHeight);
-            pDocument->SetCompleteReformatReq();
-        }
-        else if (resBindData.pResource->GetResourceType() == Resource::RT_SpriteDef)
-        {
-            // a sprite: not supported
         }
     }
 }
+#pragma strict_gs_check(pop)
 
 // The state of mouse mouseIndex (the movie keeps four).
 static inline const MouseState* MouseStateOf(MovieImpl* proot, unsigned mouseIndex)
