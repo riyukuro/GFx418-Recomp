@@ -1074,19 +1074,22 @@ void Sprite::SetVisible(bool visible)
         PropagateNoAdvanceGlobalFlag();
 }
 
+// Movie::GetHeap is vftable +0x178 of the MovieImpl (whose vtable is not recovered).
+typedef MemoryHeap* (*MS2_MovieGetHeapFn)(MovieImpl*);
+static inline MemoryHeap* MS2_GetMovieImplHeap(MovieImpl* proot)
+{
+    return (*(MS2_MovieGetHeapFn*)(*(UByte**)proot + 0x178))(proot);
+}
+
 // Jumps to a frame (clamped to the loaded ones) and stops there. Going back rebuilds the display list from frame 0;
 // going forward over several frames applies their tags as one snapshot; the target frame's tags then run normally.
 // @0x1425db6b0
-// MS2-FUNCTIONAL: the backward jump gets the heap through the virtual MovieImpl::GetMovieHeap (vftable +0x178, MovieImpl's
-// vtable is not recovered); here both jumps read MovieImpl::pHeap, and the stack frame differs
+// As in the SDK, the backward snapshot takes the heap from the virtual Movie::GetHeap, the forward one MovieImpl::pHeap.
 void Sprite::GotoFrame(unsigned targetFrameNumber)
 {
     if (!((UByte)(DisplayObjectBase::Flags >> 11) & 1) || IsUnloading())   // Mask_MovieClip, shifted byte test
         return;
-    int target = Alg::Min<int>(targetFrameNumber, GetLoadingFrame() - 1);
-    if (target < 0)
-        target = 0;
-    unsigned frame = target;
+    unsigned frame = (unsigned)Alg::Max<int>(0, Alg::Min<int>(targetFrameNumber, (int)GetLoadingFrame() - 1));   // SDK Alg::Clamp
     SetStreamingSound(0);
 
     if (frame < CurrentFrame)
@@ -1094,7 +1097,7 @@ void Sprite::GotoFrame(unsigned targetFrameNumber)
         mDisplayList.MarkAllEntriesForRemoval(this, frame ? frame - 1 : 0);
         if (frame >= 1)
         {
-            TimelineSnapshot snapshot(TimelineSnapshot::Direction_Backward, GetMovieImpl()->pHeap, this);
+            TimelineSnapshot snapshot(TimelineSnapshot::Direction_Backward, MS2_GetMovieImplHeap(GetMovieImpl()), this);
             snapshot.MakeSnapshot(pDef, 0, frame - 1);
             CurrentFrame = frame;
             snapshot.ExecuteSnapshot(this);
