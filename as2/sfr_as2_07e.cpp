@@ -448,7 +448,6 @@ void XmlCtorFunction::GlobalCtor(const FnCall& fn)
 }
 
 // The parsed file becomes the tree of ptarget; onLoad reports whether it parsed.
-// MS2-FUNCTIONAL: no tail call into NotifyOnLoad on the no-data path
 // @0x1429a1a80
 void XMLFileLoaderAndParserImpl::InitASXml(Environment* penv, Object* ptarget)
 {
@@ -457,30 +456,32 @@ void XMLFileLoaderAndParserImpl::InitASXml(Environment* penv, Object* ptarget)
     {
         pnode->SetLoadedBytes(-1, 0);
         pnode->NotifyOnLoad(penv, false);
-        return;
-    }
-    XML::DOMBuilder    builder(pParser, bIgnoreWhitespace);
-    Ptr<XML::Document> pdoc = builder.ParseString((const char*)pFileData, FileLength, pObjectManager);
-    Memory::pGlobalHeap->Free(pFileData);
-    pFileData = 0;
-    pnode->pRealNode = pdoc;
-    pnode->pRootNode = *pObjectManager->CreateRootNode(pdoc);
-    XMLShadowRef* pshadow = SF_HEAP_NEW(pObjectManager->GetHeap()) XMLShadowRef();
-    pshadow->pAttributes  = NULL;
-    pshadow->pASNode      = pnode;
-    pdoc->pShadow         = pshadow;
-    pnode->AssignXMLDecl(penv, pdoc);
-    if (builder.IsError() && builder.GetTotalBytesToLoad() == 0)
-    {
-        pnode->SetLoadedBytes(-1, (Number)builder.GetLoadedBytes());
-        pnode->NotifyOnLoad(penv, false);
     }
     else
     {
-        pnode->SetMemberRaw(penv->GetSC(), XmlConstString(penv, "loaded"), Value(true),
-                            PropFlags(PropFlags::PropFlag_DontDelete));
-        pnode->SetLoadedBytes((Number)builder.GetTotalBytesToLoad(), (Number)builder.GetLoadedBytes());
-        pnode->NotifyOnLoad(penv, true);
+        XML::DOMBuilder    builder(pParser, bIgnoreWhitespace);
+        Ptr<XML::Document> pdoc = builder.ParseString((const char*)pFileData, FileLength, pObjectManager);
+        Memory::pGlobalHeap->Free(pFileData);
+        pFileData = 0;
+        pnode->pRealNode = pdoc;
+        pnode->pRootNode = *pObjectManager->CreateRootNode(pdoc);
+        XMLShadowRef* pshadow = SF_HEAP_NEW(pObjectManager->GetHeap()) XMLShadowRef();
+        pshadow->pAttributes  = NULL;
+        pshadow->pASNode      = pnode;
+        pdoc->pShadow         = pshadow;
+        pnode->AssignXMLDecl(penv, pdoc);
+        if (builder.IsError() && builder.GetTotalBytesToLoad() == 0)
+        {
+            pnode->SetLoadedBytes(-1, (Number)builder.GetLoadedBytes());
+            pnode->NotifyOnLoad(penv, false);
+        }
+        else
+        {
+            pnode->SetMemberRaw(penv->GetSC(), XmlConstString(penv, "loaded"), Value(true),
+                                PropFlags(PropFlags::PropFlag_DontDelete));
+            pnode->SetLoadedBytes((Number)builder.GetTotalBytesToLoad(), (Number)builder.GetLoadedBytes());
+            pnode->NotifyOnLoad(penv, true);
+        }
     }
 }
 
