@@ -1673,12 +1673,12 @@ __declspec(noinline) void FUN_1423ca660(void* self, unsigned value)
 }
 
 // @0x1423ca3f0
-void FUN_1423ca3f0(void* self)
+__declspec(noinline) void FUN_1423ca3f0(void* self, int index)
 {
     void* child = *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x70);
     if (child) {
         void** vtable = *reinterpret_cast<void***>(child);
-        reinterpret_cast<void(*)(void*)>(vtable[0x98 / sizeof(void*)])(child);
+        reinterpret_cast<void(*)(void*, int)>(vtable[0x98 / sizeof(void*)])(child, index);
     }
 }
 
@@ -4956,7 +4956,7 @@ void FUN_1423ceb30(void* raw)
 // then on to the provider's slot 11 with defaultArgument. The exe inlines this into both callers and re-reads the
 // vtable and provider (+0x78) from self at every use, so they are macros here, not locals.
 static __forceinline void cx18_DispatchLangBarEvent(unsigned long long* self, const char* command, const char* argument,
-                                      const char* defaultArgument)
+                                      const Scaleform::GFx::Value* values)
 {
 #define vtable (reinterpret_cast<void**>(self[0]))
 #define provider (reinterpret_cast<unsigned char*>(self[0xf]))
@@ -4992,9 +4992,10 @@ static __forceinline void cx18_DispatchLangBarEvent(unsigned long long* self, co
                 self, stringData(*reinterpret_cast<unsigned long long*>(provider + 0x70)));
     } else {
         reinterpret_cast<void(*)(void*)>(vtable[24])(self);
-        if (provider)
-            reinterpret_cast<void(*)(void*, const char*, const char*)>(providerCall(11))(
-                provider, command, defaultArgument);
+        if (provider) {
+            const char* defaultArgument = argument;
+            if (values && values[1].GetType() == Scaleform::GFx::Value::VT_Boolean) defaultArgument = values[1].GetBool() == false ? "false" : "true";
+            reinterpret_cast<void(*)(void*, const char*, const char*)>(providerCall(11))(provider, command, defaultArgument); }
     }
 }
 #undef vtable
@@ -5021,56 +5022,57 @@ void FUN_1423cd6b0(unsigned long long* self, unsigned long long payload,
         reinterpret_cast<void(*)(void*)>(vtable[19])(self);
         reinterpret_cast<void(*)(void*, int)>(vtable[6])(self, -1);
     } else {
-        cx18_DispatchLangBarEvent(self, command, argument, argument);
+        cx18_DispatchLangBarEvent(self, command, argument, nullptr);
     }
 }
 #undef vtable
 #undef provider
 
-// MS2-FUNCTIONAL: decodes the external callback's Value array (string values may be managed, one more indirection)
-// and dispatches its event. The OnInit events keep the second Value in the owner at +0x28/+0x58.
+// MS2-FUNCTIONAL: decodes the external callback's Value array and dispatches its event by name. The OnInit events
+// keep the second Value in the owner at +0x28/+0x58. CandidateList_OnItemSelect passes the selected index (a
+// VT_Number second Value) to FUN_1423ca3f0, which forwards it to the candidate list's slot 19. Unknown events go
+// through cx18_DispatchLangBarEvent, which sends "true"/"false" for a VT_Boolean second Value.
+// Same length (1547 bytes) and the same instructions as the exe. Three scheduling differences are left:
+// - At the tail, cl loads the "false" literal before "true". The exe loads "true" into r15 first. This holds for
+//   every spelling tried: ternary, inverted ternary, if/else, and default-then-override.
+// - In StatusWindow_OnInit, cl keeps the -1 for provider slot 10 and vtable[6] in ebx, set inside the inlined
+//   "Korean" compare loop. The exe uses two mov edx,-1 immediates. Nesting the provider check does not change it.
+// - In the inlined LangBar_GetIMENames case 0x80000, the exe uses a 6-byte je for the empty-list skip. Ours is
+//   a 2-byte je, so the loop padding differs (2-byte nop vs 7-byte nop). FUN_1423cd6b0 inlines the same helper
+//   and matches, so this follows from cl's branch-size estimate for this caller.
+// fe4 tried these on 11-06 and left them.
 // @0x1423cd0a0
 void FUN_1423cd0a0(unsigned long long* self, const unsigned char* event)
 {
     using Scaleform::GFx::Value;
     const unsigned count = *reinterpret_cast<const unsigned*>(event + 0x28);
-    if (!count) return;
     const unsigned long long payload = *reinterpret_cast<const unsigned long long*>(event + 8);
-    auto* values = *reinterpret_cast<unsigned char* const*>(event + 0x20);
-    auto valueString = [](const unsigned char* v) {
-        const char* text = *reinterpret_cast<const char* const*>(v + 0x10);
-        if (*reinterpret_cast<const unsigned*>(v + 8) & Value::VTC_ManagedBit)
-            text = *reinterpret_cast<const char* const*>(text);
-        return text;
-    };
-    const char* command = valueString(values);
-    unsigned char* second = values + 0x20;
-    // The exe reads the second Value's type even for a one-element array (StatusWindow_OnInit, OnItemSelect).
-    const unsigned secondType = *reinterpret_cast<const unsigned*>(second + 8) & 0x8f;
-    const char* argument = (count > 1 && secondType == Value::VT_String) ? valueString(second) : nullptr;
+    const Value* values = *reinterpret_cast<const Value* const*>(event + 0x20);
+    if (!count) return;
+    const char* command = values[0].GetString();
+    const char* argument = nullptr;
+    if (count > 1 && values[1].GetType() == Value::VT_String) argument = values[1].GetString();
 #define vtable (reinterpret_cast<void**>(self[0]))
 #define provider (reinterpret_cast<unsigned char*>(self[0xf]))
-    auto* owner = reinterpret_cast<unsigned char*>(self[3]);
+#define owner (reinterpret_cast<unsigned char*>(self[3]))
     if (std::strcmp(command, "CandidateList_OnSetItemDataMap") == 0) {
         auto* candidates = reinterpret_cast<unsigned char*>(self[0xe]);
         if (candidates)
             reinterpret_cast<void(*)(void*, unsigned long long, const char*, const char*)>(
                 (*reinterpret_cast<void***>(candidates))[0xa0 / sizeof(void*)])(candidates, payload, command, argument);
     } else if (std::strcmp(command, "CandidateList_OnItemSelect") == 0) {
-        // The exe calls FUN_1423ca3f0 with the index in edx, which its tail jump passes on to the candidate list's
-        // slot 19; our one-argument FUN_1423ca3f0 cannot pass it, so the call is made here.
-        auto* candidates = reinterpret_cast<unsigned char*>(self[0xe]);
-        if (secondType == Value::VT_Number && candidates)
-            reinterpret_cast<void(*)(void*, int)>((*reinterpret_cast<void***>(candidates))[0x98 / sizeof(void*)])(
-                candidates, static_cast<int>(*reinterpret_cast<const double*>(second + 0x10)));
+        // The exe reads the second Value's type here without checking count, so a one-element array reads past its
+        // end. StatusWindow_OnInit does the same. Both are kept as in the exe.
+        // FUN_1423ca3f0 is noinline because the exe calls it rather than inlining it.
+        if (values[1].GetType() == Value::VT_Number) FUN_1423ca3f0(self, static_cast<int>(values[1].GetNumber()));
     } else if (std::strcmp(command, "LangBar_OnInit") == 0) {
-        if (count < 2 || !secondType) return;
-        *reinterpret_cast<Value*>(owner + 0x28) = *reinterpret_cast<const Value*>(second);
+        if (count < 2 || values[1].IsUndefined()) return;
+        *reinterpret_cast<Value*>(owner + 0x28) = values[1];
         if (provider)
             reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(provider))[12])(provider);
     } else if (std::strcmp(command, "StatusWindow_OnInit") == 0) {
-        if (!secondType) return;
-        *reinterpret_cast<Value*>(owner + 0x58) = *reinterpret_cast<const Value*>(second);
+        if (count < 1 || values[1].IsUndefined()) return;
+        *reinterpret_cast<Value*>(owner + 0x58) = values[1];
         const char* language = reinterpret_cast<const char*>((self[0x16] & ~3ull) + 0xc);
         reinterpret_cast<void(*)(void*, const char*)>(vtable[12])(self, language);
         reinterpret_cast<void(*)(void*)>(vtable[19])(self);
@@ -5080,13 +5082,11 @@ void FUN_1423cd0a0(unsigned long long* self, const unsigned char* event)
             reinterpret_cast<void(*)(void*, int)>((*reinterpret_cast<void***>(provider))[10])(provider, -1);
         reinterpret_cast<void(*)(void*, int)>(vtable[6])(self, -1);
     } else {
-        const char* defaultArgument = argument;
-        if (secondType == Value::VT_Boolean)
-            defaultArgument = *reinterpret_cast<const bool*>(second + 0x10) ? "true" : "false";
-        cx18_DispatchLangBarEvent(self, command, argument, defaultArgument);
+        cx18_DispatchLangBarEvent(self, command, argument, values);
     }
 #undef vtable
 #undef provider
+#undef owner
 }
 
 // MS2-FUNCTIONAL: for the (0x282, 0xe, 0x12) notification: on backspace ([+0xd0] == 8) in state 4/0x40000 it removes the
