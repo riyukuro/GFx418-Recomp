@@ -147,20 +147,20 @@ inline FontHandle::~FontHandle()
 
 // ---- TextField
 
-// MS2-FUNCTIONAL 0x1425b5930: same member init and calls; register allocation and the inlined editor/autosize tests differ
+// MS2-FUNCTIONAL 0x1425b5930: same member init and calls; register allocation differs and ours jump-threads the second autoSize test
 // @0x1425b5930
 TextField::TextField(TextFieldDef* def, MovieDefImpl* pbindingDefImpl, ASMovieRootBase* pasRoot,
                      InteractiveObject* parent, ResourceId id)
-    : InteractiveObject(pbindingDefImpl, pasRoot, parent, id), pDef(def), pImageDescAssoc(NULL)
+    : InteractiveObject(pbindingDefImpl, pasRoot, parent, id), pDef(def)
 {
+    pImageDescAssoc = NULL;
     pBinding = pbindingDefImpl ? &pbindingDefImpl->GetResourceBinding() : NULL;
     Flags = 0;
     FocusedControllerIdx = ~0u;
     Alignment = def->Alignment;
-    Flags = (def->IsPassword() ? Flags_Password : 0);
+    Flags = def->IsPassword() ? (Flags | Flags_Password) : Flags;
+    Flags = def->IsHtml() ? (Flags | Flags_Html) : Flags;
     pShadow = NULL;
-    if (def->IsHtml())
-        Flags |= Flags_Html;
     Flags |= Flags_MouseWheelEnabled;
 
     MovieImpl* proot = pasRoot->GetMovieImpl();
@@ -174,9 +174,9 @@ TextField::TextField(TextFieldDef* def, MovieDefImpl* pbindingDefImpl, ASMovieRo
 
     if (def->IsBorder())
     {
-        pDocument->SetBackgroundColor(0xffffffffu);
+        pDocument->SetBackgroundColor(Render::Color(255, 255, 255, 255).ToColor32());
         static_cast<Render::TreeText*>(GetRenderNode())->NotifyLayoutChanged();
-        pDocument->SetBorderColor(0xff000000u);
+        pDocument->SetBorderColor(Render::Color(0, 0, 0, 255).ToColor32());
         static_cast<Render::TreeText*>(GetRenderNode())->NotifyLayoutChanged();
     }
     SetInitialFormatsAsDefault();
@@ -192,13 +192,12 @@ TextField::TextField(TextFieldDef* def, MovieDefImpl* pbindingDefImpl, ASMovieRo
         pDocument->SetMultiline();
     else
         pDocument->ClearMultiline();
-    if (def->IsAutoSize())
-    {
-        // a single-line word-wrapped field keeps its width
-        if (!(def->IsWordWrap() && def->IsMultiline()))
-            pDocument->SetAutoSizeX();
+    bool autoSize = def->IsAutoSize();
+    // a multiline word-wrapped field keeps its width
+    if (autoSize && !(def->IsWordWrap() && def->IsMultiline()))
+        pDocument->SetAutoSizeX();
+    if (autoSize)
         pDocument->SetAutoSizeY();
-    }
     if (def->IsWordWrap())
         pDocument->SetWordWrap();
     if (IsPassword())
@@ -1518,7 +1517,7 @@ void TextField::ProcessImageTags(Render::Text::StyledText::HTMLImageTagInfoArray
 // The state of mouse mouseIndex (the movie keeps four).
 static inline const MouseState* MouseStateOf(MovieImpl* proot, unsigned mouseIndex)
 {
-    return mouseIndex < 4 ? reinterpret_cast<const MouseState*>(proot->MouseState0_1260) + mouseIndex : NULL;
+    return mouseIndex >= 4 ? NULL : reinterpret_cast<const MouseState*>(proot->MouseState0_1260) + mouseIndex;
 }
 
 // The entity under the cursor, with a reference (TopmostEntity, the state's first member, is protected).
@@ -1529,7 +1528,7 @@ static inline Ptr<InteractiveObject> TopmostEntityOf(const MouseState* pms)
 
 // The mouse over the field: the URL under the cursor takes the style sheet's link formats and the hand cursor, the
 // editor gets the press, the release and the moves (in the field's space), then the field's own handlers run.
-// MS2-FUNCTIONAL 0x1425badd0: same event cases; the exe inlines the first HasStyleSheet and calls the out-of-line TransformByInverse
+// MS2-FUNCTIONAL 0x1425badd0: same code; register allocation differs (the exe keeps proot in r12 and Link_rollout in r13)
 // @0x1425badd0
 void TextField::PropagateMouseEvent(const EventId& id)
 {
@@ -1562,7 +1561,8 @@ void TextField::PropagateMouseEvent(const EventId& id)
                 {
                     Matrix m;
                     GetWorldMatrix(&m);
-                    Render::PointF b = m.TransformByInverse(pms->GetLastPosition());
+                    Render::PointF lp = pms->GetLastPosition();
+                    Render::PointF b = m.TransformByInverse(lp);
                     EditorOf(pDocument)->OnMouseMove(b.x, b.y);
                 }
                 if (HasStyleSheet() && IsHtml() && pDocument->MayHaveUrl())
@@ -1596,7 +1596,7 @@ void TextField::PropagateMouseEvent(const EventId& id)
                     else
                         Flags &= ~Flags_HandCursor;
                 }
-                else if (Flags & Flags_HandCursor)
+                else if ((UByte)(Flags >> 5) & 1)   // Flags_HandCursor
                 {
                     ChangeUrlFormat(Link_rollout, id.MouseIndex);
                     Flags &= ~Flags_HandCursor;
@@ -1620,7 +1620,8 @@ void TextField::PropagateMouseEvent(const EventId& id)
                 const MouseState* pms = MouseStateOf(proot, id.MouseIndex);
                 Matrix m;
                 GetWorldMatrix(&m);
-                Render::PointF b = m.TransformByInverse(pms->GetLastPosition());
+                Render::PointF lp = pms->GetLastPosition();
+                Render::PointF b = m.TransformByInverse(lp);
                 EditorOf(pDocument)->OnMouseDown(b.x, b.y, pms->GetButtonsState());
                 if (!IsInPlayList())
                     AddToPlayList();
@@ -1643,7 +1644,8 @@ void TextField::PropagateMouseEvent(const EventId& id)
                 const MouseState* pms = MouseStateOf(proot, id.MouseIndex);
                 Matrix m;
                 GetWorldMatrix(&m);
-                Render::PointF b = m.TransformByInverse(pms->GetLastPosition());
+                Render::PointF lp = pms->GetLastPosition();
+                Render::PointF b = m.TransformByInverse(lp);
                 EditorOf(pDocument)->OnMouseUp(b.x, b.y, pms->GetButtonsState());
                 if (!IsInPlayList())
                     AddToPlayList();
@@ -1654,7 +1656,7 @@ void TextField::PropagateMouseEvent(const EventId& id)
             break;
         }
     }
-    InteractiveObject::PropagateMouseEvent(id);
+    OnEvent(id); // InteractiveObject::PropagateMouseEvent, inlined in the exe
 }
 
 // The URL zone of the style sheet that overlaps urlRange (NULL: none); its index in pindex.

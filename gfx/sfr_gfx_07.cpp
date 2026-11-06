@@ -197,7 +197,6 @@ void EditorKit::Advance(Double timer)
 
 // The cursor box at charIndex in line buffer space: x of the glyph there, its advance as width, the line's height.
 // Composition glyphs take no text positions unless avoidComposStr is false.
-// MS2-FUNCTIONAL the exe schedules the nGlyph zeroing after the GlyphIterator constructor call
 // @0x142616b60
 bool EditorKit::CalcCursorRectInLineBuffer(UPInt charIndex, RectF* pcursorRect, unsigned* plineIndex,
                                            unsigned* pglyphIndex, bool avoidComposStr,
