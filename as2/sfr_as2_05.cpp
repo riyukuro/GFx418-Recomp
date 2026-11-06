@@ -901,7 +901,7 @@ static SF_FORCEINLINE FunctionRef GetConstructor_ToFunction(const Value& v, cons
 
 // MS2-FUNCTIONAL scheduling only: the exe forms the global's ObjectInterface pointer and the builtin address before &ctor
 // @0x14294a0f0
-FunctionRef Environment::GetConstructor(ASBuiltinType className)
+SF_NOINLINE FunctionRef Environment::GetConstructor(ASBuiltinType className)
 {
     Value ctor;
     // GlobalContext::GetStringManager (ToAS2Root(pMovieRoot)), inlined by the exe.
@@ -1081,7 +1081,7 @@ void ArrayCtorFunction::GlobalCtor(const FnCall& fn)
     fn.Result->SetAsObject(parray.GetPtr());
 }
 
-// MS2-FUNCTIONAL stack layout (the exe puts the converted value below the temporaries) and block order
+// MS2-FUNCTIONAL regalloc and stack layout only: the exe holds 0 in rbx from entry (pobj, Arg default), fn in rsi, and gives objVal and ctor one slot (frame 0x70 vs 0x90)
 // @0x14295bee0
 void ObjectProto::GlobalCtor(const FnCall& fn)
 {
@@ -1091,9 +1091,15 @@ void ObjectProto::GlobalCtor(const FnCall& fn)
         const Value& arg = fn.Arg(0);
         Value        objVal;
         if (arg.IsNumber())
-            objVal = Value(arg.ToNumber(fn.Env));
+        {
+            Number n = arg.ToNumber(fn.Env);
+            objVal = Value(n);
+        }
         else if (arg.IsBoolean())
-            objVal = Value(arg.ToBool(fn.Env));
+        {
+            bool b = arg.ToBool(fn.Env);
+            objVal = Value(b);
+        }
         else if (arg.IsString())
             objVal = Value(arg.ToString(fn.Env));
         else if (arg.IsObject() || arg.IsCharacter())
@@ -1110,7 +1116,8 @@ void ObjectProto::GlobalCtor(const FnCall& fn)
         pobj = static_cast<Object*>(fn.ThisPtr);
     else
         pobj = *SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);
-    pobj->Set_constructor(fn.Env->GetSC(), fn.Env->GetConstructor(ASBuiltin_Object));
+    FunctionRef ctor = fn.Env->GetConstructor(ASBuiltin_Object);
+    pobj->Set_constructor(fn.Env->GetSC(), ctor);
     fn.Result->SetAsObject(pobj.GetPtr());
 }
 
