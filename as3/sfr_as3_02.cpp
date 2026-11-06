@@ -294,6 +294,15 @@ Scaleform::GFx::AS3::Value& FUN_1423f1b90(Scaleform::GFx::AS3::Value* self, Scal
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// HashDH::Get (the SDK body) as a forced-inline copy, because cl no longer inlines the header Get here.
+// The key is a const&, as in the SDK, so the inlined saAt keeps ind in memory for GetAlt.
+template<class H>
+static __forceinline const Value* saHashGet(const H& h, const UPInt& key)
+{
+    const auto* p = h.mHash.GetAlt(key);
+    return p ? &p->Second : 0;
+}
+
 // The exe inlines SparseArray::At (the SDK body) and PushBack into the Array natives (out-of-line copies in sfr_as3_03/04).
 static SF_INLINE const Value& saAt(const SparseArray& sa, UPInt ind)
 {
@@ -308,7 +317,7 @@ static SF_INLINE const Value& saAt(const SparseArray& sa, UPInt ind)
 
         // ValueH
 
-        if ((vp = sa.ValueH.Get(ind)) != NULL)
+        if ((vp = saHashGet(sa.ValueH, ind)) != NULL)
             return *vp;
         else
             return sa.DefaultValue;
