@@ -88,11 +88,11 @@ public:
     UInt32   WcharCode;     // +0x10
     UInt8    KeyboardIndex; // +0x14
 
-    KeyEvent(EventType eventType = Unknown, Key::Code code = Key::VoidSymbol, UByte asciiCode = 0, UInt32 wcharCode = 0,
-             KeyModifiers mods = KeyModifiers(), UInt8 keyboardIndex = 0)
+    KeyEvent(EventType eventType = Unknown, Key::Code code = Key::VoidSymbol, UByte asciiCode = 0, UInt32 wcharCode = 0, UInt8 keyboardIndex = 0)
+        : Event(eventType), KeyCode(code), AsciiCode(asciiCode), WcharCode(wcharCode), KeyboardIndex(keyboardIndex) {}
+    KeyEvent(EventType eventType, Key::Code code, UByte asciiCode, UInt32 wcharCode, KeyModifiers mods, UInt8 keyboardIndex = 0)
         : Event(eventType, mods), KeyCode(code), AsciiCode(asciiCode), WcharCode(wcharCode), KeyboardIndex(keyboardIndex)
-    {
-    }
+    {}
 };
 
 // A typed character. 0x10 bytes.

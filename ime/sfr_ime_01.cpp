@@ -391,8 +391,8 @@ static __forceinline unsigned long long Ime01EventKey(const unsigned char* event
     return *reinterpret_cast<const unsigned long long*>(event + 0x10);
 }
 
-// MS2-FUNCTIONAL: KeyEvent's constructor stores the type before the modifiers; the exe stores the modifiers first (the
-// SDK's no-modifier constructor). Same code otherwise.
+// The Shift key-up uses the SDK's no-modifier KeyEvent constructor (Event(eventType)), so the modifiers are stored
+// before the type, as in the exe.
 // IME key and mouse filter: a Shift key-up is sent to the movie after a VK_PROCESSKEY key-up, and the arrow or Enter keys cancel the composition and remove the input window.
 // @0x1423d0cf0
 void FUN_1423d0cf0(unsigned long long* self, const unsigned char* event)
