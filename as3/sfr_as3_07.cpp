@@ -1128,19 +1128,19 @@ namespace Instances { namespace fl_display
 
     // An Array of flash.filters objects, each holding a copy of one of the display object's filters (null for the
     // filter types AS3 has no class for).
-    // MS2-FUNCTIONAL: register allocation / frame (exe keeps the loop state in r13-r15 under an rbp frame)
+    // (SDK body; null pushed through a named Value so the temp is built before arr is loaded)
     // @0x14244bb80
     void DisplayObject::filtersGet(SPtr<Instances::fl::Array>& result)
     {
         Pickable<Instances::fl::Array> arr = GetVM().MakeArray();
         const Render::FilterSet* filters = pDispObj->GetFilters();
-        if (filters && filters->GetFilterCount())
-        {
+        if (!filters || filters->GetFilterCount() == 0)
+        { result = arr; return; }
             for (unsigned i = 0; i < filters->GetFilterCount(); ++i)
             {
                 const Render::Filter* filter = filters->GetFilter(i);
-                SPtr<Instances::fl::Object> pobj;
-                const char* name;
+                SPtr<Instances::fl_filters::BitmapFilter> pobj;
+                const char* name = 0;
                 switch (filter->GetFilterType())
                 {
                 case Render::Filter_Blur:        name = "flash.filters.BlurFilter"; break;
@@ -1149,17 +1149,17 @@ namespace Instances { namespace fl_display
                 case Render::Filter_Bevel:       name = "flash.filters.BevelFilter"; break;
                 case Render::Filter_ColorMatrix: name = "flash.filters.ColorMatrixFilter"; break;
                 default:
-                    arr->SA.PushBack(Value((ASStringNode*)NULL));
+                    { Value v0((ASStringNode*)NULL); arr->SA.PushBack(v0); }
                     continue;
                 }
                 if (GetVM().ConstructBuiltinObject(pobj, name))
                 {
                     Ptr<Render::Filter> copy = *filter->Clone();
-                    static_cast<Instances::fl_filters::BitmapFilter*>(pobj.GetPtr())->SetFilterData(copy);
+                    pobj->SetFilterData(copy);
                     arr->SA.PushBack(Value(pobj));
                 }
             }
-        }
+        //
         result = arr;
     }
 
