@@ -14,39 +14,42 @@
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The movie loaded as _level<level>, 0 if none.
-static SF_FORCEINLINE InteractiveObject* FindLevelMovie(const MovieImpl* pmovieImpl, int level)
+static SF_FORCEINLINE InteractiveObject* FindLevelMovie(const MovieRoot* proot, int level)
 {
-    for (unsigned i = 0; i < pmovieImpl->MovieLevelsSize; i++)
+    for (unsigned i = 0; i < proot->pMovieImpl->MovieLevelsSize; i++)
     {
-        if (pmovieImpl->pMovieLevels[i].Level == level)
-            return pmovieImpl->pMovieLevels[i].pSprite;
+        if (proot->pMovieImpl->pMovieLevels[i].Level == level)
+            return proot->pMovieImpl->pMovieLevels[i].pSprite;
     }
     return 0;
 }
 
+// The movie's log as a raw pointer (MovieRoot::GetLog: the Ptr temp is released at once).
+static SF_FORCEINLINE Log* MS2_RootLog(const MovieImpl* pmovieImpl)
+{
+    return pmovieImpl->GetStateBag()->GetLog().GetPtr();
+}
+
 // Sets a script variable from the host: on _level0 now, or (sticky / permanent) kept until the target exists.
-// MS2-FUNCTIONAL: the level lookup and the string node releases are inlined differently
+// MS2-FUNCTIONAL: register allocation only: the exe keeps the level array in rbx and uses one more saved register (r15)
 // @0x14298cfb0
 bool MovieRoot::SetVariable(const char* ppathToVar, const GFx::Value& value, SetVarTypeArg setType)
 {
-    if (!FindLevelMovie(pMovieImpl, 0))
+    if (!FindLevelMovie(this, 0))
         return false;
     if (!ppathToVar)
     {
-        Ptr<Log> plog = pMovieImpl->GetLog();
-        if (!plog)
-            return false;
-        plog->LogError("NULL pathToVar passed to SetVariable/SetDouble()");
+        if (MS2_RootLog(pMovieImpl))
+            MS2_RootLog(pMovieImpl)->LogError("NULL pathToVar passed to SetVariable/SetDouble()");
         return false;
     }
-    AvmDisplayObjBase* pavm = FindLevelMovie(pMovieImpl, 0)->GetAvmObjImpl();
-    Environment* penv = static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pavm))->GetASEnvironment();
+    Environment* penv = static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(FindLevelMovie(this, 0)->GetAvmObjImpl()))
+                            ->GetASEnvironment();
     ASString path(penv->CreateString(ppathToVar));
     Value    asval;
     Value2ASValue(value, &asval);
-    penv = static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(FindLevelMovie(pMovieImpl, 0)->GetAvmObjImpl()))
-               ->GetASEnvironment();
-    bool ok = penv->SetVariable(path, asval, 0, setType == Movie::SV_Normal);
+    bool ok = static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(FindLevelMovie(this, 0)->GetAvmObjImpl()))
+               ->GetASEnvironment()->SetVariable(path, asval, 0, setType == Movie::SV_Normal);
     if ((!ok && setType != Movie::SV_Normal) || setType == Movie::SV_Permanent)
         AddStickyVariable(path, asval, setType);
     return ok;
