@@ -18,6 +18,7 @@ namespace Scaleform { namespace Render { namespace Text { class TextFormat; clas
 namespace Scaleform { namespace Render { namespace Text { struct HighlightInfo; } } }   // (appended, sfr24)
 // The IME styles live in GFx::Text in 4.1.18 (exe mangling).
 namespace Scaleform { namespace GFx { namespace Text { struct IMEStyle; } } }
+namespace Scaleform { namespace GFx { namespace Text { class StyleManager; } } }
 
 namespace Scaleform { namespace GFx {
 
@@ -752,7 +753,17 @@ struct ParagraphFormatMember
     ~ParagraphFormatMember() { ParagraphFormat_Destruct((Render::Text::ParagraphFormat*)Data); }
 };
 
-// 0x98 bytes.
+// The style sheet's Text::StyleManager, whose layout this header does not give. Its destructor is the
+// out-of-line ~StyleManager (exe 0x142609070), so the units that use StyleSheetObject's implicit destructor
+// do not need the class complete.
+void StyleManager_Destruct(Text::StyleManager* p); // exe 0x142609070 (~StyleManager)
+struct StyleManagerMember
+{
+    void* Data[6];
+    ~StyleManagerMember() { StyleManager_Destruct((Text::StyleManager*)Data); }
+};
+
+// 0x98 bytes. The destructor is implicit (exe 0x14292d230, the deleting one, stores no vftables).
 class StyleSheetObject : public Object
 {
 public:
@@ -764,7 +775,7 @@ public:
     void NotifyOnLoad(Environment* penv, bool success);
     virtual ObjectType GetObjectType() const; // exe 0x142954330: Object_StyleSheet
 
-    void* Data68[6]; // +0x68 not recovered (a Text::StyleManager)
+    StyleManagerMember CSS; // +0x68
 
 protected:
     // (appended for sfr_as2_05) destroys the style manager (exe 0x142942ff0).

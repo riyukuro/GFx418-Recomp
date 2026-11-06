@@ -2185,7 +2185,7 @@ void CSSFileLoaderAndParserImpl::Load(const String& fileName, FileOpener* opener
 // @0x142969aa0
 __declspec(noinline) void StyleSheetObject::NotifyOnLoad(Environment* penv, bool success)
 {
-    Text::StyleManager& CSS = *reinterpret_cast<Text::StyleManager*>(Data68);
+    Text::StyleManager& CSS = *reinterpret_cast<Text::StyleManager*>(this->CSS.Data);
     if (success)
         CSS.SetState(Text::StyleManager::LoadingFinished);
     else
@@ -2334,7 +2334,7 @@ void CSSFileLoaderAndParserImpl::Init(Environment* penv, Object* pTarget)
             textLength -= 3;
         }
 
-        Text::StyleManager& CSS = *reinterpret_cast<Text::StyleManager*>(pASObj->Data68);
+        Text::StyleManager& CSS = *reinterpret_cast<Text::StyleManager*>(pASObj->CSS.Data);
         bool ret = false;
         switch (Type)
         {

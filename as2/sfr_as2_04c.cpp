@@ -158,9 +158,6 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 // MS2-PIN: ??_7?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321dc78
 
 // The base vftables the inlined destructors store.
-extern const void* DAT_1432173f8[];
-extern const void* DAT_143217440[];
-extern const void* DAT_1432174e8[];
 
 // ~TextSnapshotObject (out of line at 0x142925f70, sfr_as2_03; `inline` there under cl) inlines into the deleting dtors.
 // It is protected: a derived view runs it.
@@ -698,8 +695,7 @@ void* DeleteAs2_14292d1c0(void* p, unsigned flags)
 // @0x14292d230
 void* DeleteAs2_14292d230(void* p, unsigned flags)
 {
-    reinterpret_cast<Text::StyleManager*>((char*)p+0x68)->Text::StyleManager::~StyleManager();
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<StyleSheetObject*>(p)->StyleSheetObject::~StyleSheetObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -713,12 +709,7 @@ void* DeleteAs2_14292d230(void* p, unsigned flags)
 // @0x14292d2a0
 void* DeleteAs2_14292d2a0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432173f8;
-    *(const void**)((char*)p+0x20) = DAT_143217440;
-    *(const void**)((char*)p+0x98) = DAT_1432174e8;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0x98)->GASPrototypeBase::~GASPrototypeBase();
-    reinterpret_cast<Text::StyleManager*>((char*)p+0x68)->Text::StyleManager::~StyleManager();
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<Prototype<StyleSheetObject, Environment>*>(p)->Prototype<StyleSheetObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -894,3 +885,6 @@ void* DeleteAs2_14292d9b0(void* p, unsigned flags)
 // MS2-PIN: ??_7?$Prototype@VTextFormatObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321d778
 // MS2-PIN: ??_7?$Prototype@VTextFormatObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321d7c0
 // MS2-PIN: ??_7?$Prototype@VTextFormatObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321d868
+// MS2-PIN: ??_7?$Prototype@VStyleSheetObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432173f8
+// MS2-PIN: ??_7?$Prototype@VStyleSheetObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143217440
+// MS2-PIN: ??_7?$Prototype@VStyleSheetObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x1432174e8

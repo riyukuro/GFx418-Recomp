@@ -444,7 +444,7 @@ struct StyleSheetCSS
 // @0x142942ff0
 void StyleSheetObject::Finalize_GC()
 {
-    reinterpret_cast<StyleSheetCSS*>(Data68)->~StyleSheetCSS();
+    reinterpret_cast<StyleSheetCSS*>(CSS.Data)->~StyleSheetCSS();
     Object::Finalize_GC();
 }
 

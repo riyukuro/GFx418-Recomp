@@ -73,7 +73,7 @@ namespace AS2 {
 inline StyleSheetObject::StyleSheetObject(ASStringContext* psc, Object* pprototype)
     : Object(psc)
 {
-    ::new (Data68) Text::StyleManager();
+    ::new (CSS.Data) Text::StyleManager();
     Set__proto__(psc, pprototype);
 }
 
@@ -82,7 +82,7 @@ inline StyleSheetObject::StyleSheetObject(ASStringContext* psc, Object* pprototy
 StyleSheetObject::StyleSheetObject(Environment* penv) : Object(penv)
 {
     ASStringContext* psc = penv->GetSC();
-    ::new (Data68) Text::StyleManager();
+    ::new (CSS.Data) Text::StyleManager();
     Set__proto__(psc, penv->GetPrototype(ASBuiltin_StyleSheet));
     ObjectInterface* pobj = this;
     if (pobj)

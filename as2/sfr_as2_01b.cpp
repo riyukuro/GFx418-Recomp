@@ -218,7 +218,7 @@ void StyleSheetProto::GetStyle(const FnCall& fn)
     }
 
     ASString name = fn.Arg(0).ToString(fn.Env);
-    StyleManagerBase* pmgr = (StyleManagerBase*)pthis->Data68;
+    StyleManagerBase* pmgr = (StyleManagerBase*)pthis->CSS.Data;
     const Render::Text::Style* pstyle;
     if (name.GetSize() != 0 && name.ToCStr()[0] == '.')
         pstyle = pmgr->GetStyle(StyleManagerBase::CSS_Class, name.ToCStr() + 1, name.GetSize() - 1);
@@ -311,7 +311,7 @@ void StyleSheetProto::GetStyleNames(const FnCall& fn)
     Ptr<ArrayObject> parr = *static_cast<ArrayObject*>(fn.Env->OperatorNew(fn.Env->GetBuiltin(ASBuiltin_Array)));
     ASStringContext* psc = fn.Env->GetSC();
     String           name;
-    const Text::StyleManager* pcss = reinterpret_cast<const Text::StyleManager*>(pthis->Data68);
+    const Text::StyleManager* pcss = reinterpret_cast<const Text::StyleManager*>(pthis->CSS.Data);
     for (Text::StyleHash::ConstIterator it = pcss->GetStyles().Begin(); it != pcss->GetStyles().End(); ++it)
     {
         name.Clear();
@@ -358,7 +358,7 @@ void StyleSheetProto::Load(const FnCall& fn)
 
     ASString url = fn.Arg(0).ToString(fn.Env);
     // the style manager's State (+0x28): Loading
-    *(int*)&pthis->Data68[5] = 1;
+    *(int*)&pthis->CSS.Data[5] = 1;
     Ptr<ASCSSFileLoader> ploader = *SF_NEW CSSFileLoaderAndParserImpl();
     static_cast<MovieRoot*>(fn.Env->GetTarget()->GetMovieImpl()->pASMovieRoot)
         ->AddCssLoadQueueEntry(pthis, ploader, url.ToCStr());
@@ -386,9 +386,9 @@ void StyleSheetProto::SetStyle(const FnCall& fn)
         {
             const char* pname = name.ToCStr();
             if (pname[0] == '.')
-                reinterpret_cast<Text::StyleManager*>(pthis->Data68)->ClearStyle(Text::StyleManager::KeyType(1), pname, SF_MAX_UPINT);
+                reinterpret_cast<Text::StyleManager*>(pthis->CSS.Data)->ClearStyle(Text::StyleManager::KeyType(1), pname, SF_MAX_UPINT);
             else
-                reinterpret_cast<Text::StyleManager*>(pthis->Data68)->ClearStyle(Text::StyleManager::KeyType(0), pname, SF_MAX_UPINT);
+                reinterpret_cast<Text::StyleManager*>(pthis->CSS.Data)->ClearStyle(Text::StyleManager::KeyType(0), pname, SF_MAX_UPINT);
         }
         return;
     }
@@ -404,7 +404,7 @@ void StyleSheetProto::SetStyle(const FnCall& fn)
         CSSStringBuilder builder(fn.Env, &css);
         pstyle->VisitMembers(fn.Env->GetSC(), &builder, 0, 0);
         css.AppendChar('}');
-        reinterpret_cast<Text::StyleManager*>(pthis->Data68)->ParseCSS(css.ToCStr(), css.GetSize());
+        reinterpret_cast<Text::StyleManager*>(pthis->CSS.Data)->ParseCSS(css.ToCStr(), css.GetSize());
     }
 }
 

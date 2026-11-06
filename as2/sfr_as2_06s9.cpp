@@ -239,7 +239,7 @@ __forceinline StyleSheetCtorFunction::StyleSheetCtorFunction(ASStringContext* ps
 __forceinline StyleSheetObject::StyleSheetObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
     : Object(psc, ObjectInlineCtorTag())
 {
-    ::new (Data68) Text::StyleManager();
+    ::new (CSS.Data) Text::StyleManager();
     if (!pProto)
         static_cast<ObjectInterface*>(this)->SetMemberRaw(
             psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),

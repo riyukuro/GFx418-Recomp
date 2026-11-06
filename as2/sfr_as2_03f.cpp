@@ -55,11 +55,6 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 // The Prototype<TextFieldObject> dtor, called out of line (the real dtor inlines here: 9 -> 8 matched).
 template<> SF_NOINLINE Prototype<TextFieldObject, Environment>::~Prototype();  // 0x1429250a0
 
-// The base vftables the inlined destructors store.
-extern const void* DAT_1432173f8[];
-extern const void* DAT_143217440[];
-extern const void* DAT_1432174e8[];
-
 // The Prototype<X> destructors called by name emit these vftables here as well.
 // MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143216050
 // MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143215f60
@@ -84,12 +79,7 @@ void* DeleteAs2_142928370(void* p, unsigned flags)
 // @0x142928770
 void* DeleteAs2_142928770(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432173f8;
-    *(const void**)((char*)p+0x20) = DAT_143217440;
-    *(const void**)((char*)p+0x98) = DAT_1432174e8;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0x98)->GASPrototypeBase::~GASPrototypeBase();
-    reinterpret_cast<Scaleform::GFx::Text::StyleManager*>((char*)p+0x68)->Scaleform::GFx::Text::StyleManager::~StyleManager();
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<Prototype<StyleSheetObject, Environment>*>(p)->Prototype<StyleSheetObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -199,3 +189,6 @@ void* DeleteAs2_142928d50(void* p, unsigned flags)
 }
 
 }}} // namespace Scaleform::GFx::AS2
+// MS2-PIN: ??_7?$Prototype@VStyleSheetObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432173f8
+// MS2-PIN: ??_7?$Prototype@VStyleSheetObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143217440
+// MS2-PIN: ??_7?$Prototype@VStyleSheetObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x1432174e8

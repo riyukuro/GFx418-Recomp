@@ -1599,7 +1599,7 @@ void StyleSheetProto::Clear(const FnCall& fn)
     MS2_AS2_CHECK_THIS(fn, StyleSheet);
     StyleSheetObject* pthis = (StyleSheetObject*)fn.ThisPtr;
     if (pthis)
-        reinterpret_cast<Text::StyleManager*>(pthis->Data68)->ClearStyles();
+        reinterpret_cast<Text::StyleManager*>(pthis->CSS.Data)->ClearStyles();
 }
 
 // StyleSheet.parseCSS(text): false without a text or a parse error.
@@ -1618,7 +1618,7 @@ void StyleSheetProto::ParseCSS(const FnCall& fn)
         }
         Value    arg(fn.Arg(0));
         ASString css = arg.ToString(fn.Env);
-        fn.Result->SetBool(reinterpret_cast<Text::StyleManager*>(pthis->Data68)->ParseCSS(css.ToCStr(), css.GetSize()));
+        fn.Result->SetBool(reinterpret_cast<Text::StyleManager*>(pthis->CSS.Data)->ParseCSS(css.ToCStr(), css.GetSize()));
     }
     else
         fn.ThisPtrError("StyleSheet");

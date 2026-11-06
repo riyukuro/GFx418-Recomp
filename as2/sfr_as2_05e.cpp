@@ -50,7 +50,7 @@ struct AS2CSSHolderView
 const void* CSSHolder_GetTextStyleManager(const void* pholder)
 {
     const StyleSheetObject* psheet = static_cast<const AS2CSSHolderView*>(pholder)->pASStyleSheet;
-    return psheet ? psheet->Data68 : 0;
+    return psheet ? psheet->CSS.Data : 0;
 }
 
 // GlobalContext::GetGC (exe 0x14294afc0), which the exe inlines here.
