@@ -334,7 +334,7 @@ CRI_C_LINKAGE void criVdec_TerminateSupply(void* decoder);
 CRI_C_LINKAGE void criAlphaDec_TerminateSupply(void* decoder);
 CRI_C_LINKAGE void criUsfDmx_Start(void* demux);
 CRI_C_LINKAGE void criUsfDmx_SetInputSj(void* demux, void* value);
-void FUN_140044fb0(void* output, CriUint32 index, void* value, CriUint32 type, CriUint32 flags);
+CRI_C_LINKAGE void criUsfDmx_SetOutputSj(void* demux, CriUint32 index, void* stream, CriUint32 flags, CriSint32 limit);
 #ifdef __cplusplus
 CRI_C_LINKAGE void criUsfDmx_SetThrououtSwitch(void* demux, CriUint8 value);  // the C++ name of sfr_cri_03b's definition
 #else
@@ -346,7 +346,7 @@ CRI_C_LINKAGE void criSj_UngetChunk(void* queue, CriSint32 operation, void* chun
 CRI_C_LINKAGE CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
 CRI_C_LINKAGE void criSj_GetInputChunk(void* object, void* value);
 CRI_C_LINKAGE void criMvPly_AddInputMemory(void* player, void* chunk, CriUint32 type);
-void FUN_140046814(void* streamJoint, const void* chunk, CriUint32 size);
+CRI_C_LINKAGE void criSj_PutInputChunk(void* streamJoint, const void* chunk, CriUint32 size);
 CRI_C_LINKAGE void crimvply_occurFatalError(void* owner, const char* message, CriSint32 value);
 CRI_C_LINKAGE void criSj_PutChunk(void* queue, CriSint32 operation, void* chunk);
 CRI_C_LINKAGE const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
@@ -1395,7 +1395,7 @@ CriBool FUN_140031990(void* player)
         criUsfDmx_SetInputSj(demux, ((CriMvPlyDemuxFields*)player)->HeaderBuffer);
     else
         criUsfDmx_SetInputSj(demux, ((CriMvPlyDemuxFields*)player)->MemoryInput);
-    FUN_140044fb0(demux, 0, ((CriMvPlyDemuxFields*)player)->ReadBuffer, 0, (CriUint32)-1);
+    criUsfDmx_SetOutputSj(demux, 0, ((CriMvPlyDemuxFields*)player)->ReadBuffer, 0, (CriUint32)-1);
     criUsfDmx_SetThrououtSwitch(demux, 0);
     criUsfDmx_Start(demux);
     criUsfDmx_Execute(demux);
@@ -1760,7 +1760,7 @@ void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue
             crimvply_occurFatalError(player, "E08120301M : Illigal data size of analize header against demux data line.", dst.Capacity);
         memcpy(dst.Data, chunk.Chunk, chunk.Type);
         written += chunk.Type;
-        FUN_140046814(dataQueue, &dst, chunk.Type);
+        criSj_PutInputChunk(dataQueue, &dst, chunk.Type);
     }
     while ((CriUint32)FUN_1400467b8(source, 1) > 0)
     {
@@ -1770,7 +1770,7 @@ void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue
             crimvply_occurFatalError(player, "E08120302M : Illigal data size in read buffer data line of analize header.", dst.Capacity);
         memcpy(dst.Data, chunk.Chunk, chunk.Type);
         written += chunk.Type;
-        FUN_140046814(dataQueue, &dst, chunk.Type);
+        criSj_PutInputChunk(dataQueue, &dst, chunk.Type);
         criSj_PutChunk(source, 0, &chunk);
     }
 }
@@ -1953,7 +1953,7 @@ void criMvPly_StartMemory(void* player, const void* inputData, CriUint32 inputSi
     ((CriMvStartMemoryView*)player)->HeaderSize = 0;
     memset(((CriMvStartMemoryView*)player)->AnalyzedHeader, 0, sizeof(((CriMvStartMemoryView*)player)->AnalyzedHeader));
     criUsfDmx_SetInputSj(demux, ((CriMvPlyDemuxFields*)player)->InputBuffer);
-    FUN_140044fb0(demux, 0, ((CriMvPlyDemuxFields*)player)->ReadBuffer, 0, (CriUint32)-1);
+    criUsfDmx_SetOutputSj(demux, 0, ((CriMvPlyDemuxFields*)player)->ReadBuffer, 0, (CriUint32)-1);
     criUsfDmx_SetThrououtSwitch(demux, 0);
     criUsfDmx_Start(demux);
     criSj_GetInputChunk(((CriMvPlyDemuxFields*)player)->InputBuffer, &buf);
@@ -1962,7 +1962,7 @@ void criMvPly_StartMemory(void* player, const void* inputData, CriUint32 inputSi
     else
         len = buf.Capacity;
     memcpy(buf.Data, inputData, len);
-    FUN_140046814(((CriMvPlyDemuxFields*)player)->InputBuffer, &buf, len);
+    criSj_PutInputChunk(((CriMvPlyDemuxFields*)player)->InputBuffer, &buf, len);
     criMvPly_AddInputMemory(player, (void*)inputData, inputSize);
     ((CriMvPlyDemuxFields*)player)->ReadMode = 1;
     memset(((CriMvStartMemoryView*)player)->CurrentHeader, 0, sizeof(((CriMvStartMemoryView*)player)->CurrentHeader));

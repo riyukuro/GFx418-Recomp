@@ -313,7 +313,7 @@ extern "C" cri_u8 FUN_140068210(longlong);
 extern "C" void cridlg_assert(const char *);
 void cridlg_lock();
 void cridlg_unlock();
-cri_u8 CRICRS_Create(longlong, int);
+extern "C" cri_u8 CRICRS_Create(longlong, int);
 extern "C" void CRICRS_Destroy(LPCRITICAL_SECTION);
 extern "C" cri_u4 CRICRS_Enter(LPCRITICAL_SECTION);
 extern "C" cri_u4 CRICRS_Leave(LPCRITICAL_SECTION);
@@ -622,7 +622,7 @@ void cridlg_lock();
 void cridlg_unlock();
 
 #pragma function(memset)                      // the exe obj calls memset here
-cri_u8 CRICRS_Create(longlong arg1, int arg2);
+extern "C" cri_u8 CRICRS_Create(longlong arg1, int arg2);
 #pragma intrinsic(memset)
 
 #pragma function(memset)                      // the exe obj calls memset here

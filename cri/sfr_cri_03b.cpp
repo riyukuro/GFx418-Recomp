@@ -750,7 +750,7 @@ void* criVdec_GetVdecCoreIf(void* decoder);
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: store one output stream joint and its size flags in the demux table.
 // @0x140044fb0
-void criUsfDmx_SetOutputSj(void* demux, CriUint32 index, void* stream, CriUint32 flags, CriSint32 limit)
+extern "C" void criUsfDmx_SetOutputSj(void* demux, CriUint32 index, void* stream, CriUint32 flags, CriSint32 limit)
 {
     struct Output { void* stream; CriUint32 flags; CriSint32 limit; };
     (*(Output**)((CriUint8*)demux + 0x18))[index].stream = stream;
@@ -1215,7 +1215,7 @@ void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void*
 
 // MS2-FUNCTIONAL: place a bounded prefix on the input queue and return the suffix to output.
 // @0x140046814
-void criSj_PutInputChunk(void* streamJoint, const void* chunk, CriUint32 size)
+extern "C" void criSj_PutInputChunk(void* streamJoint, const void* chunk, CriUint32 size)
 {
     struct SjChunk { CriUint8* Data; CriUint32 Size; CriUint32 Reserved; };
     typedef void (*PutChunk)(void*, CriSint32, void*);

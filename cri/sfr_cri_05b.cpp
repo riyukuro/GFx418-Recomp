@@ -306,7 +306,7 @@ void CRIDLG_EndInvoke(unsigned __int64, unsigned int); // C3: the definition's s
 unsigned int CRIDLG_GetPriority(unsigned __int64); // C3: the definition's signature
 void CRIDLG_SetPriority(unsigned __int64, unsigned int); // C3: the definition's signature
 void CRIDLG_SetAffinityMask(unsigned __int64, unsigned int); // C3: the definition's signature
-unsigned __int64 CRICRS_Create(__int64, int);  // C3: the definition's signature
+extern "C" unsigned __int64 CRICRS_Create(__int64, int);  // C3: the definition's signature
 extern "C" void CRICRS_Destroy(_RTL_CRITICAL_SECTION *); // C3: the definition's signature
 extern "C" unsigned int CRICRS_Enter(_RTL_CRITICAL_SECTION *);   // C3: the definition's signature
 extern "C" unsigned int CRICRS_Leave(_RTL_CRITICAL_SECTION *);   // C3: the definition's signature

@@ -36,7 +36,7 @@ CRI_C_LINKAGE void cridlg_EndInvoke(int *, cri_u4);
 cri_u8 FUN_140068200(cri_u8);
 cri_u8 FUN_140068210(longlong);
 CRI_C_LINKAGE void cridlg_assert(const char *);
-cri_u8 CRICRS_Create(longlong, int);
+CRI_C_LINKAGE cri_u8 CRICRS_Create(longlong, int);
 CRI_C_LINKAGE void CRICRS_Destroy(LPCRITICAL_SECTION);
 cri_u8 FUN_140068190(longlong);
 CRI_C_LINKAGE cri_u4 CRICRS_Enter(LPCRITICAL_SECTION);

@@ -1315,7 +1315,7 @@ void* criVdec_GetVdecCoreIf(void* decoder);
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-void criUsfDmx_SetOutputSj(void* demux, CriUint32 index, void* stream, CriUint32 flags, CriSint32 limit);
+extern "C" void criUsfDmx_SetOutputSj(void* demux, CriUint32 index, void* stream, CriUint32 flags, CriSint32 limit);
 
 CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config);
 
@@ -1522,7 +1522,7 @@ extern "C" void criSj_Destroy(void* object);
 
 void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void* suffix);
 
-void criSj_PutInputChunk(void* streamJoint, const void* chunk, CriUint32 size);
+extern "C" void criSj_PutInputChunk(void* streamJoint, const void* chunk, CriUint32 size);
 
 void criSj_PutOutputChunk(void* streamJoint, const void* chunk, CriUint32 size);
 
