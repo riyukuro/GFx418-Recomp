@@ -111,5 +111,3 @@ int SF_CDECL SFtowlower(wchar_t charCode)
 // MS2-PIN: ?SFwcslen@Scaleform@@YA_KPEB_W@Z 0x1425a4cc0
 // MS2-PIN: ?SFwcsncpy@Scaleform@@YAPEA_WPEA_W_KPEB_W1@Z 0x1425a4ce0
 // MS2-PIN: ?SFstricmp@Scaleform@@YAHPEBD0@Z 0x1425a4a50
-// MS2-FUNCTIONAL 0x1425a4b30: the case tables are exe data read through SF_EXE_DATA (RIP-relative; the exe indexes them off __ImageBase, which the DLL cannot link to exe data: LNK2016)
-// MS2-FUNCTIONAL 0x1425a4bc0: as SFtowlower (SF_EXE_DATA for the exe case tables)
