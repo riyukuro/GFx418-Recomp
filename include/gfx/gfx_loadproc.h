@@ -190,10 +190,11 @@ public:
     // Tells the progress handler about the tag just opened.
     void ReportProgress(const String& fileURL, const TagInfo& tagInfo, bool calledFromDefSprite)
     {
-        if (ProgressHandler* phandler = pLoadStates->GetProgressHandler())
-            phandler->LoadTagUpdate(ProgressHandler::TagInfo(fileURL, tagInfo.TagType, tagInfo.TagOffset,
-                                                             tagInfo.TagLength, tagInfo.TagDataOffset),
-                                    calledFromDefSprite);
+        if (pLoadStates->GetProgressHandler())
+            pLoadStates->GetProgressHandler()->LoadTagUpdate(
+                ProgressHandler::TagInfo(fileURL, tagInfo.TagType, tagInfo.TagOffset, tagInfo.TagLength,
+                                         tagInfo.TagDataOffset),
+                calledFromDefSprite);
     }
 
     // The AMP debug-file handle of the movie.

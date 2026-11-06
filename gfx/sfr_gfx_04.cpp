@@ -524,7 +524,6 @@ namespace Scaleform { namespace GFx {
 // Reads the frames of the SWF: every tag goes to its loader, each ShowFrame publishes the frame (and binds it when a
 // bind process runs along).
 // @0x1425d1d80
-// MS2-FUNCTIONAL: instruction scheduling of the LoadTagUpdate arguments
 void MovieDataDef::LoadTaskData::Read(LoadProcess* plp, MovieBindProcess* pbp)
 {
     Stream& stream = *plp->GetStream();

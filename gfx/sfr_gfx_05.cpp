@@ -863,7 +863,6 @@ void SetBackgroundColorTag::Read(LoadProcess* p)
 }
 
 // @0x1425d8230
-// MS2-FUNCTIONAL: scheduling only: the exe stores [rsp+0x50] before the mov r8b,1 and [rsp+0x5c] before the vtable load, ours after
 void SpriteDef::Read(LoadProcess* p, ResourceId charId)
 {
     Stream* pin    = p->GetStream();
