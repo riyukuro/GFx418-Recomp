@@ -163,7 +163,7 @@ void FUN_14257dcd0(void*);
 extern void FUN_14257dcb0(void*);
 extern "C" unsigned long long* FUN_1423cabb0(unsigned long long*, unsigned long long);
 extern "C" const unsigned long long DAT_14313b410;
-extern "C" const unsigned long long DAT_14313b418;
+// (DAT_14313b418 is the second half of the DAT_14313b410 GUID: one 16-byte object in data_rdata_sf_a)
 extern "C" const void* DAT_14313ba60[];
 extern "C" const unsigned char DAT_1431c51e8[];
 extern "C" const unsigned char DAT_1431c5018[];
@@ -1531,8 +1531,8 @@ __declspec(noinline) unsigned long long FUN_1423d9490(void* object, unsigned lon
 // @0x1423d70d0
 unsigned long long FUN_1423d70d0(void* object, const unsigned long long* guid)
 {
-    // IsEqualGUID (memcmp) against the conversion-mode compartment GUID, whose halves are separate pieces in the fullexe.
-    if (memcmp(guid, &DAT_14313b410, 8) == 0 && memcmp(guid + 1, &DAT_14313b418, 8) == 0) {
+    // IsEqualGUID (memcmp) against the conversion-mode compartment GUID, compared as two 8-byte halves.
+    if (memcmp(guid, &DAT_14313b410, 8) == 0 && memcmp(guid + 1, &DAT_14313b410 + 1, 8) == 0) {
         auto* bytes = static_cast<unsigned char*>(object);
         void* compartment = *reinterpret_cast<void**>(bytes + 0x20);
         VARIANT value;
@@ -3196,17 +3196,17 @@ bool FUN_1423cad20(unsigned long long* node, const unsigned long long* query)
 namespace Scaleform { namespace GFx { namespace IME {
 
 // MS2-FUNCTIONAL: constructs the language bar COM bridge, its two callback objects, and the 0x100-character input buffer.
-// The source shape now follows the exe: FUN_1423cabb0 stays a call, the manager is re-read from +0x1d0 at every
-// use, and the provider, language and callback references are released at the exe's points. Two diffs remain:
-//  - The exe passes &DAT_14313b410 as a 16-byte GUID whose second half is DAT_14313b418. In the fullexe the two
-//    halves are separate pieces (0x14264e860 and 0x142645678 in fullexe.map), so passing the address directly
-//    would read the wrong 8 bytes. The local 16-byte copy below is the functional stand-in. It costs 34 bytes
-//    (500 vs 466). Passing &DAT_14313b410 directly gives 466 bytes and a 12-line diff.
-//  - Even with the direct pass, cl sinks the provider/language/callback zero stores and the xor r12d below the
-//    calls; the exe zeroes them right after the CoCreateInstance call. Declaring provider earlier moves its store
-//    above the call instead (7 lines). No source order reproduced the exe's placement.
-// Exact needs data_rdata_sf_a to define DAT_14313b410 as one 16-byte GUID (a cross-unit data change).
-// Before this change the function was 828 bytes, because FUN_1423cabb0 was inlined into it.
+// The source shape follows the exe: FUN_1423cabb0 stays a call, the manager is re-read from +0x1d0 at every use,
+// and the provider, language and callback references are released at the exe's points. data_rdata_sf_a now
+// defines DAT_14313b410 as one 16-byte GUID, so the GUID is passed straight from .rdata like the exe does
+// (466 bytes, the exe's size). One diff remains (12 lines): /O2 store scheduling. The exe puts the
+// provider-home zero store ([rsp+0x88]) and the +0x1c0 zero store right after the vftable store; cl sinks
+// both below the other vftable stores, next to the String ctor call. Declaring provider earlier moves its
+// store above the FUN_1423cabb0 call (7 lines). Every reorder of the eight setup stores gives the same 12 lines.
+// Same stores and values in a different order, so behaviour does not change.
+//
+// Before this change the function was 828 bytes (FUN_1423cabb0 inlined), then 500 (a 16-byte local GUID copy).
+//
 // @0x1423d54d0
 unsigned long long* FUN_1423d54d0(unsigned long long* self, unsigned long long owner)
 {
@@ -3238,9 +3238,9 @@ unsigned long long* FUN_1423d54d0(unsigned long long* self, unsigned long long o
         void* language = nullptr;
         if (SUCCEEDED(comCall(manager, 0, HRESULT(*)(void*, const void*, void**))(manager, DAT_1431c5028, &language))
                 && language) {
-            // Halves of one GUID, separate pieces in the fullexe: see the note above.
-            const unsigned long long compartment[2] = {DAT_14313b410, DAT_14313b418};
-            comCall(language, 3, HRESULT(*)(void*, const void*, void**))(language, compartment,
+            // The compartment GUID is passed straight from .rdata (0x14313b410).
+            comCall(language, 3, HRESULT(*)(void*, const void*, void**))(language, &DAT_14313b410,
+
                 reinterpret_cast<void**>(self + 0x38));
             comCall(language, 2, ULONG(*)(void*))(language);
         }
