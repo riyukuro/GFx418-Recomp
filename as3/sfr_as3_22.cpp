@@ -720,7 +720,7 @@ struct DICommand_ColorTransform : Sfr22SourceRect
 };
 struct DICommand_FloodFill
 {
-    virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+    virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const; const Sfr22NoiseImage* pImage; Point<SInt32> Pt; Color FillColor; // +8 / +0x10 / +0x18
 };
 struct DICommand_PerlinNoise
 {
@@ -1150,49 +1150,49 @@ void Scaleform::Render::DICommand_ColorTransform::ExecuteSW(Scaleform::Render::D
     }
 }
 
-// MS2-FUNCTIONAL: flood-fills the executable's clipped pixel region from its seed using 4-connected equal-color spans.
+struct Sfr22FillPoint { Scaleform::SInt32 x, y; Sfr22FillPoint() { } Sfr22FillPoint(Scaleform::SInt32 x2, Scaleform::SInt32 y2) { x = x2; y = y2; } Sfr22FillPoint(const Sfr22FillPoint& pt) { x = pt.x; y = pt.y; } }; // SDK Point<SInt32> (empty default ctor)
+// MS2-FUNCTIONAL: SDK floodFill; the exe hoists the overwriteColor load past the out-of-TU GetPixel (LTCG mod-ref) and reloads dest, ours keeps dest in rbx
 // @0x142676bd0
-void Scaleform::Render::DICommand_FloodFill::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& imageRef, Scaleform::Render::ImageData**) const
+void Scaleform::Render::DICommand_FloodFill::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData**) const
 {
-    void* operation = const_cast<Scaleform::Render::DICommand_FloodFill*>(this);
-    Scaleform::Render::ImageData* image = &imageRef;
-    using Scaleform::Render::ImageData;
-    using Scaleform::Render::ImagePlane;
-    ImagePlane plane;
-    image->GetPlane(0, &plane);
-    const auto* op = static_cast<const unsigned char*>(operation);
-    const int seedX = *reinterpret_cast<const int*>(op + 0x10);
-    const int seedY = *reinterpret_cast<const int*>(op + 0x14);
-    const int left = 0, top = 0;
-    const int right = static_cast<int>(plane.Width), bottom = static_cast<int>(plane.Height);
-    if (seedX < left || seedY < top || seedX >= right || seedY >= bottom) return;
-    const unsigned fill = *reinterpret_cast<const unsigned*>(op + 0x18);
-    const bool preserveAlpha = *reinterpret_cast<const bool*>(
-        static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8)) + 0x48);
-    unsigned seed = 0;
-    FUN_14257bf70(image, &seed, BitmapScanline(plane, seedY), static_cast<unsigned>(seedX));
-    if (!preserveAlpha) { seed |= 0xff000000u; }
-    unsigned replacement = fill;
-    if (!preserveAlpha) replacement |= 0xff000000u;
-    if (seed == replacement) return;
+    // SDK body (Render_DrawableImage_SW.cpp) with ImageData::GetPixel / SetPixelARGB in place of the swizzler contexts.
+    // Check whether the floodfill origin is even within the bounds.
+    Rect<SInt32> imageRect = Rect<SInt32>(dest.GetSize());
+    if ( !imageRect.Contains(Pt))
+        return;
 
-    std::vector<std::pair<int, int>> pending;
-    pending.emplace_back(seedX, seedY);
-    while (!pending.empty()) {
-        const int x = pending.back().first;
-        const int y = pending.back().second;
-        pending.pop_back();
-        if (x < left || y < top || x >= right || y >= bottom) continue;
-        unsigned pixel = 0;
-        FUN_14257bf70(image, &pixel, BitmapScanline(plane, y), static_cast<unsigned>(x));
-        if (!preserveAlpha) pixel |= 0xff000000u;
-        if (pixel != seed) continue;
-        FUN_14257d390(image, BitmapScanline(plane, y), static_cast<unsigned>(x), replacement);
-        pending.emplace_back(x - 1, y);
-        pending.emplace_back(x + 1, y);
-        pending.emplace_back(x, y - 1);
-        pending.emplace_back(x, y + 1);
+    UInt32 fillColor = FillColor.ToColor32();
+    if (!pImage->IsTransparent())
+        fillColor |= (UInt32)255 << 24;
+
+    Color overwriteColor = dest.GetPixel(Pt.x, Pt.y);
+    Array<Sfr22FillPoint> toProcess;
+    toProcess.PushBack(Sfr22FillPoint(Pt.x,Pt.y));
+    while (!toProcess.IsEmpty())
+    {
+        const Sfr22FillPoint pt = toProcess.Back();
+        toProcess.PopBack();
+        Rect<SInt32> intersection;
+        imageRect.IntersectRect(&intersection, Rect<SInt32>(pt.x, pt.y, Size<SInt32>(1,1)));
+        if ( intersection.Width() * intersection.Height() > 0 ) // SDK intersection.Area()
+        {
+            if( overwriteColor == dest.GetPixel(pt.x, pt.y) )
+            {
+                dest.SetPixelARGB(pt.x, pt.y, fillColor);
+
+                // Generate 4 cardinal directions to continue fill.
+                toProcess.PushBack(Sfr22FillPoint(pt.x-1, pt.y));
+                toProcess.PushBack(Sfr22FillPoint(pt.x, pt.y-1));
+                toProcess.PushBack(Sfr22FillPoint(pt.x, pt.y+1));
+                toProcess.PushBack(Sfr22FillPoint(pt.x+1, pt.y));
+            }
+        }
     }
+
+
+
+
+
 }
 
 // BitmapData.perlinNoise: per selected channel (red, green, blue, alpha when transparent; grayscale draws red into
