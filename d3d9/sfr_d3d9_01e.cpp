@@ -1864,169 +1864,224 @@ void FUN_142733ef0(MaskStackData* a, UPInt newSize)
         MaskStackData::AllocatorType::ConstructArray(a->Data + oldSize, newSize - oldSize);
 }
 
+// the SDK PrimitiveFill::RequiresBlend
+// (PrimitiveFill keeps its PrimitiveFillData private at +0x10; the SDK fill derives from it)
+static __forceinline bool SpfRequiresBlend(const PrimitiveFillData& d)
+{
+    switch (d.Type)
+    {
+    case PrimFill_None:
+    case PrimFill_Mask:
+        return false;
+    case PrimFill_SolidColor:
+        return (d.SolidColor.GetAlpha() != 255);
+
+    case PrimFill_Texture:
+    case PrimFill_UVTexture:
+    case PrimFill_2Texture:
+        for (int i = 0; i < 2; i++)
+            if (d.Textures[i])
+                switch (d.Textures[i]->GetFormat())
+                {
+                case Image_R8G8B8:
+                case Image_B8G8R8:
+                case Image_PVRTC_RGB_2BPP:
+                case Image_PVRTC_RGB_4BPP:
+                case Image_ATCIC:
+                case Image_Y8_U2_V2:
+                    break;
+                default:
+                    return true;
+                }
+        return false;
+
+    default:
+        return true;
+    }
+}
+// the SDK HMatrix::GetCxform / GetTextureMatrix
+static __forceinline const Cxform& SpfGetCxform(const MatrixPoolImpl::HMatrix& m)
+{
+    typedef MatrixPoolImpl::HMatrixConstants HC;
+    return !m.pHandle->pHeader->HasElement(HC::Element_Cxform) ? Cxform::Identity : *m.pHandle->pHeader->GetCxformPtr();
+}
+static __forceinline const Matrix2F& SpfGetTextureMatrix(const MatrixPoolImpl::HMatrix& m, unsigned index)
+{
+    typedef MatrixPoolImpl::HMatrixConstants HC;
+    HC::ElementIndex e = (HC::ElementIndex)(HC::Element_T0 + index);
+    return !m.pHandle->pHeader->HasElement(e) ? Matrix2F::Identity : *m.pHandle->pHeader->GetTextureMatrixPtr(e);
+}
+// the SDK Texture::GetPlaneCount
+static __forceinline unsigned SpfGetPlaneCount(const Render::Texture* t)
+{
+    return ImageData::GetFormatPlaneCount((ImageFormat)t->GetFormat()) * t->GetMipmapCount();
+}
+// the SDK PrimitiveFillData::GetTextureCount
+static __forceinline UByte SpfGetTextureCount(const PrimitiveFillData& d)
+{
+    if ((d.Type >= PrimFill_Texture) && (d.Type <= PrimFill_2Texture_EAlpha))
+        return (d.Type >= PrimFill_2Texture) ? 2 : 1;
+    return 0;
+}
+// PrimitiveFill::GetData (the fill's PrimitiveFillData is private at +0x10)
+static __forceinline const PrimitiveFillData& SpfData(const PrimitiveFill* fill)
+{
+    return *(const PrimitiveFillData*)((const char*)fill + 0x10);
+}
+// the SDK StaticShaderManager::StaticShaderForFill(PrimitiveFill*, ...)
+static __forceinline unsigned SpfStaticShaderForFill(D3D9::ShaderManager* sm, PrimitiveFill* pfill, unsigned& fillflags,
+                                                     unsigned batchType)
+{
+    switch (pfill->GetType())
+    {
+    case PrimFill_Texture:
+    case PrimFill_Texture_EAlpha:
+        if (SpfGetTextureCount(SpfData(pfill)) == 1 &&
+            ImageData::GetFormatPlaneCount((ImageFormat)pfill->GetTexture(0)->GetFormat()) >= 3)
+        {
+            unsigned shader = pfill->GetType() == PrimFill_Texture_EAlpha ? 0xa025 : 0xa005;
+
+            if (ImageData::GetFormatPlaneCount((ImageFormat)pfill->GetTexture(0)->GetFormat()) == 4)
+                shader += 0x100;
+
+            if (fillflags & 4)
+                shader += 0x10;
+
+            switch (batchType)
+            {
+            case PrimitiveBatch::DP_Batch:
+                shader += 2;
+                break;
+
+            case PrimitiveBatch::DP_Instanced:
+                shader += 4;
+                break;
+            default: break;
+            }
+
+            if (fillflags & 1)
+                shader += 1;
+
+            if (fillflags & 8)
+                shader += 8;
+
+            return shader;
+        }
+        break;
+
+    default: break;
+    }
+    return sm->StaticShaderForFill(pfill->GetType(), fillflags, batchType);
+}
+// ProfileViews::GetCxform (this build returns the cxform unchanged, by value)
+static __forceinline Cxform SpfProfileCxform(const Cxform& cx)
+{
+    return cx;
+}
+// the SDK ShaderInterface::SetCxform
+static __forceinline void SpfSetCxform(D3D9::ShaderInterface* psi, const D3D9::ShaderPair& sd, const Cxform& cx,
+                                       unsigned index = 0, unsigned batch = 0)
+{
+    const float(*rows)[4] = &cx.M[0];
+    psi->SetUniform(sd, D3D9::Uniform::SU_cxmul, rows[0], 4, index, batch);
+    psi->SetUniform(sd, D3D9::Uniform::SU_cxadd, rows[1], 4, index, batch);
+}
+// the SDK ShaderInterfaceBase::GetParameterStage
+static __forceinline unsigned SpfGetParameterStage(const D3D9::ShaderPair& sd, unsigned var, int index = 0)
+{
+    if (sd->pVDesc->BatchUniforms[var].Offset >= 0 && index < sd->pVDesc->BatchUniforms[var].Size)
+        return 0x10000 | sd->pVDesc->BatchUniforms[var].Size;
+    else if (sd->pVDesc->Uniforms[var].Location >= 0 && index < sd->pVDesc->Uniforms[var].Size)
+        return 0x10000 | sd->pVDesc->Uniforms[var].Size / sd->pVDesc->Uniforms[var].ElementSize;
+    else if (sd->pFDesc->BatchUniforms[var].Offset >= 0 && index < sd->pFDesc->BatchUniforms[var].Size)
+        return 0x20000 | sd->pFDesc->BatchUniforms[var].Size;
+    else if (sd->pFDesc->Uniforms[var].Location >= 0 && index < sd->pFDesc->Uniforms[var].Size)
+        return 0x20000 | sd->pFDesc->Uniforms[var].Size / sd->pVDesc->Uniforms[var].ElementSize;
+    else
+        return 0;
+}
 // StaticShaderManager::SetPrimitiveFill: picks the shader of a batch and sets its meshes' uniforms
-// MS2-FUNCTIONAL: written from the decompile
+// SDK 4.1.19 form (this build has no Profiler)
 // @0x1427359d0
-const D3D9::ShaderPair* FUN_1427359d0(D3D9::ShaderManager* sm, PrimitiveFill* fill, unsigned* fillFlags,
-                                      unsigned batchType, const VertexFormat* format, unsigned meshCount,
-                                      MatrixState* matrices, const Primitive::MeshEntry* meshes,
+const D3D9::ShaderPair* FUN_1427359d0(D3D9::ShaderManager* sm, PrimitiveFill* pfill, unsigned* pfillFlags,
+                                      unsigned batchType, const VertexFormat* pvf, unsigned meshCount,
+                                      MatrixState* Matrices, const Primitive::MeshEntry* pmeshes,
                                       D3D9::ShaderInterface* psi)
 {
-    SF_UNUSED(sm);
-    typedef MatrixPoolImpl::HMatrixConstants HC;
-    PrimitiveFillType type = fill->GetType();
+    unsigned& fillFlags = *pfillFlags;
+    PrimitiveFillType fillType = pfill->GetType();
 
-    // bit 4: the fill is transparent (a solid color with alpha, a texture format with alpha)
-    if (!(*fillFlags & 0x10))
-    {
-        switch (type)
-        {
-        case PrimFill_None:
-        case PrimFill_Mask:
-            break;
-        case PrimFill_SolidColor:
-            if (fill->GetSolidColor().GetAlpha() != 0xff)
-                *fillFlags |= 0x10;
-            break;
-        case PrimFill_Texture:
-        case PrimFill_2Texture:
-        case PrimFill_UVTexture:
-            for (unsigned i = 0; i < 2; i++)
-            {
-                Render::Texture* tex = fill->GetTexture(i);
-                if (!tex)
-                    continue;
-                unsigned f = tex->GetFormat();
-                if (f != 3 && f != 4 && f != 0x35 && f != 0x37 && f != 0x3b && f != 200)
-                    *fillFlags |= 0x10;
-            }
-            break;
-        default:
-            *fillFlags |= 0x10;
-            break;
-        }
-    }
+    if ((fillFlags & 0x10) == 0 && SpfRequiresBlend(SpfData(pfill)))
+        fillFlags |= 0x10;
 
-    // bit 2: some mesh has a cxform (bit 4 too when it fades)
     for (unsigned i = 0; i < meshCount; i++)
     {
-        const MatrixPoolImpl::HMatrix& m = meshes[i].M;
-        const Cxform& cx = m.pHandle->pHeader->HasElement(HC::Element_Cxform) ? *m.pHandle->pHeader->GetCxformPtr()
-                                                                              : Cxform::Identity;
-        if (!(cx == Cxform::Identity))
+        Cxform finalCx = SpfProfileCxform(SpfGetCxform(pmeshes[i].M));
+        if (!(finalCx == Cxform::Identity))
         {
-            *fillFlags |= 4;
-            if (cx.M[0][3] < 1.0f)
-                *fillFlags |= 0x10;
+            fillFlags |= 4;
+            if (finalCx.M[0][3] < 1.0f)
+                fillFlags |= 0x10;
             break;
         }
     }
 
-    // YUV video fills have their own shaders
-    unsigned shader;
-    unsigned planes = 0;
-    if ((type == PrimFill_Texture || type == PrimFill_Texture_EAlpha) && fill->GetTexture(0) &&
-        (planes = ImageData::GetFormatPlaneCount((ImageFormat)fill->GetTexture(0)->GetFormat())) >= 3)
-    {
-        shader = (type == PrimFill_Texture_EAlpha) ? 0xa025 : 0xa005;
-        if (planes == 4)
-            shader += 0x100;
-        if (*fillFlags & 4)
-            shader += 0x10;
-        if (batchType == 1)
-            shader += 2;
-        else if (batchType == 2)
-            shader += 4;
-        if (*fillFlags & 1)
-            shader += 1;
-        if (*fillFlags & 8)
-            shader += 8;
-    }
-    else
-        shader = sm->StaticShaderForFill(type, *fillFlags, batchType);
+    unsigned shader = SpfStaticShaderForFill(sm, pfill, fillFlags, batchType);
 
-    psi->SetStaticShader((D3D9::VertexShaderDesc::ShaderType)shader, (D3D9::FragShaderDesc::ShaderType)shader, format);
+    psi->SetStaticShader((D3D9::VertexShaderDesc::ShaderType)shader, (D3D9::FragShaderDesc::ShaderType)shader, pvf);
     D3D9::ShaderInterfaceAccess::BeginPrimitive(psi);
-    const D3D9::ShaderPair& cur = psi->GetCurrentShaders();
+    const D3D9::ShaderPair& pso = psi->GetCurrentShaders();
+    bool solid = (fillType == PrimFill_None || fillType == PrimFill_Mask || fillType == PrimFill_SolidColor);
 
-    if (type <= PrimFill_SolidColor)
-        psi->SetColor(cur, D3D9::Uniform::SU_cxmul, fill->GetSolidColor());
-    else if (type > 4)
+    if (solid)
+        psi->SetColor(pso, D3D9::Uniform::SU_cxmul, pfill->GetSolidColor());
+    else if (fillType >= PrimFill_Texture)
     {
-        psi->SetTexture(cur, D3D9::Uniform::SU_tex, fill->GetTexture(0), fill->GetFillMode(0));
-        if (type == PrimFill_2Texture || type == PrimFill_2Texture_EAlpha)
+        Render::Texture* pt0 = pfill->GetTexture(0);
+        ImageFillMode    fm0 = pfill->GetFillMode(0);
+
+        psi->SetTexture(pso, D3D9::Uniform::SU_tex, pt0, fm0);
+        if ((fillType == PrimFill_2Texture) || (fillType == PrimFill_2Texture_EAlpha))
         {
-            // texture 1 starts after every stage of texture 0: its planes times its mip stages (the exe reads +0x3e bit 1
-            // and the byte at +0x3c, as the batch path does)
-            Render::Texture* t0 = fill->GetTexture(0);
-            unsigned stages = (t0->Use & 2) ? 1 : t0->MipLevels;
-            psi->SetTexture(cur, D3D9::Uniform::SU_tex, fill->GetTexture(1), fill->GetFillMode(1),
-                            ImageData::GetFormatPlaneCount((ImageFormat)t0->GetFormat()) * stages);
+            Render::Texture* pt1 = pfill->GetTexture(1);
+            ImageFillMode    fm1 = pfill->GetFillMode(1);
+
+            psi->SetTexture(pso, D3D9::Uniform::SU_tex, pt1, fm1, SpfGetPlaneCount(pt0));
         }
     }
 
-    // (fill 13: this build's user shader fill)
-    if (type == 13)
+    if (fillType == PrimFill_UVTextureDFAlpha_VColor)
+    {
         for (unsigned i = 0; i < meshCount; i++)
-            psi->SetUserUniforms(cur, meshes[i].M, i);
+        {
+            psi->SetUserUniforms(pso, pmeshes[i].M, i);
+        }
+    }
 
-    // the number of texgen matrices the shader takes
-    unsigned n = 0;
-    const unsigned tg = D3D9::Uniform::SU_texgen;
-    if (cur.pVDesc->BatchUniforms[tg].Array >= 0 && cur.pVDesc->BatchUniforms[tg].Size)
-        n = cur.pVDesc->BatchUniforms[tg].Size;
-    else if (cur.pVDesc->Uniforms[tg].Location >= 0 && cur.pVDesc->Uniforms[tg].Size > 0)
-        n = cur.pVDesc->Uniforms[tg].Size / cur.pVDesc->Uniforms[tg].ElementSize;
-    else if (cur.pFDesc->BatchUniforms[tg].Array >= 0 && cur.pFDesc->BatchUniforms[tg].Size)
-        n = cur.pFDesc->BatchUniforms[tg].Size;
-    else if (cur.pFDesc->Uniforms[tg].Location >= 0 && cur.pFDesc->Uniforms[tg].Size > 0)
-        n = cur.pFDesc->Uniforms[tg].Size / cur.pVDesc->Uniforms[tg].ElementSize; // (the SDK divides by the vertex side)
-    unsigned texgenCount = (n >> 1) & 0x7fff;
+    unsigned tmCount = (SpfGetParameterStage(pso, D3D9::Uniform::SU_texgen) & 0xffff) >> 1;
 
     for (unsigned i = 0; i < meshCount; i++)
     {
-        const MatrixPoolImpl::HMatrix& m      = meshes[i].M;
-        const Matrix2F&                vertex = meshes[i].pMesh->VertexMatrix;
+        DmcSetMatrix(psi, pso, pmeshes[i].pMesh->VertexMatrix, pmeshes[i].M, Matrices, i);
 
-        if (!m.Has3D())
-        {
-            Matrix2F mvp;
-            mvp.SetToAppend(vertex, m.GetMatrix2D(), matrices->UserView);
-            psi->SetUniform(cur, D3D9::Uniform::SU_mvp, &mvp.M[0][0], 8, 0, i);
-        }
-        else
-        {
-            Matrix3F t;
-            t.MultiplyMatrix(m.GetMatrix3D(), vertex);
-            Matrix4F mvp;
-            mvp.MultiplyMatrix(matrices->GetUVPO(), t);
-            psi->SetUniformInline(cur, D3D9::Uniform::SU_mvp, &mvp.M[0][0], 16, 0, i);
-        }
+        if (fillType == PrimFill_Mask)
+            psi->SetColor(pso, D3D9::Uniform::SU_cxmul, Color(128, 0, 0, 128));
+        else if (fillFlags & 4)
+            SpfSetCxform(psi, pso, SpfProfileCxform(SpfGetCxform(pmeshes[i].M)), 0, i);
 
-        if (type == PrimFill_Mask)
-            psi->SetColor(cur, D3D9::Uniform::SU_cxmul, Color(0x80800000));
-        else if (*fillFlags & 4)
+        for (unsigned tm = 0; tm < tmCount; tm++)
         {
-            const Cxform& cx = m.pHandle->pHeader->HasElement(HC::Element_Cxform)
-                                   ? *m.pHandle->pHeader->GetCxformPtr()
-                                   : Cxform::Identity;
-            psi->SetUniform(cur, D3D9::Uniform::SU_cxmul, cx.M[0], 4, 0, i);
-            psi->SetUniform(cur, D3D9::Uniform::SU_cxadd, cx.M[1], 4, 0, i);
-        }
-
-        for (unsigned t = 0; t < texgenCount; t++)
-        {
-            Matrix2F tm(vertex);
-            HC::ElementIndex e = (HC::ElementIndex)(HC::Element_T0 + t);
-            tm.Append(m.pHandle->pHeader->HasElement(e) ? *m.pHandle->pHeader->GetTextureMatrixPtr(e)
-                          : Matrix2F::Identity);
-            psi->SetUniform(cur, tg, &tm.M[0][0], 8, t * 2, i);
+            Matrix2F m(pmeshes[i].pMesh->VertexMatrix);
+            m.Append(SpfGetTextureMatrix(pmeshes[i].M, tm));
+            const float* rows = &m.M[0][0];
+            psi->SetUniform(pso, D3D9::Uniform::SU_texgen, rows, 8, tm * 2, i);
         }
     }
 
-    if (!(*fillFlags & 0x20))
+    if (!(fillFlags & 0x20))
         psi->Finish(meshCount);
-    return &psi->CurShaders;
+
+    return &pso;
 }
 
 #pragma strict_gs_check(push, on)
