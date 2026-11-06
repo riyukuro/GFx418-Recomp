@@ -159,7 +159,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524
 namespace Scaleform { extern template void ArrayDataDH<UPInt, AllocatorDH_POD<UPInt, GFx::AS3::StatMV_VM>, ArrayDefaultPolicy>::Resize(UPInt); typedef ArrayDataDH<UPInt, AllocatorDH_POD<UPInt, GFx::AS3::StatMV_VM>, ArrayDefaultPolicy> Sfr19PosData; }   // Tracer TCodeOffset arrays, 0x142524870
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_1425248e0(UPInt* a, const void* addr, UPInt n); }}}
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524c30(UPInt* a, const void* addr, UPInt n); }}}
-namespace Scaleform { typedef ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>, 340>, ArrayDefaultPolicy> Sfr19TraitsArr; template<> void Sfr19TraitsArr::ResizeNoConstruct(const void*, UPInt); } // (C3) FUN_142524af0
+namespace Scaleform { typedef ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>, 340>, ArrayDefaultPolicy> Sfr19TraitsArr; extern template void Sfr19TraitsArr::ResizeNoConstruct(const void*, UPInt); } // (C3) FUN_142524af0, instantiated below
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524680(UPInt* a, UPInt n); }}}
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524710(UPInt* a, UPInt n); }}}
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_1425244e0(UPInt* a, UPInt n); }}}
