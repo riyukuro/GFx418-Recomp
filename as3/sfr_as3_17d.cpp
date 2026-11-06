@@ -536,7 +536,6 @@ static SF_FORCEINLINE InteractiveObject* Sfr17dCharToSprite(DisplayObjectBase* p
 // Creates every record's character in each state it shows in: under the state's container sprite (made once,
 // character 0x10001, and put on the play list), with the record's placement; the current state's container goes
 // into the button's render tree.
-// MS2-FUNCTIONAL 0x1424f2e90: the exe loads the record's colour transform with movaps, ours with movups
 // @0x1424f2e90
 void AvmButton::CreateCharacters()
 {
@@ -592,14 +591,14 @@ void AvmButton::CreateCharacters()
             CharacterCreateInfo ccinfo = GetButton()->pDefImpl->GetCharacterCreateInfo(rec.CharacterId);
             if (ccinfo.pCharDef)
             {
+                const Matrix2F&  mat = rec.ButtonMatrix;
+                const Cxform&    cx  = rec.ButtonCxform;
                 CharPosInfo pos;
+                pos.ColorTransform = cx;
+                pos.Matrix_1       = mat;
                 pos.CharacterId    = rec.CharacterId;
-                // The exe copies the colour transform as two aligned SSE vectors.
-                _mm_store_ps(pos.ColorTransform.M[0], _mm_load_ps(rec.ButtonCxform.M[0]));
-                _mm_store_ps(pos.ColorTransform.M[1], _mm_load_ps(rec.ButtonCxform.M[1]));
                 pos.BlendMode      = (UByte)rec.BlendMode;
                 pos.Depth          = rec.Depth;
-                pos.Matrix_1       = rec.ButtonMatrix;
                 pos.Flags.Flags    = CharPosInfoFlags::Flags_HasDepth | CharPosInfoFlags::Flags_HasCharacterId |
                                      CharPosInfoFlags::Flags_HasMatrix | CharPosInfoFlags::Flags_HasCxform |
                                      CharPosInfoFlags::Flags_HasBlendMode;
