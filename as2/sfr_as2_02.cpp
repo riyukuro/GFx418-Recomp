@@ -82,6 +82,7 @@
 #include "../include/gfx/as2/as2_refcountcollector.h"
 #include "../include/gfx/as2/as2_stringobject.h"
 #include "../include/gfx/gfx_asstringhash.h"
+#include "../include/gfx/as2/as2_hashaccess.h"
 #include "../include/gfx/gfx_event.h"
 #include "../include/gfx/gfx_textfield.h"
 #include "../include/gfx/gfx_imageresource.h"
@@ -2138,6 +2139,54 @@ void SharedObjectProto::Clear(const FnCall& fn)
 // RemoveCaseCheck of the registered class table (exe 0x14297cd20).
 void         ClassHash_RemoveCaseCheck(ASStringHash<FunctionRef>* phash, const ASString& key, bool caseSensitive);
 
+// The registered class table's findIndexAlt ignoring case, a COMDAT the exe calls out of line (0x142916f50).
+struct ClassHashAccess
+{
+    typedef decltype(ASStringHash<FunctionRef>::mHash) Container;
+    typedef Container::BaseType                        SetType;
+};
+inline SPInt HashFindIndex(const ClassHashAccess* phash, const ASStringNoCaseKey& key);
+template struct HashFindIndexAccess<ClassHashAccess, ASStringNoCaseKey,
+                                    &ClassHashAccess::SetType::findIndexAlt<ASStringNoCaseKey> >;
+
+// Hash::SetCaseCheck of the registered class table, inline in the exe around the out-of-line findIndexAlt.
+template<class K>
+SF_INLINE ClassHashAccess::Container::Iterator ClassHash_FindAlt(ASStringHash<FunctionRef>* phash, const K& key)
+{
+    SPInt index = HashFindIndex(reinterpret_cast<const ClassHashAccess*>(phash), key);
+    if (index >= 0)
+        return ClassHashAccess::Container::Iterator(&phash->mHash, index);
+    return ClassHashAccess::Container::Iterator(0, 0);
+}
+SF_INLINE ClassHashAccess::Container::Iterator ClassHash_FindNoCase(ASStringHash<FunctionRef>* phash, const ASString& key)
+{
+    ASStringNoCaseKey ikey(key);
+    return ClassHash_FindAlt(phash, ikey);
+}
+SF_INLINE void ClassHash_SetCaseCheck(ASStringHash<FunctionRef>* phash, const ASString& key, const FunctionRef& value,
+                                      bool caseSensitive)
+{
+    ClassHashAccess::Container::Iterator it = caseSensitive ? phash->Find(key) : ClassHash_FindNoCase(phash, key);
+    if (it != phash->End())
+        it->Second = value;
+    else
+        phash->Add(key, value);
+}
+
+static __forceinline bool MS2_GC_RegisterClass(GlobalContext* pgc, ASStringContext* psc, const ASString& className, const FunctionRef& ctorFunction)
+{
+    ClassHash_SetCaseCheck(&pgc->RegisteredClasses, className, ctorFunction, psc->IsCaseSensitive());
+    return true;
+}
+
+static __forceinline bool MS2_GC_UnregisterClass(GlobalContext* pgc, ASStringContext* psc, const ASString& className)
+{
+    if (pgc->RegisteredClasses.GetCaseCheck(className, psc->IsCaseSensitive()) == 0)
+        return false;
+    ClassHash_RemoveCaseCheck(&pgc->RegisteredClasses, className, psc->IsCaseSensitive());
+    return true;
+}
+
 // Object.registerClass(name, ctor) binds the constructor to the linkage name; null removes the binding.
 // @0x142908e90
 void ObjectCtorFunction::RegisterClassA(const FnCall& fn)
@@ -2148,27 +2197,24 @@ void ObjectCtorFunction::RegisterClassA(const FnCall& fn)
         fn.Env->LogScriptError("Error: Too few parameters for Object.registerClass (%d)", fn.NArgs);
         return;
     }
-    GlobalContext* pgc = fn.Env->GetSC()->pContext;
+
+    GlobalContext* pgctxt = fn.Env->GetSC()->pContext;
     ASString       classname(fn.Arg(0).ToString(fn.Env));
     if (fn.Arg(1).IsFunction())
     {
-        FunctionRef func = fn.Arg(1).ToFunction(fn.Env);
-        pgc->RegisteredClasses.SetCaseCheck(classname, func, fn.Env->IsCaseSensitive());
-        fn.Result->SetBool(true);
+        FunctionRef func = static_cast<const MS2_FuncValue&>(fn.Arg(1)).ToFunctionSw(fn.Env);
+        fn.Result->SetBool(MS2_GC_RegisterClass(pgctxt, fn.Env->GetSC(), classname, func));
     }
     else if (fn.Arg(1).IsNull())
     {
-        bool rv = false;
-        if (pgc->RegisteredClasses.GetCaseCheck(classname, fn.Env->IsCaseSensitive()))
-        {
-            ClassHash_RemoveCaseCheck(&pgc->RegisteredClasses, classname, fn.Env->IsCaseSensitive());
-            rv = true;
-        }
-        fn.Result->SetBool(rv);
+        fn.Result->SetBool(MS2_GC_UnregisterClass(pgctxt, fn.Env->GetSC(), classname));
     }
     else
+    {
+        ASString a1(fn.Arg(1).ToString(fn.Env));
         fn.Env->LogScriptError("Second parameter of Object.registerClass(%s, %s) should be function or null",
-                               classname.ToCStr(), fn.Arg(1).ToString(fn.Env).ToCStr());
+                               classname.ToCStr(), a1.ToCStr());
+    }
 }
 
 // ExternalInterface.call(methodName, ...args): the arguments, as host values, go to the handler of the movie; the
