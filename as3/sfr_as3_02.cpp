@@ -1445,87 +1445,105 @@ namespace Instances { namespace fl
 
     // new XMLList(value): an XML value becomes the only item; anything else is converted to a string and parsed as a
     // sequence of text runs and elements (";" separators are skipped).
-    // MS2-FUNCTIONAL: register allocation (the exe keeps this in r13 and vm.XMLSupport in r15) and the frame layout;
-    // the exe also keeps ignoreWhitespace in a stack byte
+    // SDK shape (AS3_Obj_XMLList.cpp), except that the exe has no last_pos check. The parse end is copied out of the
+    // address-taken Parse argument, as the exe keeps it in a register.
+    // MS2-FUNCTIONAL: register allocation (the exe swaps rsi and r14) and the slots of txt and the Parse argument
     // @0x1423f63b0
     void XMLList::AS3Constructor(unsigned argc, const Value* argv)
     {
         VM& vm = GetVM();
+
         if (argc == 0 || argv[0].IsNullOrUndefined())
-            return;
-        if (argc != 1)
-            return;
-
-        const Value& arg = argv[0];
-        if (IsXMLObject(arg))
         {
-            List.PushBack(SPtr<XML>(static_cast<XML*>(arg.GetObject())));
-            return;
         }
-
-        InstanceTraits::fl::XML& itr = static_cast<InstanceTraits::fl::XML&>(*vm.GetXMLSupport().GetITraitsXML());
-        ASString str = vm.GetStringManager().CreateEmptyString();
-        if (!arg.Convert2String(str))
-            return;
-
-        StringDataPtr s(str.ToCStr(), str.GetSize());
-        const bool ignoreWhitespace =
-            static_cast<const Classes::fl::XML&>(FUN_142508460(vm.GetXMLSupport().GetITraitsXML())).ignoreWhitespace;
-        while (!s.IsEmpty())
+        else if (argc == 1)
         {
-            const char first = *ASUtils::SkipWhiteSpace(s.ToCStr(), s.GetSize());
-            if (first == ';')
-            {
-                s.TrimLeft(1);
-                continue;
-            }
+            const Value& arg = argv[0];
 
-            if (first != '<')
+            if (IsXMLObject(arg))
             {
-                // A text run up to the next element.
-                StringDataPtr txt;
-                const SPInt len = FindFirstChar(s, '<');
-                if (len == -1)
-                {
-                    txt = s;
-                    s.TrimLeft(s.GetSize());
-                }
-                else
-                {
-                    txt = StringDataPtr(s.ToCStr(), len);
-                    s.TrimLeft(len);
-                }
-                if (ignoreWhitespace)
-                    txt = txt.GetTruncateWhitespace();
-                SPtr<XML> el(Sfr02MakeInstanceText(itr, txt));
-                List.PushBack(el);
-                continue;
+                List.PushBack(SPtr<XML>(static_cast<XML*>(arg.GetObject())));
             }
-
-            UPInt pos = 0;
-            XMLParser parser(itr);
-            if (!parser.Parse(s, pos, true))
+            else
             {
-                if (pos == 0)
+                InstanceTraits::fl::XML& itr = static_cast<InstanceTraits::fl::XML&>(*vm.GetXMLSupport().GetITraitsXML());
+                StringManager& sm = vm.GetStringManager();
+                ASString str = sm.CreateEmptyString();
+
+                if (!arg.Convert2String(str))
                     return;
-                const char c = s.ToCStr()[pos];
-                if (c == ';')
-                {
-                    vm.HandleException = false;
-                    s.TrimLeft(1);
-                }
-                else if (c == '<')
-                {
-                    pos = s.FindLastChar('>', pos) + 1;
-                    vm.HandleException = false;
-                }
-                else
-                    return;
-            }
 
-            for (UPInt i = 0; i < parser.RootElements.GetSize(); ++i)
-                Sfr02PushBack(List, parser.RootElements[i]);
-            s.TrimLeft(pos);
+                StringDataPtr s(str.ToCStr(), str.GetSize());
+                const Classes::fl::XML& cl_xml = static_cast<const Classes::fl::XML&>(FUN_142508460(vm.GetXMLSupport().GetITraitsXML()));
+                const bool iw = cl_xml.ignoreWhitespace;
+
+                while (!s.IsEmpty())
+                {
+                    const char first_char = *ASUtils::SkipWhiteSpace(s.ToCStr(), s.GetSize());
+
+                    if (first_char == ';')
+                    {
+                        s.TrimLeft(1);
+                        continue;
+                    }
+
+                    if (first_char != '<')
+                    {
+                        // A text run up to the next element.
+                        StringDataPtr txt;
+
+                        SPInt len = FindFirstChar(s, '<');
+                        if (len == -1)
+                        {
+                            txt = s;
+                            s.TrimLeft(s.GetSize());
+                        }
+                        else
+                        {
+                            txt = StringDataPtr(s.ToCStr(), len);
+                            s.TrimLeft(len);
+                        }
+
+                        if (iw)
+                            txt = txt.GetTruncateWhitespace();
+
+                        SPtr<XML> el(Sfr02MakeInstanceText(itr, txt));
+                        List.PushBack(el);
+                    }
+                    else
+                    {
+                        UPInt parsed = 0;
+                        XMLParser parser(itr);
+                        const bool ok = parser.Parse(s, parsed, true);
+                        UPInt pos = parsed;
+
+                        if (!ok)
+                        {
+                            if (pos == 0)
+                                return;
+
+                            const char c = s.ToCStr()[pos];
+
+                            if (c == ';')
+                            {
+                                s.TrimLeft(1);
+                                vm.HandleException = false;
+                            }
+                            else if (c == '<')
+                            {
+                                pos = s.FindLastChar('>', pos) + 1;
+                                vm.HandleException = false;
+                            }
+                            else
+                                return;
+                        }
+
+                        for (UPInt i = 0; i < parser.RootElements.GetSize(); ++i)
+                            Sfr02PushBack(List, parser.RootElements[i]);
+                        s.TrimLeft(pos);
+                    }
+                }
+            }
         }
     }
 }} // namespace Instances::fl
