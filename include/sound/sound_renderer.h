@@ -58,7 +58,7 @@ public:
     void AddRef() { _InterlockedExchangeAdd(&RefCount, 1); }
     void Release()
     {
-        if ((_InterlockedExchangeAdd(&RefCount, -1) - 1) == 0)
+        if (_InterlockedDecrement(&RefCount) == 0)
             delete this;
     }
 };

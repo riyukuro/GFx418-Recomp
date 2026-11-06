@@ -431,7 +431,6 @@ void VideoSoundRendererStream::DestroyOutput()
 }
 
 // @0x14001d420
-// MS2-FUNCTIONAL: the exe SoundSample release is lock add (_InterlockedDecrement), sound_renderer.h has the xadd form
 void VideoSoundRendererStream::Start(PCMStream* pstream)
 {
     Stat            = Sound_Playing;
