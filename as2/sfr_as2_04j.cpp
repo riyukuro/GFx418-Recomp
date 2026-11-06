@@ -204,7 +204,7 @@ static SF_FORCEINLINE InteractiveObject* EntryLevelMovie(const MovieRoot* proot,
 }
 
 // The movie load: a MoviePreloadTask reads the file while the movie polls LoadFinished. 0x58 bytes.
-// MS2-FUNCTIONAL: raw words over the entry; the exe shrink-wraps the rbp/rsi/r14/r15 saves (push rbx, 0x38 frame)
+// MS2-FUNCTIONAL: scheduling only: the exe loads the queue entry (word 4) between the NewCharId and CharSwitched stores; ours loads it after the FirstFrameLoaded store
 // @0x14291c690
 void* FUN_14291c690(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie)
 {
@@ -238,10 +238,11 @@ void* FUN_14291c690(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie)
     MoviePreloadTask* ptask = 0;
     if (void* pmem = Memory::pGlobalHeap->Alloc(0x50))
         ptask = ::new (pmem) MoviePreloadTask(reinterpret_cast<MovieImpl*>(w[3]), pas2->URL, stripped, pentry->QuietOpen);
-    if (w[5])
-        FUN_14257dcb0(reinterpret_cast<void*>(w[5]));
-    w[5] = reinterpret_cast<UPInt>(ptask);
-    StartTask(reinterpret_cast<MovieImpl*>(w[3]), ptask);
+    // The SDK: pPreloadTask = *SF_NEW ...; GetTaskManager()->AddTask(pPreloadTask), with the task re-read after the call.
+    reinterpret_cast<Ptr<MoviePreloadTask>&>(w[5]) = *ptask;
+    Ptr<TaskManager> ptm = *static_cast<TaskManager*>(
+        reinterpret_cast<MovieImpl*>(w[3])->GetStateBag()->GetStateAddRef(State::State_TaskManager));
+    ptm->AddTask(reinterpret_cast<Task*>(w[5]));
     return self;
 }
 
