@@ -1232,48 +1232,42 @@ public:
 // Global ASSetPropFlags(object, names, setTrue[, setFalse]): sets / clears the DontEnum/DontDelete/ReadOnly bits of the
 // named members (a comma separated string or an array), of all members for null names.
 // @0x1428f7740
-// MS2-FUNCTIONAL same logic; the exe's argument decoding and visitor setup are scheduled differently
+// MS2-FUNCTIONAL SDK body; the exe gives the two StringSplit Ptr temps their own home slots (ours share one with key), so its frame is 0x10 larger
 void GAS_GlobalASSetPropFlags(const FnCall& fn)
 {
+    unsigned version = fn.Env->GetVersion();
 
-    UByte            version = fn.Env->GetVersion();
-    ObjectInterface* pobj = fn.Arg(0).ToObjectInterface(fn.Env);
+    ObjectInterface* const pobj = fn.Arg(0).ToObjectInterface(fn.Env);
     if (!pobj)
         return;
 
+    const Value&     arg1 = fn.Arg(1);
     Ptr<ArrayObject> props;
-    const Value&     names = fn.Arg(1);
-    if (names.IsString())
+    if (arg1.IsString())
     {
-        ASString list = names.ToString(fn.Env);
-        props = StringProto::StringSplit(fn.Env, list, ",", 0x3fffffff);
+        props = StringProto::StringSplit(fn.Env, arg1.ToString(fn.Env), ",", 0x3fffffff);
     }
-    else if (names.IsObject())
+    else if (arg1.IsObject())
     {
-        // A null object goes on to all members (0x1428f78f4 je -> 0x1428f7919)
-        Object* pn = names.ToObject(fn.Env);
-        if (!pn)
-            ;
-        else if (pn->GetObjectType() == ObjectInterface::Object_Array)
-            props = static_cast<ArrayObject*>(pn);
-        else if (pn->GetObjectType() == ObjectInterface::Object_String)
+        Object* _props = fn.Arg(1).ToObject(fn.Env);
+        if (_props == NULL)
         {
-            ASString list = names.ToString(fn.Env);
-            props = StringProto::StringSplit(fn.Env, list, ",", 0x3fffffff);
+            // null names: all members (SDK asserts the type is null)
         }
+        else if (_props->GetObjectType() == ObjectInterface::Object_Array)
+            props = static_cast<ArrayObject*>(_props);
+        else if (_props->GetObjectType() == ObjectInterface::Object_String)
+            props = StringProto::StringSplit(fn.Env, arg1.ToString(fn.Env), ",", 0x3fffffff);
         else
             return;
     }
-    else if (!names.IsNull())
+    else if (!arg1.IsNull())
         return;
 
     UByte setTrue = (UByte)(fn.Arg(2).ToInt32(fn.Env) & 7);
-    // SWF 5 with three arguments clears all flags first, null names too (0x1428f782f r15d=-1, 0x1428f7a25 cmove)
-    UByte setFalse;
-    if (fn.NArgs == 3)
-        setFalse = (UByte)((version == 5 ? ~0 : 0) & 7);
-    else
-        setFalse = (UByte)(fn.Arg(3).ToUInt32(fn.Env) & 7);
+    UByte setFalse = (UByte)((fn.NArgs == 3 ?
+        (version == 5 ? ~0 : 0) : fn.Arg(3).ToUInt32(fn.Env))
+        & 7);
 
     ASStringContext* psc = fn.Env->GetSC();
     if (!props)
@@ -1287,15 +1281,15 @@ void GAS_GlobalASSetPropFlags(const FnCall& fn)
     }
     else
     {
-        for (int i = 0, n = props->GetSize(); i < n; i++)
+        for (int i = 0, n = props->GetSize(); i < n; ++i)
         {
-            Value* pv = props->GetElementPtr(i);
-            if (!pv)
+            const Value* elem = props->GetElementPtr(i);
+            if (elem == 0)
                 continue;
-            ASString name = pv->ToString(fn.Env);
-            Member   m;
-            if (pobj->FindMember(psc, name, &m))
-                pobj->SetMemberFlags(psc, name, (UByte)((~setFalse & m.mValue.T.PropFlags) | setTrue));
+            ASString key = elem->ToString(fn.Env);
+            Member   member;
+            if (pobj->FindMember(psc, key, &member))
+                pobj->SetMemberFlags(psc, key, (UByte)((~setFalse & member.mValue.T.PropFlags) | setTrue));
         }
     }
 }
