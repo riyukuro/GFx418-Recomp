@@ -2785,7 +2785,8 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace TR { struct Sfr3
 // pushes the result type on the state's op stack (+0x38): a class name of a global as its class, a data slot as
 // getslot (0xb6), a method slot as its function (op 0x66) or a getter call (0x43 callmethod / 0xb9); the builtin
 // primitive traits give their class. Anything else is the op with ind and an Object result.
-// MS2-FUNCTIONAL 0x1424f8b00: written on raw offsets (tracer +0x20 state, VM builtin traits, SlotInfo bitfields)
+// MS2-FUNCTIONAL 0x1424f8b00: SDK EmitGetProperty order (code slot, else data slot); the exe keeps a separate inline
+// ~Value release per method/getter branch where cl tail-merges ours (1207 vs 1370 bytes)
 // @0x1424f8b00
 bool FUN_1424f8b00(void* tr, int op, void* state, const Scaleform::GFx::AS3::Traits* t,
                    const Scaleform::GFx::AS3::Multiname* pmn, int ind)
@@ -2816,26 +2817,16 @@ bool FUN_1424f8b00(void* tr, int op, void* state, const Scaleform::GFx::AS3::Tra
         {
             const unsigned siw = *reinterpret_cast<const unsigned*>(si);
             const int bt = (static_cast<int>(siw) << 0x16) >> 0x1b;
-            if (bt < 11)
+            if (bt > 10)
             {
-                Value v;
-                if (!*Scaleform::GFx::AS3::TR::Sfr33TRStateAccess17::PropType(state, &ok, t, si, v))
-                    return false;
-                opstack.PushBack(v);
-                if (mnw & 4)
-                    FUN_14251f930(self, 0x29);   // pop
-                FUN_14251fb90(self, 0xb6, static_cast<unsigned>(static_cast<int>(index) + 1));   // getslot
-                return true;
-            }
-            if (!((siw >> 0x1a) & 1) && (bt != 11 || op == 0x66))
-            {
+              if (!((siw >> 0x1a) & 1) && (bt != 11 || op == 0x66))
+              {
                 const InstanceTraits::Traits* ret;
                 if (bt == 11)
                 {
                     FUN_14251fb90(self, 0xb6, static_cast<unsigned>(static_cast<int>(index) + 1));
                     const AbsoluteIndex ai((*reinterpret_cast<const int*>(si) << 5) >> 0xf);
-                    Value f = t->GetVT().GetValue(ai);
-                    ret = &reinterpret_cast<const TR::State*>(state)->GetFunctType(f);
+                    ret = &reinterpret_cast<const TR::State*>(state)->GetFunctType(t->GetVT().GetValue(ai));
                 }
                 else
                 {
@@ -2844,13 +2835,24 @@ bool FUN_1424f8b00(void* tr, int op, void* state, const Scaleform::GFx::AS3::Tra
                     FUN_14251fa10(self, op == 4 ? 0xb9 : 0x43,
                                   static_cast<UPInt>(static_cast<SPInt>((static_cast<int>(siw) << 5) >> 0xf)), 0);
                     const AbsoluteIndex ai((*reinterpret_cast<const int*>(si) << 5) >> 0xf);
-                    Value f = t->GetVT().GetValue(ai);
-                    ret = reinterpret_cast<const InstanceTraits::Traits*>(FUN_14250a060(reinterpret_cast<UPInt>(vm), &f));
+                    ret = &FUN_14250a060(*reinterpret_cast<VM*>(*reinterpret_cast<UByte**>(*reinterpret_cast<UByte**>(*reinterpret_cast<UByte**>(self + 0x20) + 0x28) + 0x20)), t->GetVT().GetValue(ai));
                 }
                 Value v;
                 Sfr33TracerValueSet(v, ((static_cast<unsigned>(reinterpret_cast<const Tracer*>(self)->CanBeNull(*ret)) & ~8u) << 5) | 8,
                                     const_cast<InstanceTraits::Traits*>(ret), false);
                 opstack.PushBack(v);
+                return true;
+              }
+            }
+            else
+            {
+                Value v;
+                if (!*Scaleform::GFx::AS3::TR::Sfr33TRStateAccess17::PropType(state, &ok, t, si, v))
+                    return false;
+                opstack.PushBack(v);
+                if (mnw & 4)
+                    FUN_14251f930(self, 0x29);   // pop
+                FUN_14251fb90(self, 0xb6, static_cast<unsigned>(static_cast<int>(index) + 1));   // getslot
                 return true;
             }
         }
