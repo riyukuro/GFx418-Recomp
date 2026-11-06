@@ -268,17 +268,9 @@ extern "C" void FUN_1424dfbf0(void* self);
 void FUN_1424dc8e0(void* self);
 void FUN_1424de240(long long* state);
 namespace Scaleform { namespace GFx { namespace AS3 {
-void* DeleteAs3_1424e3eb0(void* self, unsigned flags);
 void* DeleteAs3_1424e3890(void* self, unsigned flags);
 }}}
 
-// VMAbcFile's non-deleting teardown follows the same member cleanup sequence as its scalar deleting dtor.
-// MS2-FUNCTIONAL 0x1424dfa30: delegates to that recovered sequence with flags 0 so the object storage stays live.
-// @0x1424dfa30
-extern "C" void FUN_1424dfa30(void* self)
-{
-    Scaleform::GFx::AS3::DeleteAs3_1424e3eb0(self, 0);
-}
 
 // The stage display object: its members release in reverse order, then DisplayObjContainer's dtor.
 // @0x1424defe0
@@ -2289,6 +2281,54 @@ template SfrCx18TextFormatSet::~HashSetBase();
 // @0x1424dd110
 template SfrCx18ASStringValueSet::~HashSetBase();
 }
+
+// The VMAbcFile member arrays whose destructors the exe calls out of line (instantiated elsewhere).
+namespace Scaleform {
+typedef ArrayDataBase<GFx::AS3::SPtr<GFx::ASStringNode>, AllocatorLH<GFx::AS3::SPtr<GFx::ASStringNode>, 2>, ArrayDefaultPolicy> Sfr16AdbStr;
+typedef ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::NamespaceSet>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::NamespaceSet>, 340>, ArrayDefaultPolicy> Sfr16AdbNsSet;
+typedef ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>, 340>, ArrayDefaultPolicy> Sfr16AdbCtr;
+typedef ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::VMAbcFile>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::VMAbcFile>, 340>, ArrayDefaultPolicy> Sfr16AdbFile;
+typedef ArrayDataBase<GFx::AS3::Abc::MethodBodyInfo::Exception, AllocatorLH<GFx::AS3::Abc::MethodBodyInfo::Exception, 340>, ArrayDefaultPolicy> Sfr16AdbExc;
+typedef ArrayDataBase<ArrayLH_POD<UInt64, 338, ArrayDefaultPolicy>, AllocatorLH<ArrayLH_POD<UInt64, 338, ArrayDefaultPolicy>, 340>, ArrayDefaultPolicy> Sfr16AdbPod;
+template<> SF_NOINLINE Sfr16AdbStr::~ArrayDataBase();      // 0x1424dc440
+template<> SF_NOINLINE Sfr16AdbNsSet::~ArrayDataBase();    // 0x1424dc530
+template<> SF_NOINLINE Sfr16AdbCtr::~ArrayDataBase();      // 0x1424dc5b0
+template<> SF_NOINLINE Sfr16AdbFile::~ArrayDataBase();     // 0x1424dc6b0
+template<> SF_NOINLINE Sfr16AdbExc::~ArrayDataBase();      // 0x1424dc800
+template<> SF_NOINLINE Sfr16AdbPod::~ArrayDataBase();      // 0x1424dc3d0
+}
+bool FUN_142522a60(Scaleform::GFx::AS3::VM* vm, void* file);
+void FUN_1424dcc30(void* self);
+void FUN_1424dcdd0(void* self);
+extern const void* DAT_14317b750[];     // VMAbcFile
+
+// VMAbcFile's non-deleting teardown: the member cleanup sequence its scalar deleting dtor (0x1424e3eb0) inlines.
+// Every member teardown is an out-of-line call in the exe.
+#pragma inline_depth(0)
+// @0x1424dfa30
+extern "C" void FUN_1424dfa30(void* self)
+{
+    using namespace Scaleform;
+    char* p = static_cast<char*>(self);
+    *reinterpret_cast<const void* const**>(p) = DAT_14317b750;
+    ::FUN_142522a60(*reinterpret_cast<GFx::AS3::VM**>(p + 0x20), self);
+    reinterpret_cast<Sfr16AdbExc*>(p + 0xd0)->Sfr16AdbExc::~ArrayDataBase();
+    reinterpret_cast<Sfr16AdbPod*>(p + 0xb8)->Sfr16AdbPod::~ArrayDataBase();
+    reinterpret_cast<Sfr16AdbCtr*>(p + 0xa0)->Sfr16AdbCtr::~ArrayDataBase();
+    FUN_1424dcc30(p + 0x98);
+    FUN_1424dcdd0(p + 0x90);
+    reinterpret_cast<Sfr16AdbFile*>(p + 0x78)->Sfr16AdbFile::~ArrayDataBase();
+    reinterpret_cast<SfrCx18GlobalScriptSet*>(p + 0x70)->SfrCx18GlobalScriptSet::~HashSetBase();
+    reinterpret_cast<Sfr16AdbStr*>(p + 0x58)->Sfr16AdbStr::~ArrayDataBase();
+    reinterpret_cast<Sfr16AdbNsSet*>(p + 0x40)->Sfr16AdbNsSet::~ArrayDataBase();
+    reinterpret_cast<SfrCx18GASRefSet*>(p + 0x38)->SfrCx18GASRefSet::~HashSetBase();
+    reinterpret_cast<SfrCx18AbcNamespaceSet*>(p + 0x30)->Clear();
+    reinterpret_cast<SfrCx18AbcNamespaceSet*>(p + 0x30)->SfrCx18AbcNamespaceSet::~HashSetBase();
+    if (void* m = *reinterpret_cast<void**>(p + 0x28))
+        reinterpret_cast<RefCountImpl*>(m)->Release();
+    reinterpret_cast<GFx::AS3::GASRefCountBase*>(self)->GFx::AS3::GASRefCountBase::~GASRefCountBase();
+}
+#pragma inline_depth()
 
 
 // Assigns a tagged AS3 reference and transfers the old/new reference counts.
