@@ -73,14 +73,15 @@ struct BlurFilterParams
         Colors[1] = o.Colors[1];
     }
 
-    // (appended for sfr_render_04l) member-wise as well, both offset coordinates read before either is stored
+    // (appended for sfr_render_04l) member-wise; the offset goes through Point::operator= as in the SDK's implicit
+    // assignment (a TextFilter copy then moves Offset.x as an int and stores y first)
     BlurFilterParams& operator=(const BlurFilterParams& o)
     {
         Mode      = o.Mode;
         Passes    = o.Passes;
         BlurX     = o.BlurX;
         BlurY     = o.BlurY;
-        Offset    = PointF(o.Offset.x, o.Offset.y);
+        Offset    = o.Offset;
         Strength  = o.Strength;
         Colors[0] = o.Colors[0];
         Colors[1] = o.Colors[1];
