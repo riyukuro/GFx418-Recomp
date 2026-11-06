@@ -2084,7 +2084,6 @@ namespace Instances { namespace fl_display
     }
 
     // A rectangle with elliptic corners (radii clamped to half the size), in twips.
-    // MS2-FUNCTIONAL: the exe splits the body into a chained-unwind chunk (shrink-wrapped xmm saves); register allocation
     // @0x14244aae0
     void Graphics::drawRoundRect(const Value& result, Value::Number x, Value::Number y,
                                  Value::Number width, Value::Number height,
@@ -2112,35 +2111,59 @@ namespace Instances { namespace fl_display
         if (NumberUtil::IsNaN(ellipseHeight))
             ellipseHeight = ellipseWidth;
 
-        float left   = float(x);
-        float top    = float(y);
-        float right  = left + float(width);
-        float bottom = top + float(height);
-        float rx = Alg::Min(float(width) * 0.5f, float(ellipseWidth) * 0.5f);
-        float ry = Alg::Min(float(height) * 0.5f, float(ellipseHeight) * 0.5f);
-        float cx0 = right - rx, cy0 = bottom - ry;
-        float cx1 = left + rx,  cy1 = top + ry;
+        float fx = (float)x, fy = (float)y;
+        float fx1 = fx + (float)width, fy1 = fy + (float)height;
+        float fhalfWidth = (float)width * 0.5f, fhalfHeight = (float)height * 0.5f;
+        float fexradius = Alg::Min((float)ellipseWidth * 0.5f, fhalfWidth), feyradius = Alg::Min((float)ellipseHeight * 0.5f, fhalfHeight);
+        float fexcenter = fx1 - fexradius, feycenter = fy1 - feyradius;
 
-        pDrawing->MoveTo(right * 20.0f, cy0 * 20.0f);
-        pDrawing->CurveTo((cx0 + rx) * 20.0f, (cy0 + GraphicsTanPi8 * ry) * 20.0f,
-                          (cx0 + GraphicsSinPi4 * rx) * 20.0f, (cy0 + GraphicsSinPi4 * ry) * 20.0f);
-        pDrawing->CurveTo((cx0 + GraphicsTanPi8 * rx) * 20.0f, (cy0 + ry) * 20.0f,
-                          cx0 * 20.0f, (cy0 + ry) * 20.0f);
-        pDrawing->LineTo(cx1 * 20.0f, bottom * 20.0f);
-        pDrawing->CurveTo((cx1 - GraphicsTanPi8 * rx) * 20.0f, (cy0 + ry) * 20.0f,
-                          (cx1 - GraphicsSinPi4 * rx) * 20.0f, (cy0 + GraphicsSinPi4 * ry) * 20.0f);
-        pDrawing->CurveTo((cx1 - rx) * 20.0f, (cy0 + GraphicsTanPi8 * ry) * 20.0f,
-                          (cx1 - rx) * 20.0f, cy0 * 20.0f);
-        pDrawing->LineTo(left * 20.0f, cy1 * 20.0f);
-        pDrawing->CurveTo((cx1 - rx) * 20.0f, (cy1 - GraphicsTanPi8 * ry) * 20.0f,
-                          (cx1 - GraphicsSinPi4 * rx) * 20.0f, (cy1 - GraphicsSinPi4 * ry) * 20.0f);
-        pDrawing->CurveTo((cx1 - GraphicsTanPi8 * rx) * 20.0f, (cy1 - ry) * 20.0f,
-                          cx1 * 20.0f, (cy1 - ry) * 20.0f);
-        pDrawing->LineTo(cx0 * 20.0f, top * 20.0f);
-        pDrawing->CurveTo((cx0 + GraphicsTanPi8 * rx) * 20.0f, (cy1 - ry) * 20.0f,
-                          (cx0 + GraphicsSinPi4 * rx) * 20.0f, (cy1 - GraphicsSinPi4 * ry) * 20.0f);
-        pDrawing->CurveTo((cx0 + rx) * 20.0f, (cy1 - GraphicsTanPi8 * ry) * 20.0f,
-                          (cx0 + rx) * 20.0f, cy1 * 20.0f);
+
+        pDrawing->MoveTo(Render::PixelsToTwips(fx1), Render::PixelsToTwips(fy1 - feyradius));
+
+        pDrawing->CurveTo(Render::PixelsToTwips(fexcenter + fexradius), 
+                          Render::PixelsToTwips(GraphicsTanPi8 * feyradius + feycenter),
+                          Render::PixelsToTwips(GraphicsSinPi4 * fexradius + fexcenter),
+                          Render::PixelsToTwips(GraphicsSinPi4 * feyradius + feycenter));
+        pDrawing->CurveTo(Render::PixelsToTwips(GraphicsTanPi8 * fexradius + fexcenter), 
+                          Render::PixelsToTwips(feycenter + feyradius),
+                          Render::PixelsToTwips(fexcenter),
+                          Render::PixelsToTwips(feycenter + feyradius));
+
+        pDrawing->LineTo(Render::PixelsToTwips(fx + fexradius), Render::PixelsToTwips(fy1));
+        fexcenter = fx + fexradius;
+
+        pDrawing->CurveTo(Render::PixelsToTwips(-GraphicsTanPi8 * fexradius + fexcenter), 
+                          Render::PixelsToTwips(feycenter + feyradius),
+                          Render::PixelsToTwips(-GraphicsSinPi4 * fexradius + fexcenter),
+                          Render::PixelsToTwips(GraphicsSinPi4 * feyradius + feycenter));
+        pDrawing->CurveTo(Render::PixelsToTwips(fexcenter - fexradius), 
+                          Render::PixelsToTwips(GraphicsTanPi8 * feyradius + feycenter),
+                          Render::PixelsToTwips(fexcenter - fexradius),
+                          Render::PixelsToTwips(feycenter));
+
+        pDrawing->LineTo(Render::PixelsToTwips(fx), Render::PixelsToTwips(fy + feyradius));
+        feycenter = fy + feyradius;
+
+        pDrawing->CurveTo(Render::PixelsToTwips(fexcenter - fexradius), 
+                          Render::PixelsToTwips(-GraphicsTanPi8 * feyradius + feycenter),
+                          Render::PixelsToTwips(-GraphicsSinPi4 * fexradius + fexcenter),
+                          Render::PixelsToTwips(-GraphicsSinPi4 * feyradius + feycenter));
+        pDrawing->CurveTo(Render::PixelsToTwips(-GraphicsTanPi8 * fexradius + fexcenter), 
+                          Render::PixelsToTwips(feycenter - feyradius),
+                          Render::PixelsToTwips(fexcenter),
+                          Render::PixelsToTwips(feycenter - feyradius));
+
+        pDrawing->LineTo(Render::PixelsToTwips(fx1 - fexradius), Render::PixelsToTwips(fy));
+        fexcenter = fx1 - fexradius;
+
+        pDrawing->CurveTo(Render::PixelsToTwips(GraphicsTanPi8 * fexradius + fexcenter), 
+                          Render::PixelsToTwips(feycenter - feyradius),
+                          Render::PixelsToTwips(GraphicsSinPi4 * fexradius + fexcenter),
+                          Render::PixelsToTwips(-GraphicsSinPi4 * feyradius + feycenter));
+        pDrawing->CurveTo(Render::PixelsToTwips(fexcenter + fexradius), 
+                          Render::PixelsToTwips(-GraphicsTanPi8 * feyradius + feycenter),
+                          Render::PixelsToTwips(fexcenter + fexradius),
+                          Render::PixelsToTwips(feycenter));
         pDispObj->InvalidateHitResult();
     }
 
