@@ -2013,7 +2013,8 @@ static __forceinline void VectorSort(VectorBase<T>& self, Value& result, unsigne
                 {
                     if (pairs[i - 1].First == pairs[i].First)
                     {
-                        result.SetSInt32(0);
+                        result.~Value();
+                        result.SetSInt32Unsafe(0);
                         return;
                     }
                 }
@@ -2173,23 +2174,23 @@ void FUN_142550490(VectorBase<Value>& v, Value& result, unsigned argc, const Val
 void FUN_142550640(VectorBase<UInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_uint& owner)
 { VI::VectorSlice<VI::Vector_uint, VT::Vector_uint>(v, result, argc, argv, owner); }
 
-// MS2-FUNCTIONAL: the exe inlines Value::SetSInt32 in the numeric unique-sort return and orders the ptr-path ReleaseNode differently; ours calls SetSInt32 out of line
+// MS2-FUNCTIONAL: SetSInt32 is inlined by hand (Release + SetSInt32Unsafe) in the numeric unique-sort return; the exe still keeps result in r12 (frame 0x110 vs 0x118) and orders the ptr-path ReleaseNode differently
 // @0x142550840
 void FUN_142550840(VectorBase<Ptr<GFx::ASStringNode> >& v, Value& result, unsigned argc, const Value* argv, VI::Vector_String& owner)
 { VI::VectorSort<VI::Vector_String, VT::Vector_String>(v, result, argc, argv, owner); }
-// MS2-FUNCTIONAL: the exe inlines Value::SetSInt32 in the numeric unique-sort return and orders the ptr-path ReleaseNode differently; ours calls SetSInt32 out of line
+// MS2-FUNCTIONAL: SetSInt32 is inlined by hand (Release + SetSInt32Unsafe) in the numeric unique-sort return; the exe still keeps result in r12 (frame 0x110 vs 0x118) and orders the ptr-path ReleaseNode differently
 // @0x142551250
 void FUN_142551250(VectorBase<Value::Number>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_double& owner)
 { VI::VectorSort<VI::Vector_double, VT::Vector_double>(v, result, argc, argv, owner); }
-// MS2-FUNCTIONAL: the exe inlines Value::SetSInt32 in the numeric unique-sort return and orders the ptr-path ReleaseNode differently; ours calls SetSInt32 out of line
+// MS2-FUNCTIONAL: SetSInt32 is inlined by hand (Release + SetSInt32Unsafe) in the numeric unique-sort return; the exe still keeps result in r12 (frame 0x110 vs 0x118) and orders the ptr-path ReleaseNode differently
 // @0x142551cb0
 void FUN_142551cb0(VectorBase<SInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_int& owner)
 { VI::VectorSort<VI::Vector_int, VT::Vector_int>(v, result, argc, argv, owner); }
-// MS2-FUNCTIONAL: the exe inlines Value::SetSInt32 in the numeric unique-sort return and orders the ptr-path ReleaseNode differently; ours calls SetSInt32 out of line
+// MS2-FUNCTIONAL: SetSInt32 is inlined by hand (Release + SetSInt32Unsafe) in the numeric unique-sort return; the exe still keeps result in r12 (frame 0x110 vs 0x118) and orders the ptr-path ReleaseNode differently
 // @0x1425526f0
 void FUN_1425526f0(VectorBase<Value>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_object& owner)
 { VI::VectorSort<VI::Vector_object, VT::Vector_object>(v, result, argc, argv, owner); }
-// MS2-FUNCTIONAL: the exe inlines Value::SetSInt32 in the numeric unique-sort return and orders the ptr-path ReleaseNode differently; ours calls SetSInt32 out of line
+// MS2-FUNCTIONAL: SetSInt32 is inlined by hand (Release + SetSInt32Unsafe) in the numeric unique-sort return; the exe still keeps result in r12 (frame 0x110 vs 0x118) and orders the ptr-path ReleaseNode differently
 // @0x142553170
 void FUN_142553170(VectorBase<UInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_uint& owner)
 { VI::VectorSort<VI::Vector_uint, VT::Vector_uint>(v, result, argc, argv, owner); }
