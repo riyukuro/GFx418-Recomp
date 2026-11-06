@@ -57,25 +57,36 @@ SF_FORCEINLINE Environment* LqCharEnv(InteractiveObject* pchar)
 
 } // namespace
 
+// The SDK's GFx_LoadBitmap template, which BitmapData::LoadBitmap forwards to. It gives the exe's second release tail.
+template <class StringType>
+BitmapData* GFx_LoadBitmap(Environment* penv, const StringType& linkageId)
+{
+    MovieImpl* pm = penv->GetTarget()->GetMovieImpl();
+    Ptr<ImageResource> ir = pm->GetImageResourceByLinkageId(penv->GetTarget()->GetResourceMovieDef(), linkageId.ToCStr());
+    if (!ir)
+    {
+        penv->LogScriptWarning(
+            "BitmapData::LoadBitmap: LoadMovieImageCallback failed to load image \"%s\"",
+            linkageId.ToCStr());
+        return NULL;
+    }
+    Ptr<MovieDef> md = penv->GetTarget()->GetResourceMovieDef();
+    if (md) // can it be NULL?
+    {
+        BitmapData* pobj = SF_HEAP_NEW(penv->GetHeap()) BitmapData(penv);
+        pobj->SetImage(penv, ir, md);
+        return pobj;
+    }
+    return NULL;
+}
+
 // A BitmapData of the image exported under linkageId by the movie of the target.
-// MS2-FUNCTIONAL: register allocation differs (rbx/rdi swapped) and the exe keeps a second pimg release tail.
+// MS2-FUNCTIONAL: register allocation differs in the inlined Environment::GetMovieImpl (the exe loads pASRoot into r8
+// and pMovieImpl after the GetResourceMovieDef vtable load; ours uses rax and loads it first).
 // @0x142966480
 BitmapData* BitmapData::LoadBitmapA(Environment* penv, const String& linkageId)
 {
-    Ptr<ImageResource> pimg = penv->GetTarget()->GetMovieImpl()->GetImageResourceByLinkageId(
-        penv->GetTarget()->GetResourceMovieDef(), linkageId.ToCStr());
-    if (!pimg)
-    {
-        penv->LogScriptWarning("BitmapData::LoadBitmap: LoadMovieImageCallback failed to load image \"%s\"",
-                               linkageId.ToCStr());
-        return 0;
-    }
-    Ptr<MovieDef> pmd = penv->GetTarget()->GetResourceMovieDef();
-    if (!pmd)
-        return 0;
-    BitmapData* pbmp = SF_HEAP_NEW(penv->GetHeap()) BitmapData(penv);
-    pbmp->SetImage(penv, pimg, pmd);
-    return pbmp;
+    return GFx_LoadBitmap<>(penv, linkageId);
 }
 
 // The style sheet is handed to its object once the loader thread has read it; a canceled load just waits for it.
