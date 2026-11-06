@@ -452,27 +452,38 @@ void FontNamesVisitor::Visit(MovieDef*, Resource* presource, ResourceId, const c
     }
 }
 
+// ArrayObject::PushBack, inlined.
+static SF_FORCEINLINE void LqArrayPushBack(ArrayObject* parr, const Value& val)
+{
+    parr->Elements.PushBack(SF_HEAP_AUTO_NEW(parr) Value(val));
+}
+
 // TextField.getFontList(): the names of the movie's fonts, the font library's and the font provider's.
-// MS2-FUNCTIONAL: the font name hash is walked with its iterator; the exe inlines it.
+// MS2-FUNCTIONAL: LTCG knows the Value copy ctor (0x1429237f0) keeps no pointer to name, so it holds the type byte in
+// r12b across the Reserve call and rematerialises the 0x7fff... size mask in r9; our cl keeps the mask in r12.
 // @0x1428ebd60
 void TextFieldCtorFunction::GetFontList(const FnCall& fn)
 {
+    MovieImpl*         proot     = fn.Env->GetTarget()->GetMovieImpl();
+    MovieDef*          pmoviedef = ((MovieInterface418*)proot)->GetMovieDef();
     StringHash<String> fontnames;
-    MovieImpl*         proot = fn.Env->GetMovieImpl();
     FontNamesVisitor   visitor(&fontnames);
-    ((MovieInterface418*)proot)->GetMovieDef()->VisitResources(&visitor, MovieDef::ResVisit_Fonts);
+    pmoviedef->VisitResources(&visitor, MovieDef::ResVisit_Fonts);
 
-    StateBag*    pstates  = proot->GetStateBag();
-    Ptr<FontLib> pfontlib = pstates->GetFontLib();
+    StateBag*     pstates   = proot->GetStateBag();
+    FontLib*      pfontlib = pstates->GetFontLib();
     if (pfontlib)
         pfontlib->LoadFontNames(fontnames);
-    Ptr<FontProvider> pprovider = *(FontProvider*)pstates->GetStateAddRef(State::State_FontProvider);
+    FontProvider* pprovider = Ptr<FontProvider>(*(FontProvider*)pstates->GetStateAddRef(State::State_FontProvider));
     if (pprovider)
         pprovider->LoadFontNames(fontnames);
 
     Ptr<ArrayObject> parr = *SF_HEAP_NEW(fn.Env->GetHeap()) ArrayObject(fn.Env);
     for (StringHash<String>::ConstIterator it = fontnames.Begin(); it != fontnames.End(); ++it)
-        parr->PushBack(Value(fn.Env->CreateString(it->First.ToCStr(), it->First.GetSize())));
+    {
+        Value name(fn.Env->CreateString(it->First));
+        LqArrayPushBack(parr, name);
+    }
     fn.Result->SetAsObject(parr);
 }
 
