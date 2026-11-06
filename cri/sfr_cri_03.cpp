@@ -60,7 +60,7 @@ extern "C" const void* PTR_LAB_143a48350;
 extern "C" const void* PTR_FUN_143a48638;
 extern "C" const void* PTR_FUN_143a48668;
 extern "C" const void* PTR_FUN_1431b9b10;
-extern "C" const void* PTR_FUN_1431b4f78;
+// (the SyncObject vftable 0x1431b4f78 comes from its inline destructor in sfr_cri_03)
 void criAdec_Initialize(void);
 void criAdec_Finalize(void);
 void crivmpv_ErrorFunc(void*, CriSint32);
@@ -120,6 +120,7 @@ class MemoryHeap { public: void ReleaseOnFree(void* ptr); };
 class Memory { public: static MemoryHeap* pGlobalHeap; };
 class Timer { public: static unsigned __int64 GetRawTicks(); static unsigned __int64 GetRawFrequency(); };
 class RefCountNTSImplCore { protected: mutable int RefCount; public: virtual ~RefCountNTSImplCore(); }; // 0x14257db50
+namespace GFx { namespace Video { class VideoPlayer { public: class SyncObject : public RefCountNTSImplCore { public: virtual void SetStartFrame(unsigned) = 0; virtual void Start() = 0; virtual void Stop() = 0; virtual void Pause(bool) = 0; virtual void GetTime(unsigned __int64*, unsigned __int64*) = 0; virtual ~SyncObject() {} void operator delete(void* p) { void* heap = Memory::pGlobalHeap; ((void (*)(void*, void*))*(void**)((char*)*(void**)heap + 0x60))(heap, p); } }; }; } } // video_video.h view (SF heap delete, as SF_MEMORY_REDEFINE_NEW)
 namespace Render {
 struct ImagePlane;
 class ImageData { public: void GetPlane(unsigned index, ImagePlane* plane) const; unsigned GetPlaneCount() const; };
@@ -2421,13 +2422,12 @@ void* FUN_140041c00(void* context)
     timer->Reserved40 = 0;
     return context;
 }
-
+// MS2-PIN: ??_7SyncObject@VideoPlayer@Video@GFx@Scaleform@@6B@ 0x1431b4f78
 // destroy the global heap manager and optionally free its owning object.
 // @0x140041c60
 void* FUN_140041c60(void* manager, CriUint32 flags)
 {
-    *(const void**)manager = &PTR_FUN_1431b4f78;
-    static_cast<Scaleform::RefCountNTSImplCore*>(manager)->Scaleform::RefCountNTSImplCore::~RefCountNTSImplCore();
+    static_cast<Scaleform::GFx::Video::VideoPlayer::SyncObject*>(manager)->Scaleform::GFx::Video::VideoPlayer::SyncObject::~SyncObject();
     if (flags & 1)
     {
         void* globalManager = Scaleform::Memory::pGlobalHeap;

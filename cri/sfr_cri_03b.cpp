@@ -52,7 +52,7 @@ extern "C" const void* PTR_LAB_143a48350;
 extern "C" const void* PTR_FUN_143a48638;
 extern "C" const void* PTR_FUN_143a48668;
 extern "C" const void* PTR_FUN_1431b9b10;
-extern "C" const void* PTR_FUN_1431b4f78;
+// (the SyncObject vftable 0x1431b4f78 comes from its inline destructor in sfr_cri_03)
 void criAdec_Initialize(void);
 void criAdec_Finalize(void);
 void crivmpv_ErrorFunc(void*, CriSint32);
