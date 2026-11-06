@@ -2257,14 +2257,14 @@ void Instance::Construct(Value&, unsigned, const Value*, bool)
 }
 
 // Throws a TypeError when v, about to be used as an object, is null or undefined.
-// MS2-FUNCTIONAL 0x1424ef180: value pointer kept in r8 (exe reuses rdx) and Error ctor arg order differs; same tests/throw
+// As the SDK's StackReader::CheckObject, which calls GetVM() once for the throw and again for the Error.
 // @0x1424ef180
 void Sfr33CheckObject(VM* const* self, const Value& v)
 {
     if (v.IsNullOrUndefined())
     {
         VM& vm = **self;
-        Sfr33ThrowTypeError(vm, VM::Error(v.IsNull() ? VM::eConvertNullToObjectError : VM::eConvertUndefinedToObjectError, vm));
+        Sfr33ThrowTypeError(vm, VM::Error(v.IsNull() ? VM::eConvertNullToObjectError : VM::eConvertUndefinedToObjectError, **self));
     }
 }
 }}}
