@@ -1558,7 +1558,6 @@ static inline Ptr<InteractiveObject> TopmostEntityOf(const MouseState* pms)
 
 // The mouse over the field: the URL under the cursor takes the style sheet's link formats and the hand cursor, the
 // editor gets the press, the release and the moves (in the field's space), then the field's own handlers run.
-// MS2-FUNCTIONAL 0x1425badd0: same code; register allocation differs (the exe keeps proot in r12 and Link_rollout in r13)
 // @0x1425badd0
 void TextField::PropagateMouseEvent(const EventId& id)
 {
@@ -1584,6 +1583,52 @@ void TextField::PropagateMouseEvent(const EventId& id)
             return;
         switch (id.Id)
         {
+        case EventId::Event_MouseDown:
+            if (HasStyleSheet() && IsHtml() && pDocument->MayHaveUrl())
+            {
+                const MouseState* pms = MouseStateOf(proot, id.MouseIndex);
+                Range urlRange;
+                if (IsUrlUnderMouseCursor(id.MouseIndex, NULL, &urlRange) && pCSSData &&
+                    pCSSData->HasASStyleSheet() && (pms->GetButtonsState() & MouseState::MouseButton_Left))
+                    ChangeUrlFormat(Link_press, id.MouseIndex, &urlRange);
+            }
+            if (pDocument->HasEditorKit())
+            {
+                const MouseState* pms = MouseStateOf(proot, id.MouseIndex);
+                Matrix m;
+                GetWorldMatrix(&m);
+                Render::PointF b(Render::PointF::NoInit);
+                m.TransformByInverse(&b, Render::PointF(pms->GetLastPosition()));
+                EditorOf(pDocument)->OnMouseDown(b.x, b.y, pms->GetButtonsState());
+                if (!IsInPlayList())
+                    AddToPlayList();
+                ModifyOptimizedPlayListLocal<TextField>();
+            }
+            break;
+        case EventId::Event_MouseUp:
+        case EventId::Event_ReleaseOutside:
+            if (HasStyleSheet() && IsHtml() && pDocument->MayHaveUrl())
+            {
+                const MouseState* pms = MouseStateOf(proot, id.MouseIndex);
+                Range urlRange;
+                if (IsUrlUnderMouseCursor(id.MouseIndex, NULL, &urlRange) && pCSSData &&
+                    pCSSData->HasASStyleSheet() && !(pms->GetButtonsState() & MouseState::MouseButton_Left))
+                    ChangeUrlFormat(Link_release, id.MouseIndex, &urlRange);
+                ChangeUrlFormat(Link_release, id.MouseIndex);
+            }
+            if (pDocument->HasEditorKit())
+            {
+                const MouseState* pms = MouseStateOf(proot, id.MouseIndex);
+                Matrix m;
+                GetWorldMatrix(&m);
+                Render::PointF b(Render::PointF::NoInit);
+                m.TransformByInverse(&b, Render::PointF(pms->GetLastPosition()));
+                EditorOf(pDocument)->OnMouseUp(b.x, b.y, pms->GetButtonsState());
+                if (!IsInPlayList())
+                    AddToPlayList();
+                ModifyOptimizedPlayListLocal<TextField>();
+            }
+            break;
         case EventId::Event_MouseMove:
             {
                 const MouseState* pms = MouseStateOf(proot, id.MouseIndex);
@@ -1592,7 +1637,8 @@ void TextField::PropagateMouseEvent(const EventId& id)
                     Matrix m;
                     GetWorldMatrix(&m);
                     Render::PointF lp = pms->GetLastPosition();
-                    Render::PointF b = m.TransformByInverse(lp);
+                    Render::PointF b(Render::PointF::NoInit);
+                    m.TransformByInverse(&b, lp);
                     EditorOf(pDocument)->OnMouseMove(b.x, b.y);
                 }
                 if (HasStyleSheet() && IsHtml() && pDocument->MayHaveUrl())
@@ -1618,68 +1664,25 @@ void TextField::PropagateMouseEvent(const EventId& id)
                         Flags |= Flags_HandCursor;
                     else
                         Flags &= ~Flags_HandCursor;
-                }
-                else if (IsHtml() && pDocument->MayHaveUrl())
-                {
-                    if (IsUrlUnderMouseCursor(id.MouseIndex))
-                        Flags |= Flags_HandCursor;
-                    else
-                        Flags &= ~Flags_HandCursor;
-                }
-                else if ((UByte)(Flags >> 5) & 1)   // Flags_HandCursor
-                {
-                    ChangeUrlFormat(Link_rollout, id.MouseIndex);
-                    Flags &= ~Flags_HandCursor;
+                    proot->ChangeMouseCursorType(id.MouseIndex, GetCursorType());
                 }
                 else
-                    break;
-                proot->ChangeMouseCursorType(id.MouseIndex, GetCursorType());
-            }
-            break;
-        case EventId::Event_MouseDown:
-            if (HasStyleSheet() && IsHtml() && pDocument->MayHaveUrl())
-            {
-                const MouseState* pms = MouseStateOf(proot, id.MouseIndex);
-                Range urlRange;
-                if (IsUrlUnderMouseCursor(id.MouseIndex, NULL, &urlRange) && pCSSData &&
-                    pCSSData->HasASStyleSheet() && (pms->GetButtonsState() & MouseState::MouseButton_Left))
-                    ChangeUrlFormat(Link_press, id.MouseIndex, &urlRange);
-            }
-            if (pDocument->HasEditorKit())
-            {
-                const MouseState* pms = MouseStateOf(proot, id.MouseIndex);
-                Matrix m;
-                GetWorldMatrix(&m);
-                Render::PointF lp = pms->GetLastPosition();
-                Render::PointF b = m.TransformByInverse(lp);
-                EditorOf(pDocument)->OnMouseDown(b.x, b.y, pms->GetButtonsState());
-                if (!IsInPlayList())
-                    AddToPlayList();
-                ModifyOptimizedPlayListLocal<TextField>();
-            }
-            break;
-        case EventId::Event_MouseUp:
-        case EventId::Event_ReleaseOutside:
-            if (HasStyleSheet() && IsHtml() && pDocument->MayHaveUrl())
-            {
-                const MouseState* pms = MouseStateOf(proot, id.MouseIndex);
-                Range urlRange;
-                if (IsUrlUnderMouseCursor(id.MouseIndex, NULL, &urlRange) && pCSSData &&
-                    pCSSData->HasASStyleSheet() && !(pms->GetButtonsState() & MouseState::MouseButton_Left))
-                    ChangeUrlFormat(Link_release, id.MouseIndex, &urlRange);
-                ChangeUrlFormat(Link_release, id.MouseIndex);
-            }
-            if (pDocument->HasEditorKit())
-            {
-                const MouseState* pms = MouseStateOf(proot, id.MouseIndex);
-                Matrix m;
-                GetWorldMatrix(&m);
-                Render::PointF lp = pms->GetLastPosition();
-                Render::PointF b = m.TransformByInverse(lp);
-                EditorOf(pDocument)->OnMouseUp(b.x, b.y, pms->GetButtonsState());
-                if (!IsInPlayList())
-                    AddToPlayList();
-                ModifyOptimizedPlayListLocal<TextField>();
+                {
+                    if (IsHtml() && pDocument->MayHaveUrl())
+                    {
+                        if (IsUrlUnderMouseCursor(id.MouseIndex))
+                            Flags |= Flags_HandCursor;
+                        else
+                            Flags &= ~Flags_HandCursor;
+                        proot->ChangeMouseCursorType(id.MouseIndex, GetCursorType());
+                    }
+                    else if ((UByte)(Flags >> 5) & 1)   // Flags_HandCursor
+                    {
+                        ChangeUrlFormat(Link_rollout, id.MouseIndex);
+                        Flags &= ~Flags_HandCursor;
+                        proot->ChangeMouseCursorType(id.MouseIndex, GetCursorType());
+                    }
+                }
             }
             break;
         default:
