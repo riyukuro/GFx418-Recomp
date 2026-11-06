@@ -20,6 +20,7 @@
 #include "../include/gfx/gfx_movieimplstates.h"
 
 void FUN_14000c280(void* owner, unsigned key, void** value);
+void FUN_14000b9e0(Scaleform::UPInt* tableRef, void* owner, void** pair, Scaleform::UPInt hash);
 namespace Scaleform { namespace GFx { namespace AS2 { class FnCall; class Value; }}}
 
 namespace Scaleform { namespace GFx { namespace AS2 {
@@ -294,15 +295,33 @@ void GASImeProto::GlobalCtor(const FnCall& fn)
     fn.Result->SetAsObject(pime.GetPtr());
 }
 
-// MS2-FUNCTIONAL: the exe inlines the GASImeCtorFunction and GASImeProto ctors and the prototype store
+Value* FUN_142923b90(Value* pthis, const FunctionRef& func); // sfr_as2_03, Value(const FunctionRef&) out of line
+// Raw room for a Value the exe builds through FUN_142923b90.
+struct ImeValueStorage
+{
+    ImeValueStorage() {}
+    UInt64 Raw0, Raw1, Raw2, Raw3;
+};
 // @0x14299b200
 FunctionRef GASImeCtorFunction::Register(GlobalContext* pgc)
 {
     ASStringContext sc(pgc, 8);
     FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) GASImeCtorFunction(&sc));
-    Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) GASImeProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor);
-    SetBuiltinPrototype(pgc, ASBuiltin_Ime, proto);
-    pgc->SystemPackage->SetMemberRaw(&sc, pgc->GetStringManager()->GetBuiltin(ASBuiltin_Ime), Value(ctor));
+    Ptr<Object>     proto = *SF_HEAP_NEW(pgc->pHeap) GASImeProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor);
+    {
+        Ptr<Object>   pproto  = proto;
+        ASBuiltinType key     = ASBuiltin_Ime;
+        void*         pair[2] = { &key, &pproto };
+        UPInt*        ptable  = reinterpret_cast<UPInt*>(&pgc->Prototypes);
+        ::FUN_14000b9e0(ptable, ptable, pair, FixedSizeHash<ASBuiltinType>()(key));
+    }
+    {
+        ImeValueStorage storage;
+        Value& fval = *reinterpret_cast<Value*>(&storage);
+        pgc->SystemPackage->SetMemberRaw(&sc, pgc->GetStringManager()->GetBuiltin(ASBuiltin_Ime),
+                                         *FUN_142923b90(&fval, ctor));
+        fval.~Value();
+    }
     return ctor;
 }
 
