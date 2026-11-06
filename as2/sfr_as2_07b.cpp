@@ -19,6 +19,7 @@
 #include "../include/sound/sound_sound.h"
 
 void FUN_14000c280(void* owner, unsigned key, void** value);
+void FUN_14000b9e0(Scaleform::UPInt* tableRef, void* owner, void** pair, Scaleform::UPInt hash);
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -496,15 +497,34 @@ void SoundCtorFunction::GlobalCtor(const FnCall& fn)
     fn.Result->SetAsObject(psound.GetPtr());
 }
 
-// MS2-FUNCTIONAL: the exe inlines the SoundCtorFunction and SoundProto ctors
+Value* FUN_142923b90(Value* pthis, const FunctionRef& func); // sfr_as2_03, Value(const FunctionRef&) out of line
+// Raw room for a Value the exe builds through FUN_142923b90.
+struct SoundValueStorage
+{
+    SoundValueStorage() {}
+    UInt64 Raw0, Raw1, Raw2, Raw3;
+};
 // @0x142998b50
 FunctionRef SoundCtorFunction::Register(GlobalContext* pgc)
 {
     ASStringContext sc(pgc, 8);
     FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) SoundCtorFunction(&sc));
-    Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) SoundProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor);
-    SetBuiltinPrototype(pgc, ASBuiltin_Sound, proto);
-    pgc->pGlobal->SetMemberRaw(&sc, sc.GetBuiltin(ASBuiltin_Sound), Value(ctor));
+    Ptr<Object>     proto = *SF_HEAP_NEW(pgc->pHeap) SoundProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor,
+                                                                 SoundProto::InlineCtorTag());
+    {
+        Ptr<Object>   pproto  = proto;
+        ASBuiltinType key     = ASBuiltin_Sound;
+        void*         pair[2] = { &key, &pproto };
+        UPInt*        ptable  = reinterpret_cast<UPInt*>(&pgc->Prototypes);
+        ::FUN_14000b9e0(ptable, ptable, pair, FixedSizeHash<ASBuiltinType>()(key));
+    }
+    {
+        SoundValueStorage storage;
+        Value& fval = *reinterpret_cast<Value*>(&storage);
+        pgc->pGlobal->SetMemberRaw(&sc, pgc->GetStringManager()->GetBuiltin(ASBuiltin_Sound),
+                                   *FUN_142923b90(&fval, ctor));
+        fval.~Value();
+    }
     return ctor;
 }
 

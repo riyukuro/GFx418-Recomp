@@ -24,6 +24,17 @@ protected:
     {
         Set__proto__(psc, pprototype);
     }
+    // (appended) the ctor as the exe's SoundCtorFunction::Register inlines it: Object::Set__proto__ inlined too, its
+    // SetMemberRaw still a virtual call through the ObjectInterface base.
+    struct InlineProtoTag {};
+    __forceinline SoundObject(ASStringContext* psc, Object* pprototype, InlineProtoTag) : Object(psc), pMovieRoot(0)
+    {
+        if (!pProto)
+            static_cast<ObjectInterface*>(this)->SetMemberRaw(
+                psc, psc->pContext->GetStringManager()->GetBuiltin(ASBuiltin___proto__), Value(Value::UNSET),
+                PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+        pProto = pprototype;
+    }
 
     virtual void Finalize_GC(); // exe 0x142998610
 
@@ -51,6 +62,15 @@ public:
     MovieImpl*              pMovieRoot;    // +0x88
 };
 
+// The Prototype<SoundObject> ctor as Register inlines it: the SoundObject base built through its inline-proto ctor.
+template <>
+__forceinline Prototype<SoundObject>::Prototype(ASStringContext* psc, Object* pprototype,
+                                                const FunctionRef& constructor, InlineCtorTag)
+    : SoundObject(psc, pprototype, SoundObject::InlineProtoTag())
+{
+    Init(this, psc, constructor);
+}
+
 // Sound.prototype.
 class SoundProto : public Prototype<SoundObject>
 {
@@ -58,6 +78,13 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143222ad0
 
     SoundProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142997c70
+    // (appended) inlined into SoundCtorFunction::Register (exe 0x142998b50).
+    __forceinline SoundProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor,
+                             InlineCtorTag tag)
+        : Prototype<SoundObject>(psc, pprototype, constructor, tag)
+    {
+        InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+    }
 
     static void Attach(const FnCall& fn);         // exe 0x1429967b0
     static void GetBytesLoaded(const FnCall& fn); // exe 0x1429969d0
