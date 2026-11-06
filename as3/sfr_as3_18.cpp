@@ -5,6 +5,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142509d40-0x142523170 .text$mn
 #define SF_AS3_AVMBUTTON_MODEL
+#define SF_AS3_SHAPEOBJECT_MODEL   // ShapeObject / AvmBitmap from the SDK MI layout (as3_avm.h)
 #define MS2_AS3_ASSIGN_NOALIAS
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp/AS3_Value.cpp AddRef bodies inline (as3_value.h)
 #include <math.h>
@@ -108,7 +109,6 @@ static SF_INLINE VM& Sfr18TracerVM(const void* tracer)
 {
     return (*reinterpret_cast<const CallFrame* const*>(static_cast<const UByte*>(tracer) + 0x20))->GetVM();
 }
-
 // @0x14250a1b0
 __declspec(noinline) InstanceTraits::Traits& TR::State::GetFunctType(const Value& value) const
 {
@@ -3327,9 +3327,9 @@ public:
     Ptr<ShapeBaseCharacterDef>  pDef;           // +0xc0
     Ptr<DrawingContext>         pDrawing;       // +0xc8 the graphics drawn from AS3
 
-    bool          PointTestLocal(const PointF& pt, UInt8 hitTestMask) const;
-    TopMostResult GetTopMostMouseEntity(const PointF& pt, TopMostDescr* pdescr);
-    RectF         GetRectBounds(const Render::Matrix2F& t) const;
+    // (bool          PointTestLocal(const PointF& pt, UInt8 hitTestMask) const; is the real member now)
+    // (TopMostResult GetTopMostMouseEntity(const PointF& pt, TopMostDescr* pdescr); is the real member now)
+    // (RectF         GetRectBounds(const Render::Matrix2F& t) const; is the real member now)
 };
 
 class Sfr34_AvmBitmapView : public DisplayObject
@@ -3343,7 +3343,7 @@ public:
 
 // The drawn graphics first, then the shape of the definition.
 // @0x14251cac0
-bool Sfr34_ShapeObjectView::PointTestLocal(const PointF& pt, UInt8 hitTestMask) const
+bool ShapeObject::PointTestLocal(const PointF& pt, UInt8 hitTestMask) const
 {
     if (pDrawing && pDrawing->DefPointTestLocal(pt, (hitTestMask & HitTest_TestShape) != 0, this))
         return true;
@@ -3353,7 +3353,7 @@ bool Sfr34_ShapeObjectView::PointTestLocal(const PointF& pt, UInt8 hitTestMask) 
 // A shape is never the topmost entity itself: with drawn graphics a hit gives the parent, otherwise the
 // definition's shape is searched.
 // @0x14250f770
-DisplayObjectBase::TopMostResult Sfr34_ShapeObjectView::GetTopMostMouseEntity(const PointF& pt, TopMostDescr* pdescr)
+DisplayObjectBase::TopMostResult ShapeObject::GetTopMostMouseEntity(const PointF& pt, TopMostDescr* pdescr)
 {
     if (pDrawing)
     {
@@ -3374,10 +3374,10 @@ DisplayObjectBase::TopMostResult Sfr34_ShapeObjectView::GetTopMostMouseEntity(co
 }
 
 // Inside the image's rect (in twips, from the origin).
-// Member of a layout view (AvmBitmap is opaque in the shared header)
+// (SF_AS3_SHAPEOBJECT_MODEL member)
 // @0x14251c9f0
 #pragma strict_gs_check(push, on)
-bool Sfr34_AvmBitmapView::PointTestLocal(const PointF& pt, UInt8 hitTestMask) const
+bool AvmBitmap::PointTestLocal(const PointF& pt, UInt8 hitTestMask) const
 {
     SF_UNUSED(hitTestMask);
     if (pImage)
@@ -4432,7 +4432,7 @@ struct Sfr34_CharDefBoundsSlots
 
 // The definition's rect bounds through t.
 // @0x14250d700
-RectF Sfr34_ShapeObjectView::GetRectBounds(const Render::Matrix2F& t) const
+RectF ShapeObject::GetRectBounds(const Render::Matrix2F& t) const
 {
     return t.EncloseTransform(reinterpret_cast<const Sfr34_CharDefBoundsSlots*>(pDef.GetPtr())->GetRectBoundsLocal());
 }
@@ -5711,13 +5711,13 @@ void FUN_14251bc40(UPInt self, FlashUI::OutputMessageType type, const char* msg)
 
 // AvmBitmap::GetTopMostMouseEntity: a visible bitmap with an image is hit when the point (in its parent's space)
 // falls inside the image's rectangle (in twips); the hit is its parent, the interactive object.
-// Free function on the bitmap's display object (AvmBitmap is opaque in the shared header). Compiled under
+// Compiled under
 // strict_gs_check like PointTestLocal (0x14251c9f0): this gives the exe's /GS cookie and frame (point low, rect high).
 // @0x14250f660
 #pragma strict_gs_check(push, on)
-DisplayObjectBase::TopMostResult FUN_14250f660(DisplayObject* self, const Render::PointF& pt,
-                                               DisplayObjectBase::TopMostDescr* pdescr)
-{
+DisplayObjectBase::TopMostResult AvmBitmap::GetTopMostMouseEntity(const Render::PointF& pt,
+                                                                TopMostDescr* pdescr)
+{   DisplayObject* const self = this;
     if (!self->GetVisible())
         return DisplayObjectBase::TopMost_FoundNothing;
     ImageResource* const& pImage = *reinterpret_cast<ImageResource* const*>(reinterpret_cast<const char*>(self) + 0xc0);
@@ -8925,12 +8925,12 @@ UPInt FUN_14250d960(UPInt self) { return AccRd(self, 0xc8); }
 // @0x14250eef0
 UPInt FUN_14250eef0(UPInt self) { return AccRd(AccRd(self, 0x40), 0x18); }
 
-// A float of the render node the handle at +0x48 names (0x38-byte entries on 4K pages, the page's entry table at
-// +0x20), 0 for no handle or a node of another type than 3.
+// ShapeObject::GetRatio: a float of the render node the handle at +0x48 names (0x38-byte entries on 4K pages, the
+// page's entry table at +0x20), 0 for no handle or a node of another type than 3.
 // MS2-FUNCTIONAL: raw-layout page walk
 // @0x14250d630
-float FUN_14250d630(UPInt self)
-{
+float ShapeObject::GetRatio() const
+{   const UPInt self = reinterpret_cast<UPInt>(this);
     const UPInt h = AccRd(self, 0x48);
     if (!h)
         return 0.0f;

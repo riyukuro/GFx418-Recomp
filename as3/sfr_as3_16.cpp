@@ -60,6 +60,7 @@
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp weak-ref bodies inline (as3_value.h)
 #define MS2_AS3_PROPREF_DTOR_OUTLINE   // PropRef::~PropRef 0x1424de8f0 is defined here (as3_obj.h)
 #define MS2_AS3_ASSIGN_NOALIAS   // one SCU in the exe: Assign/ReleaseInternal/getNext touch no caller memory (as3_value.h, as3_asvm.h)
+#define SF_AS3_SHAPEOBJECT_MODEL   // ShapeObject / AvmBitmap from the SDK MI layout (as3_avm.h)
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
@@ -2536,48 +2537,42 @@ Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>&
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1f20 0x1424e1f20
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1f80 0x1424e1f80
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1fe0 0x1424e1fe0
-namespace Scaleform { namespace GFx { namespace AS3 {
-extern void* const ShapeObject_vftable[];
-extern void* const ShapeObject_vftable_18[];
-extern void* const ShapeObject_vftable_90[];
-extern void* const AvmBitmap_vftable[];
-extern void* const AvmBitmap_vftable_18[];
-extern void* const AvmBitmap_vftable_90[];
-}}}
-
-// AvmBitmap (a ShapeObject sibling): clear the AvmObjOffset byte, reinstall its three vftables, release the image
-// and definition resources, then the AvmDisplayObj and DisplayObject bases.
-// AvmBitmap is not recovered; the teardown is written against raw member offsets.
+// AvmBitmap / ShapeObject over the SDK MI class model (SF_AS3_SHAPEOBJECT_MODEL, as3_avm.h): the compiler
+// installs the three vftables (0x14317c560 / c7d8 / c7e8 and 0x14317c210 / c488 / c498) and releases the two
+// Ptr members, the AvmDisplayObj part and the DisplayObject base. The body only clears AvmObjOffset: the AS3
+// part is a base here, not one DisplayObjectBase destroys.
+// Both are `inline` under cl: sfr_as3_16z carries copies of them for its deleting destructors (the exe's one
+// AS3_All SCU inlines them there), so these are COMDAT-any and do not clash with those (LNK2005).
+// MS2_Sfr16EmitShapeDtors below keeps them emitted here. clang-cl ignores inline_depth: plain definitions there.
+#if defined(__clang__)
+#define SFR16_SHAPE_DTOR
+#else
+#define SFR16_SHAPE_DTOR inline
+#endif
 // @0x1424ddb00
-extern "C" void FUN_1424ddb00(void* self)
+SFR16_SHAPE_DTOR Scaleform::GFx::AS3::AvmBitmap::~AvmBitmap()
 {
-    auto* bytes = static_cast<unsigned char*>(self);
-    bytes[0x6d] = 0;
-    *reinterpret_cast<void* const**>(bytes + 0x00) = Scaleform::GFx::AS3::AvmBitmap_vftable;
-    *reinterpret_cast<void* const**>(bytes + 0x18) = Scaleform::GFx::AS3::AvmBitmap_vftable_18;
-    *reinterpret_cast<void* const**>(bytes + 0x90) = Scaleform::GFx::AS3::AvmBitmap_vftable_90;
-    reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::Resource>*>(bytes + 0xc8)->~Ptr();
-    reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::Resource>*>(bytes + 0xc0)->~Ptr();
-    reinterpret_cast<Scaleform::GFx::AS3::AvmDisplayObj*>(bytes + 0x90)->Scaleform::GFx::AS3::AvmDisplayObj::~AvmDisplayObj();
-    reinterpret_cast<Scaleform::GFx::DisplayObject*>(bytes)->Scaleform::GFx::DisplayObject::~DisplayObject();
+    AvmObjOffset = 0;
 }
 
-// Release ShapeObject's own drawing and definition references, then its bases.
 // @0x1424deeb0
-namespace Scaleform { namespace GFx { namespace AS3 {
-ShapeObject::~ShapeObject()
+SFR16_SHAPE_DTOR Scaleform::GFx::AS3::ShapeObject::~ShapeObject()
 {
-    auto* bytes = reinterpret_cast<unsigned char*>(this);
-    bytes[0x6d] = 0;
-    *reinterpret_cast<void* const**>(bytes + 0x00) = ShapeObject_vftable;
-    *reinterpret_cast<void* const**>(bytes + 0x18) = ShapeObject_vftable_18;
-    *reinterpret_cast<void* const**>(bytes + 0x90) = ShapeObject_vftable_90;
-    reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::DrawingContext>*>(bytes + 0xc8)->~Ptr();
-    reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::ShapeBaseCharacterDef>*>(bytes + 0xc0)->~Ptr();
-    reinterpret_cast<AvmDisplayObj*>(bytes + 0x90)->AvmDisplayObj::~AvmDisplayObj();
-    reinterpret_cast<Scaleform::GFx::DisplayObject*>(bytes)->DisplayObject::~DisplayObject();
+    AvmObjOffset = 0;
 }
-}}}
+// Calls both destructors above out of line (inline_depth 0), so cl emits them in this unit. Nothing calls it.
+#pragma inline_depth(0)
+void MS2_Sfr16EmitShapeDtors(Scaleform::GFx::AS3::AvmBitmap* b, Scaleform::GFx::AS3::ShapeObject* s)
+{
+    b->Scaleform::GFx::AS3::AvmBitmap::~AvmBitmap();
+    s->Scaleform::GFx::AS3::ShapeObject::~ShapeObject();
+}
+#pragma inline_depth()
+//
+//
+//
+//
+//
 
 // AvmMovieClip has no additional state; release the AvmSprite base.
 // @0x1424ddcb0
@@ -2612,12 +2607,17 @@ Scaleform::GFx::AS3::AvmMovieClip::~AvmMovieClip()
 // MS2-PIN: ??_7LoadQueueEntry@AS3@GFx@Scaleform@@6B@ 0x14317d888
 // MS2-PIN: ??_7LoadQueueEntryMT_LoadMovie@AS3@GFx@Scaleform@@6B@ 0x14317d890
 // MS2-PIN: ??_7AvmInteractiveObj@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ca60
-// MS2-PIN: ??_7ShapeObject@AS3@GFx@Scaleform@@6B@ 0x14317c210
+//
 // MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@3@@ 0x14317de60
 // MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317e228
 // MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317e330
 // MS2-PIN: ??_7AvmLoader@AS3@GFx@Scaleform@@6B@ 0x14317e3e8
-
+// MS2-PIN: ??_7ShapeObject@AS3@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@3@@ 0x14317c210
+// MS2-PIN: ??_7ShapeObject@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317c488
+// MS2-PIN: ??_7ShapeObject@AS3@GFx@Scaleform@@6B@ 0x14317c498
+// MS2-PIN: ??_7AvmBitmap@AS3@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@3@@ 0x14317c560
+// MS2-PIN: ??_7AvmBitmap@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317c7d8
+// MS2-PIN: ??_7AvmBitmap@AS3@GFx@Scaleform@@6B@ 0x14317c7e8
 // Trap-stub pass (sfr21): vftable slots and adjustor thunks the full exe names but nothing defined.
 namespace Scaleform { namespace GFx { namespace AS3 {
 

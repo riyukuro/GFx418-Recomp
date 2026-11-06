@@ -19,6 +19,7 @@
 // MS2-PIN: ??_7Traits@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14317b288
 // MS2-PIN: ??_7Traits@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b300
 #define SF_AS3_AVMBUTTON_MODEL   // AvmButton / AvmTextField / AvmStaticText from the SDK MI layout (as3_avm.h)
+#define SF_AS3_SHAPEOBJECT_MODEL   // ShapeObject / AvmBitmap from the SDK MI layout (as3_avm.h)
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp AddRefWeakRef and AS3_Value.cpp AddRefInternal inline (as3_value.h)
 #define MS2_AS3_SCU_ADDREF_ONLY
 #define SF_GFX_FOCUSKEY_MEMBERS   // MovieImpl::InitFocusKeyInfo/ProcessFocusKey/FinalizeProcessFocusKey (gfx_movieimpl.h)
@@ -2083,68 +2084,67 @@ __declspec(noinline) AvmInteractiveObj::AvmInteractiveObj(InteractiveObject* pdi
 // AvmButton / AvmTextField / AvmStaticText are the SDK MI classes of as3_avm.h (SF_AS3_AVMBUTTON_MODEL): their ctors
 // below store the class vftables themselves.
 
-extern void* const ShapeObject_vftable[];
-extern void* const ShapeObject_vftable_18[];
-extern void* const ShapeObject_vftable_90[];
-
 // A shape on the display list: a DisplayObject with its AS3 part at +0x90, then the shape def (+0xc0) and the
-// drawing context of the AS3 Graphics API (+0xc8, made on first use).
-// MS2-PIN: ??_7ShapeObject@AS3@GFx@Scaleform@@6B@ 0x14317c210
-// ShapeObject is opaque (its virtuals are unrecovered): its bases are built in place and the exe's vftables stored.
-// The opaque class declares no virtual, so cl stores no vptr of its own on entry.
+// drawing context of the AS3 Graphics API (+0xc8, made on first use). The SDK MI class of as3_avm.h
+// (SF_AS3_SHAPEOBJECT_MODEL): the ctor stores its vftables 0x14317c210 / c488 / c498 itself.
+// MS2-PIN: ??_7ShapeObject@AS3@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@3@@ 0x14317c210
+// MS2-PIN: ??_7ShapeObject@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317c488
+// MS2-PIN: ??_7ShapeObject@AS3@GFx@Scaleform@@6B@ 0x14317c498
 // @0x1424d98a0
 ShapeObject::ShapeObject(CharacterDef* pdef, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id)
+    : DisplayObject(pasRoot, pparent, id), AvmDisplayObj(this),
+      pDef(static_cast<ShapeBaseCharacterDef*>(pdef)), pDrawing(NULL)
 {
-    UByte* const self = reinterpret_cast<UByte*>(this);   // object offsets as in the exe
-    reinterpret_cast<DisplayObject*>(this)->DisplayObject::DisplayObject(pasRoot, pparent, id);
-    new (self + 0x90) AvmDisplayObj(reinterpret_cast<DisplayObject*>(this));
-    *reinterpret_cast<void* const**>(self + 0x00) = ShapeObject_vftable;
-    *reinterpret_cast<void* const**>(self + 0x18) = ShapeObject_vftable_18;
-    *reinterpret_cast<void* const**>(self + 0x90) = ShapeObject_vftable_90;
-    if (pdef)
-        reinterpret_cast<Resource*>(pdef)->AddRef();
-    *reinterpret_cast<CharacterDef**>(self + 0xc0) = pdef;
-    *reinterpret_cast<void**>(self + 0xc8) = NULL;
 }
-
-extern void* const AvmBitmap_vftable[];
-extern void* const AvmBitmap_vftable_18[];
-extern void* const AvmBitmap_vftable_90[];
 
 // A bitmap on the display list: +0xc0 the image resource, +0xc8 the movie that binds it. The image comes from the
 // character's resource, or, for a valid id, from the movie's resource binding; only image resources are kept.
-// AvmBitmap is opaque (its virtuals are unrecovered): its bases are built in place and the exe's vftables stored.
+// The SDK MI class of as3_avm.h (SF_AS3_SHAPEOBJECT_MODEL): vftables 0x14317c560 / c7d8 / c7e8.
+// MS2-PIN: ??_7AvmBitmap@AS3@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@3@@ 0x14317c560
+// MS2-PIN: ??_7AvmBitmap@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317c7d8
+// MS2-PIN: ??_7AvmBitmap@AS3@GFx@Scaleform@@6B@ 0x14317c7e8
 // @0x1424d6270
 AvmBitmap::AvmBitmap(ASMovieRootBase* pasRoot, const CharacterCreateInfo& ccinfo, InteractiveObject* pparent, ResourceId id)
+    : DisplayObject(pasRoot, pparent, id), AvmDisplayObj(this), pDefImpl(ccinfo.pBindDefImpl)
 {
-    reinterpret_cast<DisplayObject*>(this)->DisplayObject::DisplayObject(pasRoot, pparent, id);
-    new (Data + 0x90) AvmDisplayObj(reinterpret_cast<DisplayObject*>(this));
-    *reinterpret_cast<void* const**>(Data + 0x00) = AvmBitmap_vftable;
-    *reinterpret_cast<void* const**>(Data + 0x18) = AvmBitmap_vftable_18;
-    *reinterpret_cast<void* const**>(Data + 0x90) = AvmBitmap_vftable_90;
-    Resource*& pimage = *reinterpret_cast<Resource**>(Data + 0xc0);
-    MovieDefImpl*& pdefImpl = *reinterpret_cast<MovieDefImpl**>(Data + 0xc8);
-    pimage = NULL;
-    MovieDefImpl* pdef = ccinfo.pBindDefImpl;
-    if (pdef)
-        reinterpret_cast<Resource*>(pdef)->AddRef();
-    pdefImpl = pdef;
     Resource* pres = ccinfo.pResource;
     if (id != ResourceId(ResourceId::InvalidId))
     {
         ResourceHandle rh;
-        if (pdef->GetDataDef()->GetResourceHandle(&rh, id))
-            pres = FUN_14250d840(&rh, &pdefImpl->GetResourceBinding());
+        if (pDefImpl->GetDataDef()->GetResourceHandle(&rh, id))
+            pres = FUN_14250d840(&rh, &pDefImpl->GetResourceBinding());
     }
     if (pres && (pres->GetResourceTypeCode() & 0xff00) == Resource::MakeTypeCode(Resource::RT_Image))
-    {
-        pres->AddRef();
-        if (pimage)
-            pimage->Release();
-        pimage = pres;
-    }
+        pImage = static_cast<ImageResource*>(pres);
 }
 
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 // A button takes part in tab navigation by default.
 // @0x1424d63e0
 AvmButton::AvmButton(Button* pbtn)

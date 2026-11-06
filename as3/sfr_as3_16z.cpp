@@ -28,6 +28,7 @@
 // The Avm* deleting destructors free only on a global delete, and AvmButton / AvmTextField / AvmStaticText are modeled.
 #define SF_AS3_AVM_INPLACE_DELETE
 #define SF_AS3_AVMBUTTON_MODEL
+#define SF_AS3_SHAPEOBJECT_MODEL
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp weak-ref bodies inline (as3_value.h)
 #define MS2_SF_FUNCTIONBASE_DTOR_OUTLINE   // UserDefinedFunction is outside the SCU: its ??_G calls ~FunctionBase (as3_obj.h)
 #include "ms2/scaleform/include/kernel/sf_std.h"
@@ -52,18 +53,12 @@
 #undef GetObject
 // VM: runs the queued code (unrecovered).
 
-// vftables of the data_rdata unit (Sd_ structs there)
-struct Sd_14317c488;
-extern Sd_14317c488 DAT_14317c488;     // ShapeObject +0x18
-struct Sd_14317c498;
-extern Sd_14317c498 DAT_14317c498;     // ShapeObject +0x90
-struct Sd_14317c560;
-extern Sd_14317c560 DAT_14317c560;     // AvmBitmap
-struct Sd_14317c7d8;
-extern Sd_14317c7d8 DAT_14317c7d8;     // AvmBitmap +0x18
-struct Sd_14317c7e8;
-extern Sd_14317c7e8 DAT_14317c7e8;     // AvmBitmap +0x90
-
+// ShapeObject / AvmBitmap (SF_AS3_SHAPEOBJECT_MODEL): copies of sfr_as3_16's destructors (0x1424ddb00 / 0x1424deeb0,
+// inline there under cl), which the exe's AS3_All SCU inlines into the deleting destructors below. clang: call 16's.
+#if !defined(__clang__)
+__forceinline Scaleform::GFx::AS3::AvmBitmap::~AvmBitmap() { AvmObjOffset = 0; }
+__forceinline Scaleform::GFx::AS3::ShapeObject::~ShapeObject() { AvmObjOffset = 0; }
+#endif
 // global C++ helpers defined in other units
 void FUN_1424dcce0(void* p);
 void FUN_1424dcc30(void* p);
@@ -1005,9 +1000,8 @@ extern const void* DAT_14317afe8[];     // empty interface (0x1424e2e70)
 extern const void* DAT_14317b750[];     // VMAbcFile
 extern const void* DAT_14317bc40[];     // TreeShape::NodeData
 extern const void* DAT_14317bde0[];     // ASMovieRootBase
-// ShapeObject (79 slots, data_rdata_sf_b). Not a DAT_14317c210 extern: that name binds to sfr_as3_15's one-slot
-// ??_7ShapeObject view table in the fullexe.
-extern void* const ShapeObject_vftable[];
+//
+//
 extern const void* DAT_14317d220[];     // Stage
 extern const void* DAT_14317d5f0[];     // Stage +0x18
 extern const void* DAT_14317d8a8[];     // ASVM::AbcFileWithMovieDef
@@ -1109,17 +1103,17 @@ void* DeleteAs3_1424e25b0(void* p, unsigned flags) { static_cast<Scaleform::GFx:
 // @0x1424e2610
 void* DeleteAs3_1424e2610(void* p, unsigned flags)
 {
-    Sfr21GVft(p, 0, reinterpret_cast<const void* const*>(&::DAT_14317c560));
-    Sfr21GVft(p, 0x18, reinterpret_cast<const void* const*>(&::DAT_14317c7d8));
-    Sfr21GVft(p, 0x90, reinterpret_cast<const void* const*>(&::DAT_14317c7e8));
-    *Sfr21At(p, 0x6d) = 0;
-    Sfr21GRes(p, 0xc8);
-    Sfr21GRes(p, 0xc0);
-    reinterpret_cast<Scaleform::GFx::AS3::AvmDisplayObj*>(Sfr21At(p, 0x90))->Scaleform::GFx::AS3::AvmDisplayObj::~AvmDisplayObj();
-    static_cast<Scaleform::GFx::DisplayObject*>(p)->Scaleform::GFx::DisplayObject::~DisplayObject();
+    static_cast<Scaleform::GFx::AS3::AvmBitmap*>(p)->Scaleform::GFx::AS3::AvmBitmap::~AvmBitmap();
     Sfr21GFree(p, flags, 0xd0);
     return p;
 }
+//
+//
+//
+//
+//
+//
+//
 
 // AvmInteractiveObj-family wrappers: never heap-freed (the sized-delete path only); the implicit destructors inline
 // @0x1424e26d0
@@ -1242,17 +1236,17 @@ void* DeleteAs3_1424e3630(void* p, unsigned flags) { static_cast<Scaleform::GFx:
 // @0x1424e3890
 void* DeleteAs3_1424e3890(void* p, unsigned flags)
 {
-    Sfr21GVft(p, 0, ShapeObject_vftable);
-    Sfr21GVft(p, 0x18, reinterpret_cast<const void* const*>(&::DAT_14317c488));
-    Sfr21GVft(p, 0x90, reinterpret_cast<const void* const*>(&::DAT_14317c498));
-    *Sfr21At(p, 0x6d) = 0;
-    Sfr21GPtrNTS(p, 0xc8);
-    Sfr21GRes(p, 0xc0);
-    reinterpret_cast<Scaleform::GFx::AS3::AvmDisplayObj*>(Sfr21At(p, 0x90))->Scaleform::GFx::AS3::AvmDisplayObj::~AvmDisplayObj();
-    static_cast<Scaleform::GFx::DisplayObject*>(p)->Scaleform::GFx::DisplayObject::~DisplayObject();
+    static_cast<Scaleform::GFx::AS3::ShapeObject*>(p)->Scaleform::GFx::AS3::ShapeObject::~ShapeObject();
     Sfr21GFree(p, flags, 0xd0);
     return p;
 }
+//
+//
+//
+//
+//
+//
+//
 
 // Stage
 // Scalar deleting destructor written out against raw member offsets; the class is not recovered.
@@ -1759,6 +1753,12 @@ void DisplayObjectBase::AdvanceFrame(bool, float)
 // MS2-PIN: ??_7?$RefCountBase@V?$RefCountCollector@$0BED@@AS3@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x14317c9f8
 // MS2-PIN: ??_7ASIntervalTimerIntf@GFx@Scaleform@@6B@ 0x14317c9f8
 // MS2-PIN: ??_7?$RefCountBase@VASIntervalTimerIntf@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x14317c9f8
+// MS2-PIN: ??_7ShapeObject@AS3@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@3@@ 0x14317c210
+// MS2-PIN: ??_7ShapeObject@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317c488
+// MS2-PIN: ??_7ShapeObject@AS3@GFx@Scaleform@@6B@ 0x14317c498
+// MS2-PIN: ??_7AvmBitmap@AS3@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@3@@ 0x14317c560
+// MS2-PIN: ??_7AvmBitmap@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317c7d8
+// MS2-PIN: ??_7AvmBitmap@AS3@GFx@Scaleform@@6B@ 0x14317c7e8
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 // Defined outside sfr_as3_15: the exe's callers there (GamePadAnalogEvent::toString 0x1424cc0f0) reload the string

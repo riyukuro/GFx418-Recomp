@@ -16,6 +16,7 @@
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x1425422c0 ; unique
 // MS2-PINS-END tplpin
 #define SF_AS3_AVMBUTTON_MODEL
+#define SF_AS3_SHAPEOBJECT_MODEL   // ShapeObject / AvmBitmap from the SDK MI layout (as3_avm.h)
 #define MS2_AS3_ASSIGN_NOALIAS
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp weak-ref bodies inline (as3_value.h)
 // The exe's exec_esc_xattr (0x142538700) did not see XML::EscapeElementValue's body (as3_obj_fl.h).
@@ -3538,8 +3539,8 @@ void Sfr31TreeShapeEntry::SetShape(UPInt pshape)
 // ShapeObject::SetRatio: only when its render node is a shape node.
 // Raw-offset model.
 // @0x142528da0
-void Sfr31ShapeObjectSetRatio(UPInt self, float ratio)
-{
+void ShapeObject::SetRatio(float ratio)
+{   const UPInt self = reinterpret_cast<UPInt>(this);
     const UPInt node = FUN_1425f26c0(reinterpret_cast<void*>(self));
     if (node == 0)
         return;
@@ -5112,7 +5113,6 @@ UPInt Sfr31FindClassTraitsByMn(UPInt vm, UPInt mn)
     {
         // the VM's class traits cache (+0x1c8): MultinameHash::Add copies the key (ASString + SPtr<Namespace>) and calls add<NodeRef> 0x1423eb030
         reinterpret_cast<TClassTraitsCache*>(vm + 0x1c8)->Add(str, *reinterpret_cast<const Instances::Namespace*>(ns), reinterpret_cast<ClassTraits::Traits* const&>(found));
-//
 //
 //
 //

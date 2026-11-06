@@ -25,6 +25,7 @@
 // MS2-RANGE: 0x142507a40-0x1425094e0 .text$mn
 // MS2-RANGE: 0x142509850-0x142509d40 .text$mn
 #define SF_AS3_AVMBUTTON_MODEL
+#define SF_AS3_SHAPEOBJECT_MODEL   // ShapeObject / AvmBitmap from the SDK MI layout (as3_avm.h)
 #define MS2_AS3_ASSIGN_NOALIAS
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp/AS3_Value.cpp AddRef bodies inline (as3_value.h)
 #include "ms2/scaleform/include/kernel/sf_std.h"
@@ -112,7 +113,6 @@ Value::TraceNullType TR::State::CanBeNull(const InstanceTraits::Traits& traits) 
 {
     return static_cast<const Tracer*>(pTracer)->CanBeNull(traits);
 }
-
 // @0x1424ed8f0
 SF_NOINLINE void Value::Assign(const Value& other)
 {
@@ -1356,21 +1356,21 @@ void Sfr33MovieRootCreateObjectInterface(MovieRoot* self, MovieImpl* pmovieImpl)
         p ? Sfr33ConstructAS3ObjectInterface(p, pmovieImpl) : NULL;
 }
 
-// ShapeObject::CreateRenderNode (virtual): the tree shape of the shape's definition, bound to its movie.
-// ShapeObject is opaque (as3_avm.h); a member of a stand-in keeps the virtual's register use.
-struct Sfr33ShapeObject
-{
-    Ptr<Render::TreeNode> CreateRenderNode(Render::Context& context);
-};
+// ShapeObject::CreateRenderNode (virtual): the tree shape of the shape's definition, bound to its movie
+// (GetResourceMovieDef, slot 60).
 // @0x1424f3f40
-Ptr<Render::TreeNode> Sfr33ShapeObject::CreateRenderNode(Render::Context& context)
+Ptr<Render::TreeNode> ShapeObject::CreateRenderNode(Render::ContextImpl::Context& context) const
 {
-    UByte* self = reinterpret_cast<UByte*>(this);
-    const ShapeBaseCharacterDef* pdef = *reinterpret_cast<ShapeBaseCharacterDef* const*>(self + 0xc0);
-    typedef MovieDefImpl* (*GetResourceMovieDefFn)(UByte*);
-    MovieDefImpl* pdefImpl = (*reinterpret_cast<GetResourceMovieDefFn const* const*>(self))[60](self);
-    return pdef->CreateTreeShape(context, pdefImpl);
+    return pDef->CreateTreeShape(context, GetResourceMovieDef());
 }
+//
+//
+//
+//
+//
+//
+//
+//
 
 // @0x1424f4a40
 CheckResult Object::DeleteProperty(const Multiname& prop_name)
@@ -6057,33 +6057,33 @@ InstanceTraits::Traits* Sfr33GetActivationInstanceTraits(VMAbcFile& file, const 
     return *reinterpret_cast<InstanceTraits::Traits* const*>(reinterpret_cast<const UByte*>(&vm) + 0x288);
 }
 
-// DisplayObject::GetDrawingContext (virtual) of a sprite-like object (+0xc8): created on first use with the mask
-// lifted while its tree node goes last in the container.
+// ShapeObject::GetDrawingContext (virtual, +0xc8): created on first use with the mask lifted while its tree node
+// goes last in the container.
 // @0x1425099a0
-struct Sfr33DisplayObjectAccess : DisplayObject
+DrawingContext* ShapeObject::GetDrawingContext()
 {
-    using DisplayObjectBase::ConvertToTreeContainer;
-};
-
-DrawingContext* Sfr33GetDrawingContext(DisplayObject* self)
-{
-    Ptr<DrawingContext>& pdc = *reinterpret_cast<Ptr<DrawingContext>*>(reinterpret_cast<UByte*>(self) + 0xc8);
-    if (!pdc)
+    if (!pDrawing)
     {
-        Ptr<DisplayObject> mask = self->GetMask();
+        Ptr<DisplayObject> mask = GetMask();
         if (mask)
-            self->SetMask(NULL);
-        pdc = *self->GetMovieImpl()->CreateDrawingContext();
-        Render::TreeContainer* node = static_cast<Sfr33DisplayObjectAccess*>(self)->ConvertToTreeContainer();
+            SetMask(NULL);
+        pDrawing = *DisplayObject::GetMovieImpl()->CreateDrawingContext();
+        Render::TreeContainer* node = ConvertToTreeContainer();
         node->Remove(0, 1);
-        DrawingContext* dc = pdc;
+        DrawingContext* dc = pDrawing;
         const UPInt n = node->GetSize();
         node->Insert(n, dc->GetTreeNode());
         if (mask)
-            self->SetMask(mask);
+            SetMask(mask);
     }
-    return pdc;
+    return pDrawing;
 }
+//
+//
+//
+//
+//
+//
 }}}
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -7565,11 +7565,11 @@ void FUN_1425046d0(Scaleform::UPInt self)
         reinterpret_cast<Scaleform::RefCountImpl*>(Sfr21AccRd(Sfr21AccRd(self, 0x10), 0x30)));
 }
 
-// Drops the loader info of the AS3 object of the AVM display object at +0x90 (the AvmBitmap ForceShutdown slot).
+// AvmBitmap::ForceShutdown: drops the loader info of the AS3 object of its AvmDisplayObj part (+0x90).
 // @0x1425047c0
-void FUN_1425047c0(Scaleform::UPInt self)
+void Scaleform::GFx::AS3::AvmBitmap::ForceShutdown()
 {
-    const Scaleform::GFx::AS3::AvmDisplayObj& avm = *reinterpret_cast<const Scaleform::GFx::AS3::AvmDisplayObj*>(self + 0x90);
+    const Scaleform::GFx::AS3::AvmDisplayObj& avm = *this;
     if (Scaleform::GFx::AS3::Sfr33HasAS3Obj(&avm))
         avm.GetAS3Obj()->SetLoaderInfo(static_cast<Scaleform::GFx::AS3::Instances::fl_display::LoaderInfo*>(NULL));
 }
@@ -7594,9 +7594,9 @@ const char* FUN_142506ed0(Scaleform::UPInt self, Scaleform::String* ppath)
         ->Scaleform::GFx::AS3::AvmInteractiveObj::GetAbsolutePath(ppath);
 }
 
-// MS2-FUNCTIONAL: raw getter
+// ShapeObject::GetCharacterDef: the shape definition (pDef, +0xc0).
 // @0x142507b70
-Scaleform::UPInt FUN_142507b70(Scaleform::UPInt self) { return Sfr21AccRd(self, 0xc0); }
+Scaleform::GFx::CharacterDef* Scaleform::GFx::AS3::ShapeObject::GetCharacterDef() const { return pDef; }
 
 // The enabled bit (Mask_Enabled, 0x10) of the AVM object's display object (+0x18 back from the AVM base), as 0 or 1.
 // MS2-FUNCTIONAL: the exe zero-extends the shifted byte before the mask (movzx; and eax,1)

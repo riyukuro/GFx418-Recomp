@@ -416,6 +416,9 @@ public:
     ShapeObject(CharacterDef* pdef, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id);
     // Body: AvmObjOffset = 0 (the AS3 part is a base here, not one DisplayObjectBase destroys). ??_G 0x1424e3890
     virtual ~ShapeObject();
+#ifdef SF_AS3_AVM_INPLACE_DELETE
+    using DisplayObject::operator delete;   // AvmDisplayObj's in-place delete would make it ambiguous
+#endif
 
     virtual Ptr<Render::TreeNode> CreateRenderNode(Render::ContextImpl::Context& context) const;   // 1  0x1424f3f40
     // The morph ratio of the render node when it is a shape node, else 0.
@@ -444,6 +447,9 @@ public:
     AvmBitmap(ASMovieRootBase* pasRoot, const CharacterCreateInfo& ccinfo, InteractiveObject* pparent, ResourceId id);
     // Body: AvmObjOffset = 0. ??_G 0x1424e2610
     virtual ~AvmBitmap();
+#ifdef SF_AS3_AVM_INPLACE_DELETE
+    using DisplayObject::operator delete;   // AvmDisplayObj's in-place delete would make it ambiguous
+#endif
 
 protected:
     virtual Ptr<Render::TreeNode> CreateRenderNode(Render::ContextImpl::Context& context) const;   // 1  0x1424f3e60
