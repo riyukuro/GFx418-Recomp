@@ -106,6 +106,14 @@ MS2_AS2_HASH_FINDINDEX(Object::Watchpoint)
 typedef ASStringHash_GC<Object::Watchpoint>::SetType WatchpointSet;
 
 // Hash::SetCaseCheck of the watchpoint table, inline in the exe around the out-of-line findIndexAlt and add.
+template<class K>
+SF_INLINE WatchpointSet::Iterator WatchpointHash_FindAlt(ASStringHash_GC<Object::Watchpoint>* phash, const K& key)
+{
+    SPInt index = HashFindIndex(phash, key);
+    if (index >= 0)
+        return WatchpointSet::Iterator(reinterpret_cast<WatchpointSet*>(phash), index);
+    return WatchpointSet::Iterator(0, 0);
+}
 SF_INLINE WatchpointSet::Iterator WatchpointHash_Find(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key)
 {
     SPInt index = HashFindIndex(phash, key);
@@ -117,10 +125,7 @@ SF_INLINE WatchpointSet::Iterator WatchpointHash_FindNoCase(ASStringHash_GC<Obje
                                                             const ASString& key)
 {
     ASStringNoCaseKey ikey(key);
-    SPInt             index = HashFindIndex(phash, ikey);
-    if (index >= 0)
-        return WatchpointSet::Iterator(reinterpret_cast<WatchpointSet*>(phash), index);
-    return WatchpointSet::Iterator(0, 0);
+    return WatchpointHash_FindAlt(phash, ikey);
 }
 inline WatchpointSet::Iterator WatchpointHash_FindCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash,
                                                                const ASString& key, bool caseSensitive)
@@ -1611,8 +1616,6 @@ Object* Value::ToObject(const Environment* penv) const
 }
 
 
-// MS2-FUNCTIONAL block order: the exe lays out the case-sensitive lookup with a jump past the no-case one to the
-// shared iterator test
 // @0x142994c50
 bool Object::Watch(ASStringContext* psc, const ASString& prop, const FunctionRef& callback, const Value& userData)
 {
