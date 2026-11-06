@@ -677,7 +677,6 @@ void AsBroadcasterCtorFunction::Initialize(const FnCall& fn)
 
 // Color.getRGB(): the add row of the target's transform as 0xRRGGBB.
 // @0x1428ed450
-// MS2-FUNCTIONAL the exe multiplies the red and green lanes with imul; ours folds them to neg + shl
 void ColorProto::GetRGB(const FnCall& fn)
 {
     MS2_AS2_CHECK_THIS(fn, Color);
@@ -685,11 +684,17 @@ void ColorProto::GetRGB(const FnCall& fn)
     if (!pthis)
         return;
 
-    Ptr<InteractiveObject> pchar = pthis->pCharacter;
-    if (!pchar)
+    Ptr<InteractiveObject>    pc = pthis->pCharacter;
+    if (!pc)
         return;
-    Render::Cxform cx = pchar->GetCxform();
-    fn.Result->SetInt(((-(SInt32)(SInt64)cx.M[1][2]) & 0xff) | (((SInt32)(SInt64)cx.M[1][0] * -65536) & 0xff0000) | (((SInt32)(SInt64)cx.M[1][1] * -256) & 0xff00));
+
+    Render::Cxform c = pc->GetCxform();
+    UInt32  colorVal =
+        (((unsigned)c.M[1][2]*255) & 0xFF)         |
+        ((((unsigned)c.M[1][1]*255) & 0xFF) << 8)  |
+        ((((unsigned)c.M[1][0]*255) & 0xFF) << 16);
+
+    fn.Result->SetUInt((unsigned)colorVal);
 }
 
 // Color.setRGB(rgb): zeroes the multipliers and sets the add row.
