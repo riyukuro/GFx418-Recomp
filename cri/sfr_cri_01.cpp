@@ -1556,15 +1556,16 @@ void VideoPlayerImpl::Pause(bool on)
     }
 }
 
-// MS2-FUNCTIONAL: ; register allocation and block order differ
 // @0x1400286d0
 UInt32 VideoPlayerImpl::GetPosition()
 {
     if (Stat == Finished || Stat == Stopped)
         return 0;
-    UInt32 pos = 0;
+    UInt32 pos;
     if (StmPrm.num_video > 0)
         pos = CurrentFrame % StmPrm.video_prm[0].total_frames;
+    else
+        pos = 0;
     return pos;
 }
 
