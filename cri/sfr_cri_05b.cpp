@@ -267,7 +267,7 @@ void FUN_140053880(longlong a1);
 void FUN_140054040(longlong a1,cri_u64 a2,cri_u64 a3);
 void MPVM2V_Init();
 void MPVM2V_Destroy(longlong a0);
-cri_u64 FUN_140062a40(cri_any,cri_any,cri_any);  // C3: the definition's signature
+int MPVM2V_DecodeFrm(cri_any, cri_any, cri_any);  // 0x140062a40 (sfr_cri_06b)
 void MPVM2V_RequestStop(cri_any);  // C3: the definition's signature
 int MPVM2V_DecodePicAtr(cri_any, cri_any);  // 0x140062ae0 (sfr_cri_06b)
 int FUN_140062bc0(Any a0,Any a1,Any a2);
@@ -2157,7 +2157,7 @@ cri_u32 FUN_140050bd0(longlong a1,cri_u64 a2,void *a3)
          ((short)u_v1 <= 0x4000)) && (((short)u_v2 <= 0x4000 && ((u_v1 & 0x7f) == 0)))) &&
        ((u_v2 & 0x7f) == 0)))))) {
     if (CriAt<int>(a1, 0x17b8) == 2) {
-      return FUN_140062a40(a1,a2,a3);
+      return MPVM2V_DecodeFrm(a1,a2,a3);
     }
     i_v6 = CriAt<int>(a1, 0x162c);
     i_v3 = CriAt<int>(a1, 0x1630);
