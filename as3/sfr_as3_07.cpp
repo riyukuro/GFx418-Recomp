@@ -1457,10 +1457,10 @@ namespace Instances { namespace fl_display
         labelsGet(result);
         return result;
     }
-
+    static SF_FORCEINLINE void Sfr07FrameLabelSet(Instances::fl_display::FrameLabel* fl, unsigned frame, const ASString& name) { fl->FrameNumber = frame; fl->FrameName = name; }    static SF_FORCEINLINE void Sfr07FrameLabelSet(Instances::fl_display::FrameLabel* fl, int offset, const MovieDataDef::FrameLabelInfo* info) { fl->FrameNumber = info->Number - offset + 1; fl->FrameName.AssignNode(fl->FrameName.GetManager()->CreateStringNode(info->Name.ToCStr(), info->Name.GetSize())); }
     // The scene's frame labels as a new Array of FrameLabel objects (frames counted from 1 within the scene). A
     // sprite scene has no scene info: its labels are gathered frame by frame from the sprite's timeline.
-    // MS2-FUNCTIONAL: register allocation (rsi/rdi swapped) and load scheduling of the label pointer; same calls and logic
+    // MS2-FUNCTIONAL: load scheduling before CreateString (the exe interleaves the names-array and string-manager loads); same code otherwise
     // @0x14244f5b0
     SF_NOINLINE void Scene::labelsGet(SPtr<Instances::fl::Array>& result)
     {
@@ -1473,9 +1473,9 @@ namespace Instances { namespace fl_display
             {
                 SPtr<Instances::fl_display::FrameLabel> label;
                 asvm.ConstructInstance(label, labelClass);
-                const MovieDataDef::FrameLabelInfo& info = SceneInfo->Labels[i];
-                label->FrameNumber = info.Number - SceneInfo->Offset + 1;
-                label->FrameName.AssignNode(label->FrameName.GetManager()->CreateStringNode(info.Name.ToCStr(), info.Name.GetSize()));
+                Sfr07FrameLabelSet(label.GetPtr(), SceneInfo->Offset, &SceneInfo->Labels[i]);
+
+
                 result->SA.PushBack(Value(label));
             }
         }
@@ -1491,9 +1491,9 @@ namespace Instances { namespace fl_display
                     {
                         SPtr<Instances::fl_display::FrameLabel> label;
                         asvm.ConstructInstance(label, labelClass);
-                        ASString name = asvm.GetStringManager().GetStringManager()->CreateString(names[j].ToCStr());
-                        label->FrameNumber = i + 1;
-                        label->FrameName = name;
+                        Sfr07FrameLabelSet(label.GetPtr(), i + 1, asvm.GetStringManager().CreateString(names[j].ToCStr()));
+
+
                         result->SA.PushBack(Value(label));
                     }
                     names.Clear();
