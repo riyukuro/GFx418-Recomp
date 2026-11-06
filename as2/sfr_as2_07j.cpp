@@ -22,8 +22,64 @@ void FUN_14000d250(Scaleform::GFx::AS2::Value* value, double number);
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
+namespace {
+struct ToNumberInlineTag {};
+enum { ToNumber_MAX_RECURSION_LEVEL = 255 };
+// Environment::RecursionGuardStart (SDK), inlined.
+SF_INLINE bool ToNumberRecursionGuardStart(Environment* penv)
+{
+    return (penv->FuncCallNestingLevel++ < ToNumber_MAX_RECURSION_LEVEL);
+}
+}
+
+// FunctionRefBase::SetLocalFrame (exe 0x142981e70), expanded in place as the exe has it here.
+static SF_FORCEINLINE void ToNumberSetLocalFrame(FunctionRefBase* p, LocalFrame* localFrame, bool weakRef)
+{
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->Release();
+    p->pLocalFrame = localFrame;
+    if (weakRef)
+        p->Flags |= FunctionRefBase::FuncRef_Weak;
+    else
+        p->Flags &= ~FunctionRefBase::FuncRef_Weak;
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->AddRef();
+}
+
+// FunctionRefBase::Init(orig) with the SetLocalFrame call expanded.
+template<>
+SF_FORCEINLINE FunctionRef::FunctionRef(const FunctionRefBase& orig, ToNumberInlineTag)
+{
+    Flags    = 0;
+    Function = orig.Function;
+    if (!(Flags & FuncRef_Internal) && Function)
+        Function->AddRef();
+    pLocalFrame = 0;
+    if (orig.pLocalFrame)
+        ToNumberSetLocalFrame(this, orig.pLocalFrame, (orig.Flags & FuncRef_Weak) != 0);
+}
+
+namespace {
+// Value::ToFunction (exe 0x142991190), inlined.
+struct ToNumberValueAccess : Value
+{
+    static SF_FORCEINLINE FunctionRef ToFunction(const Value& v, const Environment* penv)
+    {
+        switch (v.T.Type)
+        {
+        case FUNCTIONNAME:
+            return static_cast<const ToNumberValueAccess&>(v).ResolveFunctionName(penv);
+        case FUNCTION:
+            return FunctionRef(v.V.FunctionValue, ToNumberInlineTag());
+        default:;
+        }
+        return FunctionRef();
+    }
+};
+}
+
 // The script number of a string (sfr_as2_07).
-SF_NOINLINE bool StringToNumber(Number* result, const char* str);
+SF_NOINLINE __declspec(noalias) bool StringToNumber(Number* result, const char* str);
 // Value::GetCharacterNamePath as the exe has it out of line (sfr_as2_05).
 SF_NOINLINE const ASString& Value_GetCharacterNamePath(const Value* pval, Environment* penv);
 
@@ -40,74 +96,96 @@ const int Builtin_valueOf  = 87;
 
 // Undefined is 0 up to SWF 6 and NaN after it, null 0 before SWF 7; an object is the number its valueOf gives (or
 // that of its text value).
-// MS2-FUNCTIONAL: branch layout differs; same behavior
 // @0x1429912d0
 Number Value::ToNumber(Environment* penv) const
 {
     if (T.Type == NUMBER)
+    {
         return NV.NumberValue;
+    }
     else if (T.Type == INTEGER)
+    {
         return (Number)NV.Int32Value;
+    }
     else if (T.Type == STRING)
     {
-        Number result;
-        if (StringToNumber(&result, V.pStringNode->pData))
-            return result;
-        return NumberUtil::NaN();
+        Number num;
+        if (!StringToNumber(&num, V.pStringNode->pData))
+        {
+            num = NumberUtil::NaN();
+        }
+        return num;
     }
     else if (T.Type == NULLTYPE)
     {
-        if (penv->GetVersion() <= 6)
+        unsigned version = penv->GetVersion();
+        if (version <= 6)
             return 0;
-        return NumberUtil::NaN();
+        else
+            return NumberUtil::NaN();
     }
     else if (T.Type == BOOLEAN)
-        return V.BooleanValue ? 1.0 : 0.0;
-    else if (T.Type == CHARACTER)
-        return NumberUtil::NaN();
-    else if (T.Type == OBJECT || T.Type == FUNCTION)
     {
-        if (T.Type == OBJECT && !V.pObjectValue)
-            return 0;
-
-        Value            val;
-        ObjectInterface* pobj = ToObjectInterface_Call(penv);
-        if (penv && pobj->GetMemberRaw(&penv->StringContext, penv->GetBuiltin(Builtin_valueOf), &val))
+        return V.BooleanValue ? (Number)1 : (Number)0;
+    }
+    else if (T.Type == CHARACTER)
+    {
+        return NumberUtil::NaN();
+    }
+    else if (((T.Type == OBJECT) && V.pObjectValue) || (T.Type == FUNCTION))
+    {
+        Value            toValueFunc;
+        ObjectInterface* piobj = ToObjectInterface_Call(penv);
+        if (penv && piobj->GetMemberRaw(penv->GetSC(), penv->GetBuiltin(Builtin_valueOf), &toValueFunc))
         {
-            Number ret;
-            if (penv->FuncCallNestingLevel++ < 255)
+            Number retVal;
+            if (ToNumberRecursionGuardStart(penv))
             {
                 Value       result;
-                FunctionRef func = val.ToFunction(penv);
+                FunctionRef func(ToNumberValueAccess::ToFunction(toValueFunc, penv));
                 if (func.Function)
-                    func.Invoke(FnCall(&result, pobj, penv, 0, 0));
+                {
+                    FnCall fnCall(&result, piobj, penv, 0, 0);
+                    func.Function->Invoke(fnCall, func.pLocalFrame, NULL);
+                }
                 if (result.T.Type >= NULLTYPE && result.T.Type <= STRING)
-                    ret = result.ToNumber(penv);
+                    retVal = result.ToNumber(penv);
                 else
-                    ret = NumberUtil::NaN();
+                    retVal = NumberUtil::NaN();
             }
             else
             {
-                ret = NumberUtil::NaN();
+                retVal = NumberUtil::NaN();
                 if (penv->IsVerboseActionErrors())
                     penv->LogScriptError("Stack overflow, max level of 255 nested calls of valueOf is reached.");
             }
             --penv->FuncCallNestingLevel;
-            return ret;
+            return retVal;
         }
-        if (T.Type == CHARACTER)
-            return NumberUtil::NaN();
-        const char* ptext = pobj->GetTextValue(penv);
-        return ptext ? atof(ptext) : 0;
+        else
+        {
+            if (T.Type == CHARACTER)
+                return NumberUtil::NaN();
+            const char* ptextval = piobj->GetTextValue(penv);
+            if (ptextval)
+            {
+                return (Number)atof(ptextval);
+            }
+        }
+        return 0;
     }
-    else if (T.Type == UNDEFINED || T.Type == UNSET)
+    else if (IsUndefined())
     {
         unsigned version = penv->GetVersion();
         if (version > 0 && version <= 6)
             return 0;
-        return NumberUtil::NaN();
+        else
+            return NumberUtil::NaN();
     }
-    return 0;
+    else
+    {
+        return 0;
+    }
 }
 
 // An object (or clip, or function) is what its valueOf gives; without one, a clip is its target path and an object
