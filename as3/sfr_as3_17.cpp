@@ -6227,66 +6227,81 @@ static void Sfr33PushResult(VM& vm, Value& result)
 {
     Sfr33OpStack& st = *reinterpret_cast<Sfr33OpStack*>(reinterpret_cast<UByte*>(&vm) + 0x48);
     ++st.pCurrent;
-    memcpy(static_cast<void*>(st.pCurrent), &result, sizeof(Value));
-    *reinterpret_cast<UInt32*>(&result) = 0;
+    ::new (static_cast<void*>(st.pCurrent)) Value(result, PickValue);
 }
 
-// A thunk's argument count check: an ArgumentError (#1063) when argc is outside its range.
-static bool Sfr33ThunkArgsOk(VM& vm, const ThunkInfo& ti, unsigned argc)
+// VM::ThrowErrorInternal on an Error temporary, as the exe's inlined throws have it (the ctor's result passed on).
+static __forceinline void Sfr17ThrowError(VM& vm, const VM::Error& e, const ClassInfo& ci)
 {
-    const unsigned maxArgs = ti.GetMaxArgNum();
-    if (maxArgs == 0x3ff || (argc <= maxArgs && ti.GetMinArgNum() <= argc))
-        return true;
-    const VM::Error e(VM::eWrongArgumentCountError, vm, ti.Name, ti.GetMinArgNum(), maxArgs, argc);
-    FUN_14252ecb0(&vm, &e, &fl::ArgumentErrorCI);
-    return false;
+    FUN_14252ecb0(&vm, &e, &ci);
+}
+
+// Room for the Value a closure's this is made in, constructed and destroyed by hand so both closure cases share
+// one call and one release.
+union Sfr17ValueSlot
+{
+    Value V;
+    Sfr17ValueSlot() {}
+    ~Sfr17ValueSlot() {}
+};
+
+// The argument count check of VM::ExecuteThunkUnsafe: an ArgumentError (#1063) when argc is outside the thunk's range.
+static __forceinline bool Sfr17ThunkArgsOk(VM& vm, const ThunkInfo& thunk, unsigned argc)
+{
+    const unsigned maxArgs = thunk.GetMaxArgNum();
+    if (maxArgs != 0x3ff && (argc > maxArgs || argc < thunk.GetMinArgNum()))
+    {
+        Sfr17ThrowError(vm, VM::Error(VM::eWrongArgumentCountError, vm, thunk.Name, thunk.GetMinArgNum(), maxArgs, argc),
+                        fl::ArgumentErrorCI);
+        return false;
+    }
+    return true;
+}
+
+// VM::ExecuteThunkUnsafe as the exe inlines it: the check, then the call, its result moved onto the operand stack
+// with result_on_stack.
+static __forceinline void Sfr17ExecuteThunk(VM& vm, const ThunkInfo& thunk, const Value& _this, Value& result,
+                                            unsigned argc, const Value* argv, bool result_on_stack)
+{
+    if (!Sfr17ThunkArgsOk(vm, thunk, argc))
+        return;
+    thunk.Method(thunk, vm, _this, result, argc, argv);
+    if (result_on_stack && !vm.IsException())
+        Sfr33PushResult(vm, result);
+}
+
+// The method half of VM::ExecuteVTableIndUnsafe as the exe inlines it, for the slot m (index ind) of a VTable: a
+// call frame invoked by func, run here unless result_on_stack.
+static __forceinline void Sfr17AddSlotFrame(VM& vm, const Value& func, const Value& m, UPInt ind, const Value& _this,
+                                             Value& result, unsigned argc, const Value* argv, bool result_on_stack)
+{
+    const Traits& ot = m.GetTraits();
+    VMAbcFile& file = *ot.GetFilePtr();
+    const SInt32 mbi_ind = file.GetAbcFile().Methods.Info[m.GetMethodInd()]->MethodBodyInfoInd;
+    vm.AddFrame(func, file, mbi_ind, _this, argc, argv, false, ot.InitScope, ot, ot.GetVT().Names[ind]);
+    if (!result_on_stack)
+        Sfr33ExecuteAndPop(vm, result);
 }
 
 // VM::ExecuteInternalUnsafe: calls func on _this. A method slot of a traits' VTable pushes a call frame (run here
 // unless result_on_stack, when the interpreter picks it up); thunks, objects and functions are called directly. With
 // result_on_stack the result goes onto the operand stack. Anything else is a TypeError (#1006).
-// MS2-FUNCTIONAL 0x1424fef00: VM::AddFrame used for the inlined call frame build; method slot lookup factored out
+// MS2-FUNCTIONAL 0x1424fef00: 32 bytes long; the exe shares the kThunk call with the VTableInd thunk, ours does not
 // @0x1424fef00
 void VM::ExecuteInternalUnsafe(const Value& func, const Value& _this, Value& result, unsigned argc, const Value* argv,
                                bool result_on_stack)
 {
-    const ThunkInfo* thunk = NULL;
-    Value closureThis;
-    const Value* pthis = &_this;
+    Scaleform::SIMD::PrefetchObj(&func);
+    Scaleform::SIMD::PrefetchObj(&_this);
+    const ThunkInfo* thunk;
+    Sfr17ValueSlot closureThis;
     switch (func.GetKind())
     {
-    case Value::kThunk:
-        thunk = &func.AsThunk();
-        break;
-    case Value::kVTableInd:
-    case Value::kVTableIndClosure:
-    {
-        const bool closure = func.GetKind() == Value::kVTableIndClosure;
-        if (closure)
-        {
-            closureThis = Value(func.GetClosure());
-            pthis = &closureThis;
-        }
-        const Traits& tr = closure ? func.GetClosure()->GetTraits() : func.GetTraits();
-        const UPInt ind = static_cast<UInt32>(func.GetVTableInd());
-        const Value& m = tr.GetVT().VTMethods[ind];
-        if (m.GetKind() == Value::kMethodInd)
-        {
-            const Traits& ot = m.GetTraits();
-            VMAbcFile& file = *ot.GetFilePtr();
-            const SInt32 mbi_ind = file.GetAbcFile().Methods.Info[m.GetMethodInd()]->MethodBodyInfoInd;
-            AddFrame(func, file, mbi_ind, *pthis, argc, argv, false, ot.InitScope, ot, ot.GetVT().Names[ind]);
-            if (!result_on_stack)
-                Sfr33ExecuteAndPop(*this, result);
-            return;
-        }
-        thunk = &m.AsThunk();
-        break;
-    }
-    case Value::kThunkClosure:
-        thunk = &func.AsThunk();
-        closureThis = Value(func.GetClosure());
-        pthis = &closureThis;
+    case Value::kFunction:
+        if (result_on_stack)
+            const_cast<Instances::Function&>(func.AsFunction()).Execute(_this, argc, argv, false);
+        else
+            const_cast<Instances::Function&>(func.AsFunction()).ExecuteUnsafe(_this, result, argc, argv);
         break;
     case Value::kObject:
     case Value::kClass:
@@ -6295,32 +6310,69 @@ void VM::ExecuteInternalUnsafe(const Value& func, const Value& _this, Value& res
             obj->Call(_this, result, argc, argv);
             if (!IsException() && result_on_stack)
                 Sfr33PushResult(*this, result);
-            return;
+            break;
         }
-        // fall through: a null object is not callable
-    default:
-    {
-        const VM::Error e(VM::eCallOfNonFunctionError, *this, func);
-        FUN_14252ecb0(this, &e, &fl::TypeErrorCI);
-        return;
-    }
-    case Value::kFunction:
-        if (result_on_stack)
-            const_cast<Instances::Function&>(func.AsFunction()).Execute(_this, argc, argv, false);
-        else
-            const_cast<Instances::Function&>(func.AsFunction()).Call(_this, result, argc, argv);
-        return;
+        goto non_function;
+    case Value::kThunk:
+        thunk = &func.AsThunk();
+        Scaleform::SIMD::PrefetchObj(thunk);
+        Sfr17ExecuteThunk(*this, *thunk, _this, result, argc, argv, result_on_stack);
+        break;
     case Value::kThunkFunction:
-        const_cast<Instances::ThunkFunction&>(func.AsThunkFunction()).Call(_this, result, argc, argv);
+        const_cast<Instances::ThunkFunction&>(func.AsThunkFunction()).ExecuteUnsafe(_this, result, argc, argv);
         if (!IsException() && result_on_stack)
             Sfr33PushResult(*this, result);
-        return;
+        break;
+    case Value::kThunkClosure:
+        thunk = &func.AsThunk();
+        Scaleform::SIMD::PrefetchObj(thunk);
+        ::new (static_cast<void*>(&closureThis.V)) Value(func.GetClosure(), Value::InlineObj);
+        if (!Sfr17ThunkArgsOk(*this, *thunk, argc))
+            goto closure_done;
+    call_closure_thunk:
+        thunk->Method(*thunk, *this, closureThis.V, result, argc, argv);
+        if (result_on_stack && !IsException())
+            Sfr33PushResult(*this, result);
+    closure_done:
+        closureThis.V.~Value();
+        break;
+    case Value::kVTableInd:
+    {
+        const UPInt ind = static_cast<UInt32>(func.GetVTableInd());
+        const Value& m = func.GetTraits().GetVT().VTMethods[ind];
+        Scaleform::SIMD::PrefetchObj(&m);
+        if (m.GetKind() == Value::kMethodInd)
+        {
+            Sfr17AddSlotFrame(*this, func, m, ind, _this, result, argc, argv, result_on_stack);
+            break;
+        }
+        thunk = &m.AsThunk();
+        Scaleform::SIMD::PrefetchObj(thunk);
+        Sfr17ExecuteThunk(*this, *thunk, _this, result, argc, argv, result_on_stack);
+        break;
     }
-    if (!Sfr33ThunkArgsOk(*this, *thunk, argc))
-        return;
-    thunk->Method(*thunk, *this, *pthis, result, argc, argv);
-    if (result_on_stack && !IsException())
-        Sfr33PushResult(*this, result);
+    case Value::kVTableIndClosure:
+    {
+        const UPInt ind = static_cast<UInt32>(func.GetVTableInd());
+        const Value& m = func.GetClosure()->GetTraits().GetVT().VTMethods[ind];
+        Scaleform::SIMD::PrefetchObj(&m);
+        ::new (static_cast<void*>(&closureThis.V)) Value(func.GetClosure(), Value::InlineObj);
+        if (m.GetKind() == Value::kMethodInd)
+        {
+            Sfr17AddSlotFrame(*this, func, m, ind, closureThis.V, result, argc, argv, result_on_stack);
+            goto closure_done;
+        }
+        thunk = &m.AsThunk();
+        Scaleform::SIMD::PrefetchObj(thunk);
+        if (!Sfr17ThunkArgsOk(*this, *thunk, argc))
+            goto closure_done;
+        goto call_closure_thunk;
+    }
+    default:
+    non_function:
+        Sfr17ThrowError(*this, VM::Error(VM::eCallOfNonFunctionError, *this, func), fl::TypeErrorCI);
+        break;
+    }
 }
 
 // Value(Object*) as the exe inlines it on a non-null object (no null test); released by ~Value.
