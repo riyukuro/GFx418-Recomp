@@ -192,11 +192,7 @@ String operator+(const char* left, const GFx::ASString& right)
 }
 }
 
-namespace Scaleform { namespace GFx {
-// Releases pASSupport and then runs the RefCountImplCore base destructor, matching the exe's order.
-// @0x1424dd4d0
-ASMovieRootBase::~ASMovieRootBase() = default;
-}} // namespace Scaleform::GFx
+// ASMovieRootBase::~ASMovieRootBase (0x1424dd4d0) is inline (gfx_displayobject.h); FUN_1424de650 below emits it.
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 // ASVM::~ASVM (0x1424dd500) is implicit (as3_asvm.h); it is emitted with the vftable in sfr_as3_15.

@@ -9,6 +9,7 @@
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_assupport.h"
 #include "../include/gfx/gfx_movieimpl.h"
+#include "../include/gfx/gfx_rendertree.h"
 #include "../include/gfx/gfx_sprite.h"
 #include "../include/kernel/sf_std.h"
 #include "../include/render/text_core.h"
@@ -19,34 +20,28 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 // MS2-PIN: ??_7AS2ValueObjectInterface@GFx@Scaleform@@6B@ 0x143222128
 // MS2-PIN: ??_7ObjectInterface@Value@GFx@Scaleform@@6B@ 0x14317bc90
 
-// MS2-FUNCTIONAL: the unmodelled words (+0x28 entry, +0x78 action queue block) are zeroed by hand (+0x638 is not
-// modelled)
+// MS2-FUNCTIONAL: the +0x78 hash and the +0x80 action queue block are zeroed by hand, and the member Ptrs are built
+// in the init list (the exe AddRefs the ASSupport without a null test)
 // @0x14291f070
 MovieRoot::MovieRoot(MemoryContextImpl* pmemContext, MovieImpl* pmovie, ASSupport* pasSupport)
-    : BuiltinsMgr(*reinterpret_cast<ASStringManager**>(reinterpret_cast<UByte*>(pmemContext) + 0x18))
+    : pAS2Support(pasSupport), MemContext(pmemContext),
+      BuiltinsMgr(*reinterpret_cast<ASStringManager**>(reinterpret_cast<UByte*>(pmemContext) + 0x18))
 {
     pMovieImpl = 0;
     pASSupport = pasSupport;
     AVMVersion = pasSupport->GetAVMVersion();
-    ::memset(Unrecovered_28, 0, sizeof(Unrecovered_28));
-    pAS2Support = pasSupport;
-    pasSupport->AddRef();
-    MemContext = pmemContext;
-    if (pmemContext)
-        pmemContext->AddRef();
     GCFrameCnt         = 0;
     GCSeenCollectCount = 0;
     pMouseListener     = 0;
     pGlobalContext     = 0;
-    ::memset(Unrecovered_78, 0, sizeof(Unrecovered_78));
+    // The invoke alias hash (+0x78) and the action queue block (+0x80) start zeroed.
+    ::memset(Unrecovered_78, 0, 0x138 - 0x78);
     // The action queue starts at modification 1 and session 1 and allocates its entries from the movie's heap.
     ActionQueueType& queue = GetActionQueue();
     queue.ModId    = 1;
     queue.Field_a0 = 1;
     *reinterpret_cast<unsigned*>(&queue.Field_a8) = 1;
     queue.pHeap    = pmemContext->Heap;
-    pLevelRoots    = 0;
-    LevelRootCount = 0;
     pMovieImpl     = pmovie;
     pmovie->SetASMovieRoot(this);
 

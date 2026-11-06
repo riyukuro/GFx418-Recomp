@@ -123,7 +123,7 @@ void AvmCharacter::SetSingleClipEventHandler(const EventId& id, const Value& han
 void MovieRoot::Shutdown()
 {
     SpritesWithHitAreaOf(this).Clear();
-    *reinterpret_cast<Ptr<Render::TreeContainer>*>(Unrecovered_28) = 0;
+    TopNode = 0;
     InvokeAliasHash* paliases = *reinterpret_cast<InvokeAliasHash**>(Unrecovered_78);
     pMouseListener = 0;
     if (paliases)

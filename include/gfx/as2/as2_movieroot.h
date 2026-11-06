@@ -205,6 +205,9 @@ public:
     ASStringManager*   pStringManager;         // +0x4e0
     const char**       pStaticStrings;         // +0x4e8
 
+    // Drops the builtins (inline in ~MovieRoot).
+    ~StringManager() { pStringManager->ReleaseBuiltinArray(Builtins, BuiltinCount); }
+
     // The builtins come from the static name table (exe 0x142920e10).
     StringManager(ASStringManager* pmgr);
 
@@ -256,19 +259,57 @@ public:
 class MovieRoot : public ASMovieRootBase
 {
 public:
-    UByte              Unrecovered_28[0x08];  // +0x28
-    // (sfr24) A Ptr in the exe; the AS2 support the empty clips of a failed loadMovie are made with.
-    ASSupport*         pAS2Support;           // +0x30
-    MemoryContextImpl* MemContext;            // +0x38
+    struct ActionEntry;
+    // The queued actions per priority (only the members used so far).
+    struct ActionQueueType
+    {
+        // A priority level: the queued entries, from pActionRoot to pLastEntry.
+        struct Level
+        {
+            ActionEntry* pActionRoot;  // +0x00
+            ActionEntry* pInsertEntry; // +0x08
+            ActionEntry* pLastEntry;   // +0x10
+        };
+        enum { AL_Count = 6, FreeEntriesLimit = 50 };
+
+        Level        Levels[AL_Count];  // +0x00
+        int          ModId;             // +0x90 bumped when the queue changes under an iterator
+        ActionEntry* pFreeEntry;        // +0x98 the recycled entries
+        unsigned     Field_a0;          // +0xa0 (not identified yet)
+        unsigned     FreeEntriesCount;  // +0xa4
+
+        // (sfr32) Drops the queue and deletes the recycled entries (exe 0x142925250).
+        ~ActionQueueType();
+        // Clears pentry and keeps it for reuse (up to FreeEntriesLimit), deletes it otherwise (exe 0x142930910).
+        void AddToFreeList(ActionEntry* pentry);
+        // Drops every queued action (exe 0x142934390).
+        void Clear();
+
+        // (appended for sfr_as2_06)
+        void*       Field_a8; // +0xa8 (not identified yet)
+        MemoryHeap* pHeap;    // +0xb0 where new entries are allocated
+
+        // A recycled entry, or a new one from the heap (inline in sfr_as2_06).
+        inline ActionEntry* GetNewEntry();
+        // A recycled or new entry linked in after the level's insert point, for the current session (Field_a0)
+        // (exe 0x1429621f0); 0 if out of memory.
+        ActionEntry* InsertEntry(ActionPriority::Priority prio);
+    };
+
+    // The members are destroyed in reverse order by the implicit part of ~MovieRoot (exe 0x142925be0).
+    Ptr<Render::TreeContainer> TopNode;       // +0x28
+    // (sfr24) The AS2 support the empty clips of a failed loadMovie are made with.
+    Ptr<ASSupport>         pAS2Support;       // +0x30
+    Ptr<MemoryContextImpl> MemContext;        // +0x38
     unsigned           GCFrameCnt;            // +0x40 frames since this movie last saw a collection
     unsigned           GCSeenCollectCount;    // +0x44 the collector's collection count at that time
     MouseListener*     pMouseListener;        // +0x48 the Mouse class (set by its constructor)
     Ptr<GlobalContext> pGlobalContext;        // +0x50
     Value              ExternalIntfRetVal;    // +0x58 set by the host handler of ExternalInterface.call
-    UByte              Unrecovered_78[0xc0];  // +0x78
+    UByte              Unrecovered_78[0x08];  // +0x78 the invoke alias hash
+    ActionQueueType    ActionQueue;           // +0x80
     StringManager      BuiltinsMgr;           // +0x138
-    void**             pLevelRoots;           // +0x628 (sfr32) array of NTS-counted nodes, released by ~MovieRoot
-    UPInt              LevelRootCount;        // +0x630
+    ArrayLH<Ptr<RefCountNTSImpl> > LevelRoots; // +0x628 (sfr32) NTS-counted nodes
 
     ASRefCountCollector* GetASGC() const { return MemContext->ASGC; }
 
@@ -388,41 +429,6 @@ public:
     // A new empty entry queued at prio (exe 0x1429620d0).
     ActionEntry* InsertEmptyAction(ActionPriority::Priority prio = ActionPriority::AP_Frame);
 
-    // The queued actions per priority (only the members used so far).
-    struct ActionQueueType
-    {
-        // A priority level: the queued entries, from pActionRoot to pLastEntry.
-        struct Level
-        {
-            ActionEntry* pActionRoot;  // +0x00
-            ActionEntry* pInsertEntry; // +0x08
-            ActionEntry* pLastEntry;   // +0x10
-        };
-        enum { AL_Count = 6, FreeEntriesLimit = 50 };
-
-        Level        Levels[AL_Count];  // +0x00
-        int          ModId;             // +0x90 bumped when the queue changes under an iterator
-        ActionEntry* pFreeEntry;        // +0x98 the recycled entries
-        unsigned     Field_a0;          // +0xa0 (not identified yet)
-        unsigned     FreeEntriesCount;  // +0xa4
-
-        // (sfr32) Drops the queue and deletes the recycled entries (exe 0x142925250).
-        ~ActionQueueType();
-        // Clears pentry and keeps it for reuse (up to FreeEntriesLimit), deletes it otherwise (exe 0x142930910).
-        void AddToFreeList(ActionEntry* pentry);
-        // Drops every queued action (exe 0x142934390).
-        void Clear();
-
-        // (appended for sfr_as2_06)
-        void*       Field_a8; // +0xa8 (not identified yet)
-        MemoryHeap* pHeap;    // +0xb0 where new entries are allocated
-
-        // A recycled entry, or a new one from the heap (inline in sfr_as2_06).
-        inline ActionEntry* GetNewEntry();
-        // A recycled or new entry linked in after the level's insert point, for the current session (Field_a0)
-        // (exe 0x1429621f0); 0 if out of memory.
-        ActionEntry* InsertEntry(ActionPriority::Priority prio);
-    };
 
     // Walks the queue in priority order; entries handed out go back to the free list.
     struct ActionQueueIterator
@@ -448,8 +454,7 @@ public:
         __declspec(noalias) const ActionEntry* getNext(); // exe 0x142995180; noalias lets the iterator dtor tail-call (callers reread the queue only after calls)
     };
 
-    // The action queue (+0x80, inside the unrecovered block).
-    ActionQueueType& GetActionQueue() { return *reinterpret_cast<ActionQueueType*>(Unrecovered_78 + 0x08); }
+    ActionQueueType& GetActionQueue() { return ActionQueue; }
     // Runs every queued action (exe 0x142938bd0).
     virtual void DoActions();
     // Runs the queued actions of one session only, the others stay queued (exe 0x142938c40).

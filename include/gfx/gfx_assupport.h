@@ -62,6 +62,13 @@ public:
 // (appended for the game's GFxManager)
 inline void StateBag::SetAS3Support(ASSupport* ptr) { SetState(State::State_AS3Support, ptr); }
 
+// ~ASMovieRootBase (gfx_displayobject.h) needs the complete ASSupport: see the note there.
+#define MS2_SF_ASSUPPORT_COMPLETE
+#if defined(MS2_SF_ASMOVIEROOTBASE_COMPLETE) && !defined(MS2_SF_ASMOVIEROOTBASE_DTOR)
+#define MS2_SF_ASMOVIEROOTBASE_DTOR
+inline ASMovieRootBase::~ASMovieRootBase() {}
+#endif
+
 }} // namespace Scaleform::GFx
 
 #endif

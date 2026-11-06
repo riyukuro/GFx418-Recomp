@@ -241,7 +241,7 @@ bool MovieRoot::Init(MovieDefImpl* pmovieDef)
 {
     pGlobalContext = *new (pMovieImpl->GetMovieHeap()) GlobalContext(pMovieImpl);
 
-    Ptr<Render::TreeContainer>& topNode = *reinterpret_cast<Ptr<Render::TreeContainer>*>(Unrecovered_28);
+    Ptr<Render::TreeContainer>& topNode = TopNode;
     topNode = *reinterpret_cast<Render::ContextImpl::Context*>(pMovieImpl->RenderContext)
                    ->CreateEntry<Render::TreeContainer>();
     static_cast<Render::TreeContainer*>(pMovieImpl->pRenderRoot)->Insert(0, topNode);

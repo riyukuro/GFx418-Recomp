@@ -75,7 +75,9 @@ using Render::Matrix4F;
 class ASMovieRootBase : public RefCountBase<ASMovieRootBase, 327>
 {
 public:
-    ~ASMovieRootBase() override; // 0x1424dd4d0
+    // Inline, as in the SDK (defined below the class): the AS2 ~MovieRoot inlines it; the AS3 one calls the COMDAT
+    // copy (0x1424dd4d0).
+    ~ASMovieRootBase() override;
     MovieImpl*     pMovieImpl; // +0x10
     Ptr<ASSupport> pASSupport; // +0x18
     UByte          AVMVersion; // +0x20
@@ -181,6 +183,14 @@ public:
     virtual ASStringManager* GetStringManager() const = 0;                                             // 50
     virtual Render::Text::Allocator* GetTextAllocator() = 0;                                           // 51
 };
+
+// ~ASMovieRootBase needs the complete ASSupport (Ptr member). Whichever of this header and gfx_assupport.h comes
+// second defines it; units with neither use the COMDAT copy (sfr_as3_16).
+#define MS2_SF_ASMOVIEROOTBASE_COMPLETE
+#if defined(MS2_SF_ASSUPPORT_COMPLETE) && !defined(MS2_SF_ASMOVIEROOTBASE_DTOR)
+#define MS2_SF_ASMOVIEROOTBASE_DTOR
+inline ASMovieRootBase::~ASMovieRootBase() {}
+#endif
 
 class AvmInteractiveObjBase;
 class AvmSpriteBase;

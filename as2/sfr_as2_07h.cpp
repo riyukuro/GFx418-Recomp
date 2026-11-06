@@ -218,7 +218,7 @@ void AvmSprite::SetLevel(int level)
         if (pmovie->pMovieLevels[index].Level > lvl)
             break;
     }
-    Ptr<Render::TreeContainer>& topNode = *reinterpret_cast<Ptr<Render::TreeContainer>*>(proot->Unrecovered_28);
+    Ptr<Render::TreeContainer>& topNode = proot->TopNode;
     topNode->Insert(index, GetDispObj()->GetRenderNode());
     Level = lvl;
 

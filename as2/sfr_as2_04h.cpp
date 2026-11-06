@@ -13,7 +13,6 @@
 // MS2-RANGE: 0x14292a0e0-0x14292a163 .text$mn
 // MS2-RANGE: 0x14292b4e0-0x14292b586 .text$mn
 // MS2-RANGE: 0x14292ba00-0x14292baaa .text$mn
-// MS2-RANGE: 0x14292c3e0-0x14292c520 .text$mn
 // MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS2@GFx@Scaleform@@6B@ 0x143215370
 // MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
 
@@ -50,15 +49,6 @@ template<> SF_NOINLINE Sfr04hHashVal::~HashSetBase();    // 0x142924960
 template<> SF_NOINLINE Sfr04hHashEv::~HashSetBase();     // 0x142924a20
 }
 
-namespace Scaleform { namespace Render { namespace ContextImpl {
-class Entry
-{
-protected:
-    void destroyHelper();
-};
-struct EntryAccess : Entry { using Entry::destroyHelper; };
-} } }
-
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 struct GcAccess : RefCountBaseGC<StatMV_ActionScript_Mem> { using RefCountBaseGC<StatMV_ActionScript_Mem>::ReleaseInternal; };
@@ -84,9 +74,6 @@ static inline void ra(unsigned long long tagged) // atomic shared string-data re
     if (_InterlockedExchangeAdd((volatile long*)c, -1) == 1) Memory::Free((void*)(tagged & ~3ull));
 }
 
-// The base vftables the inlined destructors store.
-extern const void* DAT_1432177d8[];
-extern const void* DAT_14317bde0[];
 // The RefCountBaseGC<323> dtor is protected: a derived view runs it.
 struct Sfr_RcgcDtor : RefCountBaseGC<323>
 {
@@ -279,33 +266,6 @@ void* DeleteAs2_14292ba00(void* p, unsigned flags)
             Memory::Free(p);
         else
             ::operator delete(p, 0x88);
-    }
-    return p;
-}
-
-struct Q14292c3e0 { void* P; ~Q14292c3e0() { if (P) static_cast<RefCountImpl*>(P)->Release(); } };
-struct B14292c3e0 { void* vp; void* rc; void* x10; Q14292c3e0 q; ~B14292c3e0() { vp = (void*)DAT_14317bde0; } };
-struct P14292c3e0 { void* P; ~P14292c3e0() { if (P) FUN_14257dcd0(P); } };
-// @0x14292c3e0
-void* DeleteAs2_14292c3e0(void* p, unsigned flags)
-{
-    *(const void**)p = DAT_1432177d8;
-    ((ArrayLH<P14292c3e0>*)((char*)p+0x628))->~ArrayLH();
-    (*(ASStringManager**)((char*)p+0x618))->ReleaseBuiltinArray((ASStringNodeHolder*)((char*)p+0x138), 0x9c);
-    ((MovieRoot::ActionQueueType*)((char*)p+0x80))->~ActionQueueType();
-    ((Value*)((char*)p+0x58))->~Value();
-    if (*(void**)((char*)p+0x50)) FUN_14257dcd0(*(void**)((char*)p+0x50));
-    if (*(void**)((char*)p+0x38)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x38))->Release();
-    if (*(void**)((char*)p+0x30)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x30))->Release();
-    { char* e=*(char**)((char*)p+0x28); if (e && --*(long long*)(e+8)==0) reinterpret_cast<Render::ContextImpl::EntryAccess*>(e)->destroyHelper(); }
-    ((B14292c3e0*)p)->~B14292c3e0();
-    static_cast<RefCountImplCore*>((void*)(p))->RefCountImplCore::~RefCountImplCore();
-    if (flags & 1)
-    {
-        if (!(flags & 4))
-            Memory::Free(p);
-        else
-            ::operator delete(p, 0x640);
     }
     return p;
 }
