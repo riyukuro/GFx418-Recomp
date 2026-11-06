@@ -2661,17 +2661,22 @@ bool Environment::IsAvailable(const ASString& name, const WithStackArray* withSt
     return global && global->GetMemberRaw(psc, name, &value);
 }
 
-// MS2-FUNCTIONAL: resolves a constructor from the requested package and delegates object creation to its function.
+// The member className of the package, when it is a function, constructs the object (SDK form: no null package
+// test, a non-function member gives 0).
+// MS2-FUNCTIONAL: LTCG codegen: the exe inlines Value::ToFunction (AS2_Value.cpp) and keeps the FunctionRef fields in
+// registers across the OperatorNew call
 // @0x14296e520
 Object* Environment::OperatorNew(Object* package, const ASString& className, int nargs, int argsTopOff)
 {
-    if (!package)
-        return 0;
-    Value constructorValue;
-    if (!package->GetMember(this, className, &constructorValue))
-        return 0;
-    FunctionRef constructor = constructorValue.ToFunction(this);
-    return OperatorNew(constructor, nargs, argsTopOff);
+    Value ctor;
+    if (package->GetMember(this, className, &ctor))
+    {
+        if (ctor.IsFunction())
+        {
+            return OperatorNew(ctor.ToFunction(this), nargs, argsTopOff);
+        }
+    }
+    return 0;
 }
 
 // MS2-FUNCTIONAL: new Object(x) wraps x; otherwise creates the instance through the prototype's __constructor__,
