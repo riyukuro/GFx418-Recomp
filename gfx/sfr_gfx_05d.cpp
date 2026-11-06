@@ -425,12 +425,12 @@ void SF_STDCALL GFx_DefineTextLoader(LoadProcess* p, const TagInfo& tagInfo)
     p->AddResource(ResourceId(characterId), pch);
 }
 
+struct Sfr05dBoundsLocalView { virtual void S0() = 0; virtual void S1() = 0; virtual void S2() = 0; virtual void S3() = 0; virtual void S4() = 0; virtual void S5() = 0; virtual void S6() = 0; virtual RectF GetBoundsLocal() const = 0; virtual RectF GetRectBoundsLocal() const = 0; }; // 4.1.18 slots 7/8: no morph ratio
 // @0x1425e12e0
-// MS2-FUNCTIONAL: the shared CharacterDef bounds virtuals take a morph ratio (4.1.18 ones take none)
 RectF StaticTextCharacter::GetBounds(const Matrix& transform) const
 {
     RectF r(RectF::NoInit);
-    transform.EncloseTransform(&r, pDef->GetBoundsLocal());
+    transform.EncloseTransform(&r, reinterpret_cast<const Sfr05dBoundsLocalView*>(pDef.GetPtr())->GetBoundsLocal());
     return r;
 }
 
@@ -465,11 +465,11 @@ const Render::Matrix2F& StaticTextCharacter::GetMatrix() const
 }
 
 // @0x1425e14f0
-// MS2-FUNCTIONAL: the shared CharacterDef bounds virtuals take a morph ratio (4.1.18 ones take none)
+// Called through Sfr05dBoundsLocalView, as the 4.1.18 virtual takes no morph ratio.
 RectF StaticTextCharacter::GetRectBounds(const Matrix& transform) const
 {
     RectF r(RectF::NoInit);
-    transform.EncloseTransform(&r, pDef->GetRectBoundsLocal());
+    transform.EncloseTransform(&r, reinterpret_cast<const Sfr05dBoundsLocalView*>(pDef.GetPtr())->GetRectBoundsLocal());
     return r;
 }
 
