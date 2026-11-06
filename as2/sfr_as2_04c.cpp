@@ -158,8 +158,6 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 // MS2-PIN: ??_7?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321dc78
 
 // The base vftables the inlined destructors store.
-extern const void* DAT_1432155c0[];
-extern const void* DAT_143215648[];
 extern const void* DAT_1432173f8[];
 extern const void* DAT_143217440[];
 extern const void* DAT_1432174e8[];
@@ -173,6 +171,11 @@ extern const void* DAT_14321e4a8[];
 // ~TextSnapshotObject (out of line at 0x142925f70, sfr_as2_03; `inline` there under cl) inlines into the deleting dtors.
 // It is protected: a derived view runs it.
 inline TextSnapshotObject::~TextSnapshotObject() { GetData().~StaticTextSnapshotData(); }
+// Out of line at 0x1429255a0 in sfr_as2_03 (`inline` there under cl, so both copies are COMDAT-any). The deleting
+// dtors below inline it (the two FunctionObject vftable stores).
+inline FunctionObject::~FunctionObject()
+{
+}
 struct Sfr_TextSnapshotObjectDtor : TextSnapshotObject
 {
     static void Destroy(void* p) { static_cast<Sfr_TextSnapshotObjectDtor*>(p)->TextSnapshotObject::~TextSnapshotObject(); }
@@ -251,9 +254,7 @@ void* DeleteAs2_14292bb10(void* p, unsigned flags)
 // @0x14292bb70
 void* DeleteAs2_14292bb70(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -337,9 +338,7 @@ void* DeleteAs2_14292c050(void* p, unsigned flags)
 // @0x14292c0e0
 void* DeleteAs2_14292c0e0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -368,9 +367,7 @@ void* DeleteAs2_14292c150(void* p, unsigned flags)
 // @0x14292c1c0
 void* DeleteAs2_14292c1c0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -398,9 +395,7 @@ void* DeleteAs2_14292c230(void* p, unsigned flags)
 // @0x14292c530
 void* DeleteAs2_14292c530(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -442,9 +437,7 @@ void* DeleteAs2_14292c680(void* p, unsigned flags)
 // @0x14292c6e0
 void* DeleteAs2_14292c6e0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -472,9 +465,7 @@ void* DeleteAs2_14292c790(void* p, unsigned flags)
 // @0x14292c820
 void* DeleteAs2_14292c820(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -516,9 +507,7 @@ void* DeleteAs2_14292c8f0(void* p, unsigned flags)
 // @0x14292c980
 void* DeleteAs2_14292c980(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -574,9 +563,7 @@ void* DeleteAs2_14292cb30(void* p, unsigned flags)
 // @0x14292cb90
 void* DeleteAs2_14292cb90(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -619,9 +606,7 @@ void* DeleteAs2_14292cc90(void* p, unsigned flags)
 void* DeleteAs2_14292ccf0(void* p, unsigned flags)
 {
     reinterpret_cast<Sfr04cHashShared*>((char*)p+0x70)->~Sfr04cHashShared();
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -649,9 +634,7 @@ void* DeleteAs2_14292cd70(void* p, unsigned flags)
 // @0x14292ce60
 void* DeleteAs2_14292ce60(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -693,9 +676,7 @@ void* DeleteAs2_14292cf30(void* p, unsigned flags)
 // @0x14292d040
 void* DeleteAs2_14292d040(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -709,9 +690,7 @@ void* DeleteAs2_14292d040(void* p, unsigned flags)
 // @0x14292d1c0
 void* DeleteAs2_14292d1c0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -759,9 +738,7 @@ void* DeleteAs2_14292d2a0(void* p, unsigned flags)
 // @0x14292d440
 void* DeleteAs2_14292d440(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -789,9 +766,7 @@ void* DeleteAs2_14292d550(void* p, unsigned flags)
 // @0x14292d5b0
 void* DeleteAs2_14292d5b0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -841,9 +816,7 @@ void* DeleteAs2_14292d6a0(void* p, unsigned flags)
 // @0x14292d740
 void* DeleteAs2_14292d740(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -889,9 +862,7 @@ void* DeleteAs2_14292d830(void* p, unsigned flags)
 // @0x14292d8e0
 void* DeleteAs2_14292d8e0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -933,3 +904,5 @@ void* DeleteAs2_14292d9b0(void* p, unsigned flags)
 }}} // namespace Scaleform::GFx::AS2
 // MS2-PIN: ??_7TextSnapshotObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321e2c8
 // MS2-PIN: ??_7TextSnapshotObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321e310
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432155c0
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215648

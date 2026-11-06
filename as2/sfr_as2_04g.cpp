@@ -67,11 +67,14 @@ struct Sfr_RcgcDtor : RefCountBaseGC<323>
 {
     static void Destroy(void* p) { static_cast<Sfr_RcgcDtor*>(p)->RefCountBaseGC<323>::~RefCountBaseGC(); }
 };
-extern const void* DAT_1432155c0[];
-extern const void* DAT_143215648[];
 
 // ~TextFieldObject (out of line at 0x142925f10, sfr_as2_03; `inline` there under cl) inlines into the deleting dtor.
 inline TextFieldObject::~TextFieldObject() { SF_FREE(pIMECompositionStringStyles); }
+// Out of line at 0x1429255a0 in sfr_as2_03 (`inline` there under cl, so both copies are COMDAT-any). The deleting
+// dtors below inline it (the two FunctionObject vftable stores).
+inline FunctionObject::~FunctionObject()
+{
+}
 
 // The style sheet loader (full class in sfr_as2_01b / 03ad / 06): its dtor (out of line at 0x1429255c0) inlines here.
 class CSSFileLoaderAndParserImpl : public ASCSSFileLoader
@@ -359,9 +362,7 @@ void* DeleteAs2_14292beb0(void* p, unsigned flags)
     ((FunctionRefBase*)((char*)p+0x90))->DropRefs();
     rg(*(void**)((char*)p+0x78));
     reinterpret_cast<MouseListener*>((char*)p+0x70)->MouseListener::~MouseListener();
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>((void*)(p))->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -436,3 +437,5 @@ void* DeleteAs2_14292ce00(void* p, unsigned flags)
 // MS2-PIN: ??_7CSSFileLoaderAndParserImpl@AS2@GFx@Scaleform@@6B@ 0x143222848
 // MS2-PIN: ??_7TextFieldObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218490
 // MS2-PIN: ??_7TextFieldObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432184d8
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432155c0
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215648

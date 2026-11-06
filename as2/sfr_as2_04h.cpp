@@ -92,8 +92,6 @@ struct Sfr_RcgcDtor : RefCountBaseGC<323>
 {
     static void Destroy(void* p) { static_cast<Sfr_RcgcDtor*>(p)->RefCountBaseGC<323>::~RefCountBaseGC(); }
 };
-extern const void* DAT_1432155c0[];
-extern const void* DAT_143215648[];
 extern const void* DAT_143215a98[];
 extern const void* DAT_14316afc0[];
 extern const void* DAT_1432153a0[];
@@ -136,6 +134,12 @@ void* DeleteAs2_142928dc0(void* p, unsigned flags)
 
 // Out of line at 0x142925140 in sfr_as2_03 (`inline` there under cl, so both copies are COMDAT-any). The Dictionary's
 // DefaultValue release is inlined, its ArrayDataBase dtor (0x14256a8e0) is not (declared at the top).
+// Out of line at 0x1429255a0 in sfr_as2_03 (`inline` there under cl, so both copies are COMDAT-any). The deleting
+// dtors below inline it (the two FunctionObject vftable stores).
+inline FunctionObject::~FunctionObject()
+{
+}
+
 inline ActionBuffer::~ActionBuffer()
 {
 }
@@ -177,9 +181,7 @@ void* DeleteAs2_142929400(void* p, unsigned flags)
     Memory::Free(*(void**)((char*)p+0x80));
     if (*(void**)((char*)p+0x78)) FUN_14257dcd0(*(void**)((char*)p+0x78));
     rc(*(void**)((char*)p+0x70));
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>((void*)(p))->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -318,3 +320,5 @@ void* DeleteAs2_14292c3e0(void* p, unsigned flags)
 // MS2-PIN: ??_7AvmSprite@AS2@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x143216338
 // MS2-PIN: ??_7AvmSprite@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216480
 // MS2-PIN: ??_7AvmSprite@AS2@GFx@Scaleform@@6B@ 0x143216528
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432155c0
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215648

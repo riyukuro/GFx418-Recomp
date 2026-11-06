@@ -119,6 +119,12 @@ struct Sfr04b_BitmapFilterObjectDtor : BitmapFilterObject
     }
 };
 
+// Out of line at 0x1429255a0 in sfr_as2_03 (`inline` there under cl, so both copies are COMDAT-any). The deleting
+// dtors below inline it (the two FunctionObject vftable stores).
+inline FunctionObject::~FunctionObject()
+{
+}
+
 // Inlined in the exe (no out-of-line copy), as in sfr_as2_03 and sfr_as2_03s.
 inline BitmapData::~BitmapData()
 {
@@ -140,8 +146,6 @@ public:
 
 
 // The base vftables the inlined destructors store.
-extern const void* DAT_1432155c0[];
-extern const void* DAT_143215648[];
 extern const void* DAT_143215f60[];
 extern const void* DAT_14317afe8[];
 extern const void* DAT_143215fa8[];
@@ -167,9 +171,7 @@ extern const void* DAT_1432177b0[];
 // @0x1429297a0
 void* DeleteAs2_1429297a0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -225,9 +227,7 @@ void* DeleteAs2_1429298f0(void* p, unsigned flags)
 // @0x142929980
 void* DeleteAs2_142929980(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -255,9 +255,7 @@ void* DeleteAs2_1429299f0(void* p, unsigned flags)
 // @0x142929a50
 void* DeleteAs2_142929a50(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -299,9 +297,7 @@ void* DeleteAs2_142929b40(void* p, unsigned flags)
 // @0x142929ba0
 void* DeleteAs2_142929ba0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -343,9 +339,7 @@ void* DeleteAs2_142929c90(void* p, unsigned flags)
 // @0x142929cf0
 void* DeleteAs2_142929cf0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -387,9 +381,7 @@ void* DeleteAs2_142929dc0(void* p, unsigned flags)
 // @0x142929e50
 void* DeleteAs2_142929e50(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -403,9 +395,7 @@ void* DeleteAs2_142929e50(void* p, unsigned flags)
 // @0x142929fe0
 void* DeleteAs2_142929fe0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -419,9 +409,7 @@ void* DeleteAs2_142929fe0(void* p, unsigned flags)
 // @0x14292a1d0
 void* DeleteAs2_14292a1d0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -435,9 +423,7 @@ void* DeleteAs2_14292a1d0(void* p, unsigned flags)
 // @0x14292a240
 void* DeleteAs2_14292a240(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -451,9 +437,7 @@ void* DeleteAs2_14292a240(void* p, unsigned flags)
 // @0x14292a2b0
 void* DeleteAs2_14292a2b0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -495,9 +479,7 @@ void* DeleteAs2_14292a3a0(void* p, unsigned flags)
 // @0x14292a520
 void* DeleteAs2_14292a520(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -539,9 +521,7 @@ void* DeleteAs2_14292a5f0(void* p, unsigned flags)
 // @0x14292a700
 void* DeleteAs2_14292a700(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -583,9 +563,7 @@ void* DeleteAs2_14292a7d0(void* p, unsigned flags)
 // @0x14292a860
 void* DeleteAs2_14292a860(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -655,9 +633,7 @@ void* DeleteAs2_14292aa40(void* p, unsigned flags)
 // @0x14292aaa0
 void* DeleteAs2_14292aaa0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -685,9 +661,7 @@ void* DeleteAs2_14292ab10(void* p, unsigned flags)
 // @0x14292abd0
 void* DeleteAs2_14292abd0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -701,9 +675,7 @@ void* DeleteAs2_14292abd0(void* p, unsigned flags)
 // @0x14292ac40
 void* DeleteAs2_14292ac40(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -750,9 +722,7 @@ void* DeleteAs2_14292ade0(void* p, unsigned flags)
 // @0x14292ae50
 void* DeleteAs2_14292ae50(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -766,9 +736,7 @@ void* DeleteAs2_14292ae50(void* p, unsigned flags)
 // @0x14292aec0
 void* DeleteAs2_14292aec0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -849,9 +817,7 @@ void* DeleteAs2_14292b470(void* p, unsigned flags)
 // @0x14292b590
 void* DeleteAs2_14292b590(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -908,9 +874,7 @@ void* DeleteAs2_14292b710(void* p, unsigned flags)
 void* DeleteAs2_14292b7a0(void* p, unsigned flags)
 {
     *(const void**)((char*)p+0x70) = DAT_14317afe8;
-    *(const void**)p = DAT_1432155c0;
-    *(const void**)((char*)p+0x20) = DAT_143215648;
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<FunctionObject*>(p)->FunctionObject::~FunctionObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -932,3 +896,5 @@ void* DeleteAs2_14292b7a0(void* p, unsigned flags)
 // MS2-PIN: ??_7BitmapData@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219d38
 // MS2-PIN: ??_7GASGlobalObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143220278
 // MS2-PIN: ??_7GASGlobalObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432202c0
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432155c0
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215648

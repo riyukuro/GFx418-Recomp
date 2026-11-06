@@ -1356,10 +1356,23 @@ inline BitmapData::~BitmapData()
 {
 }
 
+// `inline` under cl (COMDAT-any): sfr_as2_04b/04c/04g/04h inline the same body into their deleting dtors.
+// MS2_Sfr03EmitFunctionObjectDtor (uncalled anchor) keeps it emitted here.
+#if defined(__clang__)
+#define SFR03_FUNCTIONOBJECT_DTOR
+#else
+#define SFR03_FUNCTIONOBJECT_DTOR inline
+#endif
 // @0x1429255a0
-FunctionObject::~FunctionObject()
+SFR03_FUNCTIONOBJECT_DTOR FunctionObject::~FunctionObject()
 {
 }
+#pragma inline_depth(0)
+void MS2_Sfr03EmitFunctionObjectDtor(FunctionObject* p)
+{
+    p->FunctionObject::~FunctionObject();
+}
+#pragma inline_depth()
 
 // @0x142926060
 UserDefinedFunctionObject::~UserDefinedFunctionObject()
