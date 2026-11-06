@@ -2055,6 +2055,14 @@ void MovieRoot::NotifyOnResize()
     }
 }
 
+// GlobalContext::GetStringManager (ToAS2Root of the movie), which is out of line in the SDK and inlined in the exe. The
+// root is read through the SDK's Ptr<ASMovieRootBase>, which gives the exe's load order.
+static SF_FORCEINLINE StringManager* SoGcStringManager(const GlobalContext* pgc)
+{
+    return static_cast<MovieRoot*>(
+        reinterpret_cast<Ptr<ASMovieRootBase>&>(pgc->pMovieRoot->pASMovieRoot).GetPtr())->GetStringManager();
+}
+
 static inline Environment* GetLevel0MovieEnvironment(MovieImpl* pmovieImpl)
 {
     InteractiveObject* pmovie = 0;
@@ -2094,34 +2102,40 @@ bool MovieRoot::NotifyOnFocusChange(InteractiveObject* curFocused, InteractiveOb
     return true;
 }
 
-// MS2-FUNCTIONAL: scheduling only: the exe loads the context before zeroing nargs and loads the name before the
-// context for CreateString.
+// A nested array of a SharedObject being read: added to the object (or array) on top, then pushed.
 // @0x1429718b0
 void GASSharedObjectLoader::PushArray(const String& name)
 {
-    Object* parent = ObjectStack.Back();
-    Ptr<Object> object = *pEnv->OperatorNew(pEnv->GetBuiltin(ASBuiltin_Array));
+    Object* ptop = ObjectStack.Back();
+    Ptr<Object> parr =
+        *pEnv->OperatorNew(SoGcStringManager(pEnv->StringContext.pContext)->GetBuiltin(ASBuiltin_Array));
     if (bArrayIsTop)
-        static_cast<ArrayObject*>(parent)->PushBack(Value(object));
+    {
+        ArrayObject* ptoparr = static_cast<ArrayObject*>(ptop);
+        ptoparr->PushBack(Value(parr));
+    }
     else
-        parent->SetMember(pEnv, pEnv->StringContext.CreateString(name.ToCStr(), name.GetSize()), Value(object));
+        ptop->SetMember(pEnv, pEnv->CreateString(name), Value(parr));
     bArrayIsTop = true;
-    ObjectStack.PushBack(object);
+    ObjectStack.PushBack(parr);
 }
 
-// MS2-FUNCTIONAL: scheduling only: the exe loads the context before zeroing nargs and loads the name before the
-// context for CreateString.
+// A nested object of a SharedObject being read: added to the object (or array) on top, then pushed.
 // @0x142972190
 void GASSharedObjectLoader::PushObject(const String& name)
 {
-    Object* parent = ObjectStack.Back();
-    Ptr<Object> object = *pEnv->OperatorNew(pEnv->GetBuiltin(ASBuiltin_Object));
+    Object* ptop = ObjectStack.Back();
+    Ptr<Object> pobj =
+        *pEnv->OperatorNew(SoGcStringManager(pEnv->StringContext.pContext)->GetBuiltin(ASBuiltin_Object));
     if (bArrayIsTop)
-        static_cast<ArrayObject*>(parent)->PushBack(Value(object));
+    {
+        ArrayObject* ptoparr = static_cast<ArrayObject*>(ptop);
+        ptoparr->PushBack(Value(pobj));
+    }
     else
-        parent->SetMember(pEnv, pEnv->StringContext.CreateString(name.ToCStr(), name.GetSize()), Value(object));
+        ptop->SetMember(pEnv, pEnv->CreateString(name), Value(pobj));
     bArrayIsTop = false;
-    ObjectStack.PushBack(object);
+    ObjectStack.PushBack(pobj);
 }
 
 // Back to the enclosing object; an array is on top again when it is one.
