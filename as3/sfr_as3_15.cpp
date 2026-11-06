@@ -2516,6 +2516,10 @@ typedef HashSetBase<const void*, FixedSizeHash<const void*>, FixedSizeHash<const
                     HashsetCachedEntry<const void*, FixedSizeHash<const void*> > > MS2_ObjPtrSet;
 // @0x1424d2890
 template void MS2_ObjPtrSet::add<const void*>(void*, const void* const&, UPInt);
+// sfr_as3_19's AllocatorGH set calls its own add<const void*>; the exe folds that instance with this one.
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:??$add@PEBX@?$HashSetBase@PEBXV?$FixedSizeHash@PEBX@Scaleform@@V12@U?$AllocatorGH@PEBX$01@2@V?$HashsetCachedEntry@PEBXV?$FixedSizeHash@PEBX@Scaleform@@@2@@Scaleform@@AEAAXPEAXAEBQEBX_K@Z=??$add@PEBX@?$HashSetBase@PEBXV?$FixedSizeHash@PEBX@Scaleform@@V12@U?$AllocatorDH@PEBX$01@2@V?$HashsetCachedEntry@PEBXV?$FixedSizeHash@PEBX@Scaleform@@@2@@Scaleform@@AEAAXPEAXAEBQEBX_K@Z")
+#endif
 // A number formatted on its own ("{0}").
 // @0x1424d2410
 template String AsString<double>(const double&);
