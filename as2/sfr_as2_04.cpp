@@ -1366,35 +1366,33 @@ Object* CreateFilterObject(Environment* penv, const Render::Filter* pfilter)
     return pobj;
 }
 
-// MS2-FUNCTIONAL regalloc: the exe keeps the zero / result in rdi and the data def in rbx (swapped)
 // @0x1429360e0
 Sprite* MovieRoot::CreateEmptyLevelMovie(LoadStates* pls, int level)
 {
-    Sprite* psprite = 0;
     ResourceKey key = MovieDataDef::CreateMovieFileKey("", 0, 0, 0, 0);
     MemoryHeap* pheap = pMovieImpl->GetMovieHeap();
     Ptr<MovieDataDef> pdataDef =
         *SF_HEAP_NEW(pheap ? pheap : Memory::GetGlobalHeap()) MovieDataDef(key, MovieDataDef::MT_Empty, "", pheap);
+    Ptr<MovieDefImpl> pdefImpl;
     if (pdataDef)
     {
         pdataDef->InitEmptyMovieDef();
         pls->SetRelativePathForDataDef(pdataDef);
-        Ptr<MovieDefImpl> pdefImpl = *SF_HEAP_NEW(pMovieImpl->GetMovieHeap())
+        pdefImpl = *SF_HEAP_NEW(pMovieImpl->GetMovieHeap())
             MovieDefImpl(pdataDef, pls->pBindStates, pls->pLoaderImpl, 0, pMovieImpl->pStateBag->GetDelegate(),
                          pMovieImpl->GetMovieHeap(), true);
-        if (pdefImpl)
-        {
-            CharacterCreateInfo ccinfo;
-            ccinfo.pCharDef     = pdataDef;
-            ccinfo.pBindDefImpl = pdefImpl;
-            ccinfo.pResource    = 0;
-            psprite = static_cast<Sprite*>(pASSupport->CreateCharacterInstance(
-                pMovieImpl, ccinfo, 0, ResourceId(), CharacterDef::Sprite));
-            psprite->SetLoadedSeparately();
-            AvmSprite::FromSprite(psprite)->SetLevel(level);
-            pMovieImpl->SetLevelMovie(level, psprite);
-        }
     }
+    if (!pdefImpl)
+        return NULL;
+    CharacterCreateInfo ccinfo;
+    ccinfo.pCharDef     = pdataDef;
+    ccinfo.pBindDefImpl = pdefImpl;
+    ccinfo.pResource    = 0;
+    Sprite* psprite = static_cast<Sprite*>(pASSupport->CreateCharacterInstance(
+        pMovieImpl, ccinfo, 0, ResourceId(), CharacterDef::Sprite));
+    psprite->SetLoadedSeparately();
+    AvmSprite::FromSprite(psprite)->SetLevel(level);
+    pMovieImpl->SetLevelMovie(level, psprite);
     return psprite;
 }
 
@@ -1427,6 +1425,7 @@ public:
     virtual int          GetNumArgs() const { return -1; }
 };
 
+// MS2-FUNCTIONAL: instruction scheduling (the exe sets the heap Alloc align arg r8d before the undefined-Value type store; ours after it); same behavior
 // @0x142936360
 void MovieRoot::CreateFunction(GFx::Value* pvalue, FunctionHandler* pfc, void* puserData)
 {
