@@ -23,6 +23,7 @@
 #include "ms2/scaleform/include/gfx/amp/amp_profileframe.h"
 #include "ms2/scaleform/include/render/render_perlin.h"
 #include "ms2/scaleform/include/render/render_color.h"
+#include "ms2/scaleform/include/render/render_cxform.h"
 #include "ms2/scaleform/include/render/render_image.h"
 #include "ms2/scaleform/include/sound/sound_sound.h"
 #include "ms2/scaleform/include/kernel/sf_memory.h"
@@ -706,13 +707,16 @@ struct DICommand_PaletteMap
     const Sfr22NoiseImage* pImage; const Sfr22NoiseImage* pSource; Rect<SInt32> SourceRect; Point<SInt32> DestPoint; UByte Pad30[0x10];
     UInt32* Channels; unsigned ChannelMask; // +0x40 / +0x48
 };
-struct DICommand_CopyPixels
+struct Sfr22SourceRect { virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const = 0; const Sfr22NoiseImage* pImage; const Sfr22NoiseImage* pSource; Rect<SInt32> SourceRect; Point<SInt32> DestPoint; UByte Pad30[0x10]; }; // SDK DICommand_SourceRect
+struct DICommand_CopyPixels : Sfr22SourceRect
 {
     virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+    const Sfr22NoiseImage* pAlphaSource; Point<SInt32> AlphaPoint; bool MergeAlpha; // +0x40 / +0x48 / +0x50
 };
-struct DICommand_ColorTransform
+struct DICommand_ColorTransform : Sfr22SourceRect
 {
     virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+    Cxform Cx; // +0x40 (16-aligned: in a base-less struct it would push the fields past the vptr)
 };
 struct DICommand_FloodFill
 {
@@ -742,6 +746,7 @@ struct DICommand_Noise
     bool     GrayScale;          // +0x20
 };
 } }
+template<class T> static __forceinline T Sfr22Clamp(const T v, const T minVal, const T maxVal) { return Scaleform::Alg::Max<T>(minVal, Scaleform::Alg::Min<T>(v, maxVal)); } // SDK Alg::Clamp
 static __forceinline Scaleform::UByte Sfr22MapChannelIndex(int channel) { if (channel <= 8) return ChannelIndexMap[channel]; return 0xFF; } // SDK MapChannelIndex
 static __forceinline void Sfr22GetRGBA(const Scaleform::Render::Color& c, Scaleform::UByte* pr, Scaleform::UByte* pg, Scaleform::UByte* pb, Scaleform::UByte* pa) { c.GetRGB(pr, pg, pb); *pa = c.GetAlpha(); } // SDK Color::GetRGBA
 static __forceinline const Scaleform::Render::Rect<Scaleform::SInt32> Sfr22RectPlus(const Scaleform::Render::Rect<Scaleform::SInt32>& r, const Scaleform::Render::Point<Scaleform::SInt32>& pt) { return Scaleform::Render::Rect<Scaleform::SInt32>(r).Offset(pt); }
@@ -856,8 +861,11 @@ void Scaleform::Render::DICommand_Threshold::ExecuteSW(Scaleform::Render::DIComm
 void Scaleform::Render::DICommand_Merge::ExecuteSW(Scaleform::Render::DICommandContext& context, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData** psrc) const
 {
     const ImageData& src = *psrc[0];
-    ImagePlane d, s; dest.GetPlane(0, &d); src.GetPlane(0, &s);
-    Point<SInt32> delta; Rect<SInt32> dstClippedRect;
+    ImagePlane d, s;
+    dest.GetPlane(0, &d);
+    src.GetPlane(0, &s);
+    Point<SInt32> delta;
+    Rect<SInt32> dstClippedRect;
     if (!Sfr22CalcDestClippedRect(*this, src, dest, SourceRect, dstClippedRect, delta))
         return;
 
@@ -936,8 +944,11 @@ void Scaleform::Render::DICommand_Scroll::ExecuteSW(Scaleform::Render::DICommand
 void Scaleform::Render::DICommand_CopyChannel::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData** psrc) const
 {
     const ImageData& src = *psrc[0];
-    ImagePlane d, s; dest.GetPlane(0, &d); src.GetPlane(0, &s);
-    Point<SInt32> delta; Rect<SInt32> dstClippedRect;
+    ImagePlane d, s;
+    dest.GetPlane(0, &d);
+    src.GetPlane(0, &s);
+    Point<SInt32> delta;
+    Rect<SInt32> dstClippedRect;
     if (!Sfr22CalcDestClippedRect(*this, src, dest, SourceRect, dstClippedRect, delta))
         return;
 
@@ -946,6 +957,7 @@ void Scaleform::Render::DICommand_CopyChannel::ExecuteSW(Scaleform::Render::DICo
     UByte dCI = Sfr22MapChannelIndex(DestChannel);
     if ((sCI == 0xFF) || (dCI == 0xFF))
         return;
+
     for (y = dstClippedRect.y1; y < dstClippedRect.y2; y++)
     {
         UByte* dline = d.GetScanline(y);
@@ -972,8 +984,11 @@ void Scaleform::Render::DICommand_CopyChannel::ExecuteSW(Scaleform::Render::DICo
 void Scaleform::Render::DICommand_PaletteMap::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData** psrc) const
 {
     const ImageData& src = *psrc[0];
-    ImagePlane d, s; dest.GetPlane(0, &d); src.GetPlane(0, &s);
-    Point<SInt32> delta; Rect<SInt32> dstClippedRect;
+    ImagePlane d, s;
+    dest.GetPlane(0, &d);
+    src.GetPlane(0, &s);
+    Point<SInt32> delta;
+    Rect<SInt32> dstClippedRect;
     if (!Sfr22CalcDestClippedRect(*this, src, dest, SourceRect, dstClippedRect, delta))
         return;
 
@@ -1009,143 +1024,128 @@ void Scaleform::Render::DICommand_PaletteMap::ExecuteSW(Scaleform::Render::DICom
     }
 }
 
-// MS2-FUNCTIONAL: copyPixels with mergeAlpha. The op rect (+0x18..+0x24) is in source space and +0x28/+0x2c is the
-// destination point; the dest span is clipped against the source (or, with an alpha bitmap, against the mask rect at
-// +0x48/+0x4c) and then against the destination. Source alpha is scaled by the mask alpha and blended over the dest.
+// MS2-FUNCTIONAL: copyPixels (the SDK body without the swizzler contexts, ImageData scanlines as in the exe); scheduling of the two inlined clips and the frame size differ (ours 0x80, the exe 0x90).
 // @0x142676660
-void Scaleform::Render::DICommand_CopyPixels::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& destinationRef, Scaleform::Render::ImageData** inputsRef) const
+void Scaleform::Render::DICommand_CopyPixels::ExecuteSW(Scaleform::Render::DICommandContext& context, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData** psrc) const
 {
-    void* operation = const_cast<Scaleform::Render::DICommand_CopyPixels*>(this);
-    Scaleform::Render::ImageData* destination = &destinationRef;
-    void** inputs = reinterpret_cast<void**>(inputsRef);
-    using Scaleform::Render::Color;
-    using Scaleform::Render::ImageData;
-    using Scaleform::Render::ImagePlane;
-    auto* source = static_cast<ImageData*>(inputs[0]);
-    ImagePlane dst, src;
-    destination->GetPlane(0, &dst);
-    source->GetPlane(0, &src);
-    const auto* op = static_cast<const unsigned char*>(operation);
-    const int left = *reinterpret_cast<const int*>(op + 0x18), top = *reinterpret_cast<const int*>(op + 0x1c);
-    const int right = *reinterpret_cast<const int*>(op + 0x20), bottom = *reinterpret_cast<const int*>(op + 0x24);
-    const int destX = *reinterpret_cast<const int*>(op + 0x28), destY = *reinterpret_cast<const int*>(op + 0x2c);
-    const int dstW = static_cast<int>(dst.Width), dstH = static_cast<int>(dst.Height);
-    const int srcOffX = destX - left, srcOffY = destY - top;
-    if (static_cast<int>(src.Height) < top || bottom < 0 || right < 0 || static_cast<int>(src.Width) < left) return;
-    int x0 = left >= 0 ? destX : srcOffX, y0 = top >= 0 ? destY : srcOffY;
-    int x1 = (right < static_cast<int>(src.Width) ? right : static_cast<int>(src.Width)) + srcOffX;
-    int y1 = (bottom < static_cast<int>(src.Height) ? bottom : static_cast<int>(src.Height)) + srcOffY;
-    if (y1 < 0 || dstH < y0 || dstW < x0 || x1 < 0) return;
-    const bool hasMask = *reinterpret_cast<void* const*>(op + 0x40) != nullptr;
-    auto* mask = static_cast<ImageData*>(hasMask ? inputs[1] : inputs[0]);
-    ImagePlane maskPlane;
-    mask->GetPlane(0, &maskPlane);
-    int maskOffX = srcOffX, maskOffY = srcOffY;
-    if (hasMask) {
-        const int maskLeft = *reinterpret_cast<const int*>(op + 0x48), maskTop = *reinterpret_cast<const int*>(op + 0x4c);
-        maskOffX = destX - maskLeft;
-        maskOffY = destY - maskTop;
-        int maskRight = right - left + maskLeft, maskBottom = bottom - top + maskTop;
-        if (static_cast<int>(maskPlane.Height) < maskTop || maskBottom < 0 || maskRight < 0 ||
-            static_cast<int>(maskPlane.Width) < maskLeft) return;
-        if (static_cast<int>(maskPlane.Width) <= maskRight) maskRight = static_cast<int>(maskPlane.Width);
-        if (static_cast<int>(maskPlane.Height) <= maskBottom) maskBottom = static_cast<int>(maskPlane.Height);
-        // The exe takes the span from the mask rect here; the source clip above only decides the early exit.
-        x0 = maskLeft >= 0 ? destX : maskOffX;
-        y0 = maskTop >= 0 ? destY : maskOffY;
-        x1 = maskOffX + maskRight;
-        y1 = maskOffY + maskBottom;
-        if (y1 < 0 || dstH < y0 || dstW < x0 || x1 < 0) return;
+    ImageData& src = *psrc[0];
+
+    Rect<SInt32> dstClippedRect;
+    Point<SInt32> delta, deltaAlpha;
+    if (!Sfr22CalcDestClippedRect(*this, src, dest, SourceRect, dstClippedRect, delta))
+        return;
+
+    bool alphaImage = pAlphaSource != 0;
+    ImageData& alphaSrc = alphaImage ? *psrc[1] : *psrc[0];
+
+    int x, y;
+    if (alphaImage)
+    {
+        if (!Sfr22CalcDestClippedRect(*this, alphaSrc, dest, Rect<SInt32>(AlphaPoint.x, AlphaPoint.y, SourceRect.GetSize()), dstClippedRect, deltaAlpha))
+            return;
     }
-    if (y0 < 0) y0 = 0;
-    if (x0 < 0) x0 = 0;
-    if (x1 > dstW) x1 = dstW;
-    if (y1 > dstH) y1 = dstH;
-    const auto* srcAlphaConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 0x10));
-    const auto* dstAlphaConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8));
-    const bool preserveDestinationAlpha = *reinterpret_cast<const bool*>(op + 0x50);
-    for (int y = y0; y < y1; ++y) {
-        Scaleform::UByte* dstLine = dst.pData + static_cast<Scaleform::UPInt>(static_cast<unsigned>(y)) * dst.Pitch;
-        Scaleform::UByte* srcLine = src.pData + static_cast<Scaleform::UPInt>(static_cast<unsigned>(y - srcOffY)) * src.Pitch;
-        Scaleform::UByte* maskLine = maskPlane.pData + static_cast<Scaleform::UPInt>(static_cast<unsigned>(y - maskOffY)) * maskPlane.Pitch;
-        for (int x = x0; x < x1; ++x) {
-            unsigned foreground = 0, coverage = 0, background = 0;
-            FUN_14257bf70(source, &foreground, reinterpret_cast<long long>(srcLine), static_cast<unsigned>(x - srcOffX));
-            auto* fg = reinterpret_cast<unsigned char*>(&foreground);
-            if (!*reinterpret_cast<const bool*>(srcAlphaConfig + 0x48)) fg[3] = 0xff;
-            if (hasMask)
-                FUN_14257bf70(mask, &coverage, reinterpret_cast<long long>(maskLine), static_cast<unsigned>(x - maskOffX));
-            else
-                coverage = foreground;
-            FUN_14257bf70(destination, &background, reinterpret_cast<long long>(dstLine), static_cast<unsigned>(x));
-            const unsigned char sourceAlpha =
-                static_cast<unsigned char>(fg[3] * (hasMask ? (coverage >> 24) + 1 : 0x100u) >> 8);
-            unsigned char outAlpha = sourceAlpha;
-            if (preserveDestinationAlpha) {
-                const unsigned char bgAlpha = reinterpret_cast<const unsigned char*>(&background)[3];
-                outAlpha = static_cast<unsigned char>(static_cast<int>(
-                    static_cast<float>(bgAlpha) / 255.0f * static_cast<float>(255 - sourceAlpha) + sourceAlpha));
+    else
+    {
+        deltaAlpha = delta;
+    }
+
+    for (y = dstClippedRect.y1; y < dstClippedRect.y2; y++)
+    {
+        UByte* dline = dest.GetScanline(y);
+        const UByte* sline = src.GetScanline(y - delta.y);
+
+        const UByte* aline = alphaSrc.GetScanline(y - deltaAlpha.y);
+        for (x = dstClippedRect.x1; x < dstClippedRect.x2; x++)
+        {
+
+            Color s = src.GetPixelInScanline(sline, x - delta.x);
+            if (!pSource->IsTransparent())
+                s.SetAlpha(255);
+
+            Color alpha = alphaImage ? alphaSrc.GetPixelInScanline(aline, x - deltaAlpha.x) : s;
+            Color d = dest.GetPixelInScanline(dline, x);
+            Color final = s;
+
+            UByte alphaIn = s.GetAlpha();
+            SInt32 secAlpha = (alphaImage ? (alpha.GetAlpha() + 1) : 256);
+            UByte srcAlpha = (UByte)((alphaIn * secAlpha) >> 8);
+            UByte dstAlpha = d.GetAlpha();
+            UByte outAlpha = srcAlpha;
+            if (MergeAlpha)
+            {
+                outAlpha = (UByte)((0xFF - srcAlpha) * (dstAlpha / 255.0f) + srcAlpha); // SDK Alg::Lerp<UByte, float>
             }
-            if (!*reinterpret_cast<const bool*>(dstAlphaConfig + 0x48)) outAlpha = 0xff;
-            Color result = Color::Blend(Color(background), Color(foreground),
-                                        static_cast<float>(sourceAlpha) / static_cast<float>(outAlpha));
-            result.Channels.Alpha = outAlpha;
-            FUN_14257d390(destination, reinterpret_cast<long long>(dstLine), static_cast<unsigned>(x), result.Raw);
+            if (!pImage->IsTransparent())
+            {
+                outAlpha = 255;
+            }
+
+            final = Color::Blend(d, s, (float)srcAlpha / (float)outAlpha);
+            final.SetAlpha(outAlpha);
+
+            dest.SetPixelInScanline(dline, x, final.ToColor32());
         }
     }
 }
 
-// MS2-FUNCTIONAL: colorTransform. Each channel becomes ((c / 255) * mul + add) * 256 clamped to [0, 255], with the
-// multipliers at +0x40 and offsets at +0x50 in red, green, blue, alpha order. When the destination has no alpha the
-// colour terms are scaled by (alphaMul + alphaAdd) and the alpha is written opaque.
+// MS2-FUNCTIONAL: colorTransform (the SDK body without the swizzler contexts); one operand order left in the inlined clip: ours lea eax,[rdx+rsi], the exe [rsi+rdx].
 // @0x142675d30
-void Scaleform::Render::DICommand_ColorTransform::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& destinationRef, Scaleform::Render::ImageData** inputsRef) const
+void Scaleform::Render::DICommand_ColorTransform::ExecuteSW(Scaleform::Render::DICommandContext& context, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData** psrc) const
 {
-    void* operation = const_cast<Scaleform::Render::DICommand_ColorTransform*>(this);
-    Scaleform::Render::ImageData* destination = &destinationRef;
-    void** inputs = reinterpret_cast<void**>(inputsRef);
-    using Scaleform::Render::ImageData;
-    using Scaleform::Render::ImagePlane;
-    auto* source = static_cast<ImageData*>(inputs[0]);
-    ImagePlane dst, src;
-    destination->GetPlane(0, &dst);
-    source->GetPlane(0, &src);
-    const auto* op = static_cast<const unsigned char*>(operation);
-    BitmapCopySpan span;
-    if (!ClipBitmapCopy(op, src, dst, span)) return;
-    float mul[4], add[4];
-    for (unsigned i = 0; i < 4; ++i) mul[i] = *reinterpret_cast<const float*>(op + 0x40 + i * 4);
-    for (unsigned i = 0; i < 4; ++i) add[i] = *reinterpret_cast<const float*>(op + 0x50 + i * 4);
-    if (!BitmapHasAlpha(op, 8)) {
-        const float alphaFactor = mul[3] + add[3];
-        for (unsigned i = 0; i < 3; ++i) {
-            mul[i] *= alphaFactor;
-            add[i] *= alphaFactor;
+    const ImageData& src = *psrc[0];
+    ImagePlane d, s;
+    dest.GetPlane(0, &d);
+    src.GetPlane(0, &s);
+
+    Point<SInt32> delta;
+    Rect<SInt32> dstClippedRect;
+    if (!Sfr22CalcDestClippedRect(*this, src, dest, SourceRect, dstClippedRect, delta))
+        return;
+
+    // If the image is not transparent, then the Cxform multiplies all components by the alpha offset + alpha multiplier.
+    Cxform cx = Cx;
+    if (!pImage->IsTransparent())
+    {
+        float falpha = cx.M[0][3] + cx.M[1][3];
+        for (int i = 0; i < 3; ++i)
+        {
+            cx.M[0][i] *= falpha;
+            cx.M[1][i] *= falpha;
         }
-        mul[3] = 1.0f;
-        add[3] = 0.0f;
+        cx.M[0][3] = 1.0f;
+        cx.M[1][3] = 0.0f;
     }
-    // RGBA channel index -> byte position in the BGRA pixel.
-    static const unsigned BytePos[4] = { 2, 1, 0, 3 };
-    for (int y = span.Y0; y < span.Y1; ++y) {
-        const long long srcRow = BitmapScanline(src, y - span.OffY);
-        const long long dstRow = BitmapScanline(dst, y);
-        for (int x = span.X0; x < span.X1; ++x) {
-            unsigned pixel = 0;
-            FUN_14257bf70(source, &pixel, srcRow, static_cast<unsigned>(x - span.OffX));
-            auto* c = reinterpret_cast<unsigned char*>(&pixel);
-            if (!BitmapHasAlpha(op, 0x10)) c[3] = 0xff;
-            unsigned result = 0;
-            auto* out = reinterpret_cast<unsigned char*>(&result);
-            for (unsigned channel = 0; channel < 4; ++channel) {
-                const unsigned pos = BytePos[channel];
-                float value = (static_cast<float>(c[pos]) / 255.0f * mul[channel] + add[channel]) * 256.0f;
-                if (value > 255.0f) value = 255.0f;
-                if (value < 0.0f) value = 0.0f;
-                out[pos] = static_cast<unsigned char>(static_cast<int>(value));
-            }
-            if (!BitmapHasAlpha(op, 8)) out[3] = 0xff;
-            FUN_14257d390(destination, dstRow, static_cast<unsigned>(x), result);
+
+    SInt32 x, y;
+    for (y = dstClippedRect.y1; y < dstClippedRect.y2; y++)
+    {
+        UByte* dline = dest.GetScanline(y);
+        const UByte* sline = s.GetScanline(y - delta.y);
+
+        for (x = dstClippedRect.x1; x < dstClippedRect.x2; x++)
+        {
+            Color sCol = src.GetPixelInScanline(sline, x - delta.x);
+            if (!pSource->IsTransparent())
+                sCol.SetAlpha(255);
+
+            // Note: More or less a duplicate of the implementation in the Cxform class itself,
+            // but requires rescaling by 256 rather than 255 in order to be pixel-exact. Using
+            // Cxform.Transform causes the resulting colors to be off by 1 in
+            // test_bitmapdata_colorTransform.swf.
+            float rgbaM[4] = { ((float)sCol.GetRed()   / 255.0f) * cx.M[0][0],
+                               ((float)sCol.GetGreen() / 255.0f) * cx.M[0][1],
+                               ((float)sCol.GetBlue()  / 255.0f) * cx.M[0][2],
+                               ((float)sCol.GetAlpha() / 255.0f) * cx.M[0][3] };
+            Color dCol(
+                (UByte)Sfr22Clamp<float>((rgbaM[0] + cx.M[1][0]) * 256.0f, 0, 255),
+                (UByte)Sfr22Clamp<float>((rgbaM[1] + cx.M[1][1]) * 256.0f, 0, 255),
+                (UByte)Sfr22Clamp<float>((rgbaM[2] + cx.M[1][2]) * 256.0f, 0, 255),
+                (UByte)Sfr22Clamp<float>((rgbaM[3] + cx.M[1][3]) * 256.0f, 0, 255));
+
+            if (!pImage->IsTransparent())
+                dCol.SetAlpha(255);
+
+            dest.SetPixelInScanline(dline, x, dCol.ToColor32());
         }
     }
 }
