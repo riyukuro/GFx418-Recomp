@@ -30,9 +30,49 @@ static SF_FORCEINLINE void Sfr04pMakeDeepCopyFrom(ArrayObject* pthis, MemoryHeap
     }
 }
 
+// FunctionRefBase::SetLocalFrame (0x142981e70, sfr_as2_07) and the FunctionRef copy around it, which the exe inlines
+// into the ToFunction copy below. Local copies: an inline redefinition of the member would emit a second COMDAT.
+static SF_FORCEINLINE void MS2_SetLocalFrame(FunctionRefBase& r, LocalFrame* localFrame, bool weakRef)
+{
+    if (r.pLocalFrame && !(r.Flags & FunctionRefBase::FuncRef_Weak))
+        r.pLocalFrame->Release();
+    r.pLocalFrame = localFrame;
+    if (weakRef)
+        r.Flags |= FunctionRefBase::FuncRef_Weak;
+    else
+        r.Flags &= ~FunctionRefBase::FuncRef_Weak;
+    if (r.pLocalFrame && !(r.Flags & FunctionRefBase::FuncRef_Weak))
+        r.pLocalFrame->AddRef();
+}
+
+static SF_FORCEINLINE FunctionRef MS2_CopyFuncRef(const FunctionRefBase& orig)
+{
+    FunctionRef r(orig.Function);
+    if (orig.pLocalFrame)
+        MS2_SetLocalFrame(r, orig.pLocalFrame, (orig.Flags & FunctionRefBase::FuncRef_Weak) != 0);
+    return r;
+}
+
+// Value::ToFunction as the SDK writes it (a switch); the exe inlines it here. The derived view reaches the protected
+// ResolveFunctionName.
+struct MS2_FuncValue : Value
+{
+    SF_FORCEINLINE FunctionRef ToFunctionSw(const Environment* penv) const
+    {
+        switch (T.Type)
+        {
+        case FUNCTIONNAME:
+            return ResolveFunctionName(penv);
+        case FUNCTION:
+            return MS2_CopyFuncRef(V.FunctionValue);
+        default:;
+        }
+        return FunctionRef();
+    }
+};
+
 // Delivers eventName to a snapshot of the _listeners array: each listener's method (a function, or a function name
 // resolved against the listener) is handed to the callback together with the listener.
-// MS2-FUNCTIONAL: inline (the exe inlines FunctionRefBase::SetLocalFrame into the ToFunction copy, ours calls it)
 // @0x142932290
 bool AsBroadcaster::BroadcastMessageWithCallback(Environment* penv, ObjectInterface* pthis, const ASString& eventName,
                                                  InvokeCallback* pcallback)
@@ -67,7 +107,7 @@ bool AsBroadcaster::BroadcastMessageWithCallback(Environment* penv, ObjectInterf
                         Value methodVal;
                         if (plistener->GetMemberRaw(penv->GetSC(), eventName, &methodVal))
                         {
-                            FunctionRef method = methodVal.ToFunction(penv);
+                            FunctionRef method = static_cast<const MS2_FuncValue&>(methodVal).ToFunctionSw(penv);
                             if (!method.IsNull())
                                 pcallback->Invoke(penv, plistener, method);
                         }
