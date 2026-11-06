@@ -1320,27 +1320,29 @@ SF_NOINLINE bool Value::GetPropertyValue(Environment* penv, ObjectInterface* pth
     return false;
 }
 
-// MS2-FUNCTIONAL stack layout (the exe spills the NaN test bits to the r9 home slot, cl to rcx's)
 // @0x142938ae0
 void Value::Div(Environment* penv, const Value& v)
 {
-    Number lhs = ToNumber(penv);
-    Number rhs = v.ToNumber(penv);
-    Number result;
-    if (NumberUtil::IsNaN(lhs) || NumberUtil::IsNaN(rhs))
-        result = NumberUtil::NaN();
-    else if (rhs == 0)
-    {
-        if (lhs == 0)
-            result = NumberUtil::NaN();
-        else if (lhs >= 0)
-            result = NumberUtil::POSITIVE_INFINITY();
-        else
-            result = NumberUtil::NEGATIVE_INFINITY();
-    }
+    Number v1 = ToNumber(penv);
+    Number v2 = v.ToNumber(penv);
+    if (NumberUtil::IsNaN(v1) || NumberUtil::IsNaN(v2))
+        SetNumber(NumberUtil::NaN());
     else
-        result = lhs / rhs;
-    SetNumber(result);
+    {
+        Number res;
+        if (v2 == 0)
+        {
+            if (v1 == 0)
+                res = NumberUtil::NaN();
+            else if (v1 >= 0)
+                res = NumberUtil::POSITIVE_INFINITY();
+            else
+                res = NumberUtil::NEGATIVE_INFINITY();
+        }
+        else
+            res = v1 / v2;
+        SetNumber(res);
+    }
 }
 
 // @0x142939780
