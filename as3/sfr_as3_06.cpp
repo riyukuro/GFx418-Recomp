@@ -10,6 +10,7 @@
 // MS2-RANGE: 0x142447310-0x142447364 .text$mn
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_avmloader.h"
 #include "ms2/scaleform/include/gfx/gfx_displayobjcontainer.h"
@@ -2351,12 +2352,11 @@ namespace Instances { namespace fl_display
             pRef        = NULL;
         }
     };
-    // MovieRoot::ActionQueueType::InsertEntry
-    extern "C" LoaderActionEntry* FUN_142512800(void* pqueue, int prio);
-
+    // A new entry on the movie root's AL_Manual action queue.
     static LoaderActionEntry* InsertLoaderAction(VM& vm)
     {
-        return FUN_142512800(reinterpret_cast<UByte*>(GetASRoot(vm)) + 0x88, 6);
+        return reinterpret_cast<LoaderActionEntry*>(
+            static_cast<MovieRoot*>(GetASRoot(vm))->ActionQueue.InsertEntry(MovieRoot::AL_Manual));
     }
 
     // @0x142442350
@@ -2653,15 +2653,6 @@ void FUN_142440e50(Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameS
 {
     Scaleform::GFx::AS3::Instances::fl_display::ClearFrameScript(pthis);
 }
-
-// ASVM::_constructInstance, through a reduced view: as3_asvm.h clashes with as3_support.h's MovieRoot in this unit.
-namespace Scaleform { namespace GFx { namespace AS3 {
-class ASVM
-{
-public:
-    bool _constructInstance(SPtr<Object>& pobj, Object* classObj, unsigned argc, const Value* argv);   // 0x142531f40
-};
-}}} // namespace Scaleform::GFx::AS3
 
 // A Scene object standing for the whole clip (no scene table): an unreferenced MovieClip helper.
 // MS2-FUNCTIONAL: written from the exe's control flow
