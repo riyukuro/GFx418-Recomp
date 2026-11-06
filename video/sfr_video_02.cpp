@@ -37,6 +37,20 @@ struct Video02StateDataAccess : StateData
     using StateData::assignBag;
 };
 struct Video02EntryAccess : ContextImpl::Entry { using ContextImpl::Entry::destroyHelper; };
+// Context::createEntryHelper (0x142581520) is private: an explicit instantiation may name it, so this hands out its
+// member pointer and the calls below go to the real member.
+struct Video02CreateEntryTag
+{
+    typedef ContextImpl::Entry* (ContextImpl::Context::*Fn)(ContextImpl::EntryData*);
+    friend Fn Video02CreateEntryFn(Video02CreateEntryTag);
+};
+template<class Tag, typename Tag::Fn F> struct Video02Expose { friend typename Tag::Fn Video02CreateEntryFn(Tag) { return F; } };
+template struct Video02Expose<Video02CreateEntryTag, &ContextImpl::Context::createEntryHelper>;
+inline ContextImpl::Entry* Video02CreateEntry(void* context, void* data)
+{
+    return (static_cast<ContextImpl::Context*>(context)->*Video02CreateEntryFn(Video02CreateEntryTag()))(
+        static_cast<ContextImpl::EntryData*>(data));
+}
 }}
 namespace Scaleform { namespace GFx { namespace AS2 {
 struct Video02GCAccess : RefCountBaseGC<323> { using RefCountBaseGC<323>::ReleaseInternal; };
@@ -97,7 +111,6 @@ static __forceinline void Video02ResizeFills(void* array, const void* heapAddr, 
     (static_cast<Video02FillData*>(array)->*resize)(heapAddr, newSize);
 }
 extern void FUN_14257eb30(void*);
-extern void* FUN_142581520(void*, void*);
 #define DAT_143b15f60 (static_cast<void*>(Scaleform::Memory::pGlobalHeap))
 #include "../include/render/render_gradients.h"   // GradientData, for ComplexFill's Ptr<GradientData>
 namespace Scaleform { namespace Render { inline ComplexFill::ComplexFill() : BindIndex(~0u) {} }}   // the SDK ctor (as in sfr_gfx_06e): the fill below stores ??_7ComplexFill by name
@@ -3401,7 +3414,7 @@ void FUN_1400112a0(
         (*reinterpret_cast<Scaleform::MemoryHeap**>(context))->Alloc(0xa0));
     if (data)
         FUN_140011010(data, const_cast<void*>(*providerRef));
-    FUN_142581520(context, data);
+    Scaleform::Render::Video02CreateEntry(context, data);
 }
 
 // MS2-FUNCTIONAL: recreates the video render node after its provider changes, retaining the parent slot and transform.
@@ -3570,7 +3583,7 @@ void* FUN_140011610(void* object, void** result, void* context)
     reinterpret_cast<AddRef>((*reinterpret_cast<void***>(providerBase))[1])(providerBase);
     *reinterpret_cast<void**>(nodeData + 0x90) = shape;
     *reinterpret_cast<float*>(nodeData + 0x98) = 0.0f;
-    void* entry = FUN_142581520(context, nodeData);
+    void* entry = Scaleform::Render::Video02CreateEntry(context, nodeData);
     if (entry) ++*reinterpret_cast<int*>(static_cast<unsigned char*>(entry) + 8);
     *result = entry;
     reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(providerBase))[2])(providerBase);

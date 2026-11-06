@@ -1345,6 +1345,11 @@ extern "C" {
 void  FUN_1425dcaf0(void* sprite);                                            // Sprite::SetDirtyFlag (empty)
 void  FUN_1425f7f70(void* io);                                                // InteractiveObject::AddToPlayList
 }
+#ifndef MS2_HOOK_DLL
+// 0x1425dcaf0 is the folded empty body (named ConstructorMov<ASSoundIntf*>::Construct): called by that name it inlines
+// away and AddDisplayObject loses the exe's call.
+#pragma comment(linker, "/alternatename:FUN_1425dcaf0=?Construct@?$ConstructorMov@PEAVASSoundIntf@GFx@Scaleform@@@Scaleform@@SAXPEAX@Z")
+#endif
 }}} // namespace Scaleform::GFx::AS3
 // instantiated in sfr_as3_18 (0x142516210), called out of line
 namespace Scaleform { namespace GFx {

@@ -208,6 +208,10 @@ extern "C" void FUN_1423c9330(unsigned long long, unsigned long long);
 // ~ArrayLH<String> (0x1422fbf60). Not the real dtor: called as ~ArrayLH it inlines and the two dtor bodies
 // below no longer match.
 extern "C" void FUN_1422fbf60(void*);
+#ifndef MS2_HOOK_DLL
+// the body is the client's /Od instantiation of that dtor
+#pragma comment(linker, "/alternatename:FUN_1422fbf60=??1?$ArrayLH@VString@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@QEAA@XZ")
+#endif
 typedef Scaleform::ArrayLH<Scaleform::String> Ime01StringArray; typedef Scaleform::ArrayDataBase<Scaleform::GFx::Video::VideoPlayer::CuePoint, Scaleform::AllocatorGH<Scaleform::GFx::Video::VideoPlayer::CuePoint, 2>, Scaleform::ArrayDefaultPolicy> Ime01CueArr; template<> void Ime01CueArr::Reserve(const void*, Scaleform::UPInt);   // PushBack 0x1422fd480 (Ime01StringArray)
 
 struct HWND__;
