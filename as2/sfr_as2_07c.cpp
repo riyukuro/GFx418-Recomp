@@ -210,6 +210,8 @@ GASImeProto::GASImeProto(ASStringContext* psc, Object* pprototype, const Functio
     InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
 }
 
+// MS2-FUNCTIONAL: register allocation only: the exe keeps psc in r14 and the IME object in rsi; ours uses rsi and
+// rbp. The SDK body (GASIme.cpp) and the psc/pimeObj/top local shapes give the same or a longer diff.
 // @0x142999be0
 void GASIme::BroadcastOnDisplayStatusWindow(Environment* penv)
 {
@@ -222,6 +224,8 @@ void GASIme::BroadcastOnIMEComposition(Environment* penv, const ASString& pStrin
     BroadcastToIme<true>(penv, "onIMEComposition", &pString);
 }
 
+// MS2-FUNCTIONAL: register allocation only: the exe keeps psc in r14 and the IME object in rsi; ours uses rsi and
+// rbp. The SDK body (GASIme.cpp) and the psc/pimeObj/top local shapes give the same or a longer diff.
 // @0x142999fd0
 void GASIme::BroadcastOnRemoveStatusWindow(Environment* penv)
 {
