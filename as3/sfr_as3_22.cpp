@@ -4041,8 +4041,8 @@ void* CreateAudioRequest(void* manager, const char* path, bool stream)
 }
 
 // Builds a linked buffered request, retains its backing data, and creates its callback-fed FMOD sound.
-// MS2-FUNCTIONAL: the exe re-tests the old backing data when backing is null, and returns through one register
-// shared with the null-allocation path
+// MS2-FUNCTIONAL: register allocation of the exit: the exe returns through r15 (the null-allocation path sets it from
+// the zero register) and restores r13 in each createSound arm; ours returns through r12
 // @0x1427447f0
 void* CreateBufferedAudioRequest(void* manager, void* backing, unsigned channels, unsigned rate, bool wideSamples)
 {
@@ -4063,7 +4063,8 @@ void* CreateBufferedAudioRequest(void* manager, void* backing, unsigned channels
     *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(sentinel + 0x10) + 8) = node;
     *reinterpret_cast<void**>(sentinel + 0x10) = node;
     *reinterpret_cast<void**>(object + 0x38) = nullptr;
-    *reinterpret_cast<void***>(object) = &AS3BufferedRequestVtable;
+    // volatile: the exe keeps the +0x38 store above the derived vptr store (the ctor-chain order)
+    *reinterpret_cast<void** volatile*>(object) = &AS3BufferedRequestVtable;
     *reinterpret_cast<void***>(node) = &AS3BufferedRequestNodeVtable;
     *reinterpret_cast<void**>(object + 0x28) = manager;
     auto* sound = reinterpret_cast<FMOD::Sound**>(object + 0x30);
@@ -4078,7 +4079,8 @@ void* CreateBufferedAudioRequest(void* manager, void* backing, unsigned channels
     // Ptr<> assignment of the backing data: AddRef the new one, Release the old one.
     if (backing)
         FUN_14257dc30(backing);
-    if (void* old = *reinterpret_cast<void**>(object + 0x40))
+    // volatile: the exe re-tests the old data even when backing is null (no threading past the just-stored 0)
+    if (void* old = *reinterpret_cast<void* volatile*>(object + 0x40))
         FUN_14257dcb0(old);
     *reinterpret_cast<void**>(object + 0x40) = backing;
 
@@ -4095,12 +4097,13 @@ void* CreateBufferedAudioRequest(void* manager, void* backing, unsigned channels
 
     FMOD_CREATESOUNDEXINFO info;
     std::memset(&info, 0, sizeof(info));
+    auto* owner = *reinterpret_cast<unsigned char**>(object + 0x28);
     info.cbsize = sizeof(info);
     info.length = length;
     info.numchannels = channelCount;
     info.defaultfrequency = sampleRate;
     info.format = format;
-    auto* system = *reinterpret_cast<FMOD::System**>(*reinterpret_cast<unsigned char**>(object + 0x28) + 0x10);
+    auto* system = *reinterpret_cast<FMOD::System**>(owner + 0x10);
     if (system->createSound(nullptr, 0x442, &info, sound) != 0) {
         *sound = nullptr;
     } else {
