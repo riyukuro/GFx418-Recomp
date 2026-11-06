@@ -1029,7 +1029,7 @@ namespace InstanceTraits { namespace fl
         }
     }
 
-    // MS2-FUNCTIONAL: the dynamic flag is read as a dword (exe: a byte) and the exe takes its string ref with a checked add
+    // The namespace name is copy-initialised from the Value (SDK), so the converted temporary is copied, as in the exe.
     // @0x1423fd170
     void Object::AS3propertyIsEnumerable(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
@@ -1067,7 +1067,7 @@ namespace InstanceTraits { namespace fl
         }
         else if (_this.GetKind() == Value::kNamespace && argv[0].IsString())
         {
-            const ASString name = argv[0].AsString();
+            const ASString name = argv[0];
             if (name == "prefix" || name == "uri")
                 return result.SetBool(true);
         }
