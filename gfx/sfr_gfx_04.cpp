@@ -2519,3 +2519,7 @@ bool MatchFileNames(const String& path1, const String& path2)
 // MS2-PIN: ?GetStats@MovieDataDef@GFx@Scaleform@@UEAAXPEAVStatBag@3@_N@Z 0x1425d14a0
 // MS2-FUNCTIONAL ?GetStats@ResourceReport@GFx@Scaleform@@UEAAXPEAVStatBag@3@_N@Z: empty virtual body leaves StatBag unchanged.
 // MS2-PIN: ?GetStats@ResourceReport@GFx@Scaleform@@UEAAXPEAVStatBag@3@_N@Z 0x1425d14b0
+// The two file-static key interfaces' exit-time thunks (vptr back to ResourceKey::KeyInterface), emitted by cl here.
+// MS2-RANGE: 0x142cc9490-0x142cc94af .text$yd
+// MS2-PIN: ??__FGFxMovieDataDefFileKeyInterface_Instance@GFx@Scaleform@@YAXXZ 0x142cc9490
+// MS2-PIN: ??__FGFxMovieDefImplKeyInterface_Instance@GFx@Scaleform@@YAXXZ 0x142cc94a0

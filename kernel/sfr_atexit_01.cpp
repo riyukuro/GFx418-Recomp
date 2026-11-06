@@ -61,6 +61,11 @@ class SKI_TextPrimitive { public: static SKI_TextPrimitive Instance; static SKI_
 class HALBeginDisplayItem { public: static HALBeginDisplayItem Instance; };
 class HALEndDisplayItem { public: static HALEndDisplayItem Instance; };
 class AmpGlyphImageWriter { public: static AmpGlyphImageWriter Instance; };
+// The image codecs' handler singletons (Render_TGA/JPEG/PNG/DDS.cpp), as render_tga.h etc. declare them.
+namespace TGA { class FileReader { public: static FileReader Instance; }; }
+namespace JPEG { class FileReader { public: static FileReader Instance; }; }
+namespace PNG { class FileReader { public: static FileReader Instance; }; class FileWriter { public: static FileWriter Instance; }; }
+namespace DDS { class FileReader { public: static FileReader Instance; }; }
 }}
 
 namespace Scaleform { namespace GFx {
@@ -188,6 +193,41 @@ void FUN_142cc9300()
 void FUN_142cc9370()
 {
     RawAs3ValueDtor(DAT_143b15780);
+}
+
+// Render::TGA::FileReader::Instance (Render::ImageFileHandler): back to its interface base vftable.
+// @0x142cc9440
+void FUN_142cc9440()
+{
+    reinterpret_cast<Render::ImageFileHandler*>(RawObj(Render::TGA::FileReader::Instance))->Render::ImageFileHandler::~ImageFileHandler();
+}
+
+// Render::JPEG::FileReader::Instance (Render::ImageFileHandler): back to its interface base vftable.
+// @0x142cc9450
+void FUN_142cc9450()
+{
+    reinterpret_cast<Render::ImageFileHandler*>(RawObj(Render::JPEG::FileReader::Instance))->Render::ImageFileHandler::~ImageFileHandler();
+}
+
+// Render::PNG::FileReader::Instance (Render::ImageFileHandler): back to its interface base vftable.
+// @0x142cc9460
+void FUN_142cc9460()
+{
+    reinterpret_cast<Render::ImageFileHandler*>(RawObj(Render::PNG::FileReader::Instance))->Render::ImageFileHandler::~ImageFileHandler();
+}
+
+// Render::PNG::FileWriter::Instance (Render::ImageFileHandler): back to its interface base vftable.
+// @0x142cc9470
+void FUN_142cc9470()
+{
+    reinterpret_cast<Render::ImageFileHandler*>(RawObj(Render::PNG::FileWriter::Instance))->Render::ImageFileHandler::~ImageFileHandler();
+}
+
+// Render::DDS::FileReader::Instance (Render::ImageFileHandler): back to its interface base vftable.
+// @0x142cc9480
+void FUN_142cc9480()
+{
+    reinterpret_cast<Render::ImageFileHandler*>(RawObj(Render::DDS::FileReader::Instance))->Render::ImageFileHandler::~ImageFileHandler();
 }
 
 // static ResourceData::DataInterface at 0x143a2f430: back to its interface base vftable.
@@ -514,3 +554,4 @@ void FUN_142cca4d0()
 }} // namespace Scaleform::GFx
 // MS2-PIN: ??_7SortKeyInterface@Render@Scaleform@@6B@ 0x1431927c8
 // MS2-PIN: ??_7Interface@RenderQueueItem@Render@Scaleform@@6B@ 0x143191990
+// MS2-RANGE: 0x142cc9440-0x142cc948f .text$yd

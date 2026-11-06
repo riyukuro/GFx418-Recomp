@@ -40,6 +40,17 @@ void FUN_142cc9520();
 void FUN_142cc9530();
 void FUN_142cca410();
 void FUN_142cca4d0();
+void FUN_142cc95f0();
+void FUN_142cc9610();
+void FUN_142cc9630();
+void FUN_142cc9650();
+void FUN_142cc9670();
+void FUN_142cc9690();
+void FUN_142cc96b0();
+void FUN_142cc96d0();
+void FUN_142cc96f0();
+void FUN_142cc98d0();
+void FUN_142cca370();
 }}
 struct AtexitRegistration
 {
@@ -57,6 +68,20 @@ static struct EmptyInit
 // the FontResourceCreator static (0x143a2f430) and the system-font KeyInterface instance (0x143a2f690)
 static AtexitRegistration s_atexit_143a2f430(&Scaleform::GFx::FUN_142cc9520);
 static AtexitRegistration s_atexit_143a2f690(&Scaleform::GFx::FUN_142cc9530);
+// the render vertex formats' Ptr<SystemVertexFormat> slots and a static Ptr<> (dtors in sfr_atexit_01). Not in the hook
+// DLL: the exe registers its own copies, and a second exit-time release would underflow the shared statics.
+#ifndef MS2_HOOK_DLL
+static AtexitRegistration s_atexit_143a2f978(&Scaleform::GFx::FUN_142cc95f0);   // Image9GridVertex::Format.pSysFormat
+static AtexitRegistration s_atexit_143a2fb98(&Scaleform::GFx::FUN_142cc9610);   // VertexXY16f::Format.pSysFormat
+static AtexitRegistration s_atexit_143a2fbb0(&Scaleform::GFx::FUN_142cc9630);   // VertexXY16fAlpha::Format.pSysFormat
+static AtexitRegistration s_atexit_143a2fb80(&Scaleform::GFx::FUN_142cc9650);   // VertexXY16i::Format.pSysFormat
+static AtexitRegistration s_atexit_143a2fbe0(&Scaleform::GFx::FUN_142cc9670);   // VertexXY16iAlpha::Format.pSysFormat
+static AtexitRegistration s_atexit_143a2fbc8(&Scaleform::GFx::FUN_142cc9690);   // VertexXY16iC32::Format.pSysFormat
+static AtexitRegistration s_atexit_143a2fbf8(&Scaleform::GFx::FUN_142cc96b0);   // VertexXY16iCF32::Format.pSysFormat
+static AtexitRegistration s_atexit_143a2fc10(&Scaleform::GFx::FUN_142cc96d0);   // VertexXY16iInstance::Format.pSysFormat
+static AtexitRegistration s_atexit_143a2fc28(&Scaleform::GFx::FUN_142cc96f0);   // VertexXY16iUV::Format.pSysFormat
+static AtexitRegistration s_atexit_143a30338(&Scaleform::GFx::FUN_142cc98d0);   // the Ptr<> static
+#endif
 
 namespace Scaleform { namespace Render {
 BlendState::Interface BlendState::InterfaceImpl(State_BlendMode);
@@ -72,6 +97,10 @@ static StateData::Interface_Value s_noneInterface(State_None);
 namespace Scaleform { namespace GFx { namespace AS2 {
 const Value Point_NanParams[Point_NumProperties] = { Value(NumberUtil::NaN()), Value(NumberUtil::NaN()) };
 }}}
+// AS2 Point_DefaultParams, Value[2] at 0x143a51b70
+#ifndef MS2_HOOK_DLL   // as above
+static AtexitRegistration s_atexit_143a51b70(&Scaleform::GFx::FUN_142cca370);
+#endif
 // AS2 Rectangle_DefaultParams, Value[4] at 0x143a51bb0
 static AtexitRegistration s_atexit_143a51bb0(&Scaleform::GFx::FUN_142cca410);
 namespace Scaleform { namespace GFx { namespace AS2 {
@@ -97,4 +126,22 @@ static char s_crtStartup = (char)AfxInitialize(0, 0xe00);
 // MS2-PIN: ??_7Interface_Value@StateData@Render@Scaleform@@6B@ 0x143192128
 // MS2-PIN: ??_7Interface_RefCountImpl@StateData@Render@Scaleform@@6B@ 0x143192140
 // MS2-PIN: ??_7Interface@MaskNodeState@Render@Scaleform@@6B@ 0x143192110
-
+// MS2-RANGE: 0x14014ce60-0x14014ceec .text$di
+// MS2-RANGE: 0x14014d0f0-0x14014d0fc .text$di
+// MS2-RANGE: 0x140157e70-0x140157e7c .text$di
+// MS2-FUNCTIONAL 0x142cca4e8: the header-generated ??__F_AtlComModule tail-jumps to ~CAtlComModule; the exe inlines that dtor (Term()). Both atexit thunks come from <atlbase.h>'s selectany definition, which this TU compiles under inline_depth(0) so the ??__E initialisers keep their ctors out of line, as in the exe.
+// MS2-FUNCTIONAL 0x142cca508: same for ??__F_AtlWinModule (the exe inlines ~CAtlWinModule: AtlWinModuleTerm plus the critical-section/field resets).
+// MS2-RANGE: 0x142cca4e8-0x142cca54c .text$yd
+// MS2-PIN: ??__Es_atexit_143a2f978@@YAXXZ 0x14014ce60
+// MS2-PIN: ??__Es_atexit_143a2fb98@@YAXXZ 0x14014ce70
+// MS2-PIN: ??__Es_atexit_143a2fbb0@@YAXXZ 0x14014ce80
+// MS2-PIN: ??__Es_atexit_143a2fb80@@YAXXZ 0x14014ce90
+// MS2-PIN: ??__Es_atexit_143a2fbe0@@YAXXZ 0x14014cea0
+// MS2-PIN: ??__Es_atexit_143a2fbc8@@YAXXZ 0x14014ceb0
+// MS2-PIN: ??__Es_atexit_143a2fbf8@@YAXXZ 0x14014cec0
+// MS2-PIN: ??__Es_atexit_143a2fc10@@YAXXZ 0x14014ced0
+// MS2-PIN: ??__Es_atexit_143a2fc28@@YAXXZ 0x14014cee0
+// MS2-PIN: ??__Es_atexit_143a30338@@YAXXZ 0x14014d0f0
+// MS2-PIN: ??__Es_atexit_143a51b70@@YAXXZ 0x140157e70
+// MS2-PIN: ??__F_AtlComModule@ATL@@YAXXZ 0x142cca4e8
+// MS2-PIN: ??__F_AtlWinModule@ATL@@YAXXZ 0x142cca508
