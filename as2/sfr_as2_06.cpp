@@ -1441,18 +1441,18 @@ void MouseCtorFunction::NotifyListeners(Environment* penv, unsigned mouseIndex, 
                                                 penv->GetBuiltin(eventName), &callback);
 }
 
-// MS2-FUNCTIONAL frame layout (exe keeps an rbp frame) and register allocation
+// Runs one mouse listener with the event arguments; a negative count means the listener is skipped.
 // @0x142963400
 void MouseCtorFunction::LocalInvokeCallback::Invoke(Environment* penv, ObjectInterface* pthis,
                                                     const FunctionRef& method)
 {
     int nargs = PushListenersParams(penv, MouseIndex, EventName, Value(method), pTargetName, Button, Delta,
                                     DblClick);
-    if (nargs < 0)
-        return;
-    Value result;
-    method.Invoke(FnCall(&result, pthis, penv, nargs, penv->GetTopIndex()));
-    penv->Drop(nargs);
+    if (nargs >= 0) {
+        Value result;
+        method.Invoke(FnCall(&result, pthis, penv, nargs, penv->GetTopIndex()));
+        penv->Drop(nargs);
+    }
 }
 
 // MS2-FUNCTIONAL event compare folding and FunctionRef temporary scheduling

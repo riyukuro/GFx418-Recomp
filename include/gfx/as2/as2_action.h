@@ -259,12 +259,10 @@ public:
     template<class V>
     void   Push(const V& v) { Stack.PushAlt(v); }
     void   Drop1() { Stack.Pop1(); }
-    // Pops n values.
-    void   Drop(int n)
+    // Pops n values. As in the SDK, the count is unsigned and the callers guard it.
+    void   Drop(unsigned n)
     {
-        if (n > 0)
-            for (unsigned i = n; i; i--)
-                Stack.Pop1();
+        Stack.Pop(n);
     }
     SF_FORCEINLINE void Drop2() { Stack.Pop2(); }
 
