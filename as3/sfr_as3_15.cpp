@@ -18,6 +18,7 @@
 // MS2-PIN: ??_7Traits@AS3@GFx@Scaleform@@6B@ 0x14317b210
 // MS2-PIN: ??_7Traits@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14317b288
 // MS2-PIN: ??_7Traits@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b300
+#define SF_AS3_AVMBUTTON_MODEL   // AvmButton / AvmTextField / AvmStaticText from the SDK MI layout (as3_avm.h)
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp AddRefWeakRef and AS3_Value.cpp AddRefInternal inline (as3_value.h)
 #define MS2_AS3_SCU_ADDREF_ONLY
 #define SF_GFX_FOCUSKEY_MEMBERS   // MovieImpl::InitFocusKeyInfo/ProcessFocusKey/FinalizeProcessFocusKey (gfx_movieimpl.h)
@@ -2079,15 +2080,8 @@ __declspec(noinline) AvmInteractiveObj::AvmInteractiveObj(InteractiveObject* pdi
     pdispObj->TabIndex = -1;
 }
 
-// The exe's vftables of the AS3 parts of buttons, text fields and static text; these classes are not modelled
-// beyond their size, so their ctors store them by hand.
-extern void* const AvmButton_vftable[];
-extern void* const AvmButton_vftable_30[];
-extern void* const AvmButton_vftable_40[];
-extern void* const AvmTextField_vftable[];
-extern void* const AvmTextField_vftable_30[];
-extern void* const AvmTextField_vftable_40[];
-extern void* const AvmStaticText_vftable[];
+// AvmButton / AvmTextField / AvmStaticText are the SDK MI classes of as3_avm.h (SF_AS3_AVMBUTTON_MODEL): their ctors
+// below store the class vftables themselves.
 
 extern void* const ShapeObject_vftable[];
 extern void* const ShapeObject_vftable_18[];
@@ -2154,30 +2148,22 @@ AvmBitmap::AvmBitmap(ASMovieRootBase* pasRoot, const CharacterCreateInfo& ccinfo
 // A button takes part in tab navigation by default.
 // @0x1424d63e0
 AvmButton::AvmButton(Button* pbtn)
+    : AvmInteractiveObj(reinterpret_cast<InteractiveObject*>(pbtn))
 {
-    reinterpret_cast<AvmInteractiveObj*>(this)->AvmInteractiveObj::AvmInteractiveObj(reinterpret_cast<InteractiveObject*>(pbtn));   // abstract: explicit ctor call
-    *reinterpret_cast<void* const**>(Data + 0x00) = AvmButton_vftable;
-    *reinterpret_cast<void* const**>(Data + 0x30) = AvmButton_vftable_30;
-    *reinterpret_cast<void* const**>(Data + 0x40) = AvmButton_vftable_40;
     reinterpret_cast<InteractiveObject*>(pbtn)->Flags |= InteractiveObject::Mask_TabEnabled;
 }
 
-// MS2-FUNCTIONAL: AvmStaticText is opaque; its AvmDisplayObj part is built in place and the exe's vftable stored
 // @0x1424d6650
 AvmStaticText::AvmStaticText(StaticTextCharacter* ptxt)
+    : AvmDisplayObj(reinterpret_cast<DisplayObject*>(ptxt))
 {
-    new (this) AvmDisplayObj(reinterpret_cast<DisplayObject*>(ptxt));
-    *reinterpret_cast<void* const**>(Data) = AvmStaticText_vftable;
 }
 
 // An AS3 text field starts with the caret at 0.
 // @0x1424d66b0
 AvmTextField::AvmTextField(TextField* ptxt)
+    : AvmInteractiveObj(reinterpret_cast<InteractiveObject*>(ptxt))
 {
-    reinterpret_cast<AvmInteractiveObj*>(this)->AvmInteractiveObj::AvmInteractiveObj(reinterpret_cast<InteractiveObject*>(ptxt));   // abstract: explicit ctor call
-    *reinterpret_cast<void* const**>(Data + 0x00) = AvmTextField_vftable;
-    *reinterpret_cast<void* const**>(Data + 0x30) = AvmTextField_vftable_30;
-    *reinterpret_cast<void* const**>(Data + 0x40) = AvmTextField_vftable_40;
     *reinterpret_cast<UInt32*>(reinterpret_cast<UByte*>(ptxt) + 0xfc) |= 2;
     ptxt->SetSelection(0, 0);
 }
@@ -3910,44 +3896,36 @@ UPInt* FUN_1424dbd70(UPInt* self, UPInt vm, const UPInt* src)
 }
 
 // ---- LoadQueueEntryMT_LoadMovie constructor (out of line in the exe; sfr_as3_16 inlines its own copy) ----
-extern const void* DAT_14317d890[];      // LoadQueueEntryMT_LoadMovie vftable
-
-// Starts the preload task (stripped players try the .gfx name first) and hands it to the task manager.
-// Raw words over the entry (its members are private to the class, whose inline constructor lives in sfr_as3_16);
-// the cancel loop of the inline copy is not part of this constructor
+// `inline` under cl (COMDAT-any), as sfr_as3_16's copy is; MS2_Sfr15EmitLoadMovieCtor (uncalled anchor, inline_depth 0)
+// keeps it emitted here.
+#if defined(__clang__)
+#define SFR15_LQMOVIE_CTOR inline __attribute__((used))   // sfr_as3_16's inline copy is emitted too
+#else
+#define SFR15_LQMOVIE_CTOR inline
+#endif
+// Starts the preload task (stripped players try the .gfx name first) and hands it to the task manager. The cancel loop
+// of MovieRoot::AddLoadQueueEntryMT is not part of this constructor.
 // @0x1424d84e0
-void* FUN_1424d84e0(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie)
+SFR15_LQMOVIE_CTOR LoadQueueEntryMT_LoadMovie::LoadQueueEntryMT_LoadMovie(LoadQueueEntry* pqueueEntry, MovieImpl* pmovieImpl)
+    : LoadQueueEntryMT(pqueueEntry, pmovieImpl)
 {
-    UPInt* w = static_cast<UPInt*>(self);
-    static_cast<LoadQueueEntryMT*>(self)->LoadQueueEntryMT::LoadQueueEntryMT(pentry, pmovie);
-    w[0] = reinterpret_cast<UPInt>(DAT_14317d890);
-    ::new (w + 5) Ptr<MoviePreloadTask>();
-    UPInt mi = w[3];
-    *reinterpret_cast<UByte*>(w + 6) = 0;
-    *reinterpret_cast<UByte*>(w + 7) = 0;
-    *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(w) + 0x34) = 0;
+    CharSwitched     = false;
+    FirstFrameLoaded = false;
+    BytesLoaded      = 0;
     bool stripped = false;
-    UPInt main = *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(mi + 0x18) + 0x10) + 0x50);
-    if (main)
-    {
-        void* def = reinterpret_cast<void* (*)(UPInt)>((*reinterpret_cast<void***>(main))[0x1e0 / 8])(main);
-        unsigned flags = reinterpret_cast<unsigned (*)(void*)>((*reinterpret_cast<void***>(def))[0x58 / 8])(def);
-        stripped = ((flags >> 4) & 1) != 0;
-    }
-    MoviePreloadTask* task = NULL;
-    if (void* mem = Memory::pGlobalHeap->Alloc(0x50))
-        task = ::new (mem) MoviePreloadTask(reinterpret_cast<MovieImpl*>(w[3]),
-                                          *reinterpret_cast<const String*>(reinterpret_cast<UByte*>(pentry) + 0x18),
-                                          stripped, *reinterpret_cast<bool*>(reinterpret_cast<UByte*>(pentry) + 0x24));
-    MoviePreloadTask*& slot = *reinterpret_cast<MoviePreloadTask**>(w + 5);
-    if (slot)
-        reinterpret_cast<RefCountImpl*>(slot)->Release();
-    slot = task;
-    void* bag = reinterpret_cast<void*>(w[3] + 0x10);
-    Ptr<TaskManager> tm = *static_cast<TaskManager*>(reinterpret_cast<void* (*)(void*, unsigned)>((*reinterpret_cast<void***>(bag))[0x18 / 8])(bag, 0x14));
-    tm->AddTask(reinterpret_cast<Task*>(w[5]));
-    return self;
+    if (InteractiveObject* pmain = pMovieImpl->pASMovieRoot->GetMovieImpl()->pMainMovie)
+        stripped = (pmain->GetResourceMovieDef()->GetSWFFlags() & 0x10) != 0; // MovieInfo::SWF_Stripped
+    pPreloadTask = *SF_NEW MoviePreloadTask(pMovieImpl, pqueueEntry->URL, stripped, pqueueEntry->QuietOpen);
+    Ptr<TaskManager> ptm = *static_cast<TaskManager*>(pMovieImpl->GetStateBag()->GetStateAddRef(State::State_TaskManager));
+    ptm->AddTask(pPreloadTask);
 }
+// Builds one in place out of line (inline_depth 0), so cl emits the constructor here. Nothing calls it.
+#pragma inline_depth(0)
+void MS2_Sfr15EmitLoadMovieCtor(void* p, LoadQueueEntry* pqueueEntry, MovieImpl* pmovieImpl)
+{
+    ::new (p) LoadQueueEntryMT_LoadMovie(pqueueEntry, pmovieImpl);
+}
+#pragma inline_depth()
 // ---- MovieRoot constructor ----
 extern const void* DAT_14317d8d8[];      // MovieRoot vftable
 extern const void* DAT_14317da88[];      // MovieRoot secondary vftable (+0x28)
@@ -4738,3 +4716,14 @@ void SoundTransform::panSet(const Value& result, Value::Number v) { SF_UNUSED(re
 // MS2-PIN: ??_7MouseCursorEvent@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x1431741e8
 // MS2-PIN: ??_7MouseEventEx@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143174908
 // MS2-PIN: ??_7TextEventEx@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143175508
+// The AvmButton / AvmTextField / AvmStaticText ctors (SF_AS3_AVMBUTTON_MODEL) emit these vftables here as well.
+// MS2-PIN: ??_7AvmButton@AS3@GFx@Scaleform@@6B@ 0x14317dd68
+// MS2-PIN: ??_7AvmButton@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317dbe0
+// MS2-PIN: ??_7AvmButton@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317dcb0
+// MS2-PIN: ??_7AvmButtonBase@GFx@Scaleform@@6B@ 0x14317db08
+// MS2-PIN: ??_7AvmTextField@AS3@GFx@Scaleform@@6B@ 0x14317ec08
+// MS2-PIN: ??_7AvmTextField@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ea80
+// MS2-PIN: ??_7AvmTextField@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317eb50
+// MS2-PIN: ??_7AvmTextFieldBase@GFx@Scaleform@@6B@ 0x14317e508
+// MS2-PIN: ??_7AvmStaticText@AS3@GFx@Scaleform@@6B@ 0x14317e9b8
+// MS2-PIN: ??_7LoadQueueEntryMT_LoadMovie@AS3@GFx@Scaleform@@6B@ 0x14317d890
