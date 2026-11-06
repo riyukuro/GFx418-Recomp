@@ -22,6 +22,8 @@ void FUN_14000c280(void* owner, unsigned key, void** value);
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
+Value* ArgCopy(const FnCall* pfn, int n); // sfr_as2_04e @0x1429316c0, FnCall::Arg out of line
+
 namespace {
 
 // fn.Arg(n) as a call: the exe does not inline the argument lookup in this file.
@@ -77,12 +79,26 @@ static SF_FORCEINLINE void SetBuiltinPrototype(GlobalContext* pgc, ASBuiltinType
 
 } // namespace
 
-// MS2-FUNCTIONAL: the exe tests the movie for null before the audio state lookup and does not tail-jump to the
+// Ptr<SoundResource> = psound with operator= written out (the exe inlines it here; ours does not).
+static SF_FORCEINLINE void MS2_SetResource(Ptr<SoundResource>& ptr, SoundResource* p)
+{
+    if (p)
+        p->AddRef();
+    SoundResource*& raw = reinterpret_cast<SoundResource*&>(ptr);
+    if (raw)
+        raw->Release();
+    raw = p;
+}
+
+// MS2-FUNCTIONAL: register allocation (the exe keeps fn in rsi and fn.Env in rdi) and the exe does not tail-jump to the
 // argument error log; same lookup, same sample/resource stored
 // @0x1429967b0
 void SoundProto::Attach(const FnCall& fn)
 {
-    Sound::SoundRenderer* pplayer = GetSoundRenderer(fn.Env->GetMovieImpl());
+    MovieImpl* proot = fn.Env->GetMovieImpl();
+    if (!proot)
+        return;
+    Sound::SoundRenderer* pplayer = GetSoundRenderer(proot);
     if (!pplayer)
         return;
     if (fn.NArgs < 1)
@@ -90,13 +106,13 @@ void SoundProto::Attach(const FnCall& fn)
         fn.Env->LogScriptError("Sound.AttachSound requires one argument (file name)");
         return;
     }
-    ASString            id   = SoundArg(fn, 0).ToString(fn.Env);
+    ASString            id(ArgCopy(&fn, 0)->ToString(fn.Env));
     SoundObject*        pobj = static_cast<SoundObject*>(fn.ThisPtr);
     Ptr<MovieDefImpl>   pmd  = fn.Env->GetTarget()->GetResourceMovieDef();
     if (pobj && pmd)
     {
         ResourceBindData bd;
-        if (!fn.Env->GetMovieImpl()->FindExportedResource(pmd, &bd, String(id.ToCStr())))
+        if (!fn.Env->GetMovieImpl()->FindExportedResource(pmd, &bd, id.ToCStr()))
             return;
         if (bd.pResource->GetResourceType() != Resource::RT_SoundSample)
             return;
@@ -104,7 +120,7 @@ void SoundProto::Attach(const FnCall& fn)
         if (psound)
         {
             pobj->pSample   = psound->GetSoundInfo()->GetSoundSample(pplayer);
-            pobj->pResource = psound;
+            MS2_SetResource(pobj->pResource, psound);
         }
     }
 }
@@ -261,7 +277,6 @@ void SoundProto::SetVolume(const FnCall& fn)
 
 #pragma inline_depth()
 
-// MS2-FUNCTIONAL: other register allocation (the exe keeps zero in r12); same start call
 // @0x142997500
 void SoundProto::Start(const FnCall& fn)
 {
@@ -288,10 +303,13 @@ void SoundProto::Start(const FnCall& fn)
         loops = SoundArg(fn, 1).ToInt32(fn.Env);
     if (loops == 0)
         loops = 1;
-    if (!pobj->pResource && psprite->IsSoundPlaying(pobj))
-        return;
-
-    Ptr<Sound::SoundChannel> pchan = *pplayer->PlaySample(pobj->pSample, true);
+    Ptr<Sound::SoundChannel> pchan;
+    if (!pobj->pResource)
+    {
+        if (psprite->IsSoundPlaying(pobj))
+            return;
+    }
+    pchan = *pplayer->PlaySample(pobj->pSample, true);
     if (pchan)
     {
         if (offset > 0 || loops > 0)
@@ -303,7 +321,6 @@ void SoundProto::Start(const FnCall& fn)
     }
 }
 
-// MS2-FUNCTIONAL: other register allocation (the exe keeps fn in rbp and zero in r15); same stop calls
 // @0x1429976e0
 void SoundProto::Stop(const FnCall& fn)
 {
@@ -315,13 +332,13 @@ void SoundProto::Stop(const FnCall& fn)
         return;
     if (fn.NArgs > 0)
     {
-        ASString          id    = SoundArg(fn, 0).ToString(fn.Env);
+        ASString          id    = ArgCopy(&fn, 0)->ToString(fn.Env);
         SoundObject*      psobj = static_cast<SoundObject*>(fn.ThisPtr);
         Ptr<MovieDefImpl> pmd   = fn.Env->GetTarget()->GetResourceMovieDef();
         if (psobj && pmd)
         {
             ResourceBindData bd;
-            if (!fn.Env->GetMovieImpl()->FindExportedResource(pmd, &bd, String(id.ToCStr())))
+            if (!fn.Env->GetMovieImpl()->FindExportedResource(pmd, &bd, id.ToCStr()))
                 return;
             if (bd.pResource->GetResourceType() != Resource::RT_SoundSample)
                 return;
