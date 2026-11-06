@@ -45,6 +45,50 @@ template<> template<> SPInt decltype(HashLH<GFx::EventId, ArrayLH<GFx::AS2::Valu
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 namespace {
+struct OnFocusInlineTag {};
+}
+
+// FunctionRefBase::SetLocalFrame (exe 0x142981e70), expanded in place as the exe has it here.
+static SF_FORCEINLINE void FunctionRefSetLocalFrame(FunctionRefBase* p, LocalFrame* localFrame, bool weakRef)
+{
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->Release();
+    p->pLocalFrame = localFrame;
+    if (weakRef)
+        p->Flags |= FunctionRefBase::FuncRef_Weak;
+    else
+        p->Flags &= ~FunctionRefBase::FuncRef_Weak;
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->AddRef();
+}
+
+// FunctionRefBase::Init(orig) with the SetLocalFrame call expanded.
+template<class Tag>
+SF_FORCEINLINE FunctionRef::FunctionRef(const FunctionRefBase& orig, Tag)
+{
+    Flags    = 0;
+    Function = orig.Function;
+    if (!(Flags & FuncRef_Internal) && Function)
+        Function->AddRef();
+    pLocalFrame = 0;
+    if (orig.pLocalFrame)
+        FunctionRefSetLocalFrame(this, orig.pLocalFrame, (orig.Flags & FuncRef_Weak) != 0);
+}
+
+namespace {
+// Value::ToFunction(NULL) (exe 0x142991190), inlined; ResolveFunctionName(NULL) gives a null reference.
+SF_FORCEINLINE FunctionRef OnFocusToFunction(const Value& v)
+{
+    switch (v.T.Type)
+    {
+    case Value::FUNCTIONNAME:
+        return FunctionRef();
+    case Value::FUNCTION:
+        return FunctionRef(v.V.FunctionValue, OnFocusInlineTag());
+    default:;
+    }
+    return FunctionRef();
+}
 
 // The clips with a hit area, kept by the movie root at +0x628 (not in the MovieRoot header yet).
 typedef ArrayLH<Ptr<Sprite>, StatMV_Other_Mem> HitAreaArray;
@@ -496,37 +540,37 @@ void AvmTextField::OnScroll()
 
 // The character got or lost the focus: its onSetFocus/onKillFocus handler runs with the other character (null
 // without one), the controller index first with the extensions on.
-// MS2-FUNCTIONAL: the this of the call is passed as the object, not as Value(pDispObj); registers differ.
 // @0x14296bd60
 void AvmCharacter::OnFocus(InteractiveObject::FocusEventType event, InteractiveObject* oldOrNewFocusCh,
                            unsigned controllerIdx, FocusMovedType fmt)
 {
     SF_UNUSED(fmt);
-    Value        method;
+    Value focusMethodVal;
     Environment* penv = GetASEnvironment();
     if (!penv)
         return;
-    ASString eventName(penv->GetBuiltin(event == InteractiveObject::SetFocus ? ASBuiltin_onSetFocus
-                                                                               : ASBuiltin_onKillFocus));
-    if (!GetMemberRaw(penv->GetSC(), eventName, &method))
-        return;
-    FunctionRef func = method.IsFunctionObject() ? method.ToFunction(penv) : FunctionRef();
-    if (func.Function)
+    ASStringContext* psc = penv->GetSC();
+    ASString focusMethodName(psc->GetBuiltin((event == InteractiveObject::SetFocus) ? ASBuiltin_onSetFocus
+                                                                                     : ASBuiltin_onKillFocus));
+    if (GetMemberRaw(psc, focusMethodName, &focusMethodVal))
     {
-        int nargs = 1;
-        if (penv->CheckExtensions())
+        FunctionRef focusMethod = OnFocusToFunction(focusMethodVal);
+        if (!focusMethod.IsNull())
         {
-            penv->Push(Value(Number(controllerIdx)));
-            nargs = 2;
+            unsigned nargs = 1;
+            if (penv->CheckExtensions())
+            {
+                penv->Push(Number(controllerIdx));
+                ++nargs;
+            }
+            if (oldOrNewFocusCh)
+                penv->Push(Value(oldOrNewFocusCh));
+            else
+                penv->Push(Value::NULLTYPE);
+            Value result;
+            focusMethod.Invoke(FnCall(&result, Value(pDispObj), penv, nargs, penv->GetTopIndex()));
+            penv->Drop(nargs);
         }
-        if (oldOrNewFocusCh)
-            penv->Push(Value(oldOrNewFocusCh));
-        else
-            penv->Push(Value(Value::NULLTYPE));
-        Value result;
-        // The exe builds the call from Value(pDispObj) (the FnCall value constructor), which resolves to this.
-        func.Invoke(FnCall(&result, static_cast<ObjectInterface*>(this), penv, nargs, penv->GetTopIndex()));
-        penv->Drop(nargs);
     }
 }
 
