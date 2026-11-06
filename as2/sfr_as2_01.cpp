@@ -99,6 +99,21 @@
 #include "../include/gfx/gfx_imecandidateliststyle.h"
 #include "../include/gfx/gfx_button.h"
 
+// The progress table's lookup (exe 0x142917500, folded with another table's): the exe calls it out of line from
+// the inlined Get in MovieClipLoaderProto::GetProgress. This unit defines it (the SDK body) for sfr_as2_05 and
+// sfr_as2_06s2, which declare it too.
+// @0x142917500
+typedef decltype(Scaleform::StringHashLH<Scaleform::GFx::AS2::MovieClipLoader::ProgressDesc>::mHash) Sfr01ProgressSet;
+template<> template<> __declspec(noinline) Scaleform::SPInt
+Sfr01ProgressSet::BaseType::findIndexAlt<Scaleform::String>(const Scaleform::String& key) const
+{
+    if (pTable == 0)
+        return -1;
+    Scaleform::UPInt h = Scaleform::StringLH_HashNode<Scaleform::GFx::AS2::MovieClipLoader::ProgressDesc,
+                                                    Scaleform::String::NoCaseHashFunctor>::NodeAltHashF()(key) & pTable->SizeMask;
+    return findIndexCore(key, h);
+}
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // Boolean.prototype.toString(): "true" / "false" of the wrapped value.
@@ -1003,8 +1018,13 @@ void MovieClipLoaderProto::UnloadClip(const FnCall& fn)
     fn.Result->SetBool(true);
 }
 
+// ObjectInterface::SetConstMemberRaw (0x1400054b0), which the exe inlines into GetProgress and getIMECandidateListStyle.
+static __forceinline void Sfr01SetConstMember(Object* pobj, ASStringContext* psc, const char* name, const Value& val)
+{
+    pobj->SetMemberRaw(psc, psc->CreateConstString(name), val, PropFlags());
+}
+
 // @0x1428eb050
-// MS2-FUNCTIONAL same members and calls; the exe's argument lookup and hash probe are scheduled differently
 void MovieClipLoaderProto::GetProgress(const FnCall& fn)
 {
     if (fn.NArgs < 1)
@@ -1016,12 +1036,15 @@ void MovieClipLoaderProto::GetProgress(const FnCall& fn)
     MovieClipLoader* pthis = (MovieClipLoader*)fn.ThisPtr;
     Ptr<Object>      pobj = Pickable<Object>(SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env));
     ASString         target = fn.Arg(0).ToString(fn.Env);
-    MovieClipLoader::ProgressDesc* pdesc = pthis->ProgressInfo.Get(String(target.ToCStr()));
+    MovieClipLoader::ProgressDesc* pdesc;
+    {
+        String key(target.ToCStr());
+        pdesc = pthis->ProgressInfo.Get(key);
+    }
     if (pdesc)
     {
-        ASStringContext* psc = fn.Env->GetSC();
-        pobj->SetMemberRaw(psc, psc->CreateConstString("bytesLoaded"), Value(pdesc->LoadedBytes), PropFlags());
-        pobj->SetMemberRaw(psc, psc->CreateConstString("bytesTotal"), Value(pdesc->TotalBytes), PropFlags());
+        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "bytesLoaded", Value(pdesc->LoadedBytes));
+        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "bytesTotal", Value(pdesc->TotalBytes));
     }
     fn.Result->SetAsObject(pobj);
 }
@@ -1298,12 +1321,6 @@ void GAS_GlobalASSetPropFlags(const FnCall& fn)
 }}} // namespace Scaleform::GFx::AS2
 // Bodies of the exe called here, by their addresses.
 namespace Scaleform { namespace GFx { namespace AS2 {
-
-// ObjectInterface::SetConstMemberRaw (0x1400054b0), which the exe inlines into the getter below.
-static __forceinline void Sfr01SetConstMember(Object* pobj, ASStringContext* psc, const char* name, const Value& val)
-{
-    pobj->SetMemberRaw(psc, psc->CreateConstString(name), val, PropFlags());
-}
 
 // Global getIMECandidateListStyle(): an object with the style members that are set.
 // The exe tests each flag as (bool)((Flags >> n) & 1): movzx, shr, test al,1.
