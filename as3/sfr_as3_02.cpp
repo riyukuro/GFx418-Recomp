@@ -1537,7 +1537,9 @@ namespace Instances { namespace fl
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // Defined in sfr_as3_04 (exe 0x142419b10).
-CheckResult IsNameStartChar(int c);
+// noalias: the exe's IsNameStartChar is in this TU, so cl knows that it touches no memory but its result. That lets
+// the inlined IsValidName loop (IsValidXMLName) load the name buffer once.
+__declspec(noalias) CheckResult IsNameStartChar(int c);
 
 // Value(Namespace*) as the exe inlines it here (its out-of-line copy is sfr_as3_01c's 0x1423ef9b0)
 SF_FORCEINLINE Value::Value(Instances::Namespace* v, InlineObjType)
@@ -2559,29 +2561,57 @@ namespace Instances { namespace fl
             List[0]->AS3setChildren(result, value);
     }
 
-    // A valid XML name: a name start character, then name start characters, '-', '.' or digits.
-    static SF_INLINE bool IsValidXMLName(const ASString& name)
+    // The exe inlines IsValidName and IsNameChar (the SDK bodies; out-of-line copies in sfr_as3_04).
+    static inline CheckResult IsNameCharInl(int c)
+    {
+        if (IsNameStartChar(c))
+        {
+            return true;
+        }
+        if (c == '-' || c == '.')
+        {
+            return true;
+        }
+        if (c >= '0' && c <= '9')
+        {
+            return true;
+        }
+        if (c == 0xB7)
+        {
+            return true;
+        }
+        if (c >= 0x0300 && c <= 0x036F)
+        {
+            return true;
+        }
+        if (c >= 0x203F && c <= 0x2040)
+        {
+            return true;
+        }
+        return false;
+    }
+
+    static __forceinline CheckResult IsValidXMLName(const ASString& name)
     {
         if (name.GetLength() == 0)
             return false;
-        if (!IsNameStartChar(name[0]))
+
+        // The first test goes through a pointer, so its call has no noalias and its result slot is not reused by the loop's.
+        CheckResult (*const startChar)(int) = &IsNameStartChar;
+        if (!startChar(name[0]))
             return false;
-        const unsigned len = name.GetLength();
-        for (unsigned i = 1; i < len; ++i)
+
+        const unsigned nameSize = name.GetLength();
+        for (unsigned i = 1; i < nameSize; ++i)
         {
-            const int c = name[i];
-            if (IsNameStartChar(c))
-                continue;
-            if (c == '-' || c == '.')
-                continue;
-            if (c < '0' || c > '9')
+            if (!IsNameCharInl(name[i]))
                 return false;
         }
+
         return true;
     }
 
-    // MS2-FUNCTIONAL: the exe hoists the name buffer out of the inlined IsValidName loop (it knows IsNameStartChar
-    // writes no memory), so registers and the loop differ
+    // Inlines IsValidName (IsValidXMLName above).
     // @0x1423fe3e0
     __declspec(noinline) void XML::AS3setLocalName(const Value& result, const Value& name)
     {
@@ -2608,8 +2638,7 @@ namespace Instances { namespace fl
             List[0]->AS3setLocalName(result, name);
     }
 
-    // MS2-FUNCTIONAL: the exe hoists the name buffer out of the inlined IsValidName loop (it knows IsNameStartChar
-    // writes no memory), so registers and the loop differ
+    // Inlines IsValidName (IsValidXMLName above).
     // @0x1423fe620
     __declspec(noinline) void XML::AS3setName(const Value& result, const Value& name)
     {
