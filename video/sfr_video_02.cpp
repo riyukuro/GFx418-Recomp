@@ -696,30 +696,34 @@ bool FUN_14000e8f0(void* pvbase, Environment* penv, const ASString& name, const 
     return false;
 }
 
-// MS2-FUNCTIONAL: standard members first (slot 0x120 on the AvmCharacter), then width, height, deblocking and smoothing, then the script object.
+// Standard members first (slot 0x120 on the AvmCharacter), then width, height, deblocking and smoothing, then the script object.
 // @0x14000e9f0
 bool FUN_14000e9f0(void* pvbase, Environment* penv, const ASString& name, Value* pvalue)
 {
     char* fields = static_cast<char*>(pvbase);
-    AvmCharacter* pavm = reinterpret_cast<AvmCharacter*>(fields - 8);
     // the exe tries the standard members first: slot 0x120 on this-8 (0x14000ea3d)
-    if ((name.GetHashFlags() & ASConstString::Flag_StandardMember)
-        && pavm->GetStandardMember(pavm->GetStandardMemberConstant(name), pvalue, false))
+    if (((UInt8)(name.GetHashFlags() >> 29) & 1)
+        && reinterpret_cast<AvmCharacter*>(fields - 8)->GetStandardMember(reinterpret_cast<AvmCharacter*>(fields - 8)->GetStandardMemberConstant(name), pvalue, false))
         return true;
     const char* key = name.ToCStr();
     if (!strcmp(key, "width"))
+    {
         pvalue->SetNumber(*reinterpret_cast<int*>(fields + 0x30));
-    else if (!strcmp(key, "height"))
+        return true;
+    }
+    if (!strcmp(key, "height"))
+    {
         pvalue->SetNumber(*reinterpret_cast<int*>(fields + 0x34));
-    else if (!strcmp(key, "deblocking"))
+        return true;
+    }
+    if (!strcmp(key, "deblocking"))
         pvalue->SetNumber(*reinterpret_cast<int*>(fields + 0x38));
     else if (!strcmp(key, "smoothing"))
         pvalue->SetBool(*reinterpret_cast<bool*>(fields + 0x3c));
+    else if (FUN_14000e020(reinterpret_cast<AvmCharacter*>(fields - 8)))
+        return reinterpret_cast<Object*>(FUN_14000e020(reinterpret_cast<AvmCharacter*>(fields - 8)))->GetMember(penv, name, pvalue);
     else
-    {
-        Object* pvideo = pavm->GetASObject();
-        return pvideo ? pvideo->GetMember(penv, name, pvalue) : false;
-    }
+        return false;
     return true;
 }
 
