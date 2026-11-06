@@ -14,7 +14,6 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 
 // Appends the tabable children to the focus group's tab order: the clip's own tabChildren (or the prototype's,
 // looked up once per call chain) can switch its subtree off.
-// MS2-FUNCTIONAL: the exe computes the proto's ObjectInterface pointer before the GetMemberRaw args
 // @0x142941b40
 void AvmSprite::FillTabableArray(InteractiveObject::FillTabableParams* params)
 {
@@ -22,13 +21,22 @@ void AvmSprite::FillTabableArray(InteractiveObject::FillTabableParams* params)
     UPInt   n       = psprite->mDisplayList.GetCount();
     if (n == 0)
         return;
-    if (Unrecovered_1f8 == 0 && params->TabChildrenInProto == 0 && pProto)
+    if (Unrecovered_1f8 == 0)
     {
-        Value value;
-        // raw lookup (vtable +0x58); a null value still counts (ToBool gives false)
-        bool  found = pProto->GetMemberRaw(&Env.StringContext, Env.CreateConstString("tabChildren"), &value);
-        if (found && !value.IsUndefined())
-            params->TabChildrenInProto = value.ToBool(&Env) ? 1 : 2;
+        if (params->TabChildrenInProto == 0)
+        {
+            Object* pproto = pProto;
+            if (pproto)
+            {
+                // raw lookup (vtable +0x58); a null value still counts (ToBool gives false)
+                Value val;
+                if (pproto->GetMemberRaw(&Env.StringContext, Env.CreateConstString("tabChildren"), &val))
+                {
+                    if (!val.IsUndefined())
+                        params->TabChildrenInProto = val.ToBool(&Env) ? 1 : 2;
+                }
+            }
+        }
     }
     if (Unrecovered_1f8 == 2 || params->TabChildrenInProto == 2)
         return;
