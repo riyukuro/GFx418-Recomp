@@ -568,29 +568,78 @@ struct AvmSwfEvent
 static_assert(offsetof(AvmSwfEvent, pActionBuffer) == 0x18, "AvmSwfEvent exe layout");
 static_assert(sizeof(AvmSwfEvent) == 0x20, "AvmSwfEvent exe size");
 
-// MS2-FUNCTIONAL: reproduces the executable event header, key byte, action-data read, and stream-length correction.
-// @0x142972830
-void AvmSwfEvent::Read(StreamContext* stream, unsigned eventId)
+// The exe inlines ActionBufferData::CreateNew here (LTCG); the ctor is protected, so a vtable-less derived
+// shell runs it. novtable: no vptr store of its own, the object keeps ActionBufferData's vftable.
+struct __declspec(novtable) AvmSwfActionBufferNew : ActionBufferData
 {
-    Id = EventId(eventId);
-    Id.ControllerIndex = -1;
-    unsigned actionLength = stream->ReadU32();
-    if (eventId & EventId::Event_KeyPress)
+    SF_FORCEINLINE AvmSwfActionBufferNew() {}
+};
+
+// The SDK's EventId (GFx_Input.h): KeysState is a KeyModifiers object, and operator= is member-wise. Our shared
+// EventId has a UByte KeysState and no operator=, so the SDK temporary and its assignment are spelled out here.
+struct SdkEventId
+{
+    UInt32 Id;
+    UInt32 WcharCode;
+    UInt32 KeyCode;
+    union
     {
-        Id.KeyCode = stream->ReadU8();
-        if (actionLength)
-            --actionLength;
+        UByte    AsciiCode;
+        unsigned TouchID;
+    };
+    UInt8 RollOverCnt;
+    SInt8 ControllerIndex;
+    KeyModifiers KeysState;
+    SInt8 MouseWheelDelta;
+
+    SF_FORCEINLINE SdkEventId(UInt32 id) : Id(id), WcharCode(0), KeyCode(0), AsciiCode(0), RollOverCnt(0),
+                                           MouseWheelDelta(0)
+    {
+        ControllerIndex = -1;
+    }
+};
+static_assert(sizeof(SdkEventId) == sizeof(EventId), "SdkEventId layout");
+
+static SF_FORCEINLINE void AssignEventId(EventId& d, const SdkEventId& o)
+{
+    d.Id              = o.Id;
+    d.WcharCode       = o.WcharCode;
+    d.KeyCode         = o.KeyCode;
+    d.AsciiCode       = o.AsciiCode;
+    d.RollOverCnt     = o.RollOverCnt;
+    d.ControllerIndex = o.ControllerIndex;
+    reinterpret_cast<KeyModifiers&>(d.KeysState) = o.KeysState;
+    d.MouseWheelDelta = o.MouseWheelDelta;
+}
+
+// @0x142972830
+void AvmSwfEvent::Read(StreamContext* psc, unsigned flags)
+{
+    const SdkEventId e(flags);
+    AssignEventId(Id, e);
+    UInt32 eventLength = psc->ReadU32();
+    if (Id.Id & EventId::Event_KeyPress)
+    {
+        Id.KeyCode = psc->ReadU8();
+        --eventLength;
     }
 
-    pActionBuffer = MakePickable(ActionBufferData::CreateNew());
-    if (!pActionBuffer)
-        return;
-    pActionBuffer->Read(stream, actionLength);
-    const unsigned actualLength = pActionBuffer->GetLength();
-    if (actualLength < actionLength)
-        stream->CurByteIndex += actionLength - actualLength;
-    else if (actualLength > actionLength)
-        stream->CurByteIndex -= actualLength - actionLength;
+    pActionBuffer = *static_cast<ActionBufferData*>(SF_NEW AvmSwfActionBufferNew());
+    pActionBuffer->Read(psc, eventLength);
+    if (pActionBuffer->GetLength() != eventLength)
+    {
+        if (eventLength > pActionBuffer->GetLength())
+        {
+            unsigned remainder = eventLength - pActionBuffer->GetLength();
+            for (unsigned i = 0; i < remainder; i++)
+                psc->ReadU8(); // the SDK skips with ReadS8; StreamContext here has only ReadU8
+        }
+        else
+        {
+            UPInt pos = psc->CurByteIndex;
+            psc->CurByteIndex = pos - (pActionBuffer->GetLength() - eventLength);
+        }
+    }
 }
 
 // @0x142962010
@@ -1982,7 +2031,7 @@ void ActionBufferData::Read(StreamContext* psc, unsigned eventLength)
 {
     psc->Align();
     pBuffer = (UByte*)SF_HEAP_AUTO_ALLOC(this, eventLength);
-    memcpy(pBuffer, psc->pData + psc->CurByteIndex, eventLength);
+    memcpy(pBuffer, &psc->pData[psc->CurByteIndex], eventLength);
     BufferLen = eventLength;
     psc->Align();
     psc->CurByteIndex += eventLength;
