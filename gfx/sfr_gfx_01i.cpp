@@ -2572,10 +2572,10 @@ void MovieImpl::DragState::InitCenterDelta(bool lockCenter)
     {
         // Not centred on the mouse: keep the character's offset from it, in its parent's coordinates.
         Render::Matrix2F   parentWorldMat;
-        Render::Matrix2F   worldMat;
         InteractiveObject* pchar = pCharacter;
         if (pchar->GetParent())
         {
+            Render::Matrix2F worldMat;
             pchar->GetParent()->GetWorldMatrix(&worldMat);
             parentWorldMat = worldMat;
         }
@@ -4592,7 +4592,6 @@ template class Scaleform::RefCountBaseStatImpl<Scaleform::RefCountNTSImpl, 0x143
 // MS2-FUNCTIONAL ?HitTest@MovieImpl@GFx@Scaleform@@UEAA_NMMW4HitTestType@Movie@23@I@Z: scheduling of the inlined SetNormalizedScreenCoords (same as sfr_gfx_06 GetMouseX)
 // MS2-FUNCTIONAL ?TranslateToScreen@MovieImpl@GFx@Scaleform@@UEAA?AV?$Point@M@Render@3@AEBV453@PEAV?$Matrix2x4@M@53@@Z: xmm register allocation of the inlined Prepend pair (same operations)
 // MS2-FUNCTIONAL ?TranslateToScreen@MovieImpl@GFx@Scaleform@@UEAA?AV?$Rect@M@Render@3@AEBV453@PEAV?$Matrix2x4@M@53@@Z: xmm register allocation of the inlined Prepend pair (same operations)
-// MS2-FUNCTIONAL ?InitCenterDelta@DragState@MovieImpl@GFx@Scaleform@@QEAAX_N@Z: the two matrices' stack slots are swapped and the mouse point's halves load in the other order; same operations
 // MS2-FUNCTIONAL ?SetKeyboardFocusTo@MovieImpl@GFx@Scaleform@@QEAAXPEAVInteractiveObject@23@IW4FocusMovedType@23@@Z: the exe keeps 0 in a callee-saved register (one more saved register, 0x50 frame); same operations
 // MS2-FUNCTIONAL ?ReadTextData@MovieImpl@GFx@Scaleform@@SA_NPEAVString@3@PEAVFile@3@PEAH_N@Z: the exe tests the BOM high byte in the other register and keeps rbp in a different home slot; same operations
 // MS2-FUNCTIONAL ?HandleEvent@MovieImpl@GFx@Scaleform@@UEAAIAEBVEvent@23@@Z: the SetFocus loop walks the keyboard states with a stepped pointer and picks NULL past 4 with a cmov (0 kept in r15: one more saved register, 0x48 frame); this build indexes and branches; same calls
