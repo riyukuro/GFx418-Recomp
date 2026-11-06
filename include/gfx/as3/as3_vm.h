@@ -388,7 +388,8 @@ class XMLSupport : public GASRefCountBase
 public:
     // (appended, sfr19) only inlined (VM constructor 0x1424dae90)
     XMLSupport(VM& vm, bool enabled = false) : GASRefCountBase(vm.GetGCPtr()), Enabled(enabled) {}
-    virtual ~XMLSupport();                                                                              // slot 4
+    // inline: the exe has no out-of-line copy; the deleting dtors and ~XMLSupportImpl inline it
+    virtual ~XMLSupport() {}                                                                            // slot 4
     virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;                                       // slot 0, 0x142504510 (appended, sfr19)
 
     // overloads: MSVC gives the later declaration the earlier slot

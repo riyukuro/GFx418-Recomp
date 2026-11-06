@@ -24,7 +24,10 @@
 // MS2-RANGE: 0x1424e3750-0x1424e37a0 .text$mn
 // MS2-RANGE: 0x1424e3bd0-0x1424e3c30 .text$mn
 // MS2-RANGE: 0x1424e3cc0-0x1424e3d60 .text$mn
+// MS2-RANGE: 0x1424e3950-0x1424e3a00 .text$mn
+// MS2-RANGE: 0x1424e3d60-0x1424e3de0 .text$mn
 // MS2-RANGE: 0x1424e3e50-0x1424e3eb0 .text$mn
+// MS2-RANGE: 0x1424e4190-0x1424e4290 .text$mn
 // MS2-RANGE: 0x1424e4290-0x1424e42c0 .text$mn
 // MS2-RANGE: 0x1424e46f0-0x1424e4f40 .text$mn
 // MS2-RANGE: 0x1424e4f40-0x1424e5500 .text$mn
@@ -270,19 +273,50 @@ void* DeleteAs3_1424e3890(void* self, unsigned flags);
 
 
 // The stage display object: its members release in reverse order, then DisplayObjContainer's dtor.
+// __forceinline so that the deleting dtor below inlines it, as the exe does; the out-of-line copy is still emitted.
 // @0x1424defe0
-Scaleform::GFx::AS3::Stage::~Stage() {}
+__forceinline Scaleform::GFx::AS3::Stage::~Stage() {}
 
-// XMLSupport's dtor has no out-of-line copy in the exe: it is inlined here and in the scalar deleting dtors.
-Scaleform::GFx::AS3::XMLSupport::~XMLSupport()
+namespace Scaleform { namespace GFx { namespace AS3 {
+// The deleting destructor (vftable slot 0); ~Stage is inlined into it.
+// @0x1424e3950
+void* DeleteAs3_1424e3950(void* p, unsigned flags)
 {
+    static_cast<Stage*>(p)->Stage::~Stage();
+    if (flags & 1)
+    {
+        if (!(flags & 4))
+            Memory::pGlobalHeap->Free(p);
+        else
+            ::operator delete(p, 0x130);
+    }
+    return p;
 }
+}}} // namespace Scaleform::GFx::AS3
 
-// The members release themselves, then XMLSupport's and GASRefCountBase's dtors.
+// The members release themselves, then XMLSupport's (inline) and GASRefCountBase's dtors. __forceinline so that the
+// deleting dtor below inlines it, as the exe does; the out-of-line copy is still emitted.
 // @0x1424e0290
-Scaleform::GFx::AS3::XMLSupportImpl::~XMLSupportImpl()
+__forceinline Scaleform::GFx::AS3::XMLSupportImpl::~XMLSupportImpl()
 {
 }
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+// The deleting destructor (vftable slot 4); ~XMLSupportImpl is inlined into it.
+// @0x1424e4190
+void* DeleteAs3_1424e4190(void* p, unsigned flags)
+{
+    static_cast<XMLSupportImpl*>(p)->XMLSupportImpl::~XMLSupportImpl();
+    if (flags & 1)
+    {
+        if (!(flags & 4))
+            Memory::pGlobalHeap->Free(p);
+        else
+            ::operator delete(p, 0x48);
+    }
+    return p;
+}
+}}} // namespace Scaleform::GFx::AS3
 // MS2-PIN: ??_7FlashUI@AS3@GFx@Scaleform@@6B@ 0x14317b648
 // MS2-PIN: ??_7XMLSupport@AS3@GFx@Scaleform@@6B@ 0x14317b7b8
 // MS2-PIN: ??_7XMLSupportImpl@AS3@GFx@Scaleform@@6B@ 0x14317f9e0
@@ -894,12 +928,28 @@ void Object::AddDynamicSlotValuePair(const Value& prop_name, const Value& v, Slo
 // ==== destructors ===================================================================================================
 
 namespace Classes {
+    // __forceinline so that the deleting dtor below inlines it, as the exe does; the out-of-line copy is still emitted.
     // @0x1424df350
-    UDBase::~UDBase()
+    __forceinline UDBase::~UDBase()
     {
         // The traits pointer carries a tag in bit 0; the Class base is destroyed implicitly after this body.
         reinterpret_cast<const Traits*>(reinterpret_cast<UPInt>(pTraits.GetPtr()) & ~UPInt(1))->DestructTail(*this);
     }
+}
+
+// The UDBase deleting destructor (vftable slot 0); ~UDBase is inlined into it.
+// @0x1424e3d60
+void* DeleteAs3_1424e3d60(void* p, unsigned flags)
+{
+    static_cast<Classes::UDBase*>(p)->Classes::UDBase::~UDBase();
+    if (flags & 1)
+    {
+        if (!(flags & 4))
+            Memory::pGlobalHeap->Free(p);
+        else
+            ::operator delete(p, 0x50);
+    }
+    return p;
 }
 
 // The user data an application attached to an object (GFx::Value::SetUserData) and the movie it was set from.

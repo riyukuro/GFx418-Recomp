@@ -12,10 +12,11 @@
 // MS2-RANGE: 0x1424e3260-0x1424e3290 .text$mn
 // MS2-RANGE: 0x1424e33f0-0x1424e3580 .text$mn
 // MS2-RANGE: 0x1424e35e0-0x1424e3690 .text$mn
-// MS2-RANGE: 0x1424e3830-0x1424e3bd0 .text$mn
+// MS2-RANGE: 0x1424e3830-0x1424e3950 .text$mn
+// MS2-RANGE: 0x1424e3a00-0x1424e3bd0 .text$mn
 // MS2-RANGE: 0x1424e3c30-0x1424e3cc0 .text$mn
-// MS2-RANGE: 0x1424e3d60-0x1424e3e50 .text$mn
-// MS2-RANGE: 0x1424e3eb0-0x1424e4290 .text$mn
+// MS2-RANGE: 0x1424e3de0-0x1424e3e50 .text$mn
+// MS2-RANGE: 0x1424e3eb0-0x1424e4190 .text$mn
 // MS2-RANGE: 0x1424e42c0-0x1424e46f0 .text$mn
 // MS2-RANGE: 0x1424e5e80-0x1424e63b0 .text$mn
 // MS2-RANGE: 0x1424e6aa0-0x1424e6f90 .text$mn
@@ -995,24 +996,19 @@ static inline void* Sfr21Mem(void* p, UPInt off) { return *reinterpret_cast<void
 // The base vftables the inlined base destructors store before the out-of-line base destructor runs.
 extern const void* DAT_14317c9f8[];     // RefCountBase<ASIntervalTimerIntf, 323>
 extern const void* DAT_14317c9e0[];     // GFx::MovieDefRootNode
-extern const void* DAT_14317b7b8[];     // XMLSupport
 extern const void* DAT_14317afe8[];     // empty interface (0x1424e2e70)
 extern const void* DAT_14317b750[];     // VMAbcFile
 extern const void* DAT_14317bc40[];     // TreeShape::NodeData
 extern const void* DAT_14317bde0[];     // ASMovieRootBase
 //
 //
-extern const void* DAT_14317d220[];     // Stage
-extern const void* DAT_14317d5f0[];     // Stage +0x18
 extern const void* DAT_14317d8a8[];     // ASVM::AbcFileWithMovieDef
 extern const void* DAT_14317d8c0[];     // AS3::MovieDefRootNode
 extern const void* DAT_14317de60[];     // AvmLoader
 extern const void* DAT_14317e228[];     // AvmLoader +0x18
 extern const void* DAT_14317e330[];     // AvmLoader +0x140
 extern const void* DAT_14317e3e8[];     // AvmLoader +0x150
-extern const void* DAT_14317f778[];     // Classes::UDBase
 extern const void* DAT_14317f848[];     // empty class (0x1424e2c90, 0x1424e3a00)
-extern const void* DAT_14317f9e0[];     // XMLSupportImpl
 static inline void Sfr21GVft(void* p, UPInt off, const void* const* vft)
 {
     *reinterpret_cast<const void* const**>(Sfr21At(p, off)) = vft;
@@ -1248,20 +1244,7 @@ void* DeleteAs3_1424e3890(void* p, unsigned flags)
 //
 //
 
-// Stage
-// Scalar deleting destructor written out against raw member offsets; the class is not recovered.
-// @0x1424e3950
-void* DeleteAs3_1424e3950(void* p, unsigned flags)
-{
-    Sfr21GVft(p, 0, DAT_14317d220);
-    Sfr21GVft(p, 0x18, DAT_14317d5f0);
-    static_cast<Scaleform::GFx::ASStringNode*>(Sfr21Mem(p, 0x120))->Release();
-    Sfr21GPtrNTS(p, 0x118);
-    Sfr21GPtrNTS(p, 0x110);
-    static_cast<Scaleform::GFx::DisplayObjContainer*>(p)->Scaleform::GFx::DisplayObjContainer::~DisplayObjContainer();
-    Sfr21GFree(p, flags, 0x130);
-    return p;
-}
+// The Stage deleting dtor (0x1424e3950) is in sfr_as3_16, next to ~Stage.
 
 // @0x1424e3a00
 void* DeleteAs3_1424e3a00(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317f848); Sfr21GFree(p, flags, 0x10); return p; }
@@ -1286,16 +1269,7 @@ void* DeleteAs3_1424e3c30(void* p, unsigned flags)
     return p;
 }
 
-// UDBase
-// @0x1424e3d60
-void* DeleteAs3_1424e3d60(void* p, unsigned flags)
-{
-    Sfr21GVft(p, 0, DAT_14317f778);
-    reinterpret_cast<const Scaleform::GFx::AS3::Traits*>(reinterpret_cast<UPInt>(Sfr21Mem(p, 0x20)) & ~UPInt(1))->DestructTail(*static_cast<Scaleform::GFx::AS3::Object*>(p));
-    static_cast<Scaleform::GFx::AS3::Class*>(p)->Scaleform::GFx::AS3::Class::~Class();
-    Sfr21GFree(p, flags, 0x50);
-    return p;
-}
+// The UDBase deleting dtor (0x1424e3d60) is in sfr_as3_16, next to ~UDBase.
 
 // VMAbcFile (its destructor is inlined here in the exe)
 // @0x1424e3eb0
@@ -1335,23 +1309,11 @@ void* DeleteAs3_1424e3fc0(void* p, unsigned flags)
 // @0x1424e4040
 void* DeleteAs3_1424e4040(void* p, unsigned flags) { static_cast<Scaleform::GFx::AS3::InstanceTraits::CTraits*>(p)->Scaleform::GFx::AS3::InstanceTraits::CTraits::~CTraits(); Sfr21GFree(p, flags, 0xe8); return p; }
 
-// XMLSupport
+// XMLSupport (its inline dtor stores the vptr, then GASRefCountBase's dtor runs)
 // @0x1424e4120
-void* DeleteAs3_1424e4120(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317b7b8); static_cast<Scaleform::GFx::AS3::GASRefCountBase*>(p)->Scaleform::GFx::AS3::GASRefCountBase::~GASRefCountBase(); Sfr21GFree(p, flags, 0x28); return p; }
+void* DeleteAs3_1424e4120(void* p, unsigned flags) { static_cast<Scaleform::GFx::AS3::XMLSupport*>(p)->Scaleform::GFx::AS3::XMLSupport::~XMLSupport(); Sfr21GFree(p, flags, 0x28); return p; }
 
-// XMLSupportImpl
-// @0x1424e4190
-void* DeleteAs3_1424e4190(void* p, unsigned flags)
-{
-    Sfr21GVft(p, 0, DAT_14317f9e0);
-    Sfr21GSPtr(p, 0x40);
-    Sfr21GSPtr(p, 0x38);
-    Sfr21GSPtr(p, 0x30);
-    Sfr21GVft(p, 0, DAT_14317b7b8);
-    static_cast<Scaleform::GFx::AS3::GASRefCountBase*>(p)->Scaleform::GFx::AS3::GASRefCountBase::~GASRefCountBase();
-    Sfr21GFree(p, flags, 0x48);
-    return p;
-}
+// The XMLSupportImpl deleting dtor (0x1424e4190) is in sfr_as3_16, next to ~XMLSupportImpl.
 
 
 
@@ -1777,3 +1739,4 @@ SF_NOINLINE Value::Value(const ASString& v)
         value.VS._1.VStr->AddRef();
 }
 }}} // namespace Scaleform::GFx::AS3
+// MS2-PIN: ??_7XMLSupport@AS3@GFx@Scaleform@@6B@ 0x14317b7b8
