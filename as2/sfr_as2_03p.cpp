@@ -53,15 +53,31 @@ MovieRoot::ActionQueueType::~ActionQueueType()
     }
 }
 
+// `inline` under cl (COMDAT-any): sfr_as2_04h inlines the same bodies into its deleting dtors (0x142929590,
+// 0x142929600 and the AvmCharacter tails of 0x1429294f0 / 0x1429296e0). MS2_Sfr03pEmitAvmDtors (uncalled anchor) keeps
+// them emitted here.
+#if defined(__clang__)
+#define SFR03P_AVM_DTOR
+#else
+#define SFR03P_AVM_DTOR inline
+#endif
 // @0x1429253d0
-AvmCharacter::~AvmCharacter()
+SFR03P_AVM_DTOR AvmCharacter::~AvmCharacter()
 {
 }
 
 // @0x142925420
-AvmSprite::~AvmSprite()
+SFR03P_AVM_DTOR AvmSprite::~AvmSprite()
 {
 }
+// Calls the inline dtors above out of line (inline_depth 0), so cl emits them here. Nothing calls it.
+#pragma inline_depth(0)
+void MS2_Sfr03pEmitAvmDtors(AvmCharacter* pc, AvmSprite* ps)
+{
+    pc->AvmCharacter::~AvmCharacter();
+    ps->AvmSprite::~AvmSprite();
+}
+#pragma inline_depth()
 
 // The members release in reverse order: the frames, the throw value, the try blocks, the call stack, the registers
 // and the stack.

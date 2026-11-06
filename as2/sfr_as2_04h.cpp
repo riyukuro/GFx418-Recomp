@@ -24,6 +24,8 @@
 #include "../include/gfx/gfx_displayobject.h"
 #include "../include/gfx/gfx_asstring.h"
 #include "../include/gfx/as2/as2_movieroot.h"
+#include "../include/gfx/as2/as2_avmsprite.h"
+#include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/gfx/as2/as2_refcountcollector.h"
 #include "../include/kernel/sf_arraypaged.h"
 
@@ -83,11 +85,6 @@ static inline void ra(unsigned long long tagged) // atomic shared string-data re
 }
 
 // The base vftables the inlined destructors store.
-extern const void* DAT_143215b00[];
-extern const void* DAT_143215c48[];
-extern const void* DAT_143216338[];
-extern const void* DAT_143216480[];
-extern const void* DAT_143216528[];
 extern const void* DAT_1432177d8[];
 extern const void* DAT_14317bde0[];
 // The RefCountBaseGC<323> dtor is protected: a derived view runs it.
@@ -143,6 +140,16 @@ inline ActionBuffer::~ActionBuffer()
 {
 }
 
+// Out of line at 0x1429253d0 / 0x142925420 in sfr_as2_03p (`inline` there under cl). The EventHandlers hash dtor
+// (Sfr04hHashEv, 0x142924a20) and ~Environment stay out of line. ~AvmSprite is __forceinline: cl will not inline it
+// into 0x142929600 otherwise.
+inline AvmCharacter::~AvmCharacter()
+{
+}
+__forceinline AvmSprite::~AvmSprite()
+{
+}
+
 // Out of line at 0x142925920 in sfr_as2_03 (`inline` there under cl). The exe inlines it into 0x14292b4e0, cl does
 // not without __forceinline (same body and calls as the 03 copy).
 __forceinline GlobalContext::~GlobalContext()
@@ -187,12 +194,8 @@ void* DeleteAs2_142929400(void* p, unsigned flags)
 void* DeleteAs2_1429294f0(void* p, unsigned flags)
 {
     rg(*(void**)((char*)p+0x38));
-    *(const void**)p = DAT_143215b00;
     reinterpret_cast<AvmDisplayObjBase*>((char*)p+0x30)->AvmDisplayObjBase::~AvmDisplayObjBase();
-    *(const void**)((char*)p+0x8) = DAT_143215c48;
-    reinterpret_cast<Sfr04hHashEv*>((char*)p+0x28)->~Sfr04hHashEv();
-    static_cast<ObjectInterface*>((void*)((char*)p+0x8))->ObjectInterface::~ObjectInterface();
-    reinterpret_cast<AvmDisplayObjBase*>(p)->AvmDisplayObjBase::~AvmDisplayObjBase();
+    static_cast<AvmCharacter*>(p)->AvmCharacter::~AvmCharacter();
     if ((flags & 5) == 5)
         ::operator delete(p, 0x40);
     return p;
@@ -201,11 +204,7 @@ void* DeleteAs2_1429294f0(void* p, unsigned flags)
 // @0x142929590
 void* DeleteAs2_142929590(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_143215b00;
-    *(const void**)((char*)p+0x8) = DAT_143215c48;
-    reinterpret_cast<Sfr04hHashEv*>((char*)p+0x28)->~Sfr04hHashEv();
-    static_cast<ObjectInterface*>((void*)((char*)p+0x8))->ObjectInterface::~ObjectInterface();
-    reinterpret_cast<AvmDisplayObjBase*>(p)->AvmDisplayObjBase::~AvmDisplayObjBase();
+    static_cast<AvmCharacter*>(p)->AvmCharacter::~AvmCharacter();
     if ((flags & 5) == 5)
         ::operator delete(p, 0x30);
     return p;
@@ -214,18 +213,7 @@ void* DeleteAs2_142929590(void* p, unsigned flags)
 // @0x142929600
 void* DeleteAs2_142929600(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_143216338;
-    *(const void**)((char*)p+0x8) = DAT_143216480;
-    *(const void**)((char*)p+0x30) = DAT_143216528;
-    ((ArrayLH<UInt32>*)((char*)p+0x1e0))->~ArrayLH(); // an array of POD elements (element type not recovered)
-    rg(*(void**)((char*)p+0x1d8));
-    reinterpret_cast<Environment*>((char*)p+0x38)->Environment::~Environment();
-    *(const void**)p = DAT_143215b00;
-    reinterpret_cast<AvmDisplayObjBase*>((char*)p+0x30)->AvmDisplayObjBase::~AvmDisplayObjBase();
-    *(const void**)((char*)p+0x8) = DAT_143215c48;
-    reinterpret_cast<Sfr04hHashEv*>((char*)p+0x28)->~Sfr04hHashEv();
-    static_cast<ObjectInterface*>((void*)((char*)p+0x8))->ObjectInterface::~ObjectInterface();
-    reinterpret_cast<AvmDisplayObjBase*>(p)->AvmDisplayObjBase::~AvmDisplayObjBase();
+    static_cast<AvmSprite*>(p)->AvmSprite::~AvmSprite();
     if ((flags & 5) == 5)
         ::operator delete(p, 0x200);
     return p;
@@ -237,12 +225,8 @@ void* DeleteAs2_1429296e0(void* p, unsigned flags)
     rg(*(void**)((char*)p+0x60));
     ((Value*)((char*)p+0x40))->~Value();
     rs(*(void**)((char*)p+0x38));
-    *(const void**)p = DAT_143215b00;
     reinterpret_cast<AvmDisplayObjBase*>((char*)p+0x30)->AvmDisplayObjBase::~AvmDisplayObjBase();
-    *(const void**)((char*)p+0x8) = DAT_143215c48;
-    reinterpret_cast<Sfr04hHashEv*>((char*)p+0x28)->~Sfr04hHashEv();
-    static_cast<ObjectInterface*>((void*)((char*)p+0x8))->ObjectInterface::~ObjectInterface();
-    reinterpret_cast<AvmDisplayObjBase*>(p)->AvmDisplayObjBase::~AvmDisplayObjBase();
+    static_cast<AvmCharacter*>(p)->AvmCharacter::~AvmCharacter();
     if ((flags & 5) == 5)
         ::operator delete(p, 0x68);
     return p;
@@ -329,3 +313,8 @@ void* DeleteAs2_14292c3e0(void* p, unsigned flags)
 // The inlined ActionBuffer and GlobalContext destructors emit these vftables here as well.
 // MS2-PIN: ??_7ActionBuffer@AS2@GFx@Scaleform@@6B@ 0x1432153c8
 // MS2-PIN: ??_7GlobalContext@AS2@GFx@Scaleform@@6B@ 0x143215af8
+// MS2-PIN: ??_7AvmCharacter@AS2@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x143215b00
+// MS2-PIN: ??_7AvmCharacter@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215c48
+// MS2-PIN: ??_7AvmSprite@AS2@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x143216338
+// MS2-PIN: ??_7AvmSprite@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216480
+// MS2-PIN: ??_7AvmSprite@AS2@GFx@Scaleform@@6B@ 0x143216528
