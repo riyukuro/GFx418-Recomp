@@ -147,26 +147,30 @@ inline FontHandle::~FontHandle()
 
 // ---- TextField
 
-// MS2-FUNCTIONAL 0x1425b5930: same member init and calls; register allocation differs and ours jump-threads the second autoSize test
 // @0x1425b5930
 TextField::TextField(TextFieldDef* def, MovieDefImpl* pbindingDefImpl, ASMovieRootBase* pasRoot,
                      InteractiveObject* parent, ResourceId id)
     : InteractiveObject(pbindingDefImpl, pasRoot, parent, id), pDef(def)
 {
     pImageDescAssoc = NULL;
-    pBinding = pbindingDefImpl ? &pbindingDefImpl->GetResourceBinding() : NULL;
+    if (pbindingDefImpl)
+        pBinding = &pbindingDefImpl->GetResourceBinding();
+    else
+        pBinding = NULL;
     Flags = 0;
     FocusedControllerIdx = ~0u;
     Alignment = def->Alignment;
-    Flags = def->IsPassword() ? (Flags | Flags_Password) : Flags;
-    Flags = def->IsHtml() ? (Flags | Flags_Html) : Flags;
-    pShadow = NULL;
+    if (def->IsPassword()) Flags |= Flags_Password; else Flags &= ~Flags_Password;
+    if (def->IsHtml()) Flags |= Flags_Html; else Flags &= ~Flags_Html;
     Flags |= Flags_MouseWheelEnabled;
+    pShadow = NULL;
 
     MovieImpl* proot = pasRoot->GetMovieImpl();
     Ptr<Render::Text::Allocator> palloc = proot->GetTextAllocator();
     FontManager* pfontMgr = proot->FindFontManager(pbindingDefImpl);
-    if (!pfontMgr && (!parent || !(pfontMgr = parent->GetFontManager())))
+    if (!pfontMgr && parent)
+        pfontMgr = parent->GetFontManager();
+    if (!pfontMgr)
         pfontMgr = proot->FindFontManager(NULL);
     pDocument = *SF_HEAP_NEW(proot->GetMovieHeap()) Render::Text::DocView(palloc, pfontMgr, GetLog());
     pDocument->SetDocumentListener(&TextDocListener);
@@ -192,11 +196,12 @@ TextField::TextField(TextFieldDef* def, MovieDefImpl* pbindingDefImpl, ASMovieRo
         pDocument->SetMultiline();
     else
         pDocument->ClearMultiline();
-    bool autoSize = def->IsAutoSize();
     // a multiline word-wrapped field keeps its width
-    if (autoSize && !(def->IsWordWrap() && def->IsMultiline()))
+    const bool autoSizeByX = (def->IsAutoSize() && !(def->IsWordWrap() && def->IsMultiline()));
+    const bool autoSizeByY = def->IsAutoSize();
+    if (autoSizeByX)
         pDocument->SetAutoSizeX();
-    if (autoSize)
+    if (autoSizeByY)
         pDocument->SetAutoSizeY();
     if (def->IsWordWrap())
         pDocument->SetWordWrap();
