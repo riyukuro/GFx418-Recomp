@@ -1480,21 +1480,27 @@ static SF_INLINE IMEStyleData* GetIMEStyles(TextFieldObject* ptf)
 
 // TextField.getIMECompositionStringStyle(category)
 // @0x1428ebbd0
-// MS2-FUNCTIONAL same code; the exe restores rsi after the field's release, ours before it (save/restore placement)
 void TextFieldProto::GetIMECompositionStringStyle(const FnCall& fn)
 {
     fn.Result->SetUndefined();
-    Ptr<TextFieldObject> ptf = GetThisTextFieldObject(fn);
-    if (ptf)
+    if (fn.ThisPtr)
     {
-        IMEStyleData* pstyles = GetIMEStyles(ptf);
-        if (pstyles)
+        Ptr<TextFieldObject> ptf;
+        if (fn.ThisPtr->GetObjectType() == ObjectInterface::Object_TextField)
+            ptf = ((AvmTextField*)fn.ThisPtr)->GetTextFieldASObject();
+        else if (fn.ThisPtr->GetObjectType() == ObjectInterface::Object_TextFieldASObject)
+            ptf = (TextFieldObject*)fn.ThisPtr;
+        if (ptf)
         {
-            ASString name = fn.Arg(0).ToString(fn.Env);
-            int      cat = GFx_StringToIMEStyleCategory(name);
-            // a category that was never set still gives its (default) highlight, as in the exe
-            if (cat < IMEStyleData::SC_MaxNum)
+            IMEStyleData* pstyles = GetIMEStyles(ptf);
+            if (pstyles)
+            {
+                ASString name(fn.Arg(0).ToString(fn.Env));
+                int      cat = GFx_StringToIMEStyleCategory(name);
+                if (cat >= IMEStyleData::SC_MaxNum)
+                    return;
                 MakeStyle(fn, pstyles->HighlightStyles[cat]);
+            }
         }
     }
 }
