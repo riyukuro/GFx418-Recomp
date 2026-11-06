@@ -212,7 +212,8 @@ void Value::Add(Environment* penv, int v2)
     }
 }
 
-// MS2-FUNCTIONAL register allocation of the operand types and the ToNumber call order
+// MS2-FUNCTIONAL: LTCG keeps the pv1/pv2 type bytes in sil/r14b across the ToString/ToNumber calls and reuses them in
+// the Value dtors (our cl reloads them), and the two ToPrimitive results sit in swapped frame slots
 // @0x142935200
 Value Value::Compare(Environment* penv, const Value& v, int action) const
 {
@@ -233,14 +234,16 @@ Value Value::Compare(Environment* penv, const Value& v, int action) const
     if (penv->GetVersion() > 6 && (pv1.IsUndefined() || pv2.IsUndefined()))
         return Value();
 
-    // Both orders reduce to val1 < val2.
-    Number val1 = pv1.ToNumber(penv);
-    Number val2 = pv2.ToNumber(penv);
-    if (action > 0)
+    Number val1, val2;
+    if (action < 0)
     {
-        Number t = val1;
-        val1     = val2;
-        val2     = t;
+        val1 = pv1.ToNumber(penv);
+        val2 = pv2.ToNumber(penv);
+    }
+    else
+    {
+        val2 = pv1.ToNumber(penv);
+        val1 = pv2.ToNumber(penv);
     }
 
     if (NumberUtil::IsNaN(val1) || NumberUtil::IsNaN(val2))
