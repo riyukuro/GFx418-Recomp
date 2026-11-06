@@ -863,6 +863,7 @@ void SetBackgroundColorTag::Read(LoadProcess* p)
 }
 
 // @0x1425d8230
+// MS2-FUNCTIONAL: the tag loader table is read through a volatile SF_EXE_DATA pointer (DLL LNK2016 workaround); the exe indexes it off __ImageBase
 void SpriteDef::Read(LoadProcess* p, ResourceId charId)
 {
     Stream* pin    = p->GetStream();

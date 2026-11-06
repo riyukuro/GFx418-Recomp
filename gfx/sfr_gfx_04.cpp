@@ -297,7 +297,7 @@ MovieDataDef::~MovieDataDef()
 }
 
 // @0x1425d1110
-// MS2-FUNCTIONAL: register allocation differs
+// The resource name is the short file name.
 String MovieDataDef::GetResourceName() const
 {
     return String(GetShortFilename(pData->GetFileURL()));
@@ -1197,7 +1197,7 @@ void MovieDefImpl::BindTaskData::AddResourceImportMovie(MovieDefImpl* pdefImpl)
 // *** MovieDefImpl
 
 // @0x1425cb1a0
-// MS2-FUNCTIONAL: HeapDesc member store order and the heap-name String release differ
+// The movie heap is set up from HeapDesc and named after the file.
 MovieDefImpl::MovieDefImpl(MovieDataDef* pdataDef, MovieDefBindStates* pstates, LoaderImpl* ploaderImpl,
                            unsigned loadConstants, StateBagImpl* pdelegateState, MemoryHeap* pargHeap,
                            bool fullyLoaded, UPInt memoryArena)
