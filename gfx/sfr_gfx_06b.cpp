@@ -151,44 +151,46 @@ Ptr<TreeNode> InteractiveObject::CreateRenderNode(Render::Context& context) cons
 }
 
 // The dragged character puts its origin under the mouse (plus the grab offset), kept inside the drag bounds.
+// The SDK's GetWorldMatrix() by value and Alg::Clamp.
+static inline Render::Matrix2F DragWorldMatrix(const DisplayObjectBase* pobj)
+{
+    Render::Matrix2F m;
+    pobj->GetWorldMatrix(&m);
+    return m;
+}
+static inline float DragClamp(const float v, const float minVal, const float maxVal)
+{
+    return Alg::Max<float>(minVal, Alg::Min<float>(v, maxVal));
+}
+
 // @0x1425f81b0
-// MS2-FUNCTIONAL: the exe keeps the identity parent matrix in registers and spills it only for GetWorldMatrix
 void InteractiveObject::DoMouseDrag()
 {
-    MovieImpl* proot = GetMovieImpl();
-    Render::PointF delta(proot->DragCenterDelta());
-    bool           bound = proot->DragBound();
-    Render::PointF lt(proot->DragBoundLT());
-    Render::PointF rb(proot->DragBoundRB());
-    if (proot->pKeepAdvancingChar != this)
-        return;
+    MovieImpl::DragState st;
+    MovieImpl*           proot = GetMovieImpl();
+    st = *reinterpret_cast<const MovieImpl::DragState*>(&proot->pKeepAdvancingChar);
 
-    Render::PointF worldMouse(proot->MouseLastPosition);
-
-    Matrix parentWorldMat;
-    if (pParent)
-        pParent->GetWorldMatrix(&parentWorldMat);
-    Matrix inv(Render::NoInit);
-    inv.SetInverse(parentWorldMat);
-    float x = worldMouse.x;
-    float y = worldMouse.y;
-    inv.Transform(&x, &y);
-    x += delta.x;
-    y += delta.y;
-
-    if (bound)
+    if (this == st.pCharacter)
     {
-        x = Alg::Min(x, rb.x);
-        if (lt.x > x)
-            x = lt.x;
-        y = Alg::Min(y, rb.y);
-        if (lt.y > y)
-            y = lt.y;
-    }
+        Render::PointF worldMouse(proot->MouseLastPosition);
+        Render::PointF parentMouse;
+        Matrix         parentWorldMat;
+        if (pParent)
+            parentWorldMat = DragWorldMatrix(pParent);
 
-    SetAcceptAnimMoves(false);
-    SetX(Render::TwipsToPixels(double(x)));
-    SetY(Render::TwipsToPixels(double(y)));
+        parentWorldMat.TransformByInverse(&parentMouse, worldMouse);
+        parentMouse += st.CenterDelta;
+
+        if (st.Bound)
+        {
+            parentMouse.x = DragClamp(parentMouse.x, st.BoundLT.x, st.BoundRB.x);
+            parentMouse.y = DragClamp(parentMouse.y, st.BoundLT.y, st.BoundRB.y);
+        }
+
+        SetAcceptAnimMoves(false);
+        SetX(Render::TwipsToPixels(double(parentMouse.x)));
+        SetY(Render::TwipsToPixels(double(parentMouse.y)));
+    }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
