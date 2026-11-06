@@ -1782,7 +1782,7 @@ struct Sfr33CollectorEntry
     Scaleform::Ptr<Scaleform::RefCountImpl> pObject;
     void*                                   pExtra;
 };
-void FUN_1423de770(void* self, const Sfr33CollectorEntry& e);
+// (the record goes to Collect as its Stats: pObject is the observer slot)
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1796,7 +1796,7 @@ __declspec(noinline) void Sfr33CollectorQueue(UByte* raw, RefCountImpl* p)
         return;
     const unsigned curRootCount = static_cast<unsigned>(self->GetRootsCount());
     Sfr33CollectorEntry e(p);
-    FUN_1423de770(self, e);
+    self->Collect(reinterpret_cast<ASRefCountCollector::Stats*>(&e));
     self->FrameCnt = 0;
     self->PeakRootCount = Alg::Max(self->PeakRootCount, curRootCount);
     self->LastRootCount = curRootCount;
