@@ -409,6 +409,7 @@ void StyleSheetProto::SetStyle(const FnCall& fn)
 }
 
 // StyleSheet.prototype.transform(style): a TextFormat with the style object's properties.
+// MS2-FUNCTIONAL register allocation only: the exe takes the string context in r9 and zeroes r9 (nargs) after it, as in ArrayConcat (sfr_as2_01); same inline OperatorNew/GetBuiltin as the exact ArraySlice
 // @0x1428fa620
 void StyleSheetProto::Transform(const FnCall& fn)
 {

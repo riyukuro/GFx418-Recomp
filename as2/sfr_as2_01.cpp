@@ -240,6 +240,7 @@ void MathCtorFunction::Round(const FnCall& fn)
 // ---- Array ----
 
 // A new array holding this array's elements followed by the arguments (arrays are flattened one level).
+// MS2-FUNCTIONAL register allocation only: the exe takes the string context in r9 and zeroes r9 (nargs) after it; the body is the SDK's (OperatorNew/GetBuiltin, 4-arg OperatorNew, name and env locals tried)
 // @0x1428f4e60
 void ArrayObject::ArrayConcat(const FnCall& fn)
 {
