@@ -2507,6 +2507,8 @@ template<> template<>
 void Sfr33GCRootSet::add<GFx::AS3::GASRefCountBase*>(void* pheapAddr, GFx::AS3::GASRefCountBase* const& key, UPInt h);
 namespace GFx { namespace AS3 {
 template<> SPtr<GASRefCountBase>& SPtr<GASRefCountBase>::SetPtr(GASRefCountBase* p);
+// SPtr<GASRefCountBase>::operator=(GASRefCountBase*) is out of line too (0x142528c50, emitted in sfr_as3_19).
+template<> SPtr<GASRefCountBase>& SPtr<GASRefCountBase>::operator=(GASRefCountBase* p);
 }}
 }
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -5873,7 +5875,6 @@ ClassTraits::Traits* Sfr33SlotDataType(const SlotInfo* psi, VM* pvm)
 
 // SlotInfo::GetDataTypeName: the name of the slot's declared type: that of the resolved class traits, else the
 // ABC type multiname's name (Object's name for a runtime one), else the name of the bind type's class.
-// MS2-FUNCTIONAL 0x142508720: SDK body; regalloc only (the exe holds the switch traits in rdi and loads them in each case; ours loads them after the switch).
 // A member (this in rcx, the result slot in rdx), as the exe's callers pass it.
 // @0x142508720
 ASString SlotInfo::GetDataTypeName(VM& vm) const
@@ -5881,15 +5882,18 @@ ASString SlotInfo::GetDataTypeName(VM& vm) const
     ASString result = vm.GetStringManager().CreateEmptyString();
     if (CTraits.GetPtr() == NULL)
     {
-        if (File.GetPtr() != NULL && TI != NULL)
+        VMAbcFile* const file = File.GetPtr();
+        if (file != NULL && TI != NULL)
         {
             const UByte* amn = reinterpret_cast<const UByte*>(TI);
             const int kind = *amn & 0xf;
             if (kind == 0 || kind == 6 || kind == 4)
             {
                 const UByte* mn = reinterpret_cast<const UByte*>(&FUN_14250f8a0(
-                    amn, *reinterpret_cast<const void* const*>(reinterpret_cast<const UByte*>(File.GetPtr()) + 0x28)));
-                result = File->GetInternedString(*reinterpret_cast<const int*>(mn + 8));
+                    amn, *reinterpret_cast<const void* const*>(reinterpret_cast<const UByte*>(file) + 0x28)));
+                // out of line here (0x1423f1a30), where the exe keeps it apart from the inlined tail assignment
+                (result.*static_cast<void (ASString::*)(const ASString&)>(&ASString::operator=))(
+                    file->GetInternedString(*reinterpret_cast<const int*>(mn + 8)));
             }
             else
                 result = vm.GetClassTraitsFunction().GetName();
@@ -5903,7 +5907,9 @@ ASString SlotInfo::GetDataTypeName(VM& vm) const
             case BT_Unknown:
             case BT_ValueArray:
             case BT_Value:
-                const_cast<SPtr<const ClassTraits::Traits>&>(CTraits).SetPtr(&vm.GetClassTraitsClassClass());
+                // through the GASRefCountBase instance's out-of-line operator= (0x142528c50), as the exe calls it
+                reinterpret_cast<SPtr<GASRefCountBase>&>(const_cast<SPtr<const ClassTraits::Traits>&>(CTraits)) =
+                    (GASRefCountBase*)&vm.GetClassTraitsClassClass();
                 break;
             case BT_ObjectAS:
             case BT_ObjectCpp:
