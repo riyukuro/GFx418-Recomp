@@ -4926,7 +4926,32 @@ void Sfr33FindGOProperty(PropRef& result, VM& vm, const ArrayLH<Instances::fl::G
 // Tracer State::FindProp: the fixed slot mn names, looked up statically through the traced scope stack (State +0x58,
 // innermost first; stype 0), then the function's saved scopes (stype 1), then the class or global object that
 // defines it (stype 2); scope_index is the stack index tried last. A run-time name or a with scope stops the search.
-// MS2-FUNCTIONAL 0x142501e80: raw tracer state, VM and traits offsets
+// MS2-FUNCTIONAL 0x142501e80: SDK State::FindProp body over raw tracer state offsets; regalloc and block layout (the exe spills result and mn to their home slots and keeps the VM in r12, ours holds result in r12; 1129 vs 1246 bytes)
+// The tracer's VM (Tracer::GetVM: CF -> file -> VM), as State::GetVM re-reads it.
+static SF_FORCEINLINE VM& Sfr17TrGetVM(UPInt tracer)
+{
+    return **reinterpret_cast<VM**>(*reinterpret_cast<const UPInt*>(*reinterpret_cast<const UPInt*>(tracer + 0x20) + 0x28) + 0x20);
+}
+// Tracer::GetValueTraits(v, false) (0x14250ff00) as the exe inlines it here.
+static SF_FORCEINLINE const Traits* Sfr17TrGetValueTraits(UPInt tracer, const Value& v)
+{
+    const Traits* result = NULL;
+    switch (v.GetKind())
+    {
+    case 0:
+        result = *reinterpret_cast<Traits* const*>(reinterpret_cast<const UByte*>(&Sfr17TrGetVM(tracer)) + 0x278);
+        break;
+    case 8:
+    case 9:
+        result = *reinterpret_cast<Traits* const*>(reinterpret_cast<const UByte*>(&v) + 0x10);
+        break;
+    default:
+        result = &Sfr17TrGetVM(tracer).GetValueTraits(v);
+    }
+    if (result && result == *reinterpret_cast<Traits* const*>(reinterpret_cast<const UByte*>(&Sfr17TrGetVM(tracer)) + 0x1f0))
+        result = *reinterpret_cast<Traits* const*>(reinterpret_cast<const UByte*>(&Sfr17TrGetVM(tracer)) + 0x1f8);
+    return result;
+}
 // @0x142501e80
 void FUN_142501e80(void* state, void* propRef, void* multiname, void* stypeOut, void* scopeIndexOut)
 {
@@ -4934,86 +4959,89 @@ void FUN_142501e80(void* state, void* propRef, void* multiname, void* stypeOut, 
     const Multiname& mn = *static_cast<const Multiname*>(multiname);
     UInt32& stype = *static_cast<UInt32*>(stypeOut);
     UPInt& scope_index = *static_cast<UPInt*>(scopeIndexOut);
-    const UInt32 mnKind = static_cast<UInt32>(mn.Kind);
-    if ((mnKind & 3) == 1 || ((mnKind >> 2) & 1) != 0)
-        return;
     const UPInt* st = static_cast<const UPInt*>(state);
-    const UPInt tracer = st[0];
-    VM& vm = **reinterpret_cast<VM**>(*reinterpret_cast<const UPInt*>(*reinterpret_cast<const UPInt*>(tracer + 0x20) + 0x28) + 0x20);
+    if ((mn.Kind & 3) == 1 || (static_cast<UByte>(static_cast<UInt32>(mn.Kind) >> 2) & 1) != 0)
+        return;
+
+    VM& vm = Sfr17TrGetVM(st[0]);
     const UByte* const vmb = reinterpret_cast<const UByte*>(&vm);
-    UPInt index = 0;
-    const Value* ss = reinterpret_cast<const Value*>(st[0xb]);
-    for (UPInt i = st[0xc]; i > 0; )
+    UPInt slot_index = 0;
+
+    for (UPInt i = st[0xc]; i > 0; --i)
     {
-        scope_index = --i;
-        const Value& v = ss[i];
-        const unsigned kind = v.GetKind();
-        const Traits* tr;
-        if (kind == 0)
-            tr = *reinterpret_cast<Traits* const*>(vmb + 0x278);
-        else if (kind == 8 || kind == 9)
-            tr = *reinterpret_cast<Traits* const*>(reinterpret_cast<const UByte*>(&v) + 0x10);
-        else
-            tr = &vm.GetValueTraits(v);
-        if (tr && tr == *reinterpret_cast<Traits* const*>(vmb + 0x1f0))
-            tr = *reinterpret_cast<Traits* const*>(vmb + 0x1f8);
+        scope_index = i - 1;
+        const Value& v = reinterpret_cast<const Value*>(st[0xb])[scope_index];
+        const Traits* tr = Sfr17TrGetValueTraits(st[0], v);
+
         if (v.GetWith())
             return;
+
         if (tr && !tr->IsGlobal())
         {
-            if (const SlotInfo* si = FindFixedSlot(vm, *tr, mn, index, NULL))
+            const SlotInfo* si = FindFixedSlot(vm, *tr, mn, slot_index, NULL);
+            if (si)
             {
                 stype = 0;
-                result.pSI = si;
-                result.SlotIndex = index;
-                result.This = v;
+                Sfr33ScopePropRef t(si, slot_index, v);
+                result.pSI = t.pSI;
+                result.SlotIndex = t.SlotIndex;
+                result.This.Assign(t.This);
                 return;
             }
         }
     }
-    const UPInt* saved = *reinterpret_cast<UPInt* const*>(*reinterpret_cast<const UPInt*>(tracer + 0x20) + 0x38);
-    if (saved)
+
     {
-        const Value* sv = reinterpret_cast<const Value*>(saved[0]);
-        for (UPInt i = saved[1]; i > 0; )
+        const UPInt* ss = *reinterpret_cast<UPInt* const*>(*reinterpret_cast<const UPInt*>(st[0] + 0x20) + 0x38);
+        for (UPInt i = ss ? ss[1] : 0; i > 0; --i)
         {
-            scope_index = --i;
-            const Value& v = sv[i];
+            scope_index = i - 1;
+            const Value& v = reinterpret_cast<const Value*>(ss[0])[scope_index];
             const Traits& tr = vm.GetValueTraits(v);
+
             if (v.GetWith())
                 return;
-            if (const SlotInfo* si = FindFixedSlot(vm, tr, mn, index, NULL))
+
+            const SlotInfo* si = FindFixedSlot(vm, tr, mn, slot_index, NULL);
+            if (si)
             {
                 stype = 1;
-                result.pSI = si;
-                result.SlotIndex = index;
-                result.This = v;
+                Sfr33ScopePropRef t(si, slot_index, v);
+                result.pSI = t.pSI;
+                result.SlotIndex = t.SlotIndex;
+                result.This.Assign(t.This);
                 return;
             }
         }
     }
+
     const unsigned nameKind = mn.Name.GetKind();
     if (nameKind == 8 || nameKind == 9)
         return;
-    const Traits* ct = FUN_14250d760(vm, mn);
-    if (ct)
+    const Traits* ctr = FUN_14250d760(vm, mn);
+    if (ctr)
     {
-        if (const UByte* itr = *reinterpret_cast<UByte* const*>(reinterpret_cast<const UByte*>(ct) + 0xc0))
+        if (const UByte* itr = *reinterpret_cast<UByte* const*>(reinterpret_cast<const UByte*>(ctr) + 0xc0))
         {
-            Object* obj = ((itr[0x68] >> 4) & 1) == 0 ? *reinterpret_cast<Object* const*>(vmb + 0x298)
-                                                      : *reinterpret_cast<Object* const*>(itr + 0xd0);
-            UPInt oindex = 0;
-            if (const SlotInfo* si = FindFixedSlot(vm, obj->GetTraits(), mn, oindex, obj))
+            Object* obj = NULL;
+            if ((itr[0x68] >> 4) & 1)
+                obj = *reinterpret_cast<Object* const*>(itr + 0xd0);
+            else
+                obj = *reinterpret_cast<Object* const*>(vmb + 0x298);
+            UPInt slot_index = 0;
+            const SlotInfo* si = FindFixedSlot(vm, obj->GetTraits(), mn, slot_index, obj);
+            if (si)
             {
-                result.pSI = si;
-                result.SlotIndex = oindex;
-                result.This = Value(obj);
+                Sfr33ThisPropRef t(si, slot_index, obj);
+                result.pSI = t.pSI;
+                result.SlotIndex = t.SlotIndex;
+                result.This.Assign(t.This.Get());
                 stype = 2;
                 return;
             }
         }
     }
-    Sfr33FindGOProperty(result, vm, *reinterpret_cast<const ArrayLH<Instances::fl::GlobalObject*>*>(vmb + 0x1a8), mn, ct);
+    Sfr33FindGOProperty(result, vm, *reinterpret_cast<const ArrayLH<Instances::fl::GlobalObject*>*>(vmb + 0x1a8), mn, ctr);
     if (Sfr33PropFound(result))
         stype = 2;
 }
