@@ -663,10 +663,9 @@ inline RenderEvent& HAL::GetEvent(EventType)
 }
 
 // @0x1426c1290
-void HAL::SetUserMatrix(const Matrix2F& userMatrix)
-{
-    Matrices.SetUserMatrix(userMatrix);
-}
+void HAL::SetUserMatrix(const Matrix2F& userMatrix) { Matrices.SetUserMatrix(userMatrix); }
+// @0x1426c1790 (one body with ConstructorMov<BlendMode>::Construct): empty in this build
+void HAL::checkState_EmitWarnings(unsigned, const char*) {}
 
 // @0x1426c11b0
 void HAL::SetStereoParams(StereoParams sParams)

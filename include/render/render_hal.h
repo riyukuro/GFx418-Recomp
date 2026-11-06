@@ -331,6 +331,9 @@ protected:
     bool shutdownHAL();
     // tells every registered HALNotify of a HAL event (0x142742580)
     void notifyHandlers(HALNotifyType type);
+    // the warning a HAL call made in the wrong state would print; empty in this build (0x1426c1790, folded with
+    // ConstructorMov<BlendMode>::Construct). sfr_render_06g defines it, so its own callers drop the call.
+    void checkState_EmitWarnings(unsigned stateFlags, const char* funcName);
 
 public:
     unsigned                     HALState;              // +0x010

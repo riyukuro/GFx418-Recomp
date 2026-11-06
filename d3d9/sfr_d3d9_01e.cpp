@@ -16,8 +16,7 @@
 #include "ms2/scaleform/include/render/d3d9_texture.h"
 #include "ms2/scaleform/include/render/render_events.h"
 
-// the warning a HAL call made in the wrong state would print; empty in this build
-void FUN_1426c1790(Scaleform::Render::HAL* hal, unsigned stateFlags, const char* funcName);
+// a HAL call made in the wrong state calls Render::HAL::checkState_EmitWarnings (render_hal.h; empty in this build)
 
 // StaticShaderManager::SetPrimitiveFill (0x1427359d0): picks the shader of a batch and sets its meshes' uniforms
 const Scaleform::Render::D3D9::ShaderPair* FUN_1427359d0(
@@ -369,7 +368,7 @@ void HAL::EndMaskSubmit()
     ScopedRenderEvent evt(GetEvent(Event_Mask), 0, false);
     if ((HALState & (HS_InDisplay | HS_DrawingMask)) != (HS_InDisplay | HS_DrawingMask))
     {
-        FUN_1426c1790(this, HS_InDisplay | HS_DrawingMask, __FUNCTION__);
+        checkState_EmitWarnings(HS_InDisplay | HS_DrawingMask, __FUNCTION__);
         return;
     }
     HALState &= ~HS_DrawingMask;
@@ -614,7 +613,7 @@ void HAL::PopMask()
     ScopedRenderEvent evt(GetEvent(Event_PopMask), __FUNCTION__);
     if (!(HALState & HS_InDisplay))
     {
-        FUN_1426c1790(this, HS_InDisplay, __FUNCTION__);
+        checkState_EmitWarnings(HS_InDisplay, __FUNCTION__);
         return;
     }
     if (!StencilAvailable && !DepthBufferAvailable)
@@ -677,7 +676,7 @@ void HAL::DrawProcessedPrimitive(Primitive* prim, PrimitiveBatch* start, Primiti
     ScopedRenderEvent evt(GetEvent(Event_DrawPrimitive), __FUNCTION__);
     if (!(HALState & HS_InDisplay))
     {
-        FUN_1426c1790(this, HS_InDisplay, __FUNCTION__);
+        checkState_EmitWarnings(HS_InDisplay, __FUNCTION__);
         return;
     }
     if (!prim->GetMeshCount())
@@ -1223,7 +1222,7 @@ void HAL::PushFilters(FilterPrimitive* prim)
     GetEvent(Event_Filter).Begin(__FUNCTION__);
     if (!(HALState & HS_InDisplay))
     {
-        FUN_1426c1790(this, HS_InDisplay, __FUNCTION__);
+        checkState_EmitWarnings(HS_InDisplay, __FUNCTION__);
         return;
     }
 
@@ -1384,7 +1383,7 @@ void HAL::PushMask_BeginSubmit(MaskPrimitive* prim)
     ScopedRenderEvent evt(GetEvent(Event_Mask), __FUNCTION__);
     if (!(HALState & HS_InDisplay))
     {
-        FUN_1426c1790(this, HS_InDisplay, __FUNCTION__);
+        checkState_EmitWarnings(HS_InDisplay, __FUNCTION__);
         return;
     }
     if (!StencilAvailable && !DepthBufferAvailable)
@@ -1551,7 +1550,7 @@ void HAL::DrawProcessedComplexMeshes(ComplexMesh* complexMesh, const StrideArray
     D3D9::MeshCacheItem* pmesh = (D3D9::MeshCacheItem*)complexMesh->pCacheMeshItem;
     if (!(HALState & HS_InDisplay))
     {
-        FUN_1426c1790(this, HS_InDisplay, __FUNCTION__);
+        checkState_EmitWarnings(HS_InDisplay, __FUNCTION__);
         return;
     }
     if (!pmesh)
