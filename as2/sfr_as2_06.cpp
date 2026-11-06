@@ -254,6 +254,7 @@ public:
     void InvokeImpl(const FnCall& fn);
 };
 
+// MS2-FUNCTIONAL scheduling only: the exe stores the PropFlags default temp first and sinks SetInt's int store past the inlined Arg(i) page lookup (body is the SDK's; named arg, explicit PropFlags(), const Bottom tried)
 // @0x142961720
 void ArrayObject::InitArray(const FnCall& fn)
 {
@@ -2141,7 +2142,8 @@ void GASSharedObjectLoader::PopArray()
 class CSSFileLoaderAndParserImpl
 {
 public:
-    UByte Unrecovered_08[0x10];
+    UByte Unrecovered_08[8];
+    int Type;
     wchar_t* Buffer;
     int BufferLen;
 
@@ -2281,47 +2283,65 @@ void TextFormatCtorFunction::GlobalCtor(const FnCall& fn)
     fn.Result->SetAsObject(format.GetPtr());
 }
 
-// MS2-FUNCTIONAL: handles UTF-8/UTF-16 BOMs, parses the owned buffer, releases it, and reports completion.
 // @0x14295e080
-void CSSFileLoaderAndParserImpl::Init(Environment* penv, Object* sheet)
+void CSSFileLoaderAndParserImpl::Init(Environment* penv, Object* pTarget)
 {
-    bool success;
+    StyleSheetObject* pASObj = static_cast<StyleSheetObject*>(pTarget);
+
     if (!Buffer)
-        success = false;
+    {
+        pASObj->NotifyOnLoad(penv, false);
+    }
     else
     {
-        wchar_t* buffer = Buffer;
-        wchar_t* data = buffer;
-        int length = BufferLen;
-        if (data[0] == 0xfeff)
+        wchar_t* wcsptr     = NULL;
+        UByte*   ptextData  = reinterpret_cast<UByte*>(Buffer);
+        int      textLength = BufferLen;
+
+        UInt16* prefix16 = reinterpret_cast<UInt16*>(Buffer);
+        if (prefix16[0] == Alg::ByteUtil::BEToSystem((UInt16)0xFFFE))
         {
-            *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(this) + 0x10) = 1;
-            data++;
-            length = length / 2 - 1;
+            prefix16++;
+            ptextData  = (UByte*)prefix16;
+            textLength = (BufferLen / 2) - 1;
+            Type       = 1;
+            for (int i = 0; i < textLength; i++)
+                prefix16[i] = (wchar_t)Alg::ByteUtil::LEToSystem(prefix16[i]);
         }
-        else if (data[0] == 0xfffe)
+        else if (prefix16[0] == Alg::ByteUtil::BEToSystem((UInt16)0xFEFF))
         {
-            *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(this) + 0x10) = 1;
-            data++;
-            length = length / 2 - 1;
-            for (SPInt i = 0; i < length; ++i)
-                buffer[i + 1] = wchar_t((unsigned(buffer[i + 1]) << 8) | (unsigned(buffer[i + 1]) >> 8));
+            prefix16++;
+            ptextData  = (UByte*)prefix16;
+            textLength = (BufferLen / 2) - 1;
+            Type       = 1;
+            for (int i = 0; i < textLength; i++)
+                prefix16[i] = Alg::ByteUtil::BEToSystem(prefix16[i]);
         }
-        else if (length > 2 && UByte(data[0]) == 0xef && UByte(data[0] >> 8) == 0xbb &&
-                 UByte(data[1]) == 0xbf)
+        else if (BufferLen > 2 && reinterpret_cast<UByte*>(Buffer)[0] == 0xEF &&
+                 reinterpret_cast<UByte*>(Buffer)[1] == 0xBB && reinterpret_cast<UByte*>(Buffer)[2] == 0xBF)
         {
-            data = reinterpret_cast<wchar_t*>(reinterpret_cast<UByte*>(data) + 3);
-            length -= 3;
+            ptextData += 3;
+            textLength -= 3;
         }
 
-        void* styles = reinterpret_cast<UByte*>(sheet) + 0x68;
-        success = *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(this) + 0x10) != 1
-                      ? static_cast<Text::StyleManager*>(styles)->ParseCSS(reinterpret_cast<const char*>(data), UPInt(length))
-                      : static_cast<Text::StyleManager*>(styles)->ParseCSS(data, UPInt(length));
-        Memory::GetGlobalHeap()->Free(Buffer);
-        Buffer = 0;
+        Text::StyleManager& CSS = *reinterpret_cast<Text::StyleManager*>(pASObj->Data68);
+        bool ret = false;
+        switch (Type)
+        {
+        case 1:
+            ret = CSS.ParseCSS((wchar_t*)ptextData, textLength);
+            break;
+        default:
+            ret = CSS.ParseCSS((char*)ptextData, textLength);
+        }
+
+        if (wcsptr)
+            SF_FREE(wcsptr);
+        SF_FREE(Buffer);
+        Buffer = NULL;
+
+        pASObj->NotifyOnLoad(penv, ret);
     }
-    static_cast<StyleSheetObject*>(sheet)->NotifyOnLoad(penv, success);
 }
 
 // Flushes text caches, forces an emergency AS2 collection, then resets the heap's budget counters.

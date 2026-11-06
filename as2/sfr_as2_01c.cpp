@@ -120,7 +120,7 @@ void FUN_1423c9140(void* self, const char* text, int len)
     }
 }
 
-// MS2-FUNCTIONAL: XML end-element handler; the exe inlines the 8- and 4-byte compares.
+// MS2-FUNCTIONAL: XML end-element handler; the exe compares imeName/Tag with an indexed byte loop (i in r8/rbx, no pointer IV). memcmp/strncmp/std::equal/char_traits and hand for/do/while loops tried (best 32 lines)
 // @0x1423c93f0
 void FUN_1423c93f0(void* self, const char* name)
 {
