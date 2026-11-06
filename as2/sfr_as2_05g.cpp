@@ -17,6 +17,25 @@ namespace Scaleform { namespace GFx {
 
 namespace {
 
+// Value::SetUndefined, inlined in the exe on every failure path.
+struct VoiValue : Value
+{
+    SF_FORCEINLINE void Undef()
+    {
+        if (IsManagedValue())
+            ReleaseManagedValue();
+        Type = VT_Undefined;
+    }
+};
+
+// AS2::ToAvmCharacter(InteractiveObject*), inlined in the exe.
+SF_FORCEINLINE AS2::AvmCharacter* VoiToAvmChar(InteractiveObject* po)
+{
+    if (!po)
+        return 0;
+    return static_cast<AS2::AvmCharacter*>(po->GetAvmObjImpl()->ToAvmInteractiveObjBase());
+}
+
 SF_FORCEINLINE AS2::MovieRoot* VoiRoot(MovieImpl* pmovieRoot)
 {
     return static_cast<AS2::MovieRoot*>(pmovieRoot->pASMovieRoot);
@@ -64,14 +83,25 @@ bool AS2ValueObjectInterface::GetText(void* pdata, Value* pval, bool ishtml) con
 }
 
 // Reads a member (resolving properties) and converts it to a host value; clears pval on failure.
-// MS2-FUNCTIONAL: the exe inlines the second SetUndefined too, and keeps pdata/pobj in rsi with pthis in rdi
+// MS2-FUNCTIONAL: regalloc only: the exe indexes the AvmObjOffset lea off the resolved character (rax), ours copies it
+// to rcx first
 // @0x14294bbb0
 bool AS2ValueObjectInterface::GetMember(void* pdata, const char* name, Value* pval, bool isdobj) const
 {
     MovieImpl*            pmovieRoot = pMovieRoot;
     AS2::MovieRoot*       proot = VoiRoot(pmovieRoot);
     AS2::Environment*     penv  = VoiEnv(proot);
-    AS2::ObjectInterface* pobj  = VoiObject(pdata, pmovieRoot, isdobj);
+    AS2::ObjectInterface* pobj  = static_cast<AS2::ObjectInterface*>(pdata);
+    if (isdobj)
+    {
+        DisplayObject* d = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pmovieRoot);
+        if (!d)
+        {
+            if (pval) static_cast<VoiValue*>(pval)->Undef();
+            return false;
+        }
+        pobj = VoiToAvmChar(static_cast<InteractiveObject*>(d));
+    }
     AS2::ObjectInterface* pthis = 0;
     if (!pobj)
     {
@@ -84,7 +114,7 @@ bool AS2ValueObjectInterface::GetMember(void* pdata, const char* name, Value* pv
     {
         if (pval)
         {
-            pval->SetUndefined();
+            static_cast<VoiValue*>(pval)->Undef();
         }
         return false;
     }
