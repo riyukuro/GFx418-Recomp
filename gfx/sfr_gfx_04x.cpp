@@ -290,57 +290,68 @@ __declspec(noinline) UInt32 FUN_1425c8c20(LoadProcess* p); // LoadProcess::ReadU
 enum { Tag_DefineBitsJpeg4 = 90 };
 
 // DefineBitsJPEG3 / 4: a JPEG followed by its zlib-compressed alpha plane, kept compressed in memory.
-// MS2-FUNCTIONAL 0x1425c48e0: same reads, checks, log text and objects; register allocation, the length width and
-// the null-heap fallback differ.
+// MS2-FUNCTIONAL: the SDK body; only the home slots differ (exe: rbp save in the p home, jpegSize and the ImageSize in the r8/r9 homes)
 // @0x1425c48e0
 void SF_STDCALL GFx_DefineBitsJpeg3Loader(LoadProcess* p, const TagInfo& tagInfo)
 {
-    ResourceId rid(p->ReadU16());
-    UInt32     alphaOffset = FUN_1425c8c20(p);
+    UInt16 bitmapResourceId = p->ReadU16();
+
+    UInt32 jpegSize = FUN_1425c8c20(p);
     if (tagInfo.TagType == Tag_DefineBitsJpeg4)
     {
-        UInt16 deblocking = p->ReadU16();
-        p->LogParse("  GFx_DefineBitsJpeg4Loader: charid = %d pos = %d deblocking = %d\n", rid.GetIdIndex(),
-                    p->Tell(), deblocking);
+        // deblocking parameter; ignored for now
+        UInt16 db = p->ReadU16();
+        p->LogParse("  GFx_DefineBitsJpeg4Loader: charid = %d pos = %d deblocking = %d\n",
+            bitmapResourceId, p->Tell(), db);
     }
     else
-        p->LogParse("  GFx_DefineBitsJpeg3Loader: charid = %d pos = %d\n", rid.GetIdIndex(), p->Tell());
-
-    Render::ImageSource* psource = 0;
     {
-        Ptr<ImageFileHandlerRegistry> pregistry = p->GetLoadStates()->GetImageFileHandlerRegistry();
-        if (!pregistry)
-            p->LogError("Image file handler registry is not installed - can't load jpeg image data");
+        p->LogParse("  GFx_DefineBitsJpeg3Loader: charid = %d pos = %d\n",
+            bitmapResourceId, p->Tell());
+    }
+
+    Ptr<Render::ImageSource> pimageSrc;
+
+    {
+    Ptr<ImageFileHandlerRegistry> imageFileReg = p->GetLoadStates()->GetImageFileHandlerRegistry();
+    if (!imageFileReg)
+        p->LogError("Image file handler registry is not installed - can't load jpeg image data");
+    else
+    {
+        ZlibSupportBase* pzlib = p->GetLoadStates()->pZlibSupport;
+        if (!pzlib)
+            p->LogError("ZlibState is not set - can't load zipped image data");
         else
         {
-            ZlibSupportBase* pzlib = p->GetLoadStates()->pZlibSupport;
-            if (!pzlib)
-                p->LogError("ZlibState is not set - can't load zipped image data");
+            Render::ImageFileHandler* jpegHandler =
+                static_cast<Render::ImageFileHandlerRegistry*>(imageFileReg)->GetReader(Render::ImageFile_JPEG);
+            if (!jpegHandler)
+                p->LogError("Jpeg System is not installed - can't load jpeg image data");
             else
             {
-                Render::JPEG::AbstractReader* preader = static_cast<Render::JPEG::AbstractReader*>(
-                    static_cast<Render::ImageFileHandlerRegistry*>(pregistry)->GetReader(Render::ImageFile_JPEG));
-                if (!preader)
-                    p->LogError("Jpeg System is not installed - can't load jpeg image data");
-                else
-                {
-                    UPInt       length = tagInfo.TagLength + tagInfo.TagDataOffset - p->Tell();
-                    File*       pfile  = p->GetUnderlyingFile();
-                    MemoryHeap* pheap  = p->GetLoadHeap();
-                    if (!pheap)
-                        pheap = Memory::pGlobalHeap;
-                    MemoryBufferJpegImageWithZlibAlphas* pimage =
-                        SF_HEAP_NEW(pheap) MemoryBufferJpegImageWithZlibAlphas(pzlib, preader, alphaOffset, Render::Image_R8G8B8A8, Render::ImageSize(), 0, 0, pfile, length);
-                    psource = preader->CreateWrapperImageSource(pimage ? pimage->GetImage() : 0);
-                    if (pimage)
-                        pimage->GetImage()->Release();
-                }
+                Render::JPEG::AbstractReader* jpegReader = static_cast<Render::JPEG::AbstractReader*>(jpegHandler);
+                Render::ImageCreateArgs args;
+                args.pHeap = p->GetLoadHeap();
+                int jpegDataOff = p->Tell();
+
+                // The exe's TagDataOffset is an int.
+                UInt64 sz = tagInfo.TagLength - (jpegDataOff - (int)tagInfo.TagDataOffset);
+
+                File* file = p->GetUnderlyingFile();
+                // The SDK 4.1 Size() leaves the fields unset.
+                Ptr<Render::Image> img = *reinterpret_cast<Render::Image*>(
+                    SF_HEAP_NEW(args.GetHeap()) MemoryBufferJpegImageWithZlibAlphas(
+                        pzlib, jpegReader, jpegSize, Render::Image_R8G8B8A8, Render::ImageSize(Render::ImageSize::NoInit), args.Use,
+                        args.GetUpdateSync(), file, (UPInt)sz));
+
+                pimageSrc = *jpegReader->CreateWrapperImageSource(img);
             }
         }
     }
-    p->AddImageResource(rid, psource);
-    if (psource)
-        psource->Release();
+    }
+
+    // Create a unique resource for the image and add it.
+    p->AddImageResource(ResourceId(bitmapResourceId), pimageSrc);
 }
 
 // DefineMorphShape / DefineMorphShape2.
