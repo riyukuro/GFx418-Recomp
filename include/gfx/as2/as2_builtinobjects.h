@@ -759,6 +759,7 @@ public:
     StyleSheetObject(Environment* penv); // exe 0x142921190
     // The prototype instance: an empty style manager (exe 0x142921270 builds it inline in StyleSheetProto's ctor).
     StyleSheetObject(ASStringContext* psc, Object* pprototype);
+    StyleSheetObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06s9
     // Completes a stylesheet load and notifies its listeners (exe 0x142969aa0).
     void NotifyOnLoad(Environment* penv, bool success);
     virtual ObjectType GetObjectType() const; // exe 0x142954330: Object_StyleSheet
@@ -796,6 +797,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143213880
 
     StyleSheetProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142921270
+    StyleSheetProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06s9
     static void Clear(const FnCall& fn);         // exe 0x1428f86b0
     static void GetStyle(const FnCall& fn);      // exe 0x1428f8720
     static void GetStyleNames(const FnCall& fn); // exe 0x1428f9630
@@ -812,6 +814,7 @@ public:
     TextFormatObject(Environment* penv); // exe 0x1429226d0
     // The prototype instance: empty formats (exe 0x142923030 builds it inline in TextFormatProto's ctor).
     TextFormatObject(ASStringContext* psc, Object* pprototype);
+    TextFormatObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06s9
     virtual ObjectType GetObjectType() const; // exe 0x142954350: Object_TextFormat
     // The AS properties write through to the format (exe 0x142987710).
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
@@ -1061,6 +1064,7 @@ class StyleSheetCtorFunction : public CFunctionObject
 {
 public:
     StyleSheetCtorFunction(ASStringContext* psc); // exe 0x142921110
+    StyleSheetCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06s9
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142937380
 
@@ -1095,6 +1099,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143213ac0
 
     TextFormatProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142923030
+    TextFormatProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06s9
 
     static void GetTextExtent(const FnCall& fn); // exe 0x1429006a0
 };
@@ -1104,6 +1109,7 @@ class TextFormatCtorFunction : public CFunctionObject
 {
 public:
     TextFormatCtorFunction(ASStringContext* psc); // exe 0x142922650
+    TextFormatCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06s9
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142937470
 
