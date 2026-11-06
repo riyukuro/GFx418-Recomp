@@ -224,7 +224,11 @@ class VideoReaderConfigThrd : public VideoReaderConfig
 {
 public:
     VideoReaderConfigThrd(MemoryHeap* pheap, FileOpenerBase* pfileOpener);  // 0x14002e450
+    virtual ~VideoReaderConfigThrd();                                       // 0x14002e2a0
     virtual VideoReader* CreateReader();
+    virtual void         SetReadCallback(ReadCallback* pcallback);   // 0x14002d750
+    virtual void         DetachReader(VideoReader* preader);         // 0x14002e370
+    virtual void         EnableIO(bool enable);                      // 0x14002d6d0
 
     // (appended, sfr24) the reader thread's state, offsets from the ctor 0x14002e450. Layout only: the methods in
     // sfr_cri_02 reach these through raw offsets.
@@ -249,9 +253,9 @@ public:
     List<Cmd>                              CmdList;       // +0x68
     Mutex                                  CmdListLock;   // +0x78
     Scaleform::Event                       Event;         // +0xa0
-    RefCountImpl*                          pThread;       // +0xf8 Ptr<Thread>, started by CreateReader
+    Ptr<RefCountImpl>                      pThread;       // +0xf8 Ptr<Thread>, started by CreateReader
     WaitCondition                          IOFinished;    // +0x100
-    ReadCallback*                          pReadCallback; // +0x108 Ptr<ReadCallback>
+    Ptr<ReadCallback>                      pReadCallback; // +0x108
 };
 static_assert(sizeof(VideoReaderConfigThrd::Cmd) == 0x38, "VideoReaderConfigThrd::Cmd size");
 static_assert(sizeof(VideoReaderConfigThrd) == 0x110, "VideoReaderConfigThrd size");

@@ -285,7 +285,7 @@ CriUint64* FUN_14002ba30(CriUint64* destination, const CriUint64* source);
 CriUint64* FUN_14002c550(CriUint64* destination, const CriUint64* source);
 void     FUN_14002aa30(CriUint64* array, CriUint64 length);
 void     FUN_14000bd60(void** array, CriUint64 length);
-namespace Scaleform { namespace GFx { namespace Video { void FUN_14002e2a0(void* object); }}}
+//
 void     FUN_14000bc40(void** destination, void* source, CriUint64 capacity);
 void     FUN_140007370(void** destination, const Scaleform::String* first, CriUint64 second);
 
@@ -1193,69 +1193,68 @@ VideoReader* VideoReaderConfigThrd::CreateReader()
 }
 
 // @0x14002e450
-void* FUN_14002e450(void* object, void* heap, void* opener)
+VideoReaderConfigThrd::VideoReaderConfigThrd(MemoryHeap* pheap, FileOpenerBase* pfileOpener)
+    : VideoReaderConfig(pheap, pfileOpener)
 {
-    void** fields = (void**)object;
-    CriUint32* words = (CriUint32*)object;
-    fields[0] = (void*)DAT_1431b91b0;
-    words[2] = 1;
-    fields[2] = heap;
-    if (opener)
-        FUN_14257dc30(opener);
-    fields[3] = opener;
-    _ReadWriteBarrier();   // the member initializers run in order: Ptr<FileOpenerBase>, then Readers
-    CriUint64* readers = (CriUint64*)(fields + 4);   // Array<VideoReader*>
-    readers[0] = 0;
-    readers[1] = 0;
-    readers[2] = 0;
-    fields[0] = (void*)DAT_1431b9430;
-    _ReadWriteBarrier();   // the vftable is stored before IOEnabled and the pool
-    *((CriUint8*)object + 0x38) = 1;
-    _ReadWriteBarrier();
-    void** pool = fields + 8;   // request node pool
-    pool[0] = NULL;
-    pool[1] = NULL;
-    *(CriUint32*)(pool + 2) = 0x7f;
-    pool[3] = NULL;
-    pool[4] = pool;
-    _ReadWriteBarrier();
-    void** sentinel = fields + 13;
-    sentinel[0] = sentinel;
-    sentinel[1] = sentinel;
-    reinterpret_cast<Scaleform::Mutex*>(fields + 15)->Mutex::Mutex(true, false);
-    reinterpret_cast<Scaleform::Event*>(fields + 20)->Event::Event(false, false);
-    fields[31] = NULL;
-    reinterpret_cast<Scaleform::WaitCondition*>(fields + 32)->WaitCondition::WaitCondition();
-    fields[33] = NULL;
-    return object;
 }
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 // Release the threaded reader config's sync state, live readers and retained CRI opener.
 // @0x14002e2a0
-void FUN_14002e2a0(void* object)
+VideoReaderConfigThrd::~VideoReaderConfigThrd()
 {
-    void** fields = (void**)object;
-    fields[0] = (void*)DAT_1431b9430;
-    if (fields[33])
-        FUN_14257dcb0(fields[33]);
-    reinterpret_cast<Scaleform::WaitCondition*>(fields + 32)->WaitCondition::~WaitCondition();
-    if (fields[31])
-        FUN_14257dcb0(fields[31]);
-    reinterpret_cast<Scaleform::Event*>(fields + 20)->Event::~Event();
-    reinterpret_cast<Scaleform::Mutex*>(fields + 15)->Mutex::~Mutex();
-    void* reader = fields[8];
-    while (reader)
-    {
-        void* next = *(void**)((CriUint8*)reader + 0x1bc8);
-        FUN_14002d3f0(reader);
-        reader = next;
-    }
-    if (fields[4])
-        FUN_14002d3f0(fields[4]);
-    if (fields[3])
-        FUN_14257dcb0(fields[3]);
-    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
+    _ReadWriteBarrier();   // keeps the vftable store ahead of the member dtors
 }
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 // VideoReader's primary vftable (no RTTI in this build): the constructor stores it at +0, 0x1431b9360 at +0x10
 // MS2-PIN: ??_7VideoReader@Video@GFx@Scaleform@@6B?$RefCountBaseNTS@VVideoReader@Video@GFx@Scaleform@@$01@3@@ 0x1431b93b0
@@ -1415,8 +1414,8 @@ void FUN_14002e260(void* object, void* first, void* second)
 // VideoReaderConfigThrd::DetachReader: remove all requests for a detached reader, return their nodes, then stop an idle
 // worker.
 // @0x14002e370
-void FUN_14002e370(CriMvRequestManagerView* manager, void* reader)
-{
+void Scaleform::GFx::Video::VideoReaderConfigThrd::DetachReader(VideoReader* preader)
+{   CriMvRequestManagerView* manager = (CriMvRequestManagerView*)this; void* reader = preader;
     reinterpret_cast<Scaleform::Mutex*>(manager->Lock)->DoLock();
     CriMvRequestNode* node = manager->Tail;
     while (node != (CriMvRequestNode*)&manager->Head)
@@ -2119,7 +2118,7 @@ void* FUN_14002c8f0(void* object, CriUint32 flags)
 // @0x14002e510
 void* FUN_14002e510(void* object, CriUint32 flags)
 {
-    Scaleform::GFx::Video::FUN_14002e2a0(object);
+    reinterpret_cast<Scaleform::GFx::Video::VideoReaderConfigThrd*>(object)->Scaleform::GFx::Video::VideoReaderConfigThrd::~VideoReaderConfigThrd();
     if (flags & 1)
         CriHeapFreeRaw(object);
     return object;
@@ -2268,8 +2267,8 @@ struct CriMvRequestListRoot
 
 // Enable or disable reader IO, wake the thread, and wait for its queued work to drain.
 // @0x14002d6d0
-void FUN_14002d6d0(CriMvReaderThreadConfigView* config, CriUint8 enable)
-{
+void Scaleform::GFx::Video::VideoReaderConfigThrd::EnableIO(bool enable)
+{   CriMvReaderThreadConfigView* config = (CriMvReaderThreadConfigView*)this;
     config->IOEnabled = enable;
     reinterpret_cast<Scaleform::Event*>(config->Event)->PulseEvent();
     CriMutexLocker lock(config->Lock);
@@ -2279,8 +2278,8 @@ void FUN_14002d6d0(CriMvReaderThreadConfigView* config, CriUint8 enable)
 
 // Replace the configured reader with reference balancing while holding its lock.
 // @0x14002d750
-void FUN_14002d750(CriMvReaderThreadConfigView* config, void* reader)
-{
+void Scaleform::GFx::Video::VideoReaderConfigThrd::SetReadCallback(ReadCallback* pcallback)
+{   CriMvReaderThreadConfigView* config = (CriMvReaderThreadConfigView*)this; void* reader = pcallback;
     CriMutexLocker lock(config->Lock);
     if (reader)
         FUN_14257dc30(reader);
@@ -2376,6 +2375,7 @@ void FUN_14002e010(CriMvRequestPoolView* pool)
 // MS2-PIN: ??_7VideoReader@Video@GFx@Scaleform@@6BCriMvFileReaderInterface@@@ 0x1431b9360
 // MS2-PIN: ??_7VideoReaderConfigSmp@Video@GFx@Scaleform@@6B@ 0x1431b91d8
 // MS2-PIN: ??_7VideoReaderConfig@Video@GFx@Scaleform@@6B@ 0x1431b91b0
+// MS2-PIN: ??_7VideoReaderConfigThrd@Video@GFx@Scaleform@@6B@ 0x1431b9430
 // MS2-PIN: ??0VideoPlayerImpl@Video@GFx@Scaleform@@QEAA@PEAVMemoryHeap@3@@Z 0x14002c810
 // ---- full-exe unresolved: leaves without .pdata that data_cri's tables reference as ?FUN_<va>@@YAXXZ ----
 
