@@ -4464,17 +4464,36 @@ void GFxAS2LoadXMLTask::Execute()
 {
     LoadFile();
 }
-// MS2-FUNCTIONAL the exe inlines Value::ToFunction with SetLocalFrame inlined into the FunctionRef copy (func kept in registers) and calls Function->Invoke directly; FunctionRef has no such copy ctor
+// Value::ToFunction as the exe inlines it here: the copy has SetLocalFrame inlined, the result is built in place.
+struct GAS_Invoke_FuncRef : FunctionRefBase
+{
+    SF_FORCEINLINE GAS_Invoke_FuncRef(const Value& v, const Environment* penv)
+    {
+        switch (v.T.Type)
+        {
+        case Value::FUNCTIONNAME:
+            ::new (static_cast<void*>(this)) FunctionRef(static_cast<const GetConstructor_ValueView&>(v).ResolveFunctionName(penv));
+            return;
+        case Value::FUNCTION:
+            FunctionRef_InitCopyInl(this, v.V.FunctionValue);
+            return;
+        default:;
+        }
+        Init((FunctionObject*)0);
+    }
+    SF_FORCEINLINE ~GAS_Invoke_FuncRef() { DropRefs(); }
+};
+
 // @0x142946d10
 bool GAS_Invoke(const Value& method, Value* presult, ObjectInterface* pthis, Environment* penv, int nargs,
                 int firstArgBottomIndex, const char* pmethodName)
 {
-    FunctionRef func = method.ToFunction(penv);
+    GAS_Invoke_FuncRef func(method, penv);
     if (presult)
         presult->SetUndefined();
     if (!func.IsNull())
     {
-        func.Invoke(FnCall(presult, pthis, penv, nargs, firstArgBottomIndex), pmethodName);
+        static_cast<FunctionRef&>(static_cast<FunctionRefBase&>(func)).Invoke(FnCall(presult, pthis, penv, nargs, firstArgBottomIndex), pmethodName);
         return true;
     }
     if (penv && penv->IsVerboseActionErrors())
