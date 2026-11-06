@@ -1651,14 +1651,59 @@ void ObjectProto::AddProperty(const FnCall& fn)
         fn.Result->SetBool(false);
 }
 
+// FunctionRefBase::SetLocalFrame (0x142981e70, sfr_as2_07) and the FunctionRef copy around it, which the exe inlines
+// into the ToFunction copy in Watch_. Local copies: an inline redefinition of the member would emit a second COMDAT.
+static SF_FORCEINLINE void MS2_SetLocalFrame(FunctionRefBase& r, LocalFrame* localFrame, bool weakRef)
+{
+    if (r.pLocalFrame && !(r.Flags & FunctionRefBase::FuncRef_Weak))
+        r.pLocalFrame->Release();
+    r.pLocalFrame = localFrame;
+    if (weakRef)
+        r.Flags |= FunctionRefBase::FuncRef_Weak;
+    else
+        r.Flags &= ~FunctionRefBase::FuncRef_Weak;
+    if (r.pLocalFrame && !(r.Flags & FunctionRefBase::FuncRef_Weak))
+        r.pLocalFrame->AddRef();
+}
+
+static SF_FORCEINLINE FunctionRef MS2_CopyFuncRef(const FunctionRefBase& orig)
+{
+    FunctionRef r;
+    r.Flags    = 0;
+    r.Function = orig.Function;
+    if (!(r.Flags & FunctionRefBase::FuncRef_Internal) && r.Function)
+        r.Function->AddRef();
+    r.pLocalFrame = 0;
+    if (orig.pLocalFrame)
+        MS2_SetLocalFrame(r, orig.pLocalFrame, (orig.Flags & FunctionRefBase::FuncRef_Weak) != 0);
+    return r;
+}
+
+// Value::ToFunction as the SDK writes it (a switch); the exe inlines it here. The derived view reaches the protected
+// ResolveFunctionName.
+struct MS2_FuncValue : Value
+{
+    SF_FORCEINLINE FunctionRef ToFunctionSw(const Environment* penv) const
+    {
+        switch (T.Type)
+        {
+        case FUNCTIONNAME:
+            return ResolveFunctionName(penv);
+        case FUNCTION:
+            return MS2_CopyFuncRef(V.FunctionValue);
+        default:;
+        }
+        return FunctionRef();
+    }
+};
+
 // watch(name, callback[, userData]): the callback sees every assignment of the member.
-// MS2-FUNCTIONAL the exe inlines SetLocalFrame into the function copy of ToFunction
 // @0x1429024e0
 void ObjectProto::Watch_(const FnCall& fn)
 {
     if (fn.NArgs >= 2)
     {
-        FunctionRef func = fn.Arg(1).ToFunction(fn.Env);
+        FunctionRef func = static_cast<const MS2_FuncValue&>(fn.Arg(1)).ToFunctionSw(fn.Env);
         if (!func.IsNull())
         {
             Value userData;
