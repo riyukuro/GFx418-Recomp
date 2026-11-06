@@ -3184,27 +3184,23 @@ unsigned FUN_140011450(void* object, const unsigned* source)
     return static_cast<unsigned>(*reinterpret_cast<unsigned __int64*>(outer + 0x20));
 }
 
-// MS2-FUNCTIONAL: frees the old aligned callback buffer, allocates the grown one and advances its active range.
+// Frees the old page and allocates the grown one (the SDK PagedItemBuffer::allocPage).
 // @0x140010cd0
 void FUN_140010cd0(void** buffer, unsigned __int64 requested)
 {
-    struct Page { void* First; char* End; void* Block; };
-    if (static_cast<Page*>(buffer[3])->First) {
-        void** object = static_cast<void**>(buffer[0]);
-        void** vtable = *reinterpret_cast<void***>(object);
-        reinterpret_cast<void (*)(void*, void*)>(vtable[0x60 / sizeof(void*)])(
-            object, static_cast<Page*>(buffer[3])->First);
-    }
+    // SDK PagedItemBuffer::allocPage (Render_Containers.h)
+    using Scaleform::UByte; using Scaleform::UPInt;
+    struct PageType { UByte* pStart; UByte* pEnd; UByte* pFree; };
+    struct Heap { Scaleform::MemoryHeap* pHeap; UPInt Granularity; void* pPagePool; PageType* pLastPage; };
+    Heap* h = reinterpret_cast<Heap*>(buffer);
+    UPInt size = requested;
+    if (h->pLastPage->pStart)
+        h->pHeap->Free(h->pLastPage->pStart);
 
-    const unsigned __int64 alignment = reinterpret_cast<unsigned __int64*>(buffer)[1];
-    void** object = static_cast<void**>(buffer[0]);
-    void** vtable = *reinterpret_cast<void***>(object);
-    const unsigned __int64 size = ((alignment - 1 + requested) / alignment) * alignment;
-    static_cast<Page*>(buffer[3])->Block =
-        reinterpret_cast<void* (*)(void*, unsigned __int64, unsigned)>(vtable[0x50 / sizeof(void*)])(object, size, 0);
-    static_cast<Page*>(buffer[3])->First = static_cast<Page*>(buffer[3])->Block;
-    static_cast<Page*>(buffer[3])->End =
-        static_cast<char*>(static_cast<Page*>(buffer[3])->First) + size;
+    size = (size + h->Granularity - 1) / h->Granularity * h->Granularity;
+
+    h->pLastPage->pStart = h->pLastPage->pFree = (UByte*)h->pHeap->Alloc(size);
+    h->pLastPage->pEnd   = h->pLastPage->pStart + size;
 }
 
 // destroys the retained GASPrototypeBase subobject before the AS2 object base. The exe's inline Prototype dtor stores
