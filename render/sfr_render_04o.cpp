@@ -85,6 +85,15 @@ void ExternalFontWinAPI::loadKerningPairs()
     }
 }
 
+// Selects obj into dc for the guard's scope (SDK GFxGdiSelectObjectGuard).
+struct GdiSelectObjectGuard
+{
+    HDC     WinDC;
+    HGDIOBJ WinObj;
+    GdiSelectObjectGuard(HDC dc, HGDIOBJ obj) : WinDC(dc), WinObj(::SelectObject(dc, obj)) {}
+    ~GdiSelectObjectGuard() { ::SelectObject(WinDC, WinObj); }
+};
+
 // @0x1426475b0
 ExternalFontWinAPI::ExternalFontWinAPI(FontProviderWinAPI* pprovider, FontSysDataWinAPI* psysData, const char* name,
                                        unsigned fontFlags, Lock* fontLock)
@@ -97,24 +106,29 @@ ExternalFontWinAPI::ExternalFontWinAPI(FontProviderWinAPI* pprovider, FontSysDat
     NameW.Resize(UTF8Util::GetLength(name) + 1);
     UTF8Util::DecodeString(&NameW[0], name);
 
-    // GDI substitutes a default face for an unknown name; only the Flash device font names may go that way
     LOGFONTW lf;
-    ::StringCchCopyW(lf.lfFaceName, LF_FACESIZE, &NameW[0]);
-    lf.lfCharSet    = DEFAULT_CHARSET;
-    bool faceExists = false;
-    ::EnumFontFamiliesExW(pSysData->WinHDC, &lf, (FONTENUMPROCW)EnumFontFamExProc, (LPARAM)&faceExists, 0);
-    if (!faceExists && strcmp(name, "_sans") != 0 && strcmp(name, "_typewriter") != 0 &&
-        strcmp(name, "_serif") != 0)
-        return;
+    if (::StringCchCopyW((LPWSTR)&lf.lfFaceName, sizeof(lf.lfFaceName) / sizeof(lf.lfFaceName[0]), &NameW[0]) != S_OK)
+    {
+    }
+    lf.lfCharSet = DEFAULT_CHARSET;
+
+    bool found = false;
+    EnumFontFamiliesExW(pSysData->WinHDC, &lf, (FONTENUMPROCW)EnumFontFamExProc, (LPARAM)&found, 0);
+    if (!found)
+    {
+        // GDI substitutes a default face for an unknown name; only the Flash device font names may go that way
+        if (SFstrcmp(name, "_sans") != 0 && SFstrcmp(name, "_typewriter") != 0 && SFstrcmp(name, "_serif") != 0)
+            return;
+    }
 
     MasterFont = ::CreateFontW(-GGO_FontHeight, 0, 0, 0, IsBold() ? FW_BOLD : FW_NORMAL, IsItalic(), 0, 0,
                                DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
                                DEFAULT_PITCH, &NameW[0]);
+
     if (MasterFont)
     {
-        HDC        dc      = pSysData->WinHDC;
-        HGDIOBJ    oldFont = ::SelectObject(dc, MasterFont);
-        TEXTMETRICW tm;
+        TEXTMETRICW          tm;
+        GdiSelectObjectGuard g1(pSysData->WinHDC, MasterFont);
         if (::GetTextMetricsW(pSysData->WinHDC, &tm))
         {
             Leading = float(tm.tmExternalLeading) * Scale1024;
@@ -122,12 +136,9 @@ ExternalFontWinAPI::ExternalFontWinAPI(FontProviderWinAPI* pprovider, FontSysDat
             Descent = float(tm.tmDescent) * Scale1024;
             loadKerningPairs();
         }
-        ::SelectObject(dc, oldFont);
     }
 }
 
-// MS2-FUNCTIONAL: register allocation only in the inlined path writes (the exe loads the prolog constant into xmm7
-// and keeps the per-point factor in xmm6, ours the other way round; same size)
 // @0x14264bb10
 bool ExternalFontWinAPI::decomposeGlyphOutline(const UByte* data, unsigned size, GlyphShape* shape,
                                                unsigned hintedSize)
@@ -259,15 +270,6 @@ void ExternalFontWinAPI::decomposeGlyphBitmap(const UByte* data, int width, int 
         src += pitch;
     }
 }
-
-// Selects obj into dc for the guard's scope (SDK GFxGdiSelectObjectGuard).
-struct GdiSelectObjectGuard
-{
-    HDC     WinDC;
-    HGDIOBJ WinObj;
-    GdiSelectObjectGuard(HDC dc, HGDIOBJ obj) : WinDC(dc), WinObj(::SelectObject(dc, obj)) {}
-    ~GdiSelectObjectGuard() { ::SelectObject(WinDC, WinObj); }
-};
 
 // @0x142648570
 int ExternalFontWinAPI::GetGlyphIndex(UInt16 code)

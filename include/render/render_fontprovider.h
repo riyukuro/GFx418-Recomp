@@ -119,7 +119,7 @@ private:
     HFONT                            HintedFont;           // +0x80
     unsigned                         LastHintedFontSize;   // +0x88
     ArrayLH<GlyphType>               Glyphs;               // +0x90
-    HashUncachedLH<UInt16, unsigned, IdentityHash<UInt16> > CodeTable;   // +0xa8, character code -> glyph index
+    HashIdentityLH<UInt16, unsigned> CodeTable;   // +0xa8, character code -> glyph index
     HashLH<KerningPairType, float>   KerningPairs;         // +0xb0
     float                            Scale1024;            // +0xb8
     NativeHintingType                Hinting;              // +0xc0
