@@ -4953,39 +4953,33 @@ void FUN_1423ceb30(void* raw)
 }
 
 // The language-bar events FUN_1423cd6b0 and FUN_1423cd0a0 handle the same way. Unknown events go to slot 24 and
-// then on to the provider's slot 11 with defaultArgument.
-static void cx18_DispatchLangBarEvent(unsigned long long* self, const char* command, const char* argument,
+// then on to the provider's slot 11 with defaultArgument. The exe inlines this into both callers and re-reads the
+// vtable and provider (+0x78) from self at every use, so they are macros here, not locals.
+static __forceinline void cx18_DispatchLangBarEvent(unsigned long long* self, const char* command, const char* argument,
                                       const char* defaultArgument)
 {
-    auto** vtable = reinterpret_cast<void**>(self[0]);
-    auto* provider = reinterpret_cast<unsigned char*>(self[0xf]);
+#define vtable (reinterpret_cast<void**>(self[0]))
+#define provider (reinterpret_cast<unsigned char*>(self[0xf]))
     auto providerCall = [&](unsigned slot) { return (*reinterpret_cast<void***>(provider))[slot]; };
     auto stringData = [](unsigned long long node) { return reinterpret_cast<const char*>((node & ~3ull) + 0xc); };
     if (std::strcmp(command, "LangBar_OnSelectInputLang") == 0) {
         reinterpret_cast<void(*)(void*)>(vtable[18])(self);
         if (provider) reinterpret_cast<void(*)(void*, const char*)>(providerCall(9))(provider, argument);
     } else if (std::strcmp(command, "LangBar_GetIMENames") == 0) {
-        if (!provider) return;
-        const unsigned mode = *reinterpret_cast<unsigned*>(provider + 0x84);
-        unsigned countOffset;
-        bool callWhenEmpty = false;
-        if (mode == 9) countOffset = 0x60;
-        else if (mode == 0x400) { countOffset = 0x18; callWhenEmpty = true; }
-        else if (mode == 0x2000) countOffset = 0x30;
-        else if (mode == 0x80000) countOffset = 0x48;
-        else {
-            if (mode == 0x10000000) reinterpret_cast<void(*)(void*)>(vtable[18])(self);
-            return;
+        // One block per input mode, each with its own joined String; mode 0x400 reports an empty list too.
+#define IME_JOIN(off, always) { Scaleform::String joined; const int count = *reinterpret_cast<int*>(provider + (off)); \
+    if (always || count) { for (int i = 0; i < count; ++i) joined += (*reinterpret_cast<Scaleform::String**>(provider + (off) - 8))[i] + "@@"; \
+    reinterpret_cast<void(*)(void*, const char*)>(vtable[14])(self, joined.ToCStr()); } break; }
+        switch (*reinterpret_cast<unsigned*>(provider + 0x84)) {
+        case 9: IME_JOIN(0x60, false)
+        case 0x400: IME_JOIN(0x18, true)
+        case 0x2000: IME_JOIN(0x30, false)
+        case 0x80000: IME_JOIN(0x48, false)
+        case 0x10000000: reinterpret_cast<void(*)(void*)>(vtable[18])(self); break;
         }
-        Scaleform::String joined;
-        const int count = *reinterpret_cast<int*>(provider + countOffset);
-        if (count == 0 && !callWhenEmpty) return;
-        auto* names = *reinterpret_cast<Scaleform::String**>(provider + countOffset - 8);
-        for (int i = 0; i < count; ++i) joined += names[i] + "@@";
-        reinterpret_cast<void(*)(void*, const char*)>(vtable[14])(self, joined.ToCStr());
+#undef IME_JOIN
     } else if (std::strcmp(command, "LangBar_OnSelectIME") == 0) {
-        if (!provider) return;
-        reinterpret_cast<void(*)(void*, const char*)>(providerCall(8))(provider, argument);
+        if (provider) reinterpret_cast<void(*)(void*, const char*)>(providerCall(8))(provider, argument);
         if (*reinterpret_cast<unsigned*>(provider + 0x84) == 9)
             reinterpret_cast<void(*)(void*)>(vtable[19])(self);
         const char* language = stringData(self[0x16]);
@@ -4994,8 +4988,7 @@ static void cx18_DispatchLangBarEvent(unsigned long long* self, const char* comm
             reinterpret_cast<void(*)(void*, int)>(providerCall(10))(provider, -1);
         }
     } else if (std::strcmp(command, "LangBar_GetInstalledLanguages") == 0) {
-        if (provider)
-            reinterpret_cast<void(*)(void*, const char*)>(vtable[13])(
+        reinterpret_cast<void(*)(void*, const char*)>(vtable[13])(
                 self, stringData(*reinterpret_cast<unsigned long long*>(provider + 0x70)));
     } else {
         reinterpret_cast<void(*)(void*)>(vtable[24])(self);
@@ -5004,16 +4997,19 @@ static void cx18_DispatchLangBarEvent(unsigned long long* self, const char* comm
                 provider, command, defaultArgument);
     }
 }
+#undef vtable
+#undef provider
 
-// MS2-FUNCTIONAL: dispatches the language-bar and status-window callbacks by event name.
+// Dispatches the language-bar and status-window callbacks by event name; the rest go to
+// cx18_DispatchLangBarEvent with the argument as the default.
 // @0x1423cd6b0
 void FUN_1423cd6b0(unsigned long long* self, unsigned long long payload,
                    unsigned long long* commandCell, unsigned long long* argumentCell)
 {
-    const char* command = *reinterpret_cast<const char**>(*commandCell);
     const char* argument = *reinterpret_cast<const char**>(*argumentCell);
-    auto** vtable = reinterpret_cast<void**>(self[0]);
-    auto* provider = reinterpret_cast<unsigned char*>(self[0xf]);
+    const char* command = *reinterpret_cast<const char**>(*commandCell);
+#define vtable (reinterpret_cast<void**>(self[0]))
+#define provider (reinterpret_cast<unsigned char*>(self[0xf]))
     if (std::strcmp(command, "LangBar_OnInit") == 0) {
         *reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(self[3]) + 0x48) = payload;
         if (provider)
@@ -5028,6 +5024,8 @@ void FUN_1423cd6b0(unsigned long long* self, unsigned long long payload,
         cx18_DispatchLangBarEvent(self, command, argument, argument);
     }
 }
+#undef vtable
+#undef provider
 
 // MS2-FUNCTIONAL: decodes the external callback's Value array (string values may be managed, one more indirection)
 // and dispatches its event. The OnInit events keep the second Value in the owner at +0x28/+0x58.
@@ -5050,8 +5048,8 @@ void FUN_1423cd0a0(unsigned long long* self, const unsigned char* event)
     // The exe reads the second Value's type even for a one-element array (StatusWindow_OnInit, OnItemSelect).
     const unsigned secondType = *reinterpret_cast<const unsigned*>(second + 8) & 0x8f;
     const char* argument = (count > 1 && secondType == Value::VT_String) ? valueString(second) : nullptr;
-    auto** vtable = reinterpret_cast<void**>(self[0]);
-    auto* provider = reinterpret_cast<unsigned char*>(self[0xf]);
+#define vtable (reinterpret_cast<void**>(self[0]))
+#define provider (reinterpret_cast<unsigned char*>(self[0xf]))
     auto* owner = reinterpret_cast<unsigned char*>(self[3]);
     if (std::strcmp(command, "CandidateList_OnSetItemDataMap") == 0) {
         auto* candidates = reinterpret_cast<unsigned char*>(self[0xe]);
@@ -5087,6 +5085,8 @@ void FUN_1423cd0a0(unsigned long long* self, const unsigned char* event)
             defaultArgument = *reinterpret_cast<const bool*>(second + 0x10) ? "true" : "false";
         cx18_DispatchLangBarEvent(self, command, argument, defaultArgument);
     }
+#undef vtable
+#undef provider
 }
 
 // MS2-FUNCTIONAL: for the (0x282, 0xe, 0x12) notification: on backspace ([+0xd0] == 8) in state 4/0x40000 it removes the
