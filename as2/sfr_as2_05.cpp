@@ -1706,48 +1706,57 @@ static SF_FORCEINLINE const char* FindPathSeparator(const char* pstr)
     return 0;
 }
 
-static SF_FORCEINLINE MovieRoot* GetAS2Root_SC(const ASStringContext& sc)
-{
-    return static_cast<MovieRoot*>(sc.pContext->pMovieRoot->pASMovieRoot);
-}
-
 // Walks a target path one name at a time: a leading "/" starts at the top parent.
-// MS2-FUNCTIONAL cl swaps rbx/rdi between the name start and the separator scan; same code otherwise
 // @0x142944cb0
 InteractiveObject* Environment::FindTarget(const ASString& path, unsigned flags) const
 {
-    if (path.GetSize() == 0)
-        return IsInvalidTarget ? 0 : Target;
+    if (path.IsEmpty())
+        return IsInvalidTarget ? NULL : Target;
 
-    const char*        p    = path.ToCStr();
-    InteractiveObject* env  = Target;
-    ASString           name = GetBuiltin(ASBuiltin_empty_);
-    bool               first = true;
+    InteractiveObject* env = Target;
+
+    const char* p = path.ToCStr();
+    ASString   subpart(GetBuiltin(ASBuiltin_empty_));
+
     if (*p == '/')
     {
+        // Absolute path; start at the _root.
         env = env->GetTopParent();
         p++;
     }
+    bool first_call = true;
     for (;;)
     {
-        const char* pnext = FindPathSeparator(p);
-        if (pnext == p)
+        const char* pnextSlash = FindPathSeparator(p);
+        if (pnextSlash == p)
         {
             if (!(flags & 4))
                 LogError("Invalid path '%s'", path.ToCStr());
             break;
         }
-        ASStringManager* pmgr = GetAS2Root_SC(StringContext)->BuiltinsMgr.pStringManager;
-        name = ASString(pnext ? pmgr->CreateStringNode(p, pnext - p) : pmgr->CreateStringNode(p));
-        if (name.GetSize() != 0)
+        else if (pnextSlash)
         {
-            AvmCharacter* pavm = env ? ToAvmCharacter(env) : 0;
-            env                = pavm->GetRelativeTarget(name, first);
+            // Cut off the slash and everything after it.
+            subpart = CreateString(p, (UPInt)(pnextSlash - p));
         }
-        if (!env || !pnext)
+        else
+        {
+            subpart = CreateString(p);
+        }
+
+        if (subpart.GetSize())
+        {
+            // Handle: '.', '..', this, _root, _parent, _levelN, display list characters
+            env = ToAvmCharacter(env)->GetRelativeTarget(subpart, first_call);
+        }
+
+        if (env == NULL || pnextSlash == NULL)
+        {
             break;
-        p     = pnext + 1;
-        first = false;
+        }
+
+        p = pnextSlash + 1;
+        first_call = false;
     }
     return env;
 }
