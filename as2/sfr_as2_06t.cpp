@@ -205,38 +205,43 @@ bool MovieRoot::SetVariableArray(SetArrayTypeArg type, const char* ppathToVar, u
 }
 
 // Resizes the array at path; a missing or non-array variable becomes a new Array of that size.
-// MS2-FUNCTIONAL: register allocation differs in the first level search, and the exe sets the SV_Normal flag in dil before the environment call.
+// MS2-FUNCTIONAL: SDK body; only the first level search differs (cl keeps the loop index in r8, the exe in r9).
 // @0x14298d760
 bool MovieRoot::SetVariableArraySize(const char* ppathToVar, unsigned count, SetVarTypeArg setType)
 {
     if (!FindLevelMovie(pMovieImpl, 0))
         return false;
+
     Environment* penv = Level0Env(pMovieImpl);
     ASString     path(penv->CreateString(ppathToVar));
-    ArrayObject* parray;
-    bool         ok;
+
+    Ptr<ArrayObject> parray;
+    Value            retVal;
+    if (penv->GetVariable(path, &retVal) && retVal.IsObject())
     {
-        Value   cur;
-        Object* pobj;
-        if (penv->GetVariable(path, &cur) && cur.IsObject() && (pobj = cur.ToObject(penv)) != 0 &&
-            pobj->GetObjectType() == Object::Object_Array)
+        Object* pobj = retVal.ToObject(penv);
+        if (pobj && pobj->GetObjectType() == Object::Object_Array)
         {
             parray = static_cast<ArrayObject*>(pobj);
-            parray->AddRef();
-            if (count != (unsigned)parray->GetSize())
-                parray->Resize((int)count);
-            ok = true;
-        }
-        else
-        {
-            parray = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) ArrayObject(Level0Env(pMovieImpl));
-            parray->Resize((int)count);
-            ok = MovieRoot_StoreArray(this, path, parray, setType);
+            if (count != unsigned(parray->GetSize()))
+                parray->Resize(count);
+            return true;
         }
     }
-    if (parray)
-        parray->Release();
-    return ok;
+
+    parray = *SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) ArrayObject(Level0Env(pMovieImpl));
+    parray->Resize(count);
+    Value val;
+    val.SetAsObject(parray);
+
+    bool setResult = static_cast<AvmCharacter*>(
+                         static_cast<AvmInteractiveObjBase*>(FindLevelMovie(pMovieImpl, 0)->GetAvmObjImpl()))
+                         ->GetASEnvironment()
+                         ->SetVariable(path, val, 0, (setType == Movie::SV_Normal));
+
+    if ((!setResult && (setType != Movie::SV_Normal)) || (setType == Movie::SV_Permanent))
+        AddStickyVariable(path, val, setType);
+    return setResult;
 }
 
 }}} // namespace Scaleform::GFx::AS2
