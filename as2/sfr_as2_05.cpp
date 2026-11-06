@@ -2337,7 +2337,6 @@ void SelectionCtorFunction::GetFocusBitmask(const FnCall& fn)
 }
 
 // Selection.getFocusArray(ch) (extensions only): the controllers that have ch focused; null otherwise.
-// MS2-FUNCTIONAL the exe keeps a null test on the new array before the final release; ours drops it (same code otherwise)
 // @0x14294ab70
 void SelectionCtorFunction::GetFocusArray(const FnCall& fn)
 {
@@ -2345,10 +2344,10 @@ void SelectionCtorFunction::GetFocusArray(const FnCall& fn)
     if (fn.Env && fn.Env->CheckExtensions() && fn.NArgs >= 1)
     {
         Ptr<InteractiveObject> ch   = fn.Arg(0).ToCharacter(fn.Env);
-        Ptr<Object>            pobj = *fn.Env->OperatorNew(fn.Env->GetBuiltin(ASBuiltin_Array));
+        MovieRoot*             proot0 = (MovieRoot*)fn.Env->GetSC()->pContext->pMovieRoot->pASMovieRoot;
+        Ptr<Object>            pobj = *fn.Env->OperatorNew(proot0->GetStringManager()->GetBuiltin(ASBuiltin_Array));
         ArrayObject*           parr = static_cast<ArrayObject*>(pobj.GetPtr());
-        if (parr->Elements.GetCapacity() < 4)
-            parr->Elements.Reserve(4);
+        parr->Elements.Reserve(4);
         for (unsigned i = 0; i < 4; ++i)
         {
             MovieImpl*             proot = fn.Env->GetTarget()->GetMovieImpl();
