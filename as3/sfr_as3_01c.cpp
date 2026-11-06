@@ -1132,16 +1132,15 @@ void Sfr21AddInterfaceSlots(Traits* self, VMAbcFile& file, const Abc::ClassInfo&
 
 // The scope stack base of the running call frame (0 outside of any); the call stack is paged, 64 frames of 0xa8
 // bytes to a page.
+// The SDK's VM::GetScopeStackBaseInd shape (early return 0).
 static inline UPInt GetCurrScopeStackBaseInd(const VM& vm)
 {
-    UPInt base = vm.Unk070[1];
-    if (base != 0)
-    {
-        const UPInt n = base - 1;
-        base = *reinterpret_cast<const UPInt*>(reinterpret_cast<const char* const*>(vm.Unk070[4])[n >> 6] +
-                                               (n & 0x3f) * 0xa8 + 8);
-    }
-    return base;
+    if (vm.Unk070[1] == 0)
+        return 0;
+
+    const UPInt n = vm.Unk070[1] - 1;
+    return *reinterpret_cast<const UPInt*>(reinterpret_cast<const char* const*>(vm.Unk070[4])[n >> 6] +
+                                           (n & 0x3f) * 0xa8 + 8);
 }
 
 namespace ClassTraits
@@ -1163,7 +1162,6 @@ namespace ClassTraits
 
 namespace Classes
 {
-    // MS2-FUNCTIONAL: register allocation (the exe keeps the traits in r9 and the VM in rcx)
     // @0x1423ef700
     UserDefined::UserDefined(ClassTraits::Traits& t)
         : UDBase(t)
