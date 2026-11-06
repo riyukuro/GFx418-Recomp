@@ -344,7 +344,7 @@ static __forceinline void WordsEntryCopy(WordsEntry* d, const WordsEntry* s)
     d->Value = s->Value;
 }
 
-// MS2-FUNCTIONAL 0x14261eae0: same SDK HashSet add; cl merges the Value store of the empty-slot and moved-entry paths, the exe does not (33 bytes differ)
+// The exe stores each path's Value right after reading it; the volatile stores keep cl from sinking them into one shared tail store.
 // @0x14261eae0
 void FUN_14261eae0(U** self, void* ctx, WordsRefOps::Ref* ref, U hashValue)
 {
@@ -368,7 +368,7 @@ void FUN_14261eae0(U** self, void* ctx, WordsRefOps::Ref* ref, U hashValue)
         {
             WordsEntryCopy(blank, natural);
             natural->Key = *(const WordsKey*)ref->Key;
-            natural->Value = *ref->Value;
+            *(volatile U*)&natural->Value = *ref->Value;
             natural->NextInChain = blankIndex;
         }
         else
@@ -386,8 +386,8 @@ void FUN_14261eae0(U** self, void* ctx, WordsRefOps::Ref* ref, U hashValue)
                 collidedIndex = e->NextInChain;
             }
             natural->Key = *(const WordsKey*)ref->Key;
-            natural->Value = *ref->Value;
-            natural->NextInChain = -1;
+            *(volatile U*)&natural->Value = *ref->Value;
+            *(volatile SPInt*)&natural->NextInChain = -1;
         }
     }
     natural->HashValue = hashValue;
