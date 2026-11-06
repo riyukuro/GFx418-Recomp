@@ -3196,13 +3196,26 @@ bool FUN_1423cad20(unsigned long long* node, const unsigned long long* query)
 namespace Scaleform { namespace GFx { namespace IME {
 
 // MS2-FUNCTIONAL: constructs the language bar COM bridge, its two callback objects, and the 0x100-character input buffer.
+// The source shape now follows the exe: FUN_1423cabb0 stays a call, the manager is re-read from +0x1d0 at every
+// use, and the provider, language and callback references are released at the exe's points. Two diffs remain:
+//  - The exe passes &DAT_14313b410 as a 16-byte GUID whose second half is DAT_14313b418. In the fullexe the two
+//    halves are separate pieces (0x14264e860 and 0x142645678 in fullexe.map), so passing the address directly
+//    would read the wrong 8 bytes. The local 16-byte copy below is the functional stand-in. It costs 34 bytes
+//    (500 vs 466). Passing &DAT_14313b410 directly gives 466 bytes and a 12-line diff.
+//  - Even with the direct pass, cl sinks the provider/language/callback zero stores and the xor r12d below the
+//    calls; the exe zeroes them right after the CoCreateInstance call. Declaring provider earlier moves its store
+//    above the call instead (7 lines). No source order reproduced the exe's placement.
+// Exact needs data_rdata_sf_a to define DAT_14313b410 as one 16-byte GUID (a cross-unit data change).
+// Before this change the function was 828 bytes, because FUN_1423cabb0 was inlined into it.
 // @0x1423d54d0
 unsigned long long* FUN_1423d54d0(unsigned long long* self, unsigned long long owner)
 {
     FUN_1423cabb0(self, owner);
     *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0x1b4) = 1;
+    void* provider = nullptr;
     self[0] = reinterpret_cast<unsigned long long>(DAT_14313b520);
-    self[0x3a] = 0;
+    void** managerSlot = reinterpret_cast<void**>(self + 0x3a);
+    *managerSlot = nullptr;
     self[0x34] = reinterpret_cast<unsigned long long>(DAT_14313b5a0);
     self[0x38] = 0;
     self[0x35] = reinterpret_cast<unsigned long long>(DAT_14313b5c0);
@@ -3210,53 +3223,40 @@ unsigned long long* FUN_1423d54d0(unsigned long long* self, unsigned long long o
 
     // The exe creates the thread manager straight into +0x1d0 (0x1423d5505) and keeps that reference:
     // the dtor and FUN_1423d7610/FUN_1423d7690 unadvise the sinks through it.
-    void** managerSlot = reinterpret_cast<void**>(self + 0x3a);
     HRESULT hr = CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4858), nullptr,
         CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(&DAT_1431c4d28), managerSlot);
     if (FAILED(hr)) return self;
-    void* manager = *managerSlot;
-
-    void* provider = nullptr;
-    auto** managerVtable = *reinterpret_cast<void***>(manager);
-    hr = reinterpret_cast<HRESULT(*)(void*, const void*, void**)>(managerVtable[0])(
-        manager, DAT_1431c51e8, &provider);
-    if (FAILED(hr)) {
+#define manager (*managerSlot)
+#define comCall(p, slot, sig) reinterpret_cast<sig>((*reinterpret_cast<void***>(p))[slot])
+    if (FAILED(comCall(manager, 0, HRESULT(*)(void*, const void*, void**))(manager, DAT_1431c51e8, &provider))) {
         // Released but left in +0x1d0, as in the exe (0x1423d5585 -> 0x1423d5673).
-        reinterpret_cast<ULONG(*)(void*)>(managerVtable[2])(manager);
-        return self;
-    }
-    if (provider) {
-        auto** providerVtable = *reinterpret_cast<void***>(provider);
-        HRESULT result = reinterpret_cast<HRESULT(*)(void*, const void*, void*, void*)>(providerVtable[3])(
-            provider, DAT_14313b400, self + 0x35, self + 0x36);
-        if (FAILED(result)) *reinterpret_cast<unsigned*>(self + 0x36) = 0xffffffffu;
+        if (manager) comCall(manager, 2, ULONG(*)(void*))(manager);
+    } else {
+        if (FAILED(comCall(provider, 3, HRESULT(*)(void*, const void*, void*, void*))(
+                provider, DAT_14313b400, self + 0x35, self + 0x36)))
+            *reinterpret_cast<unsigned*>(self + 0x36) = 0xffffffffu;
         void* language = nullptr;
-        hr = reinterpret_cast<HRESULT(*)(void*, const void*, void**)>(managerVtable[0])(
-            manager, DAT_1431c5028, &language);
-        if (SUCCEEDED(hr) && language) {
-            // DAT_14313b410 and DAT_14313b418 are the two halves of one GUID, but separate pieces in the fullexe.
+        if (SUCCEEDED(comCall(manager, 0, HRESULT(*)(void*, const void*, void**))(manager, DAT_1431c5028, &language))
+                && language) {
+            // Halves of one GUID, separate pieces in the fullexe: see the note above.
             const unsigned long long compartment[2] = {DAT_14313b410, DAT_14313b418};
-            reinterpret_cast<HRESULT(*)(void*, const void*, void**)>(
-                (*reinterpret_cast<void***>(language))[3])(language, compartment,
-                    reinterpret_cast<void**>(self + 0x38));
-            reinterpret_cast<ULONG(*)(void*)>((*reinterpret_cast<void***>(language))[2])(language);
+            comCall(language, 3, HRESULT(*)(void*, const void*, void**))(language, compartment,
+                reinterpret_cast<void**>(self + 0x38));
+            comCall(language, 2, ULONG(*)(void*))(language);
         }
-
-        auto* settings = reinterpret_cast<void*>(self[0x38]);
-        if (settings) {
-            void* callback = nullptr;
-            HRESULT query = reinterpret_cast<HRESULT(*)(void*, const void*, void**)>(
-                (*reinterpret_cast<void***>(settings))[0])(settings, DAT_1431c51e8, &callback);
-            if (SUCCEEDED(query) && callback) {
-                HRESULT call = reinterpret_cast<HRESULT(*)(void*, const void*, void*, void*)>(
-                    (*reinterpret_cast<void***>(callback))[3])(callback, DAT_1431c5018,
-                        self + 0x34, self + 0x37);
-                if (FAILED(call)) *reinterpret_cast<unsigned*>(self + 0x37) = 0xffffffffu;
-                reinterpret_cast<ULONG(*)(void*)>((*reinterpret_cast<void***>(callback))[2])(callback);
+        void* callback = nullptr;
+        if (void* settings = reinterpret_cast<void*>(self[0x38])) {
+            if (SUCCEEDED(comCall(settings, 0, HRESULT(*)(void*, const void*, void**))(settings, DAT_1431c51e8, &callback))) {
+                if (FAILED(comCall(callback, 3, HRESULT(*)(void*, const void*, void*, void*))(
+                        callback, DAT_1431c5018, self + 0x34, self + 0x37)))
+                    *reinterpret_cast<unsigned*>(self + 0x37) = 0xffffffffu;
             }
+            if (callback) comCall(callback, 2, ULONG(*)(void*))(callback);
         }
-        reinterpret_cast<ULONG(*)(void*)>((*reinterpret_cast<void***>(provider))[2])(provider);
     }
+    if (provider) comCall(provider, 2, ULONG(*)(void*))(provider);
+#undef manager
+#undef comCall
     return self;
 }
 
@@ -3490,7 +3490,7 @@ void FUN_1423cb760(void* object)
 
 // Initializes the shared IME manager state, interns its embedded node, and installs the default conversion records.
 // @0x1423cabb0
-unsigned long long* FUN_1423cabb0(unsigned long long* self, unsigned long long owner)
+__declspec(noinline) unsigned long long* FUN_1423cabb0(unsigned long long* self, unsigned long long owner)
 {
     self[0] = reinterpret_cast<unsigned long long>(DAT_143138360);
     self[1] = 0; self[2] = 0; self[3] = 0; self[4] = 0; self[5] = 0; self[6] = 0; self[7] = 0;
