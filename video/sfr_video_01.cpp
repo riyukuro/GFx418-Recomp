@@ -328,6 +328,14 @@ void* FUN_140002e80(void* stream)
     return stream;
 }
 
+// FUN_140002e80 / FUN_140002ab0 are VideoSoundStream's ctor and dtor (video_video.h declares the class; its callers
+// use the real names). The hook DLL binds those names to the exe by their symbols rows (a second /alternatename
+// would conflict).
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:??0VideoSoundStream@Video@GFx@Scaleform@@QEAA@XZ=?FUN_140002e80@@YAPEAXPEAX@Z")
+#pragma comment(linker, "/alternatename:??1VideoSoundStream@Video@GFx@Scaleform@@UEAA@XZ=?FUN_140002ab0@@YAXPEAX@Z")
+#endif
+
 #pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
 // stores the ready flag and forwards the state update to the active player.
 // @0x140003580
