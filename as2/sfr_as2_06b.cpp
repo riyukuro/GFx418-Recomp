@@ -312,8 +312,52 @@ void UserDefinedFunctionObject::InvokeImpl(const FnCall& fn)
         EnvRoot(penv)->Value2ASValue(retVal, fn.Result);
 }
 
+// FunctionRefBase::SetLocalFrame (exe 0x142981e70) where the exe inlines it.
+static SF_FORCEINLINE void PrimFn_SetLocalFrameInl(FunctionRefBase* p, LocalFrame* localFrame, bool weakRef)
+{
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->Release();
+    p->pLocalFrame = localFrame;
+    if (weakRef)
+        p->Flags |= FunctionRefBase::FuncRef_Weak;
+    else
+        p->Flags &= ~FunctionRefBase::FuncRef_Weak;
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->AddRef();
+}
+
+// The function view of a value that can look a FUNCTIONNAME up.
+struct PrimFn_ValueView : Value { using Value::ResolveFunctionName; };
+
+// Value::ToFunction, inlined in the exe: the reference is built in place.
+struct PrimFn_FuncRef : FunctionRefBase
+{
+    SF_FORCEINLINE PrimFn_FuncRef(const Value& v, const Environment* penv)
+    {
+        switch (v.T.Type)
+        {
+        case Value::FUNCTIONNAME:
+            ::new (static_cast<void*>(this))
+                FunctionRef(static_cast<const PrimFn_ValueView&>(v).ResolveFunctionName(penv));
+            return;
+        case Value::FUNCTION:
+            Flags    = 0;
+            Function = v.V.FunctionValue.Function;
+            if (Function)
+                Function->AddRef();
+            pLocalFrame = 0;
+            if (v.V.FunctionValue.pLocalFrame)
+                PrimFn_SetLocalFrameInl(this, v.V.FunctionValue.pLocalFrame,
+                                        (v.V.FunctionValue.Flags & FunctionRefBase::FuncRef_Weak) != 0);
+            return;
+        default:;
+        }
+        Init((FunctionObject*)0);
+    }
+    SF_FORCEINLINE ~PrimFn_FuncRef() { DropRefs(); }
+};
+
 // toString / valueOf on a primitive: the method from the prototype chain of the wrapper object, else undefined.
-// MS2-FUNCTIONAL: register allocation differs and the obj uses a frame pointer.
 // @0x142964710
 bool BooleanObject::InvokePrimitiveMethod(const FnCall& fnCall, const ASString& methodName)
 {
@@ -324,10 +368,10 @@ bool BooleanObject::InvokePrimitiveMethod(const FnCall& fnCall, const ASString& 
         Value method;
         if (pthis->GetMemberRaw(fnCall.Env->GetSC(), methodName, &method))
         {
-            FunctionRef func = method.ToFunction(fnCall.Env);
+            PrimFn_FuncRef func(method, fnCall.Env);
             if (!func.IsNull())
             {
-                func.Invoke(fnCall);
+                static_cast<FunctionRef&>(static_cast<FunctionRefBase&>(func)).Invoke(fnCall);
                 return true;
             }
         }
@@ -336,7 +380,6 @@ bool BooleanObject::InvokePrimitiveMethod(const FnCall& fnCall, const ASString& 
     return false;
 }
 
-// MS2-FUNCTIONAL: register allocation differs and the obj uses a frame pointer.
 // @0x142964950
 bool NumberObject::InvokePrimitiveMethod(const FnCall& fnCall, const ASString& methodName)
 {
@@ -347,10 +390,10 @@ bool NumberObject::InvokePrimitiveMethod(const FnCall& fnCall, const ASString& m
         Value method;
         if (pthis->GetMemberRaw(fnCall.Env->GetSC(), methodName, &method))
         {
-            FunctionRef func = method.ToFunction(fnCall.Env);
+            PrimFn_FuncRef func(method, fnCall.Env);
             if (!func.IsNull())
             {
-                func.Invoke(fnCall);
+                static_cast<FunctionRef&>(static_cast<FunctionRefBase&>(func)).Invoke(fnCall);
                 return true;
             }
         }
