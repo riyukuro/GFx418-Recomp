@@ -2652,8 +2652,10 @@ void PointProto::Subtract(const FnCall& fn)
             GASPoint     pt1(GASPoint::NoInit), pt2(GASPoint::NoInit);
             pthis->GetProperties(fn.Env, pt1);
             GFxObject_GetPointProperties(fn.Env, p, pt2);
-            pt1.x -= pt2.x;
-            pt1.y -= pt2.y;
+            // SDK Point::operator-= is Offset(-pt.x, -pt.y): both negations come first.
+            Number dx = -pt2.x, dy = -pt2.y;
+            pt1.x += dx;
+            pt1.y += dy;
             retpt->SetProperties(fn.Env, pt1);
             set = true;
         }
