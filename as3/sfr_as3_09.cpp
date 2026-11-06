@@ -432,7 +432,7 @@ namespace Instances { namespace fl_events {
     }
 
     // @0x1424687d0
-    // MS2-FUNCTIONAL: the exe inlines the Listener copy and has a larger frame; the same calls and exception handling
+    // MS2-FUNCTIONAL: SDK body; callee-saved register permutation (r12/r14/r15) and IV add order in the inlined Listener copy loop
     bool EventDispatcher::DispatchSingleEvent(Instances::fl_events::Event* evtObj, bool useCapture)
     {
         if (!pImpl)
@@ -3270,8 +3270,15 @@ namespace Instances { namespace fl_events {
         return reinterpret_cast<Instances::fl_display::InteractiveObject*>(raw & ~UPInt(1));
     }
 
+    // The AS3 state of one mouse, as MovieRoot::GetAS3MouseState (inline in the SDK).
+    static inline const MovieRoot::MouseState* GetAS3MouseState(MovieRoot* root, unsigned mouseIndex)
+    {
+        if (mouseIndex >= 4)
+            return NULL;
+        return &root->mMouseState[mouseIndex];
+    }
+
     // @0x142467ec0
-    // MS2-FUNCTIONAL: the exe repeats the create/dispatch/release sequence per case; cl shares it
     bool EventDispatcher::Dispatch(const EventId& evtId, GFx::DisplayObject* dobj)
     {
         enum
@@ -3287,65 +3294,118 @@ namespace Instances { namespace fl_events {
         SPtr<Instances::fl_events::Event> evt;
         switch (evtId.Id)
         {
-        case EventId::Event_EnterFrame:
         case EV_Activate:
         case EV_Deactivate:
+        {
+            SPtr<Instances::fl_events::Event> efe = cls.CreateEventObject(
+                (evtId.Id == EV_Activate) ? vm.GetBuiltin(BuiltinType(BI_activate)) : vm.GetBuiltin(BuiltinType(BI_deactivate)),
+                false, false);
+            efe->Target = this;
+            if (!DispatchSingleEvent(efe, false) && dobj)
+                dobj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
+            return !efe->DefaultPrevented;
+        }
+        case EventId::Event_EnterFrame:
+        {
+            SPtr<Instances::fl_events::Event> efe = cls.CreateEventObject(vm.GetBuiltin(BuiltinType(BI_enterFrame)), false, false);
+            efe->Target = this;
+            if (!DispatchSingleEvent(efe, false) && dobj)
+                dobj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
+            return !efe->DefaultPrevented;
+        }
         case EV_Render:
+        {
+            SPtr<Instances::fl_events::Event> efe = cls.CreateEventObject(vm.GetBuiltin(BuiltinType(BI_render)), false, false);
+            efe->Target = this;
+            if (!DispatchSingleEvent(efe, false) && dobj)
+                dobj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
+            return !efe->DefaultPrevented;
+        }
         case EV_Resize:
         {
-            // to this dispatcher's listeners only
-            BuiltinType bt = BuiltinType(evtId.Id == EventId::Event_EnterFrame ? BI_enterFrame :
-                                         evtId.Id == EV_Activate ? BI_activate :
-                                         evtId.Id == EV_Deactivate ? BI_deactivate :
-                                         evtId.Id == EV_Render ? BI_render : BI_resize);
-            evt = cls.CreateEventObject(vm.GetBuiltin(bt), false, false);
-            evt->Target = this;
-            if (!DispatchSingleEvent(evt, false) && dobj)
+            SPtr<Instances::fl_events::Event> efe = cls.CreateEventObject(vm.GetBuiltin(BuiltinType(BI_resize)), false, false);
+            efe->Target = this;
+            if (!DispatchSingleEvent(efe, false) && dobj)
                 dobj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
-            return !evt->DefaultPrevented;
+            return !efe->DefaultPrevented;
         }
         case EventId::Event_KeyDown:
-            evt = cls.CreateKeyboardEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_keyDown)), this);
+        {
+            evt = cls.CreateKeyboardEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_keyDown)), this).GetPtr();
             break;
+        }
         case EventId::Event_KeyUp:
-            evt = cls.CreateKeyboardEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_keyUp)), this);
+        {
+            evt = cls.CreateKeyboardEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_keyUp)), this).GetPtr();
             break;
-        case EventId::Event_MouseMove:
-            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_mouseMove)), this);
-            break;
-        case EventId::Event_MouseDown:
-            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_mouseDown)), this);
-            break;
-        case EventId::Event_MouseUp:
-            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_mouseUp)), this);
-            break;
-        case EventId::Event_RollOver:
-        case EventId::Event_RollOut:
-            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(
-                      evtId.Id == EventId::Event_RollOver ? BI_rollOver : BI_rollOut)), this);
-            evt->Bubbles = false;
-            break;
+        }
         case EV_MouseOver:
+        {
+            SPtr<Instances::fl_events::MouseEvent> me = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_mouseOver)), this);
+            evt = me.GetPtr();
+            const MovieRoot::MouseState* ms = GetAS3MouseState(vm.GetMovieRoot(), evtId.MouseIndex);
+            if (ms && ms->LastMouseOverObj)
+                me->RelatedObj = static_cast<Instances::fl_display::InteractiveObject*>(ToAvmDisplayObj(ms->LastMouseOverObj)->GetAS3Obj());
+            else
+                me->RelatedObj = NULL;
+            break;
+        }
         case EV_MouseOut:
         {
-            SPtr<Instances::fl_events::MouseEvent> mevt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(
-                evtId.Id == EV_MouseOver ? BI_mouseOver : BI_mouseOut)), this);
-            mevt->RelatedObj = GetLastMouseOverObject(vm, evtId.MouseIndex);
+            SPtr<Instances::fl_events::MouseEvent> me = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_mouseOut)), this).GetPtr();
+            evt = me.GetPtr();
+            const MovieRoot::MouseState* ms = GetAS3MouseState(vm.GetMovieRoot(), evtId.MouseIndex);
+            if (ms && ms->LastMouseOverObj)
+                me->RelatedObj = static_cast<Instances::fl_display::InteractiveObject*>(ToAvmDisplayObj(ms->LastMouseOverObj)->GetAS3Obj());
+            else
+                me->RelatedObj = NULL;
             // the object the mouse leaves is not its own related object
-            if (evtId.Id == EV_MouseOut && mevt->RelatedObj && (void*)mevt->RelatedObj.GetPtr() == (void*)this)
-                mevt->RelatedObj = NULL;
-            evt = mevt.GetPtr();
+            if ((void*)me->RelatedObj.GetPtr() == (void*)this)
+                me->RelatedObj = NULL;
+            break;
+        }
+        case EventId::Event_RollOver:
+        {
+            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_rollOver)), this).GetPtr();
+            evt->Bubbles = false;
+            break;
+        }
+        case EventId::Event_RollOut:
+        {
+            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_rollOut)), this).GetPtr();
+            evt->Bubbles = false;
+            break;
+        }
+        case EventId::Event_MouseMove:
+        {
+            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_mouseMove)), this).GetPtr();
+            break;
+        }
+        case EventId::Event_MouseDown:
+        {
+            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_mouseDown)), this).GetPtr();
+            break;
+        }
+        case EventId::Event_MouseUp:
+        {
+            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_mouseUp)), this).GetPtr();
             break;
         }
         case EV_Click:
-            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_click)), this);
+        {
+            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_click)), this).GetPtr();
             break;
+        }
         case EV_DoubleClick:
-            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_doubleClick)), this);
+        {
+            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_doubleClick)), this).GetPtr();
             break;
+        }
         case EV_MouseWheel:
-            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_mouseWheel)), this);
+        {
+            evt = cls.CreateMouseEventObject(evtId, vm.GetBuiltin(BuiltinType(BI_mouseWheel)), this).GetPtr();
             break;
+        }
         default:
             return true;
         }
