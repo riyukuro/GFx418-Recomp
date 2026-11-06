@@ -64,28 +64,6 @@ static inline Ptr<ImageCreator> MS2_AS2_GetImageCreator(MovieDefImpl* pmd)
     return *static_cast<ImageCreator*>(pmd->GetStateAddRef(State::State_ImageCreator));
 }
 
-// The substitution's image from a BitmapData: a Render::Image is shared as is; an image source is made into an
-// image by the movie's image creator (a warning and no image when the movie has none).
-static void MS2_AS2_SetSubstituteImage(TextField* ptf, Render::Text::ImageDesc* pdesc, BitmapData* pbmp)
-{
-    ImageResource*     pimageRes = pbmp->pImageRes;
-    Ptr<MovieDefImpl>  pmd       = ptf->GetResourceMovieDef();
-    Ptr<Render::Image> pimg;
-    if (pimageRes->GetImage()->GetImageType() != Render::ImageBase::Type_ImageBase)
-        pimg = static_cast<Render::Image*>(pimageRes->GetImage());
-    else if (!MS2_AS2_GetImageCreator(pmd))
-        LogDebugMessage(Log_Warning, "ImageCreator is null in UpdateImageSubstitution");
-    else
-    {
-        ImageCreateInfo cinfo(ImageCreateInfo::Create_SourceImage, Memory::GetHeapByAddress(ptf), 1,
-                              Resource::Use_Bitmap);
-        pimg = *MS2_AS2_GetImageCreator(pmd)->CreateImage(cinfo,
-                                                           static_cast<Render::ImageSource*>(pimageRes->GetImage()));
-    }
-    pdesc->pImage = pimg;
-    ptf->SetDirtyFlag();
-}
-
 // The DocView fields the extent measure sets (exe layout).
 inline void* DocView_GetStyledText(void* pdoc) { return *(void**)((char*)pdoc + 0x10); }
 inline Render::Text::FontManagerBase* DocView_GetFontManager(void* pdoc)
@@ -199,41 +177,67 @@ static inline TextField* MS2_ThisTextField(const FnCall& fn)
 }
 
 // updateImageSubstitution(id [, image]): swaps the image of a substitution (or removes it for null / undefined).
-// MS2-FUNCTIONAL: register allocation and stack layout differ.
+// MS2-FUNCTIONAL: SDK body; the inlined StringHashLH Get loop keeps the key String's data in r11 (the exe in rdx, the free arg), one byte longer
 // @0x14290b4c0
 void AvmTextField::UpdateImageSubstitution(const FnCall& fn)
 {
     fn.Result->SetBool(false);
-    if (!fn.ThisPtr || fn.ThisPtr->GetObjectType() != Object::Object_TextField)
-        return;
-    TextField* ptf = MS2_ThisTextField(fn);
-    if (fn.NArgs < 1)
-        return;
-    ASString id = fn.Arg(0).ToString(fn.Env);
-    StringHashLH<Ptr<Render::Text::ImageDesc> >* phash = MS2_TextImageDescHash(ptf);
-    if (!phash)
-        return;
-    Ptr<Render::Text::ImageDesc>* pentry = phash->Get(String(id.ToCStr()));
-    if (!pentry || fn.NArgs < 2)
-        return;
-    Render::Text::ImageDesc* pdesc = pentry->GetPtr();
-    const Value&             arg1  = fn.Arg(1);
-    if (!arg1.IsNull() && !arg1.IsUndefined())
+    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_TextField)
     {
-        // an Image object replaces the description's image
-        Object* pobj = arg1.ToObject(fn.Env);
-        if (!pobj || pobj->GetObjectType() != Object::Object_BitmapData)
-            return;
-        MS2_AS2_SetSubstituteImage(ptf, pdesc, static_cast<BitmapData*>(pobj));
-        return;
-    }
-    void* psubst = FUN_142936510(ptf);
-    if (psubst)
-    {
-        static_cast<Render::Text::DocView::ImageSubstitutor*>(psubst)->RemoveImageDesc(pdesc);
-        DocView_SetReformatReq(ptf->GetDocument());
-        ptf->RemoveIdImageDescAssoc(id.ToCStr());
-        ptf->SetDirtyFlag();
+        TextField* pthis = MS2_ThisTextField(fn);
+        if (fn.NArgs >= 1)
+        {
+            ASString idStr = fn.Arg(0).ToString(fn.Env);
+            StringHashLH<Ptr<Render::Text::ImageDesc> >* pimageDescAssoc = MS2_TextImageDescHash(pthis);
+            if (pimageDescAssoc)
+            {
+                Ptr<Render::Text::ImageDesc>* ppimgDesc = pimageDescAssoc->Get(idStr.ToCStr());
+                if (ppimgDesc)
+                {
+                    Render::Text::ImageDesc* pimageDesc = ppimgDesc->GetPtr();
+                    if (fn.NArgs >= 2)
+                    {
+                        if (fn.Arg(1).IsNull() || fn.Arg(1).IsUndefined())
+                        {
+                            Render::Text::DocView::ImageSubstitutor* pimgSubst = static_cast<Render::Text::DocView::ImageSubstitutor*>(FUN_142936510(pthis));
+                            if (pimgSubst)
+                            {
+                                pimgSubst->RemoveImageDesc(pimageDesc);
+                                DocView_SetReformatReq(pthis->GetDocument());
+                                pthis->RemoveIdImageDescAssoc(idStr.ToCStr());
+                                pthis->SetDirtyFlag();
+                            }
+                        }
+                        else
+                        {
+                            Object* piobj = fn.Arg(1).ToObject(fn.Env);
+                            if (piobj && piobj->GetObjectType() == Object::Object_BitmapData)
+                            {
+                                BitmapData* pbmpData = static_cast<BitmapData*>(piobj);
+                                ImageResource* pimgRes = pbmpData->pImageRes;
+                                Ptr<MovieDefImpl> md = pthis->GetResourceMovieDef();
+                                Ptr<Render::Image> img;
+                                if (pimgRes->GetImage()->GetImageType() != Render::ImageBase::Type_ImageBase)
+                                    img = static_cast<Render::Image*>(pimgRes->GetImage());
+                                else
+                                {
+                                    if (!MS2_AS2_GetImageCreator(md))
+                                        LogDebugMessage(Log_Warning, "ImageCreator is null in UpdateImageSubstitution");
+                                    else
+                                    {
+                                        ImageCreateInfo cinfo(ImageCreateInfo::Create_SourceImage, Memory::GetHeapByAddress(pthis), 1,
+                                                              Resource::Use_Bitmap);
+                                        img = *MS2_AS2_GetImageCreator(md)->CreateImage(cinfo, static_cast<Render::ImageSource*>(pimgRes->GetImage()));
+                                    }
+                                }
+                                pimageDesc->pImage = img;
+                                pthis->SetDirtyFlag();
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
