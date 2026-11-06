@@ -1897,22 +1897,20 @@ struct Video02ChainPtr
     }
 };
 
-// MS2-FUNCTIONAL: clears the current object and walks/releases its chained child references.
+// Clears the current object and walks/releases its chained child references.
 // @0x140015830
 void FUN_140015830(void* object)
 {
     char* bytes = static_cast<char*>(object);
-    Video02ChainPtr& head = *reinterpret_cast<Video02ChainPtr*>(bytes + 0x80);
-    Video02ChainPtr node(head);
-    head.Clear();
+    Video02ChainPtr node(*reinterpret_cast<Video02ChainPtr*>(bytes + 0x80));
+    reinterpret_cast<Video02ChainPtr*>(bytes + 0x80)->Clear();
     if (node.pObject)
     {
         *reinterpret_cast<unsigned char*>(bytes + 0x78) |= 0x10;
         do
         {
-            Video02ChainPtr& link = *reinterpret_cast<Video02ChainPtr*>(static_cast<char*>(node.pObject) + 0x20);
-            Video02ChainPtr next(link);
-            link.Clear();
+            Video02ChainPtr next(*reinterpret_cast<Video02ChainPtr*>(static_cast<char*>(node.pObject) + 0x20));
+            reinterpret_cast<Video02ChainPtr*>(static_cast<char*>(node.pObject) + 0x20)->Clear();
             node = next;
         } while (node.pObject);
     }
