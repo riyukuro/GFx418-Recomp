@@ -33,19 +33,31 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
+// The AvmCharacter ctor (0x142918930), which the exe inlines here.
+inline AvmCharacter::AvmCharacter(InteractiveObject* pdispObj, ObjectInlineCtorTag)
+    : pDispObj(pdispObj)
+{
+    pdispObj->BindAvmObj(this);
+}
+
+// Environment::SetTargetOnConstruct (0x14298bb20), which the exe inlines here (SDK body, SetTarget inlined).
+static SF_FORCEINLINE void MS2_SetTargetOnConstruct(Environment& env, InteractiveObject* ptarget)
+{
+    env.Target          = ptarget;
+    env.IsInvalidTarget = false;
+    env.StringContext.UpdateVersion(ptarget->GetVersion());
+    env.StringContext.pContext = ToAvmCharacter(ptarget)->GetGC();
+}
+
 // The exe inlines the environment's construction and target binding here.
-// MS2-FUNCTIONAL: member by member as in the exe, byte order of the stores differs
 // @0x142918980
 AvmSprite::AvmSprite(Sprite* psprite)
-    : AvmCharacter(psprite), Level(-1), Unrecovered_1f8(false)
+    : AvmCharacter(psprite, ObjectInlineCtorTag()), Level(-1), Unrecovered_1f8(false)
 {
-    Env.IsInvalidTarget = false;
-    Env.Target          = psprite;
-    Env.StringContext.UpdateVersion(psprite->GetVersion());
-    Env.StringContext.pContext = GetGC();
-    psprite->Sprite::Flags &= ~Sprite::Flags_LockRoot;
-    psprite->InteractiveObject::Flags |= InteractiveObject::Mask_MovieClip;
-    unsigned frames = psprite->pDef->GetFrameCount();
+    MS2_SetTargetOnConstruct(Env, psprite);
+    GetSprite()->Sprite::Flags &= ~Sprite::Flags_LockRoot;
+    GetSprite()->DisplayObjectBase::Flags |= DisplayObjectBase::Mask_MovieClip; // SetMovieClipFlag
+    unsigned frames = GetSprite()->pDef->GetFrameCount();
     InitActionsExecuted.Resize(frames);
     memset(&InitActionsExecuted[0], 0, frames);
     pProto = GetAS2Root()->pGlobalContext->GetActualPrototype(&Env, ASBuiltin_MovieClip);
@@ -202,3 +214,4 @@ bool AvmSprite::CheckCandidateListLevel(int level) const
 // MS2-PIN: ??_7AvmInteractiveObjBase@GFx@Scaleform@@6B@ 0x14317bfe8
 // MS2-PIN: ??_7AvmDisplayObjContainerBase@GFx@Scaleform@@6B@ 0x14317c0a0
 // MS2-PIN: ??_7AvmSpriteBase@GFx@Scaleform@@6B@ 0x14317c898
+// MS2-PIN: ??_7ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215410
