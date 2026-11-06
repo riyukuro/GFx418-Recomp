@@ -11,6 +11,7 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fntraits.h"
+#define MS2_CALLFRAME_PUSHBACK_INLINE __forceinline
 #include "ms2/scaleform/include/gfx/as3/as3_callframe.h"
 #include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
 #include "ms2/scaleform/include/gfx/as3/as3_udbase.h"
@@ -4718,29 +4719,6 @@ namespace Instances { namespace fl
         result = LocalName;
     }
 
-    // Whether str is an XML name: a letter or '_', then letters, digits, '-', '.' or '_'.
-    // MS2-FUNCTIONAL: register allocation only: the exe tests the name size through rcx and enters the shared false tail past the rcx reload
-    // a letter or '_', then letters, digits, '-', '.' or '_'
-    static __forceinline bool Sfr04IsXMLName(const ASString& name)
-    {
-        if (name.GetSize() != 0)
-        {
-            wchar_t ch = (wchar_t)name.GetCharAt(0);
-            if (UnicodeCharIs(DAT_143186050, ch) || ch == '_')
-            {
-                for (unsigned i = 1; i < name.GetLength(); ++i)
-                {
-                    ch = (wchar_t)name.GetCharAt(i);
-                    if (!UnicodeCharIs(DAT_1431866f0, ch) && !UnicodeCharIs(DAT_143186050, ch) &&
-                        ch != '-' && ch != '.' && ch != '_')
-                        return false;
-                }
-                return true;
-            }
-        }
-        return false;
-    }
-
     // @0x142428fa0
     void GlobalObjectCPP::isXMLName(bool& result, const Value& str)
     {
@@ -4752,7 +4730,33 @@ namespace Instances { namespace fl
         ASString name = GetVM().GetStringManager().CreateEmptyString();
         if (!str.Convert2String(name))
             GetVM().ThrowArgumentError(VM::Error(VM::ErrorID(1050), GetVM()));   // eConvertToPrimitiveError
-        result = Sfr04IsXMLName(name);
+
+        if (name.GetSize() == 0)
+        {
+            result = false;
+            return;
+        }
+
+        wchar_t ch = (wchar_t)name.GetCharAt(0);
+        if (!UnicodeCharIs(DAT_143186050, ch) && ch != '_')     // SFiswalpha
+        {
+            result = false;
+            return;
+        }
+
+        for (unsigned i = 1; i < name.GetLength(); i++)
+        {
+            wchar_t ch = (wchar_t)name.GetCharAt(i);
+            if (UnicodeCharIs(DAT_1431866f0, ch) || UnicodeCharIs(DAT_143186050, ch) || (ch == '.') || (ch == '-') || (ch == '_'))
+                continue;
+            else
+            {
+                result = false;
+                return;
+            }
+        }
+
+        result = true;
     }
 }} // namespace Instances::fl
 
@@ -5993,7 +5997,6 @@ namespace Classes
     }
 
     // Runs the instance initializer of the class on _this.
-    // MS2-FUNCTIONAL: the exe inlines AddFrame (the CallFrame build and push)
     // @0x14241dea0
     void UserDefined::PostInit(const Value& _this, unsigned argc, const Value* argv) const
     {

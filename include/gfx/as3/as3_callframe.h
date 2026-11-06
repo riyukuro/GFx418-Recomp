@@ -66,9 +66,13 @@ public:
 };
 
 // (appended, sfr22) the VM's call stack (VM +0x070): frames in pages of 64, then the default frame (VM +0x098).
+// A unit whose caller the exe inlines PushBack into (sfr_as3_04 UserDefined::PostInit) defines it __forceinline.
+#ifndef MS2_CALLFRAME_PUSHBACK_INLINE
+#define MS2_CALLFRAME_PUSHBACK_INLINE inline
+#endif
 struct CallFrameStack
 {
-    void PushBack(const CallFrame& cf)
+    MS2_CALLFRAME_PUSHBACK_INLINE void PushBack(const CallFrame& cf)
     {
         const UPInt nb = Size >> 6;
         if (nb >= NumPages)
