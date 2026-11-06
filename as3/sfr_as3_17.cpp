@@ -3432,10 +3432,9 @@ public:
     virtual const Abc::File* GetFile(const ASString& name);
 };
 
-// A function-local static null file.
-// MS2-FUNCTIONAL 0x142509c20: the null store and the atexit argument load are scheduled the other way round.
+// A function-local static null file (inline, so cl dynamic-inits the static as in the exe).
 // @0x142509c20
-const Ptr<Abc::File>& Sfr33NullFileLoader::GetFile(UPInt)
+inline const Ptr<Abc::File>& Sfr33NullFileLoader::GetFile(UPInt)
 {
     static Ptr<Abc::File> f;
     return f;
