@@ -69,7 +69,7 @@ void FUN_142623f80(U*, void*, U);               // Array<8-byte>::Reserve
 void FUN_14261ee70(U**, void*, NodeRef*, U);
 __declspec(noinline) void FUN_142623820(char*, unsigned, U, const char*, int, int, char);
 void FUN_142623050(char*, int, int, U);
-void FUN_1426237c0(char*);
+__declspec(noinline) void FUN_1426237c0(char*);
 
 static inline void RawDelete(void* self, unsigned long long flags, UPInt size)
 {
@@ -797,24 +797,6 @@ char* FUN_1426229f0(char* self, unsigned a, U b, unsigned count)
     return *(char**)(*(U*)it[0] + 0x10 + it[1] * 0x20 + 0x18) + 0x10;
 }
 
-// Allocates a scope record (0x48 bytes, refcount 1, three empty child arrays).
-static __forceinline char* RawNewScope(char* self)
-{
-    char* o = (char*)Memory::AllocAutoHeap(self, 0x48, AllocInfo(2, 0, 0));
-    if (o)
-    {
-        // value-initialisation of the record, then its constructor; the exe keeps every zero store
-        volatile U* z = (volatile U*)o;
-        z[1] = 0, z[2] = 0, z[3] = 0, z[4] = 0, z[5] = 0, z[6] = 0, z[7] = 0, z[8] = 0;
-        *(void**)o = (void*)DAT_14318f040;
-        *(int*)(o + 8) = 1;
-        RawField<U>(o, 0x30) = 0;
-        RawField<U>(o, 0x38) = 0;
-        RawField<U>(o, 0x40) = 0;
-    }
-    return o;
-}
-
 // ViewStats::CallInfo, one 0x18 entry of the call stack at +0x30.
 struct AmpCallInfo
 {
@@ -931,88 +913,114 @@ void FUN_142622d00(char* self, const char* name, unsigned id, U arg)
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
 
-// Closes the top scope (when it matches {hi, lo}) and files it under its parent or a root scope.
-// @0x142623050
-void FUN_142623050(char* self, int hi, int lo, U arg)
+// ViewStats::IsFunctionAggregation: always false without SF_AMP_SERVER.
+static inline UInt64 RawSwdOffsetKey(UInt32 swdHandle, UInt32 swfOffset) { return ((UInt64)swdHandle << 32) + swfOffset; }
+static inline bool RawIsFunctionAggregation() { return false; }
+void RawAggregateFunctionTime(char*, void*, U);
+
+// ArrayLH<Ptr<FuncTreeItem>>::PushBack(val): grow by one (0x1426240f0), then copy-construct the last slot.
+static __forceinline void RawPushItem(U* arr, const Ptr<AMP::FuncTreeItem>& val)
 {
-    if (hi == 0)
+    FUN_1426240f0(arr, arr, arr[1] + 1);
+    new ((Ptr<AMP::FuncTreeItem>*)arr[0] + arr[1] - 1) Ptr<AMP::FuncTreeItem>(val);
+}
+
+// ViewStats::PopCallstack: closes the top call (when it matches {swdHandle, swfOffset}) and files it under its
+// parent, the object-interface root (1:0xe, for 1:0xf..0x36) or the function roots.
+// MS2-FUNCTIONAL 0x142623050: 916 vs 907 bytes; same blocks and calls, register allocation only (the exe keeps the
+// swd handle/offset in r12/r13 and a zero in r15 across RefreshActiveLine, ours keeps the key in r14).
+#pragma strict_gs_check(push, on)
+// @0x142623050
+void FUN_142623050(char* self, int swdHandle, int swfOffset, U funcTime)
+{
+    if (swdHandle == 0)
         return;
-    EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    U* scopes = RawFieldPtr<U>(self, 0x30);
-    U* roots = RawFieldPtr<U>(self, 0x48);
-    if (scopes[1])
+
+    RawLocker locker(self + 0xe0);
+    AmpCallstack& callstack = ((AmpViewStatsView*)self)->Callstack;
+    if (callstack.IsEmpty())
+        return;
+
+    typedef Ptr<AMP::FuncTreeItem> ItemPtr;
+    if (RawSwdOffsetKey(swdHandle, swfOffset) != reinterpret_cast<ItemPtr&>(callstack.Back().FunctionInfo)->FunctionId)
+        return;
+
+    ItemPtr poppedCall = reinterpret_cast<ItemPtr&>(callstack.Back().FunctionInfo);
+    poppedCall->EndTime = poppedCall->BeginTime + funcTime;
     {
-        char* recs = (char*)scopes[0];
-        U off = scopes[1] * 0x18;
-        U id = ((U)(unsigned)hi << 32) | (unsigned)lo;
-        char* top = RawField<char*>(recs, off - 0x18);
-        if (id == RawField<U>(top, 0x10))
+        U oldSize = callstack.Size;
+        U newSize = oldSize - 1;
+        FUN_142624020(RawFieldPtr<U>(self, 0x30), self + 0x30, newSize);
+        if (newSize > oldSize)
         {
-            char* done = 0;
-            if (top)
+            struct CallInfo
             {
-                FUN_14257dc30(top);
-                done = RawField<char*>(recs, off - 0x18);
-            }
-            RawField<U>(done, 0x20) = arg + RawField<U>(done, 0x18);
-            U n = scopes[1];
-            FUN_142624020(scopes, scopes, n - 1);
-            FUN_1426237c0(self);
-            bool push_root = true;
-            U* dest = 0;
-            if (scopes[1] != 0)
-            {
-                char* parent = *(char**)((char*)scopes[0] + scopes[1] * 0x18 - 0x18);
-                dest = RawFieldPtr<U>(parent, 0x30);
-                push_root = false;
-            }
-            else if (hi == 1 && (unsigned)(lo - 0xf) <= 0x27)
-            {
-                for (U i = 0; i < roots[1]; i++)
-                {
-                    char* r = ((char**)roots[0])[i];
-                    if (RawField<U>(r, 0x10) == 0x10000000eULL)
-                    {
-                        RawField<U>(r, 0x20) += arg;
-                        dest = RawFieldPtr<U>(r, 0x30);
-                        push_root = false;
-                        break;
-                    }
-                }
-                if (push_root)
-                {
-                    char* o = RawNewScope(self);
-                    RawField<U>(o, 0x20) = arg;
-                    RawField<U>(o, 0x18) = 0;
-                    RawField<U>(o, 0x10) = 0x10000000eULL;
-                    RawField<int>(self, 0x60) += 1;
-                    RawField<int>(o, 0x28) = RawField<int>(self, 0x60);
-                    FUN_1426240f0(RawFieldPtr<U>(o, 0x30), o + 0x30, RawField<U>(o, 0x38) + 1);
-                    FUN_14257dc30(done);
-                    ((char**)RawField<U>(o, 0x30))[RawField<U>(o, 0x38) - 1] = done;
-                    FUN_1426240f0(roots, roots, roots[1] + 1);
-                    FUN_14257dc30(o);
-                    ((char**)roots[0])[roots[1] - 1] = o;
-                    FUN_14257dcb0(o);
-                    goto filed;
-                }
-            }
-            if (push_root)
-                dest = roots;
-            FUN_1426240f0(dest, dest, dest[1] + 1);
-            FUN_14257dc30(done);
-            ((char**)dest[0])[dest[1] - 1] = done;
-        filed:
-            if (*(int*)(self + 100) >= 0 && (SPInt)*(int*)(self + 100) <= (SPInt)(int)scopes[1])
-            {
-                reinterpret_cast<Event*>(self + 0x178)->ResetEvent();
-                *(int*)(self + 100) = -1;
-            }
-            FUN_14257dcb0(done);
+                ItemPtr FunctionInfo; U FileId; UInt32 LineNumber;
+                CallInfo() : FileId(0), LineNumber(0) {}
+            };
+            CallInfo* p = (CallInfo*)callstack.Data + oldSize;
+            for (U n = newSize - oldSize; n; --n, ++p)
+                new (p) CallInfo();
         }
     }
-    LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
+    FUN_1426237c0(self);
+
+    struct ParentChildFunctionPair { UInt64 CallerId; UInt64 FunctionId; } keyParentChild;
+    keyParentChild.FunctionId = RawSwdOffsetKey(swdHandle, swfOffset);
+    if (callstack.Size == 0)
+        keyParentChild.CallerId = 0;
+    else
+        keyParentChild.CallerId = reinterpret_cast<ItemPtr&>(callstack.Back().FunctionInfo)->FunctionId;
+
+    U* roots = RawFieldPtr<U>(self, 0x48);
+    if (RawIsFunctionAggregation())
+    {
+        // FunctionTimingMap aggregation; compiled out without SF_AMP_SERVER, but keyParentChild stays on the stack.
+        RawAggregateFunctionTime(self, &keyParentChild, funcTime);
+    }
+    else if (callstack.Size > 0)
+    {
+        RawPushItem(reinterpret_cast<U*>(&reinterpret_cast<ItemPtr&>(callstack.Back().FunctionInfo)->Children), poppedCall);
+    }
+    else if (swdHandle == 1 && (UInt32)swfOffset > 0xe && (UInt32)swfOffset < 0x37)
+    {
+        UInt64 objectInterfaceRootId = RawSwdOffsetKey(1, 0xe);
+        bool foundObjectInterfaceRoot = false;
+        for (UPInt i = 0; i < roots[1]; ++i)
+        {
+            if (((AMP::FuncTreeItem**)roots[0])[i]->FunctionId == objectInterfaceRootId)
+            {
+                foundObjectInterfaceRoot = true;
+                ((AMP::FuncTreeItem**)roots[0])[i]->EndTime += funcTime;
+                RawPushItem(reinterpret_cast<U*>(&((AMP::FuncTreeItem**)roots[0])[i]->Children), poppedCall);
+                break;
+            }
+        }
+        if (!foundObjectInterfaceRoot)
+        {
+            ItemPtr newCall = *SF_HEAP_AUTO_NEW(self) AMP::FuncTreeItem();
+            newCall->BeginTime = 0;
+            newCall->EndTime = funcTime;
+            newCall->FunctionId = objectInterfaceRootId;
+            RawField<int>(self, 0x60) += 1;
+            newCall->TreeItemId = RawField<int>(self, 0x60);
+            RawPushItem(reinterpret_cast<U*>(&newCall->Children), poppedCall);
+            RawPushItem(roots, newCall);
+        }
+    }
+    else
+    {
+        RawPushItem(roots, poppedCall);
+    }
+
+    int& callstackDepthPause = RawField<int>(self, 0x64);
+    if (callstackDepthPause >= 0 && static_cast<int>(callstack.Size) >= callstackDepthPause)
+    {
+        reinterpret_cast<Event*>(self + 0x178)->ResetEvent();
+        callstackDepthPause = -1;
+    }
 }
+#pragma strict_gs_check(pop)
 
 // ViewStats::PushCallstack(swdHandle, swfOffset, funcTime): the new FuncTreeItem is value-initialised and pushed as a
 // CallInfo {item, 0, 0}. Its vftable (folded with the RefCountBase<FuncTreeItem, 2> one) is DAT_14318f040.
