@@ -120,14 +120,19 @@ bool BundleEntry::UpdateBundleEntry(TreeCacheRoot* tr, Renderer2DImpl* r, const 
 // @0x1426be450
 void BundleEntryRange::StripChains()
 {
-    for (BundleEntry* e = pFirst; e; e = e->pNextPattern)
+    if (IsEmpty())
+        return;
+    BundleEntry* p = pFirst;
+    while (1)
     {
-        if (e->pBundle)
-            e->pBundle->NeedUpdate = true;
-        e->pChain      = 0;
-        e->ChainHeight = 0;
-        if (e == pLast)
+        BundleEntry* chain = p;
+        if (p->pBundle)
+            p->pBundle->NeedUpdate = true;
+        chain->pChain      = 0;
+        chain->ChainHeight = 0;
+        if (p == pLast)
             break;
+        p = p->pNextPattern;
     }
 }
 
