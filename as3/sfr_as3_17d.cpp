@@ -78,6 +78,8 @@ template<class T> SF_INLINE T Lerp(T a, T b, T f) { return (b - a) * f + a; }
 // Button::StateCharArray's ResizeNoConstruct is out of line in the exe (0x1425248e0, instantiated in sfr_as3_19).
 namespace Scaleform {
 template <> void ArrayDataBase<GFx::Button::CharToRec, AllocatorLH<GFx::Button::CharToRec, Stat_Default_Mem>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
+// MovieDefRootNode::AbcFiles' ResizeNoConstruct is out of line too (0x142524b90, instantiated in sfr_as3_19).
+template <> void ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::VMAbcFile>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::VMAbcFile>, Stat_Default_Mem>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
 }
 #undef GetObject   // windows.h
 
@@ -768,12 +770,82 @@ void Stage::ExecuteFrame0Events()
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
-// MS2-FUNCTIONAL 0x1424f9d60: written from the exe's control flow (the exe inlines CheckAvm and the loaded-file lookup's SPtr copies)
+// The file loader MovieRoot::CheckAvm hands the new VM (sfr_as3_17 defines its out-of-line slots and vftable
+// 0x14317f470; the same class here, so the inlined CheckAvm below stores that vftable).
+class Sfr33NullFileLoader : public FileLoader
+{
+public:
+    virtual UPInt GetSize() const;
+    virtual const Ptr<Abc::File>& GetFile(UPInt n);
+    virtual const Abc::File* GetFile(const ASString& name);
+};
+
+// (sfr_as3_17's inline copy at 0x142509c20)
+inline const Ptr<Abc::File>& Sfr33NullFileLoader::GetFile(UPInt)
+{
+    static Ptr<Abc::File> f;
+    return f;
+}
+
+struct Sfr17dFlashUIAccess : FlashUI
+{
+    static void SetCurrState(FlashUI& ui, StateType s) { static_cast<Sfr17dFlashUIAccess&>(ui).FlashUI::SetCurrState(s); }
+};
+
+// MovieRoot::CheckAvm (0x1424eecb0, sfr_as3_17) as ExecuteAbc inlines it: the VM is created on first use.
+static __forceinline void Sfr17dCheckAvm(MovieRoot* self)
+{
+    Scaleform::AutoPtr<ASVM>& avm = *reinterpret_cast<Scaleform::AutoPtr<ASVM>*>(&self->pAVM);
+    if (!avm)
+    {
+        const ActionControl* pac = Ptr<ActionControl>(*static_cast<ActionControl*>(
+            self->GetMovieImpl()->GetStateBag()->GetStateAddRef(State::State_ActionControl)));
+        if (pac != NULL)
+        {
+            self->SetNeedToCheckOpCode((pac->GetActionFlags() & ActionControl::Action_Verbose) != 0);
+        }
+        else
+        {
+            self->SetNeedToCheckOpCode(false);
+        }
+        Sfr17dFlashUIAccess::SetCurrState(*self, FlashUI::sStep);
+        Sfr33NullFileLoader loader;
+        avm = SF_HEAP_NEW(self->GetMovieImpl()->GetMovieHeap())
+            ASVM(self, *self, loader, self->BuiltinsMgr, *self->MemContext->ASGC);
+        self->pAVM->ExecuteCode(1);
+    }
+}
+
+// VM::FindVMAbcFileWeak, inlined: the loaded file whose source is name.
+static __forceinline SPtr<VMAbcFile> Sfr17dFindVMAbcFileWeak(const VM& vm, const String& name)
+{
+    for (UPInt i = 0; i < vm.VMAbcFilesWeak.GetSize(); ++i)
+    {
+        if (strcmp(vm.VMAbcFilesWeak[i]->GetAbcFile().Source.ToCStr(), name.ToCStr()) == 0)
+            return vm.VMAbcFilesWeak[i];
+    }
+    return NULL;
+}
+
+// VM::LoadFile, inlined: the file's classes and scripts are registered, or no file.
+struct Sfr17dAbcLoad
+{
+    static __forceinline SPtr<VMAbcFile> LoadFile(VM& vm, const Ptr<Abc::File>& file)
+    {
+        SPtr<VMAbcFile> pfile = Pickable<VMAbcFile>(SF_HEAP_NEW(vm.GetMemoryHeap()) VMAbcFile(vm, file));
+        if (pfile->RegisterUserDefinedClassTraits() && pfile->RegisterScrips(false))
+            return pfile;
+        return SPtr<VMAbcFile>();
+    }
+};
+
+// MS2-FUNCTIONAL 0x1424f9d60: SDK form with CheckAvm, FindVMAbcFileWeak and LoadFile inlined as the exe does
 // @0x1424f9d60
 // A file already loaded under the same name ("file[name]") is reused; otherwise the block is parsed and its classes
 // and scripts registered. Either way the movie's root node keeps the file alive.
 bool MovieRoot::ExecuteAbc(const AbcDataBuffer* pabc, DisplayObjContainer* pspr)
 {
+    bool          result   = false;
     MovieDefImpl* pdefImpl = pspr->GetResourceMovieDef();
     String fileName(pabc->FileName);
     if (pabc->Name.GetSize() != 0)
@@ -783,43 +855,31 @@ bool MovieRoot::ExecuteAbc(const AbcDataBuffer* pabc, DisplayObjContainer* pspr)
         fileName.AppendString("]");
     }
 
-    bool            result = false;
-    SPtr<VMAbcFile> vmabc;
-    const UPInt nfiles = pAVM ? pAVM->VMAbcFilesWeak.GetSize() : 0;
-    for (UPInt i = 0; i < nfiles; ++i)
-    {
-        if (strcmp(pAVM->VMAbcFilesWeak[i]->GetAbcFile().Source.ToCStr(), fileName.ToCStr()) == 0)
-        {
-            vmabc  = pAVM->VMAbcFilesWeak[i];
-            result = true;
-            break;
-        }
-    }
+    SPtr<VMAbcFile> vmabc = Sfr17dFindVMAbcFileWeak(*pAVM, fileName);
     if (!vmabc)
     {
-        MemoryHeap*  pheap   = GetMovieImpl()->GetMovieHeap();
-        Abc::Reader* preader = SF_HEAP_NEW(pheap) Abc::Reader(pabc->Data, pabc->DataSize);
-        Ptr<Abc::File> file  = *SF_HEAP_NEW(pheap) ASVM::AbcFileWithMovieDef(pdefImpl, const_cast<AbcDataBuffer*>(pabc));
+        Scaleform::AutoPtr<Abc::Reader> preader = SF_HEAP_NEW(GetMovieImpl()->GetMovieHeap()) Abc::Reader(pabc->Data, pabc->DataSize);
+        Ptr<Abc::File> file = *SF_HEAP_NEW(GetMovieImpl()->GetMovieHeap())
+            ASVM::AbcFileWithMovieDef(pdefImpl, const_cast<AbcDataBuffer*>(pabc));
         file->Source   = fileName;
         file->DataSize = pabc->DataSize;
         result = preader->Read(*file);
         if (result)
         {
-            CheckAvm();
-            VM& vm = *pAVM;
-            SPtr<VMAbcFile> pfile = Pickable<VMAbcFile>(SF_HEAP_NEW(vm.GetMemoryHeap()) VMAbcFile(vm, file));
-            if (pfile->RegisterUserDefinedClassTraits() && pfile->RegisterScrips(false))
-                vmabc = pfile;
-            if (vm.HandleException)
+            Sfr17dCheckAvm(this);
+            vmabc = Sfr17dAbcLoad::LoadFile(*pAVM, file);
+            VM* vm = pAVM;   // OutputAndIgnoreException, inlined
+            if (vm->IsException())
             {
-                vm.HandleException = false;
-                vm.OutputError(vm.ExceptionObj);
-                vm.ExceptionObj.SetUndefined();
+                vm->HandleException = false;
+                vm->OutputError(vm->ExceptionObj);
+                vm->ExceptionObj.SetUndefined();
                 result = false;
             }
         }
-        delete preader;
     }
+    else
+        result = true;
     if (vmabc)
         static_cast<MovieDefRootNode*>(pspr->FindRootNode())->AbcFiles.PushBack(vmabc);
     return result;
@@ -1330,6 +1390,8 @@ namespace AS3 {
 // MS2-PIN: ??_7?$RefCountBase@VShapeDataInterface@Render@Scaleform@@$01@Scaleform@@6B@ 0x14318f130
 // MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@6B@ 0x14313f368
 // MS2-PIN: ??_7GASRefCountBase@AS3@GFx@Scaleform@@6B@ 0x14313f398
+// MS2-PIN: ??_7FileLoader@AS3@GFx@Scaleform@@6B@ 0x14317b798
+// MS2-PIN: ??_7Sfr33NullFileLoader@AS3@GFx@Scaleform@@6B@ 0x14317f470
 // MS2-PIN: ??_7XMLSupport@AS3@GFx@Scaleform@@6B@ 0x14317b7b8
 // MS2-PIN: ??_7XMLSupportImpl@AS3@GFx@Scaleform@@6B@ 0x14317f9e0
 // MS2-PIN: ??_7Stage@AS3@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@3@@ 0x14317d220

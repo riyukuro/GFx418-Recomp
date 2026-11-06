@@ -110,6 +110,7 @@ private:
     // (sfr34) VM::LoadFile, VM::VM and MovieRoot::ExecuteAbc call them directly.
     friend class VM;
     friend class MovieRoot;
+    friend struct Sfr17dAbcLoad;   // sfr_as3_17d: VM::LoadFile as MovieRoot::ExecuteAbc inlines it
     bool RegisterUserDefinedClassTraits();
     bool RegisterScrips(bool to_execute);
 
