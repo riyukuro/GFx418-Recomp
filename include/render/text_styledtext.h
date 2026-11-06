@@ -14,6 +14,10 @@
 #ifndef MS2_SF_PARAGRAPH_DTOR_INLINE
 #define MS2_SF_PARAGRAPH_DTOR_INLINE inline
 #endif
+// Likewise for StyledText::GetAllocator (the first-use allocator creation).
+#ifndef MS2_SF_STYLEDTEXT_GETALLOCATOR_INLINE
+#define MS2_SF_STYLEDTEXT_GETALLOCATOR_INLINE inline
+#endif
 
 namespace Scaleform { namespace Render { namespace Text {
 
@@ -434,7 +438,7 @@ protected:
         return pTextAllocator->GetHeap();
     }
     // the allocator is created on first use, in the heap that holds the document
-    Allocator* GetAllocator() const
+    MS2_SF_STYLEDTEXT_GETALLOCATOR_INLINE Allocator* GetAllocator() const
     {
         if (!pTextAllocator)
         {

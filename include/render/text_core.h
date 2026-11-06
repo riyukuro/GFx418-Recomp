@@ -15,6 +15,11 @@
 #include "ms2/scaleform/kernel/sf_string.h"
 #include "ms2/scaleform/kernel/sf_utf8util.h"
 #include "ms2/scaleform/kernel/sf_std.h"     // (sfr24) SFstrchr
+
+// A unit whose exe inlines the Text::Allocator constructor defines this as __forceinline before the include.
+#ifndef MS2_SF_TEXT_ALLOCATOR_CTOR_INLINE
+#define MS2_SF_TEXT_ALLOCATOR_CTOR_INLINE inline
+#endif
 #include "ms2/scaleform/include/kernel/sf_range.h"
 #include "ms2/scaleform/include/render/render_types2d.h"
 #include "ms2/scaleform/include/render/render_matrix2x4.h"
@@ -597,7 +602,7 @@ protected:
     UInt8                      Flags;
 
 public:
-    Allocator(MemoryHeap* pheap, UInt8 flags = 0)
+    MS2_SF_TEXT_ALLOCATOR_CTOR_INLINE Allocator(MemoryHeap* pheap, UInt8 flags = 0)
         : TextFormatStorageCap(InitialFormatCacheCap), ParagraphFormatStorageCap(InitialFormatCacheCap),
           NewParagraphId(1), pHeap(pheap), EntryTextFormat(pheap), Flags(flags)
     {

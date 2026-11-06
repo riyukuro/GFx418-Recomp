@@ -23,8 +23,10 @@
 // MS2-PIN: ??_GCompositionString@Text@GFx@Scaleform@@UEAAPEAXI@Z 0x142616320
 // MS2-PIN: ?Reset@?$AutoPtr@URestrictParams@EditorKit@Text@GFx@Scaleform@@@Scaleform@@QEAAXPEAURestrictParams@EditorKit@Text@GFx@2@_N@Z 0x142619740
 
-// The exe inlines ~Paragraph into ~CompositionString.
+// The exe inlines ~Paragraph into ~CompositionString and StyledText::GetAllocator (with the Allocator ctor) here.
 #define MS2_SF_PARAGRAPH_DTOR_INLINE __forceinline
+#define MS2_SF_STYLEDTEXT_GETALLOCATOR_INLINE __forceinline
+#define MS2_SF_TEXT_ALLOCATOR_CTOR_INLINE __forceinline
 #include "ms2/scaleform/include/gfx/text_editorkit.h"
 #include "../include/kernel/sf_std.h"
 #include "../include/kernel/sf_timer.h"
@@ -126,7 +128,6 @@ void EditorKit::SetCursorPos(UPInt pos, bool selectionAllowed)
 }
 
 // The exe's out-of-line copy of DocView::GetAllocator (the document creates its allocator on first use).
-// MS2-FUNCTIONAL StyledText::GetAllocator stays a call here; the exe inlines it
 // Out of line, as in the exe: CompositionString's constructor calls it twice.
 // @0x142617880
 __declspec(noinline) Render::Text::Allocator* DocView_GetAllocator_Call(DocView* pdocView)
