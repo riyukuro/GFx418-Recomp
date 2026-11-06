@@ -98,8 +98,8 @@ static __forceinline void Video02ResizeFills(void* array, const void* heapAddr, 
 extern void FUN_14257eb30(void*);
 extern void* FUN_142581520(void*, void*);
 #define DAT_143b15f60 (static_cast<void*>(Scaleform::Memory::pGlobalHeap))
-// MS2's ComplexFill vtable is referenced by the reconstructed temporary video fill object below.
-extern "C" void* DAT_14317b668;
+#include "../include/render/render_gradients.h"   // GradientData, for ComplexFill's Ptr<GradientData>
+namespace Scaleform { namespace Render { inline ComplexFill::ComplexFill() : BindIndex(~0u) {} }}   // the SDK ctor (as in sfr_gfx_06e): the fill below stores ??_7ComplexFill by name
 namespace Scaleform { typedef ArrayPagedBase<const GFx::AS3::RefCountBaseGC<323>*, 10, 5, AllocatorPagedLH_POD<const GFx::AS3::RefCountBaseGC<323>*, 2> > Video02GcRoots; template<> bool Video02GcRoots::allocatePageSafe(UPInt); struct ArrayPagedFriend { static bool AllocatePageSafe(Video02GcRoots* a, UPInt nb) { return a->allocatePageSafe(nb); } }; } // (C3) FUN_1423dfe30
 extern void* PTR_FUN_1431b71b0;
 extern void* PTR_FUN_1431b7260;
@@ -3520,15 +3520,13 @@ void* FUN_140011610(void* object, void** result, void* context)
     } else {
         void** transform = static_cast<void**>(allocate(DAT_143b15f60, object, 0x50, allocInfo));
         if (transform) {
-            transform[0] = &DAT_14317b668;   // the ComplexFill vftable address, not its first slot
-            transform[1] = reinterpret_cast<void*>(1);
-            transform[2] = 0;
-            transform[3] = 0;
+            ::new (transform) Scaleform::Render::ComplexFill;   // vftable, RefCount 1, no image or gradient, identity, Repeat|Point, BindIndex ~0
+            //
             float* m = reinterpret_cast<float*>(transform + 4);
-            for (int i = 0; i < 8; ++i) m[i] = 0.0f;
+            //
             m[0] = m[5] = 0.05f;   // identity scaled by 1/20 (twips)
-            *reinterpret_cast<unsigned char*>(transform + 8) = 0;
-            reinterpret_cast<int*>(transform)[0x44 / 4] = -1;
+            //
+            //
             void** providerVtable = *reinterpret_cast<void***>(provider);
             reinterpret_cast<void (*)(void*)>(providerVtable[1])(provider);
             transform[2] = provider;
@@ -3882,3 +3880,5 @@ void FUN_140013440(void*, void*, const void* thisValue, void* result, unsigned, 
 // @0x1400141a0
 const char* FUN_1400141a0(void*) { return "Instances::fl_net::NetStream"; }
 // MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
+// MS2-PIN: ??_7?$RefCountBase@VComplexFill@Render@Scaleform@@$01@Scaleform@@6B@ 0x14317b660
+// MS2-PIN: ??_7ComplexFill@Render@Scaleform@@6B@ 0x14317b668
