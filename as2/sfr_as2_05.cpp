@@ -527,7 +527,6 @@ template void Prototype<PointObject>::Finalize_GC();
 template void Prototype<RectangleObject>::Finalize_GC();
 // @0x142942790
 template void Prototype<AsBroadcaster>::Finalize_GC();
-// MS2-FUNCTIONAL register allocation (this and the -1 of the two string releases swap rbx / rdi)
 // @0x1429427e0
 template void Prototype<SharedObject>::Finalize_GC();
 // @0x142942880
@@ -4454,7 +4453,7 @@ void GFxAS2LoadXMLTask::Execute()
 {
     LoadFile();
 }
-// MS2-FUNCTIONAL the exe inlines the FnCall destructor
+// MS2-FUNCTIONAL the exe inlines Value::ToFunction with SetLocalFrame inlined into the FunctionRef copy (func kept in registers) and calls Function->Invoke directly; FunctionRef has no such copy ctor
 // @0x142946d10
 bool GAS_Invoke(const Value& method, Value* presult, ObjectInterface* pthis, Environment* penv, int nargs,
                 int firstArgBottomIndex, const char* pmethodName)

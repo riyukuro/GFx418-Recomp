@@ -53,7 +53,6 @@ void TextFieldProto::MakeStyle(const FnCall& fn, const Render::Text::HighlightIn
     fn.Result->SetAsObject(pobj);
 }
 
-// MS2-FUNCTIONAL: register allocation differs.
 // @0x14296e9f0
 Render::Text::HighlightInfo TextFieldProto::ParseStyle(const FnCall& fn, unsigned index,
                                                        const Render::Text::HighlightInfo& base)

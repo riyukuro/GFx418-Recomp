@@ -1500,7 +1500,6 @@ MS2_AS2_STRING_HASH_GC_DTOR(GFx::AS2::Object::Watchpoint)
 MS2_AS2_STRING_HASH_GC_DTOR(GFx::AS2::Member)
 MS2_AS2_STRING_HASH_GC_DTOR(GFx::AS2::SharedObjectPtr)
 MS2_AS2_STRING_HASH_GC_DTOR(GFx::AS2::Value)
-// MS2-FUNCTIONAL cl inlines the handler array dtor (instantiated above), the exe calls it
 // @0x142924a20
 template decltype(HashLH<GFx::EventId, ArrayLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>, GFx::EventIdHashFunctor,
                          GFx::AS2::StatMV_ActionScript_Mem>::mHash)::BaseType::~HashSetBase();

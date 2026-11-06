@@ -173,7 +173,7 @@ bool FUN_1423c9590(void* self)
     return false;
 }
 
-// MS2-FUNCTIONAL: GetIMEName: the language bar's name, "UNKNOWN" without one.
+// GetIMEName: the language bar's name, "UNKNOWN" without one.
 // @0x1423c95b0
 String* FUN_1423c95b0(void* self, String* out)
 {
@@ -187,7 +187,7 @@ String* FUN_1423c95b0(void* self, String* out)
     return out;
 }
 
-// MS2-FUNCTIONAL: an empty string.
+// an empty string.
 // @0x1423c95f0
 String* FUN_1423c95f0(void*, String* out)
 {
@@ -496,7 +496,7 @@ bool FUN_1423c9ba0(void* self, Log* log, void* opener, const char* xmlPath, bool
 
 }}} // namespace Scaleform::GFx::IME
 
-// MS2-FUNCTIONAL: invokes an ActionScript method on the movie (Movie::InvokeArgs, no result).
+// invokes an ActionScript method on the movie (Movie::InvokeArgs, no result).
 // @0x1423ca030
 extern "C" void FUN_1423ca030(void* movie, const char* method, const char* fmt, ...)
 {
@@ -526,7 +526,7 @@ extern "C" void FUN_1423c9330(IMERecordView* p, unsigned long long count)
 
 namespace Scaleform { namespace GFx { namespace IME {
 
-// MS2-FUNCTIONAL: IsTextFieldOnTopLevel-style checks: is the path inside the IME candidate/status levels.
+// IsTextFieldOnTopLevel-style checks: is the path inside the IME candidate/status levels.
 // @0x1423ca060
 bool FUN_1423ca060(void*, const char* path) { return strstr(path, "_level9999") != 0; }
 // @0x1423ca080
@@ -534,7 +534,7 @@ bool FUN_1423ca080(void*, const char* path) { return strstr(path, "_level9998") 
 // @0x1423ca0a0
 bool FUN_1423ca0a0(void*, const char* path) { return strstr(path, "_level9997") != 0; }
 
-// MS2-FUNCTIONAL: forwards to the owner (+0x18 slot 0x88) and the language bar (slot 0x18).
+// forwards to the owner (+0x18 slot 0x88) and the language bar (slot 0x18).
 // @0x1423ca100
 void FUN_1423ca100(void* self, void* arg)
 {
@@ -544,7 +544,7 @@ void FUN_1423ca100(void* self, void* arg)
         VCall<void>(bar, 0x18, arg);
 }
 
-// MS2-FUNCTIONAL: forwards to the language bar (slot 0xd8) and, for Japanese, resets the candidate position.
+// forwards to the language bar (slot 0xd8) and, for Japanese, resets the candidate position.
 // @0x1423ca160
 void FUN_1423ca160(void* self, void* arg)
 {

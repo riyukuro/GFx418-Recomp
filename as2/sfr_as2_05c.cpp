@@ -33,7 +33,6 @@ int GFx_StringToIMEStyleCategory(const ASString& name)
 }
 
 // width and height are read from the image; everything else is an ordinary member.
-// MS2-FUNCTIONAL: string compares written as strcmp
 // @0x14294dbe0
 bool BitmapData::GetMember(Environment* penv, const ASString& name, Value* val)
 {

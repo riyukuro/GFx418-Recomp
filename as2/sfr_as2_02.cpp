@@ -542,7 +542,6 @@ void KeyCtorFunction::KeyIsToggled(const FnCall& fn)
 }
 
 // TextSnapshot.findText(start, text, caseSensitive)
-// MS2-FUNCTIONAL register allocation differs (rbx/rsi/rdi swapped)
 // @0x142908090
 void TextSnapshotProto::FindTextA(const FnCall& fn)
 {
@@ -994,7 +993,6 @@ void AvmSprite::SpriteRemoveMovieClip(const FnCall& fn)
         psprite->InteractiveObject::RemoveDisplayObject();
 }
 
-// MS2-FUNCTIONAL the exe clamps the depth before reading fn.Result and keeps 0 in ebp
 // @0x142906330
 void AvmSprite::SpriteGetNextHighestDepth(const FnCall& fn)
 {
@@ -3238,8 +3236,6 @@ template SPInt decltype(MS2_AS2TextImageHash::mHash)::BaseType::findIndexAlt<Str
 // Array.sort / Array.sortOn over the element pointers.
 template bool Alg::QuickSortSafe<Alg::ArrayAdaptor<GFx::AS2::Value*>, GFx::AS2::ArraySortFunctor>(
     Alg::ArrayAdaptor<GFx::AS2::Value*>&, GFx::AS2::ArraySortFunctor);
-// MS2-FUNCTIONAL the exe inlines ~ArraySortOnFunctor (calling the ArrayDataBase dtor of the functor array), cl
-// calls it out of line; same for QuickSortSlicedSafe<..., ArraySortOnFunctor> (exe 0x142914bd0).
 // @0x1429148e0
 template bool Alg::QuickSortSafe<Alg::ArrayAdaptor<GFx::AS2::Value*>, GFx::AS2::ArraySortOnFunctor>(
     Alg::ArrayAdaptor<GFx::AS2::Value*>&, GFx::AS2::ArraySortOnFunctor);
@@ -3269,7 +3265,6 @@ template void decltype(MS2_AS2ObjectIdentityHash::mHash)::BaseType::add<MS2_AS2O
     void*, const MS2_AS2ObjectIdentityHash::NodeRef&, UPInt);
 
 // Copy of a value array (the ArrayLH<Value> data).
-// MS2-FUNCTIONAL the exe calls ResizeNoConstruct out of line (pinned below)
 // @0x1429175f0
 template ArrayData<GFx::AS2::Value, AllocatorLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>, ArrayDefaultPolicy>::ArrayData(
     const ArrayData<GFx::AS2::Value, AllocatorLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>, ArrayDefaultPolicy>&);

@@ -463,7 +463,6 @@ bool Prototype<SoundObject>::GetMemberRaw(ASStringContext* psc, const ASString& 
     return SoundObject::GetMemberRaw(psc, name, val);
 }
 
-// MS2-FUNCTIONAL: the exe inlines AttachToTarget; same target choice
 // @0x1429989a0
 void SoundCtorFunction::GlobalCtor(const FnCall& fn)
 {

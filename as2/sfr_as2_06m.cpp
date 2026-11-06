@@ -11,7 +11,6 @@
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // width and height are read-only.
-// MS2-FUNCTIONAL: the exe compares the name with the two literals byte by byte
 // @0x1429854f0
 bool BitmapData::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
 {

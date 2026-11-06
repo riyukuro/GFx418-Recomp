@@ -31,7 +31,7 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 // The movie's value interface (exe vftable 0x143222128; its members are recovered elsewhere).
 extern const void* DAT_143222128[];
 
-// MS2-FUNCTIONAL: the same flush-and-collect as the heap's limit handler, without touching the limits
+// the same flush-and-collect as the heap's limit handler, without touching the limits
 // @0x1429349a0
 void MemoryContextImpl::HeapLimit::Collect(MemoryHeap* pheap)
 {
@@ -92,7 +92,6 @@ MovieDefRootNode* MovieRoot::CreateMovieDefRootNode(MemoryHeap* pheap, MovieDefI
 }
 
 // The host value interface of the movie: 0x10 bytes, vftable and the movie.
-// MS2-FUNCTIONAL: the interface class is not modelled, its vftable is raw
 // @0x1429379d0
 void MovieRoot::CreateObjectInterface(MovieImpl* pmovie)
 {

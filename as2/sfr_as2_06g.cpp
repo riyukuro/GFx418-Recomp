@@ -18,7 +18,6 @@
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // width and height of the Stage are read-only.
-// MS2-FUNCTIONAL: the case check helper is inlined twice with the string node fields reloaded
 // @0x142988f30
 bool StageCtorFunction::SetMemberRaw(ASStringContext* psc, const ASString& name, const Value& val,
                                      const PropFlags& flags)

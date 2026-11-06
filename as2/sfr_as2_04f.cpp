@@ -132,7 +132,6 @@ typedef HashLH<ASString, MovieRoot::InvokeAliasInfo, ASStringHashFunctor, StatMV
                HashsetNodeEntry<MS2_AS2InvokeAliasNode, MS2_AS2InvokeAliasNode::NodeHashF> >
     MS2_AS2InvokeAliasHash;
 
-// MS2-FUNCTIONAL: the hash set is inlined through Hash::set; register scheduling differs
 // @0x14292f430
 void MovieRoot::AddInvokeAlias(const ASString& alias, CharacterHandle* pthisChar, Object* pthisObj, const FunctionRef& func)
 {

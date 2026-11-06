@@ -31,7 +31,6 @@ public:
     GASGlobalObject(GlobalContext* pcontext); // exe 0x14291c160
 };
 
-// MS2-FUNCTIONAL: register allocation differs.
 // @0x14296f3d0
 void GlobalContext::PreClean(bool preserveBuiltinProps)
 {

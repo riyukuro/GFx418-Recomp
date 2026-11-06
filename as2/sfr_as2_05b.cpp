@@ -81,7 +81,6 @@ struct VoiObjectData
 } // namespace
 
 // The 3D matrix of the character pdata with the translation in pixels.
-// MS2-FUNCTIONAL: instruction scheduling of the element copies
 // @0x14294b250
 bool AS2ValueObjectInterface::GetMatrix3D(void* pdata, Render::Matrix3F* pmat) const
 {
@@ -106,7 +105,6 @@ ASUserData* AS2ValueObjectInterface::GetUserData(void* pdata, bool isdobj) const
 }
 
 // The matrix of the character in the world with the translation in pixels.
-// MS2-FUNCTIONAL: instruction scheduling of the element copies
 // @0x142958290
 bool AS2ValueObjectInterface::GetWorldMatrix(void* pdata, Render::Matrix2F* pmat) const
 {

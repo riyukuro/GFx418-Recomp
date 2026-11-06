@@ -3164,7 +3164,7 @@ void GAS_GlobalIsFinite(const FnCall& fn)
 }
 
 // ASSetPropFlagsVisitor's scalar deleting destructor (vtable slot 0 of GAS_GlobalASSetPropFlags' visitor, no .pdata).
-// MS2-FUNCTIONAL: free-function form of the local class's compiler-generated destructor.
+// free-function form of the local class's compiler-generated destructor.
 // @0x1428f7be0
 void* FUN_1428f7be0(void* self, unsigned flags)
 {
@@ -3175,7 +3175,7 @@ void* FUN_1428f7be0(void* self, unsigned flags)
 }
 
 // LoadVarsStringVisitor scalar deleting destructor (vtable slot 0, no .pdata), 0x18 bytes.
-// MS2-FUNCTIONAL: free-function form of the local class's compiler-generated destructor.
+// free-function form of the local class's compiler-generated destructor.
 // @0x14292bdc0
 void* FUN_14292bdc0(void* self, unsigned flags)
 {
