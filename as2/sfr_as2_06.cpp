@@ -234,6 +234,8 @@ namespace Scaleform { namespace GFx {
 
 class FunctionHandler;
 
+template <> inline void LogBase<AS2::Environment>::LogError(const char* pfmt, ...) const;
+
 namespace AS2 {
 
 // Function object around a host FunctionHandler (GFx::Value::CreateFunction). Only what this unit needs.
@@ -3058,12 +3060,19 @@ __declspec(noinline) void GFx::AS2::PagedStack<Ptr<GFx::AS2::FunctionObject>, 32
 // @0x1429673e0
 template void GFx::LogBase<GFx::AS2::ActionLogger>::LogAction(const char*, ...) const;
 
-// MS2-FUNCTIONAL the exe inlines Target->GetLog(), while this explicit instantiation calls the recovered
-// Environment::GetLog helper; the log routing and format are unchanged.
-// LogError functional (pinned at the end): Environment::GetLog (exe 0x14294b210) is out of line here, the exe
-// inlines Target->GetLog()
+// GFXLOG_MESSAGE_FUNC(LogError) for Environment with Environment::GetLog (Target->GetLog()) inlined, as in the exe.
 // @0x142967b90
-template void GFx::LogBase<GFx::AS2::Environment>::LogError(const char*, ...) const;
+template <>
+inline void GFx::LogBase<GFx::AS2::Environment>::LogError(const char* pfmt, ...) const
+{
+    va_list argList;
+    va_start(argList, pfmt);
+    GFx::AS2::Environment* p = (GFx::AS2::Environment*)this;
+    Log* plog = p->Target->GetLog();
+    if (p->IsLogNotNull() || plog)
+        plog->LogMessageVarg(Log_Error, pfmt, argList);
+    va_end(argList);
+}
 
 // The out-of-line array growth of the AS2 containers.
 // @0x14297d690
