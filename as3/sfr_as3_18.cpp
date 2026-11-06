@@ -5551,8 +5551,8 @@ bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value
     return ctr && FUN_1425146d0(vm, v, *ctr);
 }
 
-void FUN_1424d54f0(void* dst, void* src);   // hash entry copy construction (key, value ref, count)
-
+// The root's loaded movie definitions (+0x6e8), on the node/allocator/entry types of the add instances in sfr_as3_15.
+namespace Scaleform { struct MS2_LoadedMovieDefInfo { Ptr<GFx::MovieDefImpl> pMovieDef; unsigned UseCnt; MS2_LoadedMovieDefInfo(GFx::MovieDefImpl* def) : pMovieDef(def), UseCnt(1) {} }; typedef HashNode<GFx::MovieDefImpl*, MS2_LoadedMovieDefInfo, IdentityHash<GFx::MovieDefImpl*> > MS2_LoadedMovieDefNode; typedef HashsetNodeEntry<MS2_LoadedMovieDefNode, MS2_LoadedMovieDefNode::NodeHashF> MS2_LoadedMovieDefEntry; typedef HashSetBase<MS2_LoadedMovieDefNode, MS2_LoadedMovieDefNode::NodeHashF, MS2_LoadedMovieDefNode::NodeAltHashF, AllocatorLH<GFx::MovieDefImpl*, 2>, MS2_LoadedMovieDefEntry> MS2_LoadedMovieDefSet; template<> MS2_LoadedMovieDefEntry::HashsetNodeEntry(const MS2_LoadedMovieDefEntry&); }   // the entry copy ctor (0x1424d54f0) stays out of line, as in the exe; its COMDAT is sfr_as3_15's
 namespace Scaleform {
 // @0x14251f660
 template void ArrayBase<ArrayData<GFx::AS3::Value, AllocatorGH<GFx::AS3::Value, 2>, ArrayDefaultPolicy> >::PushBack(
@@ -5771,59 +5771,59 @@ static inline void* FUN_1425059f0(const void* self, const UPInt& key) { return :
 
 // MovieRoot::RemoveLoadedMovieDef: one use less of a loaded movie definition; at the last its entry leaves the
 // root's loaded movie definitions (+0x6e8). True when the entry was removed.
-struct Sfr18LoadedDefEntry { SPInt Next; UPInt Key; Ptr<MovieDefImpl> pMovieDef; unsigned UseCnt; };
-struct Sfr18LoadedDefTable { UPInt EntryCount; UPInt SizeMask; Sfr18LoadedDefEntry E[1]; };
+// The SDK HashSetBase::RemoveAlt on the real set type; the entry copy ctor is called out of line (declared above).
+//
 
-// HashSetBase::RemoveAlt over the identity-hashed table (the hash is opaque in the shared header). Every access goes
-// through *ppTable as the SDK's member pTable does; a cached table local moves it from rdx to r8.
-static SF_FORCEINLINE void Sfr18RemoveLoadedDef(Sfr18LoadedDefTable** ppTable, const UPInt& key)
-{
-    if (*ppTable == NULL)
-        return;
-    UPInt hashValue = key;
-    UPInt index     = hashValue & (*ppTable)->SizeMask;
-    Sfr18LoadedDefEntry* e = &(*ppTable)->E[index];
-    if (e->Next == -2 || ((e->Key & (*ppTable)->SizeMask) != (UPInt)index))
-        return;
-    UPInt naturalIndex = index;
-    UPInt prevIndex    = -1;
-    while (((e->Key & (*ppTable)->SizeMask) != (UPInt)naturalIndex) || !(e->Key == key))
-    {
-        prevIndex = index;
-        index     = e->Next;
-        if (index == -1)
-            return;
-        e = &(*ppTable)->E[index];
-    }
-    if (naturalIndex == index)
-    {
-        if (e->Next != -1)
-        {
-            Sfr18LoadedDefEntry* enext = &(*ppTable)->E[e->Next];
-            e->pMovieDef.~Ptr();
-            e->Next = -2;
-            ::FUN_1424d54f0(e, enext);
-            e = enext;
-        }
-    }
-    else
-    {
-        (*ppTable)->E[prevIndex].Next = e->Next;
-    }
-    e->pMovieDef.~Ptr();
-    e->Next = -2;
-    (*ppTable)->EntryCount--;
-}
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 // @0x142522920
 bool FUN_142522920(MovieRoot* self, MovieDefImpl* def)
 {
-    Sfr18LoadedDefTable** ptable = reinterpret_cast<Sfr18LoadedDefTable**>(&self->LoadedMovieDefs);
-    const UPInt key = reinterpret_cast<UPInt>(def);
-    unsigned* pcnt = static_cast<unsigned*>(FUN_1425059f0(ptable, reinterpret_cast<const UPInt&>(def)));
+    MS2_LoadedMovieDefSet* set = reinterpret_cast<MS2_LoadedMovieDefSet*>(&self->LoadedMovieDefs);
+    MovieDefImpl* const key = def;
+    unsigned* pcnt = static_cast<unsigned*>(FUN_1425059f0(set, reinterpret_cast<const UPInt&>(def)));
     if (!pcnt || --pcnt[2] != 0)
         return false;
-    Sfr18RemoveLoadedDef(ptable, key);
+    set->RemoveAlt(key);
     return true;
 }
 
@@ -8934,11 +8934,11 @@ float ShapeObject::GetRatio() const
     const UPInt h = AccRd(self, 0x48);
     if (!h)
         return 0.0f;
-    const UInt32 idx = (UInt32)((SPInt)((h & 0xfff) - 0x38) / 0x38);
-    const UPInt node = AccRd(AccRd(h & ~UPInt(0xfff), 0x20), 0x28 + (UPInt)idx * 8);
-    if (*reinterpret_cast<const UInt16*>(node + 8) != 3)
+    const UPInt tab = AccRd(h & ~UPInt(0xfff), 0x20);
+    const SPInt off = (SPInt)(h & 0xfff) - 0x38;
+    if (*reinterpret_cast<const UInt16*>(AccRd(tab, 0x28 + (UPInt)(UInt32)(off / 0x38) * 8) + 8) != 3)
         return 0.0f;
-    return *reinterpret_cast<const float*>(node + 0x98);
+    return *reinterpret_cast<const float*>(AccRd(tab, 0x28 + (UPInt)(UInt32)(off / 0x38) * 8) + 0x98);
 }
 
 // -- tail calls into the shared bodies --

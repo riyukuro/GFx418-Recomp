@@ -352,7 +352,7 @@ inline Scaleform::UPInt FUN_142443d90(Scaleform::UPInt loader) { return reinterp
 inline void FUN_1425a3850(void* resource) { static_cast<Scaleform::GFx::Resource*>(resource)->AddRef(); }   // Resource::AddRef
 namespace Scaleform { namespace GFx { namespace AS3 { void* Sfr33IdWordHashGet(const unsigned char*, const unsigned long long&); } } }
 inline void* FUN_1425059f0(void* map, const Scaleform::UPInt* key) { return Scaleform::GFx::AS3::Sfr33IdWordHashGet(static_cast<const unsigned char*>(map), *key); }
-void FUN_1424d54f0(void* dst, void* src);   // hash entry copy (key, value ref, count)
+namespace Scaleform { struct MS2_LoadedMovieDefInfo { Ptr<GFx::MovieDefImpl> pMovieDef; unsigned UseCnt; MS2_LoadedMovieDefInfo(GFx::MovieDefImpl* def) : pMovieDef(def), UseCnt(1) {} }; typedef HashNode<GFx::MovieDefImpl*, MS2_LoadedMovieDefInfo, IdentityHash<GFx::MovieDefImpl*> > MS2_LoadedMovieDefNode; typedef HashsetNodeEntry<MS2_LoadedMovieDefNode, MS2_LoadedMovieDefNode::NodeHashF> MS2_LoadedMovieDefEntry; template<> MS2_LoadedMovieDefEntry::HashsetNodeEntry(const MS2_LoadedMovieDefEntry&); } static inline void FUN_1424d54f0(void* dst, void* src) { ::new (dst) Scaleform::MS2_LoadedMovieDefEntry(*static_cast<const Scaleform::MS2_LoadedMovieDefEntry*>(src)); }   // the real entry copy ctor (0x1424d54f0, sfr_as3_15's COMDAT), out of line as in the exe
 // through the real ArrayBase<ArrayData<WeakPtr<DisplayObject>>>::RemoveAt (0x1425224f0, called out of line)
 typedef Scaleform::ArrayBase<Scaleform::ArrayData<Scaleform::WeakPtr<Scaleform::GFx::DisplayObject>, Scaleform::AllocatorLH<Scaleform::WeakPtr<Scaleform::GFx::DisplayObject>, 2>, Scaleform::ArrayDefaultPolicy> > Sfr19WeakDispArray;
 #define FUN_1425224f0(arr, idx) ((static_cast<Sfr19WeakDispArray*>(static_cast<void*>(arr))->*static_cast<void (Sfr19WeakDispArray::*)(Scaleform::UPInt)>(&Sfr19WeakDispArray::RemoveAt))(idx))
@@ -9690,14 +9690,14 @@ typedef MS2_HashSetOf<MS2_FunctionTraitsNode, AllocatorLH<UInt32, GFx::AS3::Stat
 typedef HashNode<GFx::AS3::GASRefCountBase*, GFx::AS3::WeakProxy*, FixedSizeHash<GFx::AS3::GASRefCountBase*> > MS2_WeakProxyNode;
 typedef MS2_HashSetOf<MS2_WeakProxyNode, AllocatorGH<GFx::AS3::GASRefCountBase*, 2>,
                       HashsetCachedNodeEntry<MS2_WeakProxyNode, MS2_WeakProxyNode::NodeHashF> >::Type MS2_WeakProxySet;
-struct MS2_LoadedMovieDefInfo
-{
-    Ptr<GFx::MovieDefImpl> pMovieDef;
-    unsigned               UseCnt;
-
-    MS2_LoadedMovieDefInfo(GFx::MovieDefImpl* def) : pMovieDef(def), UseCnt(1) {}
-};
-typedef HashNode<GFx::MovieDefImpl*, MS2_LoadedMovieDefInfo, IdentityHash<GFx::MovieDefImpl*> > MS2_LoadedMovieDefNode;
+// (MS2_LoadedMovieDefInfo and MS2_LoadedMovieDefNode are declared at the top, with the entry copy ctor.)
+//
+//
+//
+//
+//
+//
+//
 typedef MS2_HashSetOf<MS2_LoadedMovieDefNode, AllocatorLH<GFx::MovieDefImpl*, 2>,
                       HashsetNodeEntry<MS2_LoadedMovieDefNode, MS2_LoadedMovieDefNode::NodeHashF> >::Type
     MS2_LoadedMovieDefSet;
