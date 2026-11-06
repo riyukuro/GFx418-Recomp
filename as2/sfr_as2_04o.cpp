@@ -258,20 +258,20 @@ void MovieRoot::ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType)
 
 // _root, _global and _levelN before the scope chain's own lookup: 0 = not one of them, 1 = the value is set, 2 = a
 // level name whose level does not exist.
-// MS2-FUNCTIONAL: ours shares the case-insensitive _global SetAsObject tail with the case-sensitive one (the exe
-// repeats it) and keeps the builtins in r15 where the exe uses rbp
+// MS2-FUNCTIONAL register allocation only: the SDK body (== for the case-sensitive tests) gives the exe's two _global
+// tails; ours keeps the builtins in r14 and the name in r15 where the exe uses rbp and r14 (inline CaseInsensitive tried)
 // @0x142933bd0
 Bool3W Environment::CheckGlobalAndLevels(const GetVarParams& params) const
 {
     // Handle _root and _global.
     if (IsCaseSensitive())
     {
-        if (GetBuiltin(ASBuiltin__root).CompareBuiltIn_CaseCheck(params.VarName, true))
+        if (GetBuiltin(ASBuiltin__root) == params.VarName)
         {
             params.pResult->SetAsCharacter(Target->GetTopParent());
             return Bool3W(true);
         }
-        else if (GetBuiltin(63).CompareBuiltIn_CaseCheck(params.VarName, true)) // _global
+        else if (GetBuiltin(ASBuiltin__global) == params.VarName)
         {
             params.pResult->SetAsObject(StringContext.pContext->pGlobal);
             return Bool3W(true);
@@ -284,7 +284,7 @@ Bool3W Environment::CheckGlobalAndLevels(const GetVarParams& params) const
             params.pResult->SetAsCharacter(Target->GetTopParent());
             return Bool3W(true);
         }
-        else if (GetBuiltin(63).CompareBuiltIn_CaseCheck(params.VarName, false))
+        else if (GetBuiltin(ASBuiltin__global).CompareBuiltIn_CaseCheck(params.VarName, false))
         {
             params.pResult->SetAsObject(StringContext.pContext->pGlobal);
             return Bool3W(true);
