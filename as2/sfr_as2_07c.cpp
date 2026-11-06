@@ -139,7 +139,7 @@ void GASImeCtorFunction::SetConversionMode(const FnCall& fn)
     Ptr<IMEManagerBase> pime   = fn.Env->GetMovieImpl()->GetIMEManager();
     bool                result = false;
     if (pime)
-        result = pime->SetConversionMode((UInt32)ImeArg(fn, 0).ToNumber(fn.Env));
+        result = pime->SetConversionMode((UInt32)ArgCopy(&fn, 0)->ToNumber(fn.Env));
     fn.Result->SetBool(result);
 }
 
@@ -151,7 +151,7 @@ void GASImeCtorFunction::SetEnabled(const FnCall& fn)
     Ptr<IMEManagerBase> pime   = fn.Env->GetMovieImpl()->GetIMEManager();
     bool                result = false;
     if (pime)
-        result = pime->SetEnabled(ImeArg(fn, 0).ToBool(fn.Env));
+        result = pime->SetEnabled(ArgCopy(&fn, 0)->ToBool(fn.Env));
     fn.Result->SetBool(result);
 }
 
