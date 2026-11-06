@@ -866,6 +866,8 @@ class Instance : public Object
 {
 public:
     explicit Instance(InstanceTraits::Traits& t);
+    // (sfr19) a unit-local inline copy of the ctor above (the exe SCU inlines it); a member template is not emitted.
+    template <class Tag> Instance(InstanceTraits::Traits& t, Tag);
     virtual ~Instance();
 
     // Heap new/delete plus placement new into Traits::Alloc() memory.

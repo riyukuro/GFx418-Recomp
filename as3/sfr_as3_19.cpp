@@ -55,6 +55,12 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace TR { class State
 namespace Scaleform { namespace GFx { namespace AS3 {
 struct ValueAssignCopies
 {
+    // Value::PickUnsafe(Object*) (out of line in sfr_as3_18; the SCU inlines it into 0x14253bef0).
+    static __forceinline void PickUnsafeObject19(Value& to, Object* v)
+    {
+        to.SetKind(Value::kObject);
+        to.value = v;
+    }
     // Value::Assign(const ASString&) as the SDK writes it, for the out-of-line operator= copy (FUN_1424e0d40).
     static SF_INLINE void AssignString19(Value& to, const ASString& v)
     {
@@ -9320,7 +9326,26 @@ void Sfr31StateTraceOp(UPInt state, unsigned char op, UPInt* pos)
 }
 // ---- batch 80
 // Pushes a new Instance of the traits found through the owner's name onto the VM's value stack (vm + 0x50 points at the top).
-// MS2-FUNCTIONAL 0x14253bef0: the exe inlines Traits::Alloc and the Instance constructor (defined out of line in sfr_as3_15/16); its picked Value temp copy and release are folded away
+// Object(Traits&) / Instance(Traits&): the exe inlines both here (out of line in sfr_as3_15). The Instance copy
+// is the tagged member template, so cl does not emit a second ??0Instance (LNK2005 with sfr_as3_15).
+inline Object::Object(Traits& t)
+    : GASRefCountBase(&t.GetVM().GetGC())
+    , pTraits(&t)
+    , pUserDataHolder(NULL)
+{
+}
+struct Sfr31InstanceInlineTag {};
+template <class Tag> __forceinline Instance::Instance(InstanceTraits::Traits& t, Tag)
+    : Object(t)
+{
+    t.ConstructTail(*this);
+}
+
+// The inlined Instance ctor emits these vftables here (as sfr_as3_15/16 do).
+// MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@6B@ 0x14313f368
+// MS2-PIN: ??_7GASRefCountBase@AS3@GFx@Scaleform@@6B@ 0x14313f398
+// MS2-PIN: ??_7Object@AS3@GFx@Scaleform@@6B@ 0x14317b098
+// MS2-PIN: ??_7Instance@AS3@GFx@Scaleform@@6B@ 0x14313f4d8
 // @0x14253bef0
 void Sfr31PushNewInstanceOfOwner(UPInt vm, UPInt own)
 {
@@ -9331,14 +9356,18 @@ void Sfr31PushNewInstanceOfOwner(UPInt vm, UPInt own)
         tr = FUN_142506f00(link, *reinterpret_cast<const UPInt*>(Sfr31Rd(Sfr31Rd(link, 0x28), 0x170) + static_cast<SPInt>(*reinterpret_cast<const SInt32*>(own + 0x30)) * 8), &name);
     }
     InstanceTraits::Traits& traits = *reinterpret_cast<InstanceTraits::Traits*>(tr);
-    void* mem = traits.Alloc();
-    // Instance(Traits&) runs ConstructTail itself.
-    Instance* obj = mem != NULL ? new (mem) Instance(traits) : NULL;
+    struct A { static __forceinline void* Alloc(const InstanceTraits::Traits& t)
+    {
+        AllocInfo info(StatMV_VM_Instance_Mem, NULL, 0);
+        return t.GetVM().GetMemoryHeap()->Alloc(t.GetMemSize(), &info);
+    } };
+    void* mem = A::Alloc(traits);
+    Instance* obj = mem != NULL ? new (mem) Instance(traits, Sfr31InstanceInlineTag()) : NULL;
+    Value v;
+    ValueAssignCopies::PickUnsafeObject19(v, obj);
     const UPInt top = Sfr31Rd(vm, 0x50) + 0x20;
     Sfr31Wr(vm, 0x50, top);
-    *reinterpret_cast<UInt32*>(top) = 0xc;
-    Sfr31Wr(top, 8, 0);
-    Sfr31Wr(top, 0x10, reinterpret_cast<UPInt>(obj));
+    new (reinterpret_cast<void*>(top)) Value(v);
 }
 // ---- batch 81
 // The AVM flavor of a SetVariable value waiting for its target (0x40 bytes; the base lives in the player unit).
