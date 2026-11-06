@@ -1254,7 +1254,7 @@ namespace AS3 {
 
 // A new instance of the exported class symbolName named instanceName at depth (the top when negative or past it)
 // of the container, with the initArgs members set; its constructor runs right away.
-// MS2-FUNCTIONAL: the exe inlines the Multiname and Value constructors
+// MS2-FUNCTIONAL: 14 bytes short of the exe (1538 vs 1552); register allocation and slot layout differ
 // @0x1424ede80
 bool AS3ValueObjectInterface::AttachMovie(void* pdata, GFx::Value* pmc, const char* symbolName, const char* instanceName,
                                      SInt32 depth, const MemberValueSet* initArgs)
@@ -1291,7 +1291,9 @@ bool AS3ValueObjectInterface::AttachMovie(void* pdata, GFx::Value* pmc, const ch
                     const Sfr17dMemberValue& mv = args->Data[i];
                     const Multiname mn(vm->GetPublicNamespace(),
                                        Value(ASString(root->GetStringManager418()->CreateStringNode(mv.Key.ToCStr(),
-                                                                                                    mv.Key.GetSize()))));
+                                                                                                    mv.Key.GetSize())),
+                                             Value::InlineStr),
+                                       Multiname::InlineCtorTag());
                     Value v;
                     root->GFxValue2ASValue(mv.mValue, &v);
                     pnew->SetProperty(mn, v);
