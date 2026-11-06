@@ -70,7 +70,7 @@ struct Video02PrototypeAccess : Scaleform::GFx::AS2::GASPrototypeBase
 {
     using GASPrototypeBase::Init;
     using GASPrototypeBase::InitFunctionMembers;
-    using GASPrototypeBase::DoesImplement;
+    using GASPrototypeBase::DoesImplement; typedef bool (GASPrototypeBase::*AddInterfaceSlot)(void*, void*, void*); static AddInterfaceSlot AddInterfaceAsSlot() { return reinterpret_cast<AddInterfaceSlot>(&GASPrototypeBase::AddInterface); }
 };
 struct Video02FinalizeAccess : Scaleform::GFx::AS2::Object
 {
@@ -3765,7 +3765,7 @@ extern void* DAT_143b275d8;
 extern int DAT_143b275e0;
 extern void* DAT_143b27668;
 extern int DAT_143b27670;
-extern bool FUN_14292f250(void*, void*, void*, void*);
+// (GASPrototypeBase::AddInterface is called through Video02PrototypeAccess; the slot keeps its bool form)
 
 typedef void (*Video02ArgsNative)(void*, void*, unsigned, const void*);
 typedef void (*Video02ResultNative)(void*, void*);
@@ -3799,7 +3799,7 @@ void* FUN_140011b90(void* self, void* owner, void* a2, void* a3)
 // @0x140011ba0
 bool FUN_140011ba0(void* self, void* context, void* index, void* function)
 {
-    return FUN_14292f250(static_cast<char*>(self) + 0x48, context, index, function);
+    return (reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(static_cast<char*>(self) + 0x48)->*Video02PrototypeAccess::AddInterfaceAsSlot())(context, index, function);
 }
 
 // InstanceOf: the object itself, else GASPrototypeBase::DoesImplement on the base at +0x68.
