@@ -2550,6 +2550,32 @@ bool Object::GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val
     return false;
 }
 
+// FunctionRefBase::SetLocalFrame (exe 0x142981e70), inlined.
+static SF_FORCEINLINE void FunctionRef_SetLocalFrameInl(FunctionRefBase* p, LocalFrame* localFrame, bool weakRef)
+{
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->Release();
+    p->pLocalFrame = localFrame;
+    if (weakRef)
+        p->Flags |= FunctionRefBase::FuncRef_Weak;
+    else
+        p->Flags &= ~FunctionRefBase::FuncRef_Weak;
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->AddRef();
+}
+
+// FunctionRefBase::Init(orig) of a fresh reference with SetLocalFrame (exe 0x142981e70) inlined, as the exe has it.
+static SF_FORCEINLINE void FunctionRef_InitCopyInl(FunctionRefBase* p, const FunctionRefBase& orig)
+{
+    p->Flags    = 0;
+    p->Function = orig.Function;
+    if (p->Function)
+        p->Function->AddRef();
+    p->pLocalFrame = 0;
+    if (orig.pLocalFrame)
+        FunctionRef_SetLocalFrameInl(p, orig.pLocalFrame, (orig.Flags & FunctionRefBase::FuncRef_Weak) != 0);
+}
+
 // Value::SetAsFunction where the exe inlines it.
 static SF_FORCEINLINE void Value_SetAsFunctionInl(Value* pval, const FunctionRefBase& func)
 {
@@ -2752,7 +2778,6 @@ void Selection::DoTransferFocus(const FnCall& fn)
     proot->TransferFocus(Value_ToCharacterInl(fn.Arg(0), fn.Env), controllerIdx, fmt);
 }
 
-// MS2-FUNCTIONAL the exe keeps the resolve handler copy in registers (no frame pointer); ours builds it on the frame
 // @0x14294ef50
 bool Environment::GetMember(ObjectInterface* pthis, const ASString& name, Value* pval)
 {
@@ -2760,11 +2785,11 @@ bool Environment::GetMember(ObjectInterface* pthis, const ASString& name, Value*
     if (rv && pval->IsProperty())
     {
         pval->GetPropertyValue(this, pthis, pval);
-        return rv;
     }
-    if (pval->GetType() == Value::RESOLVEHANDLER)
+    else if (pval->GetType() == Value::RESOLVEHANDLER)
     {
-        FunctionRef resolveHandler(pval->V.FunctionValue); // ToResolveHandler, inlined
+        FunctionRef resolveHandler; // ToResolveHandler, inlined
+        FunctionRef_InitCopyInl(&resolveHandler, pval->V.FunctionValue);
         if (resolveHandler.Function)
         {
             Push(name);
@@ -4331,15 +4356,20 @@ static SF_FORCEINLINE ObjectInterface* Env_ThisObject(Environment* penv, bool fo
     return pavm;
 }
 
-// The resolve handler a value holds, null for anything else.
-static SF_FORCEINLINE FunctionRef Value_ToResolveHandler(const Value& v)
+// Value::ToAvmCharacter, inlined.
+static SF_FORCEINLINE AvmCharacter* Value_ToAvmCharacterInl(const Value& v, Environment* penv)
 {
-    if (v.GetType() == Value::RESOLVEHANDLER)
-        return FunctionRef(v.V.FunctionValue);
-    return FunctionRef();
+    InteractiveObject* pchar = 0;
+    if (v.IsCharacter() && v.V.pCharHandle)
+    {
+        DisplayObject* pdisp = v.V.pCharHandle->ResolveCharacter(penv->GetTarget()->GetMovieImpl());
+        if (pdisp)
+            pchar = pdisp->IsInteractiveObject() ? static_cast<InteractiveObject*>(pdisp) : 0;
+    }
+    return pchar ? ToAvmCharacter(pchar) : 0;
 }
 
-// MS2-FUNCTIONAL the exe keeps the resolve handler in registers and inlines the FnCall dtor (out of line elsewhere)
+// MS2-FUNCTIONAL same logic; the exe orders the GetVarParams stores and the r13/r15 clears around the resolve-handler test differently (block layout only)
 // @0x142956cd0
 bool Environment::GetVariable(const ASString& varname, Value* presult, const WithStackArray* pwithStack,
                               InteractiveObject** ppnewTarget, Value* powner, unsigned exclFlags)
@@ -4347,21 +4377,37 @@ bool Environment::GetVariable(const ASString& varname, Value* presult, const Wit
     bool rv = FindAndGetVariableRaw(GetVarParams(varname, presult, pwithStack, ppnewTarget, powner, exclFlags));
     if (rv && presult->IsProperty())
     {
-        Value            owner;
-        ObjectInterface* pthis;
-        pthis = Env_ThisObject(this, GetVariableRaw(GetVarParams(GetBuiltin(ASBuiltin_this), &owner, pwithStack)),
-                               owner);
-        presult->GetPropertyValue(this, pthis, presult);
+        ObjectInterface* pobj = NULL;
+        Value            thisVal;
+        if (GetVariableRaw(GetVarParams(GetBuiltin(ASBuiltin_this), &thisVal, pwithStack)))
+        {
+            pobj = thisVal.ToObject(this);
+            if (!pobj)
+                pobj = Value_ToAvmCharacterInl(thisVal, this);
+        }
+        else
+            pobj = ToAvmCharacter(GetTarget());
+        presult->GetPropertyValue(this, pobj, presult);
     }
     else if (presult->GetType() == Value::RESOLVEHANDLER)
     {
-        Value            owner;
-        ObjectInterface* pthis;
-        pthis = Env_ThisObject(this, GetVariable(GetBuiltin(ASBuiltin_this), &owner, pwithStack), owner);
-        FunctionRef resolveHandler(Value_ToResolveHandler(*presult));
+        ObjectInterface* pobj = NULL;
+        Value            thisVal;
+        if (GetVariable(GetBuiltin(ASBuiltin_this), &thisVal, pwithStack))
+        {
+            pobj = thisVal.ToObject(this);
+            if (!pobj)
+                pobj = Value_ToAvmCharacterInl(thisVal, this);
+        }
+        else
+            pobj = ToAvmCharacter(GetTarget());
+
+        FunctionRef resolveHandler;
+        if (presult->GetType() == Value::RESOLVEHANDLER)
+            FunctionRef_InitCopyInl(&resolveHandler, presult->V.FunctionValue);
         Push(varname);
         presult->SetUndefined();
-        resolveHandler.Invoke(FnCall(presult, pthis, this, 1, GetTopIndex()));
+        resolveHandler.Invoke(FnCall(presult, pobj, this, 1, GetTopIndex()));
         Drop1();
     }
     return rv;
