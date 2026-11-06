@@ -4661,80 +4661,80 @@ namespace Instances { namespace fl_display
             pimage->GetPixels(provider, r);
         }
     }
-
+    static SF_FORCEINLINE Render::Rect<SInt32> Sfr07RectangleToRect(const Instances::fl_geom::Rectangle& rect) { return Render::Rect<SInt32>((SInt32)rect.x, (SInt32)rect.y, (SInt32)(rect.x + rect.width), (SInt32)(rect.y + rect.height)); }
     // The pixels of inputByteArray (from its position) into rect; EOFError when it runs out first.
-    // MS2-FUNCTIONAL: stack slot order / register allocation
+    // MS2-FUNCTIONAL: the exe loads pImage into rdx and keeps this in rcx for the cast; ours uses rcx/rbx and a later cmove
 // @0x142452f10
     void BitmapData::setPixels(const Value& result, Instances::fl_geom::Rectangle* rect, Instances::fl_utils::ByteArray* inputByteArray)
     {
-        if (!pImage)
+        if (!pImage.GetPtr())
+            return GetVM().ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, GetVM(), "Invalid BitmapData"));
+        if (!rect)
+            return GetVM().ThrowArgumentError(VM::Error(VM::eNullPointerError, GetVM(), "rect"));
+        if (!inputByteArray)
+            return GetVM().ThrowArgumentError(VM::Error(VM::eNullPointerError, GetVM(), "inputByteArray"));
+        ByteArrayPixelProvider provider(inputByteArray);
         {
-            VM& vm = GetVM();
-            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
-        }
-        else if (!rect)
-        {
-            VM& vm = GetVM();
-            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "rect"));
-        }
-        else if (!inputByteArray)
-        {
-            VM& vm = GetVM();
-            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "inputByteArray"));
-        }
-        else
-        {
-            ByteArrayPixelProvider provider(inputByteArray);
-            {
-                Render::Rect<SInt32> r((SInt32)rect->x, (SInt32)rect->y, (SInt32)(rect->x + rect->width), (SInt32)(rect->y + rect->height));
-                Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
-                if (pimage->SetPixels(r, provider))
-                    return;
-            }
-            if (provider.pBytes->GetLength() <= inputByteArray->GetLength())
-                return;
-            VM& vm = GetVM();
-            vm.ThrowError(VM::Error(VM::eEOFError, vm, "EOF"));
-        }
-    }
+            Render::Rect<SInt32> r = Sfr07RectangleToRect(*rect);
+            Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
+            if (pimage->SetPixels(r, provider)) return; }
+        if (inputByteArray->GetLength() < provider.pBytes->GetLength())
+            return GetVM().ThrowError(VM::Error(VM::eEOFError, GetVM(), "EOF"));
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    }
+    static SF_FORCEINLINE UInt32 Sfr07VectorLength(Instances::fl_vec::Vector_uint* v) { UInt32 n; v->lengthGet(n); return n; }
     // The pixels of inputVector into rect; RangeError when it is too short.
-    // MS2-FUNCTIONAL: stack slot order / register allocation (this/inputVector in rdi/rbx swapped)
+    // MS2-FUNCTIONAL: the exe keeps the two length temps below the provider (rsp+0x20/0x24), ours above the Error (0x48/0x4c); same pImage register choice as setPixels
 // @0x1424530a0
     void BitmapData::setVector(const Value& result, Instances::fl_geom::Rectangle* rect, Instances::fl_vec::Vector_uint* inputVector)
     {
         if (!pImage)
+            return GetVM().ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, GetVM(), "Invalid BitmapData"));
+        if (!rect)
+            return GetVM().ThrowArgumentError(VM::Error(VM::eNullPointerError, GetVM(), "rect"));
+        if (!inputVector)
+            return GetVM().ThrowArgumentError(VM::Error(VM::eNullPointerError, GetVM(), "inputVector"));
+        VectorPixelProvider provider(inputVector);
         {
-            VM& vm = GetVM();
-            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
-        }
-        else if (!rect)
-        {
-            VM& vm = GetVM();
-            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "rect"));
-        }
-        else if (!inputVector)
-        {
-            VM& vm = GetVM();
-            vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "inputVector"));
-        }
-        else
-        {
-            UInt32 have, need;
-            VectorPixelProvider provider(inputVector);
-            {
-                Render::Rect<SInt32> r((SInt32)rect->x, (SInt32)rect->y, (SInt32)(rect->x + rect->width), (SInt32)(rect->y + rect->height));
-                Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
-                if (pimage->SetPixels(r, provider))
-                    return;
-            }
-            inputVector->lengthGet(have);
-            provider.pVector->lengthGet(need);
-            if (have >= need)
+            Render::Rect<SInt32> r((SInt32)rect->x, (SInt32)rect->y, (SInt32)(rect->x + rect->width), (SInt32)(rect->y + rect->height));
+            Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
+            if (pimage->SetPixels(r, provider))
                 return;
-            VM& vm = GetVM();
-            vm.ThrowError(VM::Error(VM::eOutOfRangeError, vm, "inputVector not large enough to read all the pixel data."));
         }
+        if (Sfr07VectorLength(inputVector) < Sfr07VectorLength(provider.pVector))
+            return GetVM().ThrowError(VM::Error(VM::eOutOfRangeError, GetVM(), "inputVector not large enough to read all the pixel data."));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     }
 #pragma strict_gs_check(pop)
 
