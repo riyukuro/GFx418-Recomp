@@ -1151,23 +1151,17 @@ namespace Instances { namespace fl
         }
     }
 
-    // MS2-FUNCTIONAL: regalloc (the exe also saves rdi and keeps this in rbp)
+    // The SDK body: AS3::Convert<Value,ASString> / <Value,int> inlined as constructor scopes (gives the exe regalloc).
     // @0x1423f5770
     void Error::AS3Constructor(unsigned argc, const Value* argv)
     {
+        struct ConvertStr { __forceinline ConvertStr(ASString& to, const Value& from) { if (from.IsObject() && from.GetObject() == NULL) to.SetNull(); else from.Convert2String(to); } };
+        struct ConvertInt { __forceinline ConvertInt(SInt32& to, const Value& from) { SInt32 v; if (from.Convert2Int32(v)) to = v; } };
         if (argc > 0)
-        {
-            if (argv[0].IsObject() && argv[0].GetObject() == NULL)
-                message.SetNull();
-            else
-                argv[0].Convert2String(message);
-        }
+            ConvertStr(message, argv[0]);
+
         if (argc > 1)
-        {
-            SInt32 id;
-            if (argv[1].Convert2Int32(id))
-                ID = id;
-        }
+            ConvertInt(ID, argv[1]);
     }
 }} // namespace Instances::fl
 
