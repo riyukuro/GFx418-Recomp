@@ -52,7 +52,6 @@ SF_FORCEINLINE Environment* LqCharEnv(InteractiveObject* pchar)
 
 // The variables text of a finished load: a LoadVars object gets the byte counts and its onData event (the default
 // handler decodes it), otherwise the target clip or level (made empty when missing) gets the pairs as members.
-// MS2-FUNCTIONAL: cl folds the clamp of the byte total to maxsd, the exe tests it with comisd and a branch.
 // @0x142938d60
 void MovieRoot::DoProcessLoadVars(GFx::LoadQueueEntry* pentry, LoadStates* pls, const String& data, UPInt fileLen,
                                   bool)
@@ -64,11 +63,10 @@ void MovieRoot::DoProcessLoadVars(GFx::LoadQueueEntry* pentry, LoadStates* pls, 
         Environment*    penv      = LqCharEnv(LqLevelMovie(this, 0));
         ASString        str       = penv->CreateString(data);
         Number          len       = (Number)fileLen;
-        Number          total     = ploadVars->BytesTotal;
-        if (total < 0)
-            total = 0;
+        if (ploadVars->BytesTotal < 0)
+            ploadVars->BytesTotal = 0;
         ploadVars->BytesLoaded = len;
-        ploadVars->BytesTotal  = total + len;
+        ploadVars->BytesTotal += len;
         // LoadVarsObject::NotifyOnData, inlined.
         penv->Push(str);
         BroadcastMessageLocal(penv, ploadVars, penv->CreateConstString("onData"), 1, penv->GetTopIndex());
@@ -84,13 +82,12 @@ void MovieRoot::DoProcessLoadVars(GFx::LoadQueueEntry* pentry, LoadStates* pls, 
         pchar = LqLevelMovie(this, pas2entry->Level);
         if (!pchar)
         {
-            pchar = CreateEmptyLevelMovie(pls, pas2entry->Level);
+            pchar = *CreateEmptyLevelMovie(pls, pas2entry->Level);
             if (!pchar)
                 return;
         }
     }
-    ObjectInterface* pobj = pchar ? static_cast<ObjectInterface*>(ToAvmCharacter(pchar)) : 0;
-    LoadVarsProto::LoadVariables(LqCharEnv(LqLevelMovie(this, 0)), pobj, data);
+    LoadVarsProto::LoadVariables(LqCharEnv(LqLevelMovie(this, 0)), ToAvmCharacter(pchar), data);
 }
 
 // endFill(): closes the open fill path of the clip.
