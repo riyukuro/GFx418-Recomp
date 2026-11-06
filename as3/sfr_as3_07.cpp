@@ -3816,7 +3816,7 @@ namespace Instances { namespace fl_display
 #pragma strict_gs_check(push, on)
     // The point (stage pixels) against the bounds or, with shapeFlag, the shapes; 3D objects map it through the
     // movie's screen-to-world state first.
-    // MS2-FUNCTIONAL: the exe lays out the frame and allocates registers differently; same calls and tests
+    // MS2-FUNCTIONAL: SDK body; only the pt and TransformByInverse result slots (rsp+0x20/0x28) are swapped
     // @0x14244f0f0
     void DisplayObject::hitTestPoint(bool& result, Value::Number x, Value::Number y, bool shapeFlag)
     {
@@ -3824,14 +3824,18 @@ namespace Instances { namespace fl_display
         RectF bounds = pDispObj->GetBounds(Matrix2F());
         if (bounds.IsNull())
             return;
-        Render::PointF pt((float)x * 20.0f, (float)y * 20.0f);
+        UInt8 hitTestMask = 0;
+        if (shapeFlag)
+            hitTestMask |= GFx::DisplayObject::HitTest_TestShape;
         MovieImpl* proot = pDispObj->GetMovieImpl();
+        float fx = Render::PixelsToTwips(float(x)), fy = Render::PixelsToTwips(float(y));
+        Render::PointF pt(fx, fy);
         if (proot && pDispObj->Is3D(true))
         {
-            proot->SetNormalizedScreenCoords(pt);
+            Render::ScreenToWorld& stw = proot->GetScreenToWorld(); // MovieImpl::SetNormalizedScreenCoords(pt), inlined
+            stw.SetNormalizedScreenCoords(2.f * ((fx - Render::PixelsToTwips(proot->ViewOffsetX)) / proot->VisibleFrameRect.Width()) - 1.0f, 2.f * ((fy - Render::PixelsToTwips(proot->ViewOffsetY)) / proot->VisibleFrameRect.Height()) - 1.0f);
             Matrix3F view;
             Matrix4F proj;
-            Render::ScreenToWorld& stw = proot->GetScreenToWorld();
             if (pDispObj->GetProjectionMatrix3D(&proj))
                 stw.SetProjection(proj);
             if (pDispObj->GetViewMatrix3D(&view))
@@ -3840,7 +3844,7 @@ namespace Instances { namespace fl_display
             pDispObj->GetWorldMatrix3D(&world);
             stw.SetWorld(world);
             stw.GetWorldPoint(&pt);
-            result = pDispObj->PointTestLocal(pt, shapeFlag);
+            result = pDispObj->PointTestLocal(pt, hitTestMask);
         }
         else
         {
@@ -3848,18 +3852,14 @@ namespace Instances { namespace fl_display
             pDispObj->GetLevelMatrix(&level);
             // out of line, as in the exe (COMDAT 0x142447090)
             Render::PointF (Matrix2F::*inverse)(const Render::PointF&) const = &Matrix2F::TransformByInverse;
-            Render::PointF local = (level.*inverse)(pt);
-            if (!(pDispObj->DisplayObjectBase::Flags & GFx::DisplayObjectBase::Mask_Scale9GridExists))
+            const Render::PointF& local = (level.*inverse)(pt);
+            if (pDispObj->DisplayObjectBase::Flags & GFx::DisplayObjectBase::Mask_Scale9GridExists)
+                result = pDispObj->PointTestLocal(local, hitTestMask);
+            else if (bounds.Contains(local))
             {
-                if (!bounds.Contains(local))
-                    return;
-                if (!shapeFlag)
-                {
-                    result = true;
-                    return;
-                }
+                if (!(hitTestMask & GFx::DisplayObject::HitTest_TestShape)) result = true;
+                else result = pDispObj->PointTestLocal(local, hitTestMask);
             }
-            result = pDispObj->PointTestLocal(local, shapeFlag);
         }
     }
 #pragma strict_gs_check(pop)
