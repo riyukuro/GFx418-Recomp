@@ -44,21 +44,28 @@ CheckResult Traits::SetupSlotValues(Object&) const
     return true;
 }
 
+// List<MovieDefRootNode>::IsNull: the list root stands for the node one base offset before it.
+static inline bool Sfr01fIsNull(const GFx::MovieDefRootNodeLinks& root, const GFx::MovieDefRootNode* p)
+{
+    return p == (const GFx::MovieDefRootNode*)&root;
+}
+// The 4.1.18 vtable as far as ForceCollect (slot 9, no flags).
+struct Sfr01fCollectView
+{
+    virtual void s0(); virtual void s1(); virtual void s2(); virtual void s3(); virtual void s4();
+    virtual void s5(); virtual void s6(); virtual void s7(); virtual void s8();
+    virtual void ForceCollect();
+};
 // The movie goes away: the queued actions, the stage, the host's aliases and return value, the frame listeners, the
 // mice, every movie's ABC files and at last the VM, with a collection between the steps.
-// MS2-FUNCTIONAL the 4.1.18 ForceCollect (slot 9) takes no flags; called through the slot without one
-// MS2-FUNCTIONAL: through the slot the vtable load moves above the pStage store, and the list-root test differs
 // Value::SetUndefined and ResizeNoConstruct are called through member-pointer locals, as the exe calls them out of line.
 // @0x14252c4f0
 void MovieRoot::Shutdown()
 {
-    typedef void (*CollectFn)(MovieRoot*);
     pMovieImpl->ClearPlayList();
     ActionQueue.Clear();
-    if (pStage)
-        FUN_14257dcd0(pStage);
-    pStage = NULL;
-    (*reinterpret_cast<CollectFn const* const*>(this))[9](this);
+    reinterpret_cast<Ptr<RefCountNTSImpl>&>(pStage) = NULL;
+    reinterpret_cast<Sfr01fCollectView*>(this)->ForceCollect();
     if (void* p = pInvokeAliases)
     {
         static_cast<Sfr01fInvokeAliasSet*>(p)->~HashSetBase();
@@ -82,15 +89,16 @@ void MovieRoot::Shutdown()
                           AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>, 2>,
                           ArrayDefaultPolicy> AbcFileData;
     void (AbcFileData::*resizeNoConstruct)(const void*, UPInt) = &AbcFileData::ResizeNoConstruct;
-    for (GFx::MovieDefRootNode* p = pMovieImpl->RootMovieDefNodes.pNext;
-         p != static_cast<GFx::MovieDefRootNode*>(&pMovieImpl->RootMovieDefNodes); p = p->pNext)
+    GFx::MovieDefRootNode* pdefNode = pMovieImpl->RootMovieDefNodes.pNext;
+    while (!Sfr01fIsNull(pMovieImpl->RootMovieDefNodes, pdefNode))
     {
-        MovieDefRootNode* pnode = static_cast<MovieDefRootNode*>(p);
+        MovieDefRootNode* pnode = static_cast<MovieDefRootNode*>(pdefNode);
         (reinterpret_cast<AbcFileData*>(&pnode->AbcFiles)->*resizeNoConstruct)(&pnode->AbcFiles, 0);
+        pdefNode = pdefNode->pNext;
     }
-    (*reinterpret_cast<CollectFn const* const*>(this))[9](this);
+    reinterpret_cast<Sfr01fCollectView*>(this)->ForceCollect();
     Scaleform::GFx::AS3::Sfr31ShutdownRegistered(reinterpret_cast<UPInt>(pAVM));
-    (*reinterpret_cast<CollectFn const* const*>(this))[9](this);
+    reinterpret_cast<Sfr01fCollectView*>(this)->ForceCollect();
     if (pAVM)
     {
         if (OwnsAVM)
