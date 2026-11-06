@@ -42,7 +42,7 @@
 // hook DLL binds them to the exe, the full exe to the recovered definition at that VA (tools/fullexe/alias.py).
 template <class T> using ExeDecl = T;
 
-extern "C" void FUN_1426906b0(void*, void*, std::size_t);
+typedef decltype(Scaleform::Hash<Scaleform::UInt64, Scaleform::GFx::AMP::MovieFunctionStats::FuncStats>::mHash)::BaseType Ms2FuncStatsSetBase; extern template void Ms2FuncStatsSetBase::setRawCapacity(void* pheapAddr, Scaleform::UPInt n);   // 0x1426906b0, instantiated below
 extern "C" void FUN_142747530(void*, void*, std::size_t);
 extern "C" void FUN_1427478c0(void*, void*, std::size_t);
 extern "C" void FUN_142585f70(void*, int);
@@ -2745,13 +2745,13 @@ void ReserveVideoPlayerArray(void** array, void* heap, std::size_t requested) { 
 // @0x142689ec0
 void CheckExpandAS3HashSet(void** set, void* owner)
 {
-    auto* table = static_cast<std::size_t*>(*set);
-    if (!table) {
-        FUN_1426906b0(set, owner, 8);
-        return;
-    }
-    if (table[0] * 5 > table[1] * 4 + 4)
-        FUN_1426906b0(set, owner, table[1] * 2 + 2);
+    // the CheckExpand of the function-stats hash (one body with this hash's in the exe)
+    reinterpret_cast<Ms2FuncStatsSetBase*>(set)->CheckExpand(owner);
+    //
+    //
+    //
+    //
+    //
 }
 
 // Applies the same empty-table initialization and 80 percent expansion test to this hash layout.
