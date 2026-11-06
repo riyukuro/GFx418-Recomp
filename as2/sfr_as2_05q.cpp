@@ -29,7 +29,7 @@ const AvmCharacter::StandardMember M_fov       = static_cast<AvmCharacter::Stand
 const AvmCharacter::StandardMember M__version  = static_cast<AvmCharacter::StandardMember>(116);
 
 // Puts newProto in place of the prototype of pobj and hands back the old one.
-inline Ptr<Object> ExchangeProto(Object* pobj, Object* newProto)
+SF_FORCEINLINE Ptr<Object> ExchangeProto(Object* pobj, Object* newProto)
 {
     Ptr<Object> old = pobj->pProto;
     pobj->pProto    = newProto;
@@ -40,12 +40,28 @@ inline Ptr<Object> ExchangeProto(Object* pobj, Object* newProto)
 
 // The clip's own members come before its children, the children before the prototype: the clip object is looked
 // up with its prototype taken away for the while.
-// MS2-FUNCTIONAL: the standard member test is inlined in the exe (string node flags, lowercase node); the 3D getters
-// return float there
+// AvmCharacter::IsStandardMember (sfr_as2_06) as the exe inlines it into GetMember.
+static SF_FORCEINLINE bool IsStandardMember_05q(const ASString& memberName, ASString* plowerCaseName = NULL)
+{
+    if ((UByte)(memberName.GetHashFlags() >> 29) & 1)
+        return true;
+    if (memberName.GetLength() > 0 && memberName.GetCharAt(0) == '_')
+    {
+        ASString lower(memberName.ToLowerNode());
+        if ((UByte)(lower.GetHashFlags() >> 28) & 1)
+        {
+            if (plowerCaseName)
+                *plowerCaseName = lower;
+            return true;
+        }
+    }
+    return false;
+}
+
 // @0x14294bff0
 bool AvmSprite::GetMember(Environment* penv, ASStringContext* psc, const ASString& name, Value* pval)
 {
-    if (IsStandardMember(name))
+    if (IsStandardMember_05q(name))
     {
         StandardMember member = GetStandardMemberConstant(name);
         if (GetStandardMember(member, pval, 0))
