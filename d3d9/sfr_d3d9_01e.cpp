@@ -2029,8 +2029,16 @@ const D3D9::ShaderPair* FUN_1427359d0(D3D9::ShaderManager* sm, PrimitiveFill* fi
     return &psi->CurShaders;
 }
 
+#pragma strict_gs_check(push, on)
+// the SDK ShaderInterface::SetMatrix(sd, var, m, index, batch)
+static __forceinline void DfSetMatrix(D3D9::ShaderInterface* psi, const D3D9::ShaderPair& sd, unsigned var,
+                                      const Matrix2F& m, unsigned index = 0, unsigned batch = 0)
+{
+    const float* rows = &m.M[0][0];
+    psi->SetUniform(sd, var, rows, 8, index * 2, batch);
+}
 // StaticShaderManager::DrawableFinish: the uniforms every drawable shader takes, then the upload
-// MS2-FUNCTIONAL: SDK form; the exe has a /GS cookie over mvp (frame 0xe0), ours has none even under strict_gs_check
+// SDK form (SetMatrix, Tx()/Ty()); the exe's /GS cookie over mvp comes from strict_gs_check
 // @0x142731310
 bool FUN_142731310(D3D9::ShaderManager* sm, unsigned srcCount, Render::Texture** tex, const Matrix2F* texgen,
                    Size<int> texsize, const Matrix2F& mvpIn, D3D9::ShaderInterface* psi, unsigned flags)
@@ -2047,19 +2055,21 @@ bool FUN_142731310(D3D9::ShaderManager* sm, unsigned srcCount, Render::Texture**
     // bit 0: a pixel's offset (D3D9 samples pixel centers)
     if (flags & 1)
     {
-        mvp.M[0][3] -= 1.0f / (float)texsize.Width;
-        mvp.M[1][3] += 1.0f / (float)texsize.Height;
+        mvp.Tx() -= 1.0f / texsize.Width;
+        mvp.Ty() += 1.0f / texsize.Height;
     }
-    psi->SetUniform(pso, D3D9::Uniform::SU_mvp, &mvp.M[0][0], 8);
+    DfSetMatrix(psi, pso, D3D9::Uniform::SU_mvp, mvp);
     for (unsigned i = 0; i < srcCount; i++)
     {
         psi->SetTexture(pso, D3D9::Uniform::SU_tex, tex[i],
                         ImageFillMode(Wrap_Clamp, Sample_Point), i);
-        psi->SetUniform(pso, D3D9::Uniform::SU_texgen, &texgen[i].M[0][0], 8, i * 2);
+        DfSetMatrix(psi, pso, D3D9::Uniform::SU_texgen, texgen[i], i);
     }
     psi->Finish(1);
     return true;
 }
+
+#pragma strict_gs_check(pop)
 
 // StaticShaderManager::SetDrawableMergeFill
 // written from the decompile
