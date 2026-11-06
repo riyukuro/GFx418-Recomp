@@ -385,7 +385,8 @@ bool IMEManager::Invoke(const char* pmethodName, GFx::Value* presult, const GFx:
 
 // Clicks on the IME movies keep the focus where it is; a text field taking the focus gives the candidate list
 // its font, and the IME follows whether the new focus takes IME input.
-// MS2-FUNCTIONAL: register allocation, and cl calls ~Multiname out of line where the exe inlines it
+// MS2-FUNCTIONAL: register allocation (the exe re-zeroes rdx per iteration and saves r14/r15 in the prolog), and cl
+// calls ~Multiname out of line where the exe inlines it
 // @0x142543f90
 InteractiveObject* IMEManager::HandleFocus(Movie* pmovie, InteractiveObject* poldFocus, InteractiveObject* pnewFocus,
                                            InteractiveObject* ptopMostItem)
@@ -402,9 +403,10 @@ InteractiveObject* IMEManager::HandleFocus(Movie* pmovie, InteractiveObject* pol
         Value unused;
         for (InteractiveObject* pch = ptopMostItem; pch; pch = pch->GetParent())
         {
-            if (!pch->IsSprite())
+            InteractiveObject* psprite = pch->IsSprite() ? pch : NULL;
+            if (!psprite)
                 continue;
-            AvmDisplayObj* pavm = ToAvmDisplayObj(pch);
+            AvmDisplayObj* pavm = ToAvmDisplayObj(psprite);
             Instances::fl_display::DisplayObject* pobj = pavm->GetAS3Obj();
             Value result;
             if (!pobj)
@@ -427,7 +429,13 @@ InteractiveObject* IMEManager::HandleFocus(Movie* pmovie, InteractiveObject* pol
             ToTextField(pnewFocus)->SetCandidateListFont(plist);
     }
     if (poldFocus && IsTextField(poldFocus))
+    {
+        // The exe tests the new focus here and finalizes either way (its GetType call stays).
+        if (pnewFocus && IsTextField(pnewFocus))
+        {
+        }
         pime->DoFinalize();
+    }
     pime->EnableIME(pnewFocus && IsTextField(pnewFocus) && ToTextField(pnewFocus)->IsIMEEnabled());
     return pnewFocus;
 }
@@ -457,59 +465,60 @@ void IMEManager::OnOpenCandidateList()
 // Starts loading the candidate list movie (CandidateSwfPath, next to the main movie): a Loader and its request go
 // through the load queue, and NotifyLoadInitCandidateList finishes once it is in. With bCheckIMEExists the file
 // must exist first.
-// MS2-FUNCTIONAL: register allocation, the state/URL temporaries and the notify object's reference handling
+// MS2-FUNCTIONAL: mostly register allocation (exe this/zero/proot in r15/r14/r13, ours r14/r12/r15)
 // @0x142543440
 bool IMEManager::AcquireCandidateList()
 {
     if (!pMovie)
         return false;
     MovieRoot* proot = GetAS3Root(pMovie);
-    Value loaderVal, requestVal, unused;
-    if (CandidateListState != 0)
-        return true;
-    if (pimeManager && pimeManager->bCheckIMEExists)
+    Value requestVal, loaderVal, unused;
+    if (CandidateListState == 0)
     {
-        Ptr<FileOpenerBase> pfileOpener =
-            *static_cast<FileOpenerBase*>(pimeManager->pLoader->GetStateAddRef(State::State_FileOpener));
-        Ptr<URLBuilder> purlBuilder =
-            *static_cast<URLBuilder*>(pimeManager->pLoader->GetStateAddRef(State::State_URLBuilder));
-        if (!purlBuilder)
-            purlBuilder = *SF_NEW URLBuilder();
-        if (pfileOpener)
+        if (pimeManager && pimeManager->bCheckIMEExists)
         {
-            String path;
-            path = GetMovieImpl(pMovie)->AsMovieInterface()->GetMovieDef()->GetFileURL();
-            URLBuilder::ExtractFilePath(&path);
-            if (URLBuilder::IsPathAbsolute(path.ToCStr()))
+            Ptr<FileOpenerBase> pfileOpener =
+                *static_cast<FileOpenerBase*>(pimeManager->pLoader->GetStateAddRef(State::State_FileOpener));
+            Ptr<URLBuilder> purlBuilder =
+                *static_cast<URLBuilder*>(pimeManager->pLoader->GetStateAddRef(State::State_URLBuilder));
+            if (!purlBuilder)
+                purlBuilder = *SF_NEW URLBuilder();
+            if (pfileOpener)
             {
-                URLBuilder::LocationInfo loc(URLBuilder::File_Regular, CandidateSwfPath, path);
-                String url;
-                if (purlBuilder)
-                    purlBuilder->BuildURL(&url, loc);
-                else
-                    URLBuilder::DefaultBuildURL(&url, loc);
-                if (pfileOpener->GetFileModifyTime(url.ToCStr()) == -1)
-                    return false;
+                String path;
+                path = GetMovieImpl(pMovie)->AsMovieInterface()->GetMovieDef()->GetFileURL();
+                URLBuilder::ExtractFilePath(&path);
+                if (URLBuilder::IsPathAbsolute(path.ToCStr()))
+                {
+                    URLBuilder::LocationInfo loc(URLBuilder::File_Regular, CandidateSwfPath, path);
+                    String url;
+                    if (purlBuilder)
+                        purlBuilder->BuildURL(&url, loc);
+                    else
+                        URLBuilder::DefaultBuildURL(&url, loc);
+                    if (pfileOpener->GetFileModifyTime(url.ToCStr()) == -1)
+                        return false;
+                }
             }
         }
+        CandidateListState = 1;
+        ASVM* pvm = proot->pAVM;
+        pvm->Construct("flash.display.Loader", loaderVal, 0, NULL, true);
+        if (pvm->IsException() || loaderVal.IsUndefined() || (loaderVal.IsObject() && !loaderVal.GetObject()))
+            return false;
+        pvm->Construct("flash.net.URLRequest", requestVal, 0, NULL, true);
+        if (pvm->IsException() || requestVal.IsUndefined() || (requestVal.IsObject() && !requestVal.GetObject()))
+            return false;
+        Instances::fl_display::Loader* ploader = static_cast<Instances::fl_display::Loader*>(loaderVal.GetObject());
+        Instances::fl_net::URLRequest* prequest = static_cast<Instances::fl_net::URLRequest*>(requestVal.GetObject());
+        ploader->InitInstance(false);
+        prequest->urlSet(unused, proot->BuiltinsMgr.CreateString(CandidateSwfPath));
+        LoadQueueEntry* pentry = SF_HEAP_NEW(proot->GetMovieImpl()->GetMovieHeap())
+            LoadQueueEntry(prequest, ploader, GFx::LoadQueueEntry::LM_None);
+        Ptr<NotifyLoadInitC> pnotify = *SF_NEW NotifyLoadInitCandidateList(proot, ploader, this);
+        pentry->NotifyLoadInitCInterface = pnotify;
+        proot->GetMovieImpl()->AddLoadQueueEntry(pentry);
     }
-    CandidateListState = 1;
-    ASVM* pvm = proot->pAVM;
-    pvm->Construct("flash.display.Loader", loaderVal, 0, NULL, true);
-    if (pvm->IsException() || loaderVal.IsUndefined() || (loaderVal.IsObject() && !loaderVal.GetObject()))
-        return false;
-    pvm->Construct("flash.net.URLRequest", requestVal, 0, NULL, true);
-    if (pvm->IsException() || requestVal.IsUndefined() || (requestVal.IsObject() && !requestVal.GetObject()))
-        return false;
-    Instances::fl_display::Loader* ploader = static_cast<Instances::fl_display::Loader*>(loaderVal.GetObject());
-    Instances::fl_net::URLRequest* prequest = static_cast<Instances::fl_net::URLRequest*>(requestVal.GetObject());
-    ploader->InitInstance(false);
-    prequest->urlSet(unused, proot->BuiltinsMgr.CreateString(CandidateSwfPath));
-    LoadQueueEntry* pentry = SF_HEAP_NEW(proot->GetMovieImpl()->GetMovieHeap())
-        LoadQueueEntry(prequest, ploader, GFx::LoadQueueEntry::LM_None);
-    Ptr<NotifyLoadInitC> pnotify = *SF_NEW NotifyLoadInitCandidateList(proot, ploader, this);
-    pentry->NotifyLoadInitCInterface = pnotify;
-    proot->GetMovieImpl()->AddLoadQueueEntry(pentry);
     return true;
 }
 
