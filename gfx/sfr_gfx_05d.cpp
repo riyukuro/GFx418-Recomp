@@ -562,7 +562,6 @@ static inline Render::PointF Sfr05dTransformByInverse(const Render::Matrix2F& ma
 // The character under (x, y): the field containing the point, else the nearest field within closedist (taking the
 // point on its box); then the line and the glyph at that point.
 // @0x1425e1840
-// MS2-FUNCTIONAL: the exe's final lea takes the line's text position as its base register, ours baseIdx (2 bytes)
 int StaticTextSnapshotData::HitTestTextNearPos(float x, float y, float closedist) const
 {
     StaticTextCharacter* pclosest = 0;
@@ -622,7 +621,8 @@ int StaticTextSnapshotData::HitTestTextNearPos(float x, float y, float closedist
                     break;
                 j += ge.GetLength();
             }
-            return (int)(line.GetTextPos() + j + baseIdx);
+            UPInt textPos = line.GetTextPos();
+            return (int)(textPos + j + baseIdx);
         }
     }
     return -1;
