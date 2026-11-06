@@ -2324,32 +2324,43 @@ __declspec(noinline) void FUN_142508bd0(Scaleform::UPInt obj, void* out, int hin
 Scaleform::UByte* FUN_14250dd20(Scaleform::GFx::AS3::Object* self, Scaleform::UByte* ret, const Scaleform::GFx::ASString* name,
                                 Scaleform::GFx::AS3::Instances::Namespace* ns, Scaleform::GFx::AS3::Value* value);
 
-// Object::GetDefaultValue for one method name: a callable property name is called on obj with no arguments and its
-// result swapped into result. False when the property lookup itself failed.
-static bool Sfr33CallDefaultMethod(Scaleform::GFx::AS3::Object& obj, const Scaleform::GFx::ASString& name,
-                                   Scaleform::GFx::AS3::Value& result)
+// Value::Swap (sfr_as3_19) in the SDK form, inline here as in the exe (same body as sfr_as3_18's).
+namespace Scaleform { namespace GFx { namespace AS3 {
+struct Sfr18ValueSwap
 {
-    using namespace Scaleform;
-    using namespace Scaleform::GFx::AS3;
-    VM& vm = obj.GetVM();
-    Value func;
-    UByte ok;
-    if (!*FUN_14250dd20(&obj, &ok, &name, &vm.GetPublicNamespace(), &func))
-        return false;
-    const unsigned k = func.GetKind();
-    if (k > Value::kNamespace || k - Value::kThunk < 3)
+    static SF_INLINE void Swap(Value& self, Value& other)
     {
-        Value r;
-        vm.ExecuteInternalUnsafe(func, Value(&obj), r, 0, NULL, false);
-        result.Swap(r);
+        const UInt32       tmpFlags = other.Flags;
+        const Value::Extra tmpBonus = other.Bonus;
+        const Value::VU    tmpValue = other.value;
+
+        other.Flags = self.Flags;
+        other.Bonus = self.Bonus;
+        other.value = self.value;
+
+        self.Flags = tmpFlags;
+        self.Bonus = tmpBonus;
+        self.value = tmpValue;
     }
-    return true;
+};
+}}}
+
+// Object::GetSlotValueUnsafe(name, ns, value) and Object::ExecuteValueUnsafe(value, result, 0, NULL), inlined.
+static __forceinline bool Sfr33GetSlotValueUnsafe(Scaleform::GFx::AS3::Object& obj, const Scaleform::GFx::ASString& name,
+                                                  Scaleform::GFx::AS3::Instances::Namespace& ns, Scaleform::GFx::AS3::Value& value)
+{
+    Scaleform::UByte ok;
+    return *FUN_14250dd20(&obj, &ok, &name, &ns, &value) != 0;
+}
+static __forceinline void Sfr33ExecuteValueUnsafe(Scaleform::GFx::AS3::Object& obj, Scaleform::GFx::AS3::Value& value,
+                                                  Scaleform::GFx::AS3::Value& result)
+{
+    obj.GetVM().ExecuteInternalUnsafe(value, Scaleform::GFx::AS3::Value(&obj, Scaleform::GFx::AS3::Value::InlineObj), result, 0, NULL, false);
 }
 
 // Object::GetDefaultValueUnsafe ([[DefaultValue]]): with the hint String (Date objects and the hint-less default for
 // them, and always for the two traits types 0xd/0xe) toString is tried before valueOf, otherwise valueOf first; the
 // second runs only when the first left no primitive (and raised nothing).
-// MS2-FUNCTIONAL 0x142508bd0: untyped signature as sfr_as3_19 declares it; one helper for the two name lookups
 // @0x142508bd0
 void FUN_142508bd0(Scaleform::UPInt objAddr, void* out, int hint)
 {
@@ -2357,21 +2368,81 @@ void FUN_142508bd0(Scaleform::UPInt objAddr, void* out, int hint)
     using namespace Scaleform::GFx::AS3;
     Object& obj = *reinterpret_cast<Object*>(objAddr);
     Value& result = *static_cast<Value*>(out);
+    StringManager& sm = obj.GetVM().GetStringManager();
     VM& vm = obj.GetVM();
     const int tt = obj.GetTraits().GetTraitsType();
-    if (static_cast<unsigned>(tt - 0xd) < 2)
+    if (static_cast<unsigned>(tt - 0xd) <= 1)
         hint = Value::hintString;
     else if (hint == Value::hintNone)
         hint = (tt == 8) + 1;
-    const GFx::ASString& toStr = vm.GetStringManager().GetBuiltin(AS3Builtin_toString);
-    const GFx::ASString& valueOf = vm.GetStringManager().GetBuiltin(AS3Builtin_valueOf);
-    const bool str = hint == Value::hintString;
-    if (!Sfr33CallDefaultMethod(obj, str ? toStr : valueOf, result))
-        return;
-    const unsigned k = result.GetKind();
-    if (vm.IsException() || k < Value::kThunk || k == Value::kString)
-        return;
-    Sfr33CallDefaultMethod(obj, str ? valueOf : toStr, result);
+    Value value;
+
+    if (hint == Value::hintString)
+    {
+        // toString part.
+        {
+            if (!Sfr33GetSlotValueUnsafe(obj, sm.GetBuiltin(AS3Builtin_toString), vm.GetPublicNamespace(), value))
+                return;
+
+            if (value.IsCallable())
+            {
+                Value v;
+                Sfr33ExecuteValueUnsafe(obj, value, v);
+                Sfr18ValueSwap::Swap(result, v);
+            }
+
+            if (vm.IsException() || result.IsPrimitive())
+                return;
+        }
+
+        // valueOf part.
+        {
+            Value value;
+
+            if (!Sfr33GetSlotValueUnsafe(obj, sm.GetBuiltin(AS3Builtin_valueOf), vm.GetPublicNamespace(), value))
+                return;
+
+            if (value.IsCallable())
+            {
+                Value v;
+                Sfr33ExecuteValueUnsafe(obj, value, v);
+                Sfr18ValueSwap::Swap(result, v);
+            }
+        }
+    }
+    else
+    {
+        // valueOf part.
+        {
+            if (!Sfr33GetSlotValueUnsafe(obj, sm.GetBuiltin(AS3Builtin_valueOf), vm.GetPublicNamespace(), value))
+                return;
+
+            if (value.IsCallable())
+            {
+                Value v;
+                Sfr33ExecuteValueUnsafe(obj, value, v);
+                Sfr18ValueSwap::Swap(result, v);
+            }
+
+            if (vm.IsException() || result.IsPrimitive())
+                return;
+        }
+
+        // toString part.
+        {
+            Value value;
+
+            if (!Sfr33GetSlotValueUnsafe(obj, sm.GetBuiltin(AS3Builtin_toString), vm.GetPublicNamespace(), value))
+                return;
+
+            if (value.IsCallable())
+            {
+                Value v;
+                Sfr33ExecuteValueUnsafe(obj, value, v);
+                Sfr18ValueSwap::Swap(result, v);
+            }
+        }
+    }
 }
 namespace Scaleform { namespace GFx { namespace AS3 { const ClassTraits::Traits* FUN_14250d760(VM& vm, const Multiname& mn); }}}   // the traits that define mn
 
