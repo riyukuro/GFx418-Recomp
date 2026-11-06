@@ -914,22 +914,33 @@ static SF_INLINE const SlotInfo& Sfr18GetSlotInfo(const Slots& s, AbsoluteIndex 
     return s.VArray[static_cast<UInt32>(ind.Get()) - s.FirstOwnSlotNum].Value;
 }
 
-// MS2-FUNCTIONAL: GetSlotInfo/GetSlotNameNode one level inline as in the exe (560 vs 556); ours keeps FirstOwnSlotNum in a register, the exe re-reads it at each use
+// MS2-FUNCTIONAL: the SDK Slots::CIterator loop (a local iterator struct, GetSlotInfo one level inline as in the exe);
+// the exe adds the slot count as VArray size + FirstOwnSlotNum, keeps the name node in rsi across the convert call and
+// loads the ~Value jump table base at its use (ours hoists it)
 // @0x142511890
 void Class::InitPrototypeFromVTable(AS3::Object& obj, ConvertFunc f) const
 {
     InstanceTraits::Traits& itr = GetInstanceTraits();
     const VTable& vt = itr.GetVT();
-    for (SPInt i = 0; static_cast<UInt32>(i) < itr.GetSlotInfoNum(); )
+    struct CIt
     {
-        const SlotInfo& si = Sfr18GetSlotInfo(itr, AbsoluteIndex(i));
+        AbsoluteIndex Ind;
+        const Slots*  Parent;
+        SF_INLINE CIt(const Slots& p, AbsoluteIndex ind) : Ind(ind), Parent(&p) {}
+        SF_INLINE bool IsEnd() const { return static_cast<UInt32>(Ind.Get()) >= Parent->GetSlotInfoNum(); }
+        SF_INLINE void Next() { if (Ind < Parent->GetSlotInfoNum()) Ind = AbsoluteIndex(Ind.Get() + 1); }
+        SF_INLINE const SlotInfo& GetSlotInfo() const { return Sfr18GetSlotInfo(*Parent, Ind); }
+        SF_INLINE ASStringNode* GetSlotName() const { return Parent->GetSlotNameNode(Ind); }
+    };
+    for (CIt it(itr, AbsoluteIndex(0)); !it.IsEnd(); it.Next())
+    {
+        const SlotInfo& si = it.GetSlotInfo();
         if (si.BindType == SlotInfo::BT_Code)
         {
-            obj.AddDynamicSlotValuePair(ASString(itr.GetSlotNameNode(AbsoluteIndex(i))), (this->*f)(vt.VTMethods[static_cast<UInt32>(si.ValueInd)], itr),
+            ASStringNode* sn = it.GetSlotName();
+            obj.AddDynamicSlotValuePair(ASString(sn), (this->*f)(vt.VTMethods[static_cast<UInt32>(si.ValueInd)], itr),
                                         SlotInfo::aDontEnum);
         }
-        if (AbsoluteIndex(i) < itr.GetSlotInfoNum())
-            ++i;
     }
 }
 
