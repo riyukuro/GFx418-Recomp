@@ -827,9 +827,7 @@ void MovieDataDef::LoadTaskData::ExportResource(const String& symbol, ResourceId
 
     Exports.SetCaseInsensitive(symbol, hres);
     // The inverse map shares the key string of the export.
-    StringHashLH<ResourceHandle>::Iterator it = Exports.FindCaseInsensitive(symbol);
-    const StringLH* pname = (it != Exports.End()) ? &it->First : 0;
-    InvExports.Set(rid, *pname);
+    InvExports.Set(rid, Exports.FindCaseInsensitive(symbol)->First);
 }
 
 // @0x1425cd480
