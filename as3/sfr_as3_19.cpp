@@ -2739,29 +2739,31 @@ void Sfr31SyncSetInt64(UPInt* self, SInt64 val)
     }
 }
 
-// MS2-FUNCTIONAL 0x142528fb0: the exe places the kind-2 (false) result block before the kind-3 (true) one
+// The SDK PropRef::SetSlotValue shape (AS3_Object.cpp): a result flag set per tag, then one store.
 // @0x142528fb0
 char* Sfr31PropRefSetSlotValue(UPInt self, char* ret, UPInt vm, const Value* v)
 {
     // PropRef: the low two bits of the first word tag a SlotInfo (0), a Value (1) or a missing property (2).
     const UPInt w = Sfr31Rd(self, 0);
+    char result = 1;
     switch (w & 3)
     {
     case 0:
     {
         char tmp;   // CheckResult
-        *ret = *Sfr27SlotSetValueThis(reinterpret_cast<const SlotInfo*>(w), &tmp, reinterpret_cast<VM*>(vm), v, reinterpret_cast<const Value*>(self + 0x10), 0);
-        return ret;
+        result = *Sfr27SlotSetValueThis(reinterpret_cast<const SlotInfo*>(w), &tmp, reinterpret_cast<VM*>(vm), v, reinterpret_cast<const Value*>(self + 0x10), 0);
+        break;
     }
     case 1:
         reinterpret_cast<Value*>(w & ~UPInt(1))->Assign(*v);
-        *ret = 1;
-        return ret;
+        break;
     case 2:
-        *ret = 0;
-        return ret;
+        result = 0;
+        break;
+    default:
+        break;
     }
-    *ret = 1;
+    *ret = result;
     return ret;
 }
 
