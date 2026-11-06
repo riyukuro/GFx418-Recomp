@@ -1664,155 +1664,179 @@ void TextField::PropagateMouseEvent(const EventId& id)
     OnEvent(id); // InteractiveObject::PropagateMouseEvent, inlined in the exe
 }
 
-// The URL zone of the style sheet that overlaps urlRange (NULL: none); its index in pindex.
-static RangeData<TextField::CSSHolderBase::UrlZone>* FindUrlZone(TextField::CSSHolderBase* pcss, const Range& urlRange,
-                                                                 unsigned* pindex)
-{
-    for (unsigned i = 0; i < unsigned(pcss->UrlZones.Count()); ++i)
-    {
-        RangeData<TextField::CSSHolderBase::UrlZone>& zone = pcss->UrlZones[i];
-        if (zone.Index < urlRange.NextIndex() && urlRange.Index < zone.NextIndex())
-        {
-            *pindex = i;
-            return &zone;
-        }
-    }
-    return NULL;
-}
-
 // A link event of mouse mouseIndex on a URL of the text (the one in purlRange when the mouse is over none yet): the
 // zone's press / over counts change, the AVM side hears the roll-overs and roll-outs, and when the zone's look
 // changes its saved format comes back with the style sheet's a:active or a:hover style over it (on top of "a" and
 // "a:link").
-// MS2-FUNCTIONAL 0x1425b6a40: same counts, notifications and formats; the exe reloads the CSS holder after each store
 // @0x1425b6a40
 void TextField::ChangeUrlFormat(LinkEvent event, unsigned mouseIndex, const Range* purlRange)
 {
     if (!HasStyleSheet())
         return;
-    RangeData<CSSHolderBase::UrlZone>* pzone = NULL;
+
     const char* styleName = NULL;
-    unsigned zoneIdx;
+
+    RangeData<CSSHolderBase::UrlZone>* purlZone = NULL;
     switch (event)
     {
     case Link_press:
         if (pCSSData->MouseState[mouseIndex].UrlZoneIndex > 0)
         {
             if (pCSSData->MouseState[mouseIndex].HitBit)
-                return;
+                return; // this mouse already has hit the url
             pCSSData->MouseState[mouseIndex].HitBit = true;
-            pzone = &pCSSData->UrlZones[pCSSData->MouseState[mouseIndex].UrlZoneIndex - 1];
-            if (pzone->GetData().HitCount > 0)
+            UPInt urlZoneIdx = pCSSData->MouseState[mouseIndex].UrlZoneIndex - 1;
+            purlZone = &pCSSData->UrlZones[urlZoneIdx];
+            if (purlZone->GetData().HitCount > 0)
             {
-                ++pzone->GetData().HitCount;
-                return;
+                ++purlZone->GetData().HitCount;
+                return; // hit counter is not zero - do nothing
             }
         }
         else
         {
-            if ((pzone = FindUrlZone(pCSSData, *purlRange, &zoneIdx)) == NULL)
-                return;
-            pCSSData->MouseState[mouseIndex].UrlZoneIndex = zoneIdx + 1;
-            pCSSData->MouseState[mouseIndex].HitBit       = true;
+            for (unsigned i = 0, zonesNum = (unsigned)pCSSData->UrlZones.Count(); i < zonesNum; ++i)
+            {
+                if (pCSSData->UrlZones[i].Intersects(*purlRange))
+                {
+                    purlZone = &pCSSData->UrlZones[i];
+                    pCSSData->MouseState[mouseIndex].UrlZoneIndex = i + 1;
+                    pCSSData->MouseState[mouseIndex].HitBit = true;
+                    break;
+                }
+            }
         }
-        if (pzone->GetData().HitCount++ != 0)
-            return;
-        styleName = "a:active";
-        break;
-
-    case Link_release:
-        if (pCSSData->MouseState[mouseIndex].UrlZoneIndex <= 0 || !pCSSData->MouseState[mouseIndex].HitBit)
-            return;
-        pCSSData->MouseState[mouseIndex].HitBit = false;
-        zoneIdx   = pCSSData->MouseState[mouseIndex].UrlZoneIndex - 1;
-        if (!pCSSData->MouseState[mouseIndex].OverBit)
-            pCSSData->MouseState[mouseIndex].UrlZoneIndex = 0;
-        pzone = &pCSSData->UrlZones[zoneIdx];
-        if (pzone->GetData().HitCount > 0)
+        if (purlZone)
         {
-            if (--pzone->GetData().HitCount > 0)
+            if (purlZone->GetData().HitCount++ == 0)
+            {
+                styleName = "a:active";
+            }
+            else
                 return;
-            if (pzone->GetData().OverCount > 0)
-                styleName = "a:hover";
         }
         break;
-
+    case Link_release:
+        if (pCSSData->MouseState[mouseIndex].UrlZoneIndex > 0)
+        {
+            if (!pCSSData->MouseState[mouseIndex].HitBit)
+                return; // this mouse didn't hit the url
+            pCSSData->MouseState[mouseIndex].HitBit = false;
+            UPInt urlZoneIdx = pCSSData->MouseState[mouseIndex].UrlZoneIndex - 1;
+            if (!pCSSData->MouseState[mouseIndex].OverBit) // if neither hit nor over left - clean up
+                pCSSData->MouseState[mouseIndex].UrlZoneIndex = 0;
+            purlZone = &pCSSData->UrlZones[urlZoneIdx];
+            if (purlZone->GetData().HitCount > 0)
+            {
+                --purlZone->GetData().HitCount;
+                if (purlZone->GetData().HitCount != 0)
+                    return; // hit count is still bigger than zero, return
+                if (purlZone->GetData().OverCount > 0)
+                    styleName = "a:hover";
+            }
+        }
+        break;
     case Link_rollover:
         if (pCSSData->MouseState[mouseIndex].UrlZoneIndex > 0)
         {
             if (pCSSData->MouseState[mouseIndex].OverBit)
-                return;
+                return; // this mouse already has rolled over the url
             pCSSData->MouseState[mouseIndex].OverBit = true;
-            pzone = &pCSSData->UrlZones[pCSSData->MouseState[mouseIndex].UrlZoneIndex - 1];
-            if (pzone->GetData().OverCount > 0)
+            UPInt urlZoneIdx = pCSSData->MouseState[mouseIndex].UrlZoneIndex - 1;
+            purlZone = &pCSSData->UrlZones[urlZoneIdx];
+            if (purlZone->GetData().OverCount > 0)
             {
-                ++pzone->GetData().OverCount;
-                if (HasAvmObject())
-                    GetAvmObjImpl()->ToAvmTextFieldBase()->OnLinkEventEx(event, unsigned(pzone->Index), mouseIndex);
-                return;
+                ++purlZone->GetData().OverCount;
+
+                if (HasAvmObject()) GetAvmObjImpl()->ToAvmTextFieldBase()->OnLinkEventEx(event, (unsigned)purlZone->FirstIndex(), mouseIndex);
+                return; // over counter is not zero - do nothing
             }
         }
         else
         {
-            if ((pzone = FindUrlZone(pCSSData, *purlRange, &zoneIdx)) == NULL)
-                return;
-            pCSSData->MouseState[mouseIndex].UrlZoneIndex = zoneIdx + 1;
-            pCSSData->MouseState[mouseIndex].OverBit      = true;
-            if (HasAvmObject())
-                GetAvmObjImpl()->ToAvmTextFieldBase()->OnLinkEventEx(event, unsigned(pzone->Index), mouseIndex);
-        }
-        if (pzone->GetData().HitCount > 0 || pzone->GetData().OverCount++ != 0)
-            return;
-        styleName = "a:hover";
-        break;
+            for (unsigned i = 0, zonesNum = (unsigned)pCSSData->UrlZones.Count(); i < zonesNum; ++i)
+            {
+                if (pCSSData->UrlZones[i].Intersects(*purlRange))
+                {
+                    purlZone = &pCSSData->UrlZones[i];
+                    pCSSData->MouseState[mouseIndex].UrlZoneIndex = i + 1;
+                    pCSSData->MouseState[mouseIndex].OverBit = true;
 
-    case Link_rollout:
-        if (pCSSData->MouseState[mouseIndex].UrlZoneIndex <= 0 || !pCSSData->MouseState[mouseIndex].OverBit)
-            return;
-        pCSSData->MouseState[mouseIndex].OverBit = false;
-        pzone = &pCSSData->UrlZones[pCSSData->MouseState[mouseIndex].UrlZoneIndex - 1];
-        if (!pCSSData->MouseState[mouseIndex].HitBit)
-            pCSSData->MouseState[mouseIndex].UrlZoneIndex = 0;
-        if (pzone->GetData().OverCount > 0)
+                    if (HasAvmObject()) GetAvmObjImpl()->ToAvmTextFieldBase()->OnLinkEventEx(event, (unsigned)purlZone->FirstIndex(), mouseIndex);
+                    break;
+                }
+            }
+        }
+        if (purlZone)
         {
-            --pzone->GetData().OverCount;
-            if (HasAvmObject())
-                GetAvmObjImpl()->ToAvmTextFieldBase()->OnLinkEventEx(event, unsigned(pzone->Index), mouseIndex);
-            if (pzone->GetData().OverCount > 0)
+            if (purlZone->GetData().HitCount == 0 && purlZone->GetData().OverCount++ == 0)
+            {
+                styleName = "a:hover";
+            }
+            else
                 return;
-            if (pzone->GetData().HitCount > 0)
-                styleName = "a:active";
         }
         break;
+    case Link_rollout:
+        if (pCSSData->MouseState[mouseIndex].UrlZoneIndex > 0)
+        {
+            if (!pCSSData->MouseState[mouseIndex].OverBit)
+                return; // this mouse didn't hit the url
+            pCSSData->MouseState[mouseIndex].OverBit = false;
+            UPInt urlZoneIdx = pCSSData->MouseState[mouseIndex].UrlZoneIndex - 1;
+            purlZone = &pCSSData->UrlZones[urlZoneIdx];
+            if (!pCSSData->MouseState[mouseIndex].HitBit) // if neither hit nor over left - clean up
+                pCSSData->MouseState[mouseIndex].UrlZoneIndex = 0;
+            if (purlZone->GetData().OverCount > 0)
+            {
+                --purlZone->GetData().OverCount;
 
-    default:
-        return;
+                if (HasAvmObject()) GetAvmObjImpl()->ToAvmTextFieldBase()->OnLinkEventEx(event, (unsigned)purlZone->FirstIndex(), mouseIndex);
+
+                if (purlZone->GetData().OverCount != 0)
+                    return; // over count is still bigger than zero, return
+                if (purlZone->GetData().HitCount > 0)
+                    styleName = "a:active";
+            }
+        }
+        break;
     }
 
-    const UPInt startPos = UPInt(pzone->FirstIndex()), endPos = UPInt(pzone->NextIndex());
-    if (pzone->GetData().SavedFmt)
+    if (purlZone && purlZone->GetData().SavedFmt)
     {
-        // the zone's own format comes back first
-        pDocument->RemoveText(startPos, endPos);
-        pDocument->GetStyledText()->InsertStyledText(*pzone->GetData().SavedFmt, startPos);
+        // restore originally saved format
+        UPInt stPos = (UPInt)purlZone->FirstIndex();
+        UPInt enPos = (UPInt)purlZone->NextIndex();
+        pDocument->RemoveText(stPos, enPos);
+        pDocument->GetStyledText()->InsertStyledText(*purlZone->GetData().SavedFmt.GetPtr(), stPos);
     }
-    if (!styleName)
-        return;
-    const Render::Text::StyleManagerBase* pstyles = pCSSData->GetTextStyleManager();
-    const Render::Text::Style* pstyle = pstyles->GetStyle(Render::Text::StyleManagerBase::CSS_Tag, styleName);
-    if (!pstyle)
-        return;
-    const Render::Text::Style* pastyle =
-        pCSSData->GetTextStyleManager()->GetStyle(Render::Text::StyleManagerBase::CSS_Tag, "a");
-    const Render::Text::Style* plinkStyle =
-        pCSSData->GetTextStyleManager()->GetStyle(Render::Text::StyleManagerBase::CSS_Tag, "a:link");
-    Render::Text::TextFormat fmt(Memory::GetHeapByAddress(this));
-    if (pastyle)
-        fmt = fmt.Merge(pastyle->mTextFormat);
-    if (plinkStyle)
-        fmt = fmt.Merge(plinkStyle->mTextFormat);
-    fmt = fmt.Merge(pstyle->mTextFormat);
-    pDocument->SetTextFormat(fmt, startPos, endPos);
+
+    if (styleName)
+    {
+        // now need to apply a:hover style from CSS, combined with "a:link" and "a" ones
+        const Render::Text::Style* pstyle =
+            pCSSData->GetTextStyleManager()->GetStyle(Render::Text::StyleManagerBase::CSS_Tag, styleName);
+        if (pstyle && purlZone)
+        {
+            const Render::Text::Style* pAstyle =
+                pCSSData->GetTextStyleManager()->GetStyle(Render::Text::StyleManagerBase::CSS_Tag, "a");
+
+            const Render::Text::Style* pALinkStyle =
+                pCSSData->GetTextStyleManager()->GetStyle(Render::Text::StyleManagerBase::CSS_Tag, "a:link");
+
+            Render::Text::TextFormat fmt(Memory::GetHeapByAddress(this));
+            if (pAstyle)
+                fmt = fmt.Merge(pAstyle->mTextFormat);
+            if (pALinkStyle)
+                fmt = fmt.Merge(pALinkStyle->mTextFormat);
+            fmt = fmt.Merge(pstyle->mTextFormat);
+
+            // save current formatting data first
+            UPInt stPos = (UPInt)purlZone->FirstIndex(), endPos = (UPInt)purlZone->NextIndex();
+
+            pDocument->SetTextFormat(fmt, stPos, endPos);
+        }
+    }
 }
 
 }} // namespace Scaleform::GFx
