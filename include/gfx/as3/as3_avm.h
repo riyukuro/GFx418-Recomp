@@ -487,6 +487,22 @@ public:
     virtual const char* GetDefaultASClassName() const;                  // "flash.display.MovieClip" 0x1423dccb0
 };
 
+// AVM part of the Stage (flash.display.Stage), no state of its own. 0x48 bytes; vftables 0x14317d600 (31 slots),
+// 0x14317d6f8, 0x14317d7b0. MovieRoot::CreateStage (0x1424f4000) inlines the constructor. Deleting destructor
+// 0x1424e2a10 (thunks 0x1424e1b40/b4c, sfr_as3_16). The exe's out-of-line copies of the overrides below:
+// OnEventLoad 0x1425190d0, OnEventUnload 0x142519890, GetDefaultASClassName 0x142508960, IsStage 0x142514d10.
+class AvmStage : public AvmDisplayObjContainer
+{
+public:
+    AvmStage(DisplayObjContainer* pstage) : AvmDisplayObjContainer(pstage) {}
+
+    virtual void        OnEventLoad()                                   {}
+    virtual void        OnEventUnload()                                 { AvmDisplayObj::OnEventUnload(); }
+    virtual const char* GetDefaultASClassName() const                   { return "flash.display.Stage"; }
+    virtual bool        IsStage() const                                 { return true; }
+};
+static_assert(sizeof(AvmStage) == 0x48, "AvmStage size");
+
 #ifndef SF_AS3_AVMBUTTON_MODEL
 class AvmTextField
 {

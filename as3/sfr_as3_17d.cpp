@@ -621,11 +621,17 @@ void AvmButton::CreateCharacters()
 }}} // namespace Scaleform::GFx::AS3
 
 namespace Scaleform { namespace GFx { namespace AS3 {
-// The stage's AVM part (an AvmDisplayObjContainer with the stage's overrides, 0x48 bytes) has no class model yet:
-// it is built in place by the AvmInteractiveObj constructor and its three vftables are stored.
-extern void* const AvmStage_vftable[];
-extern void* const AvmStage_vftable_30[];
-extern void* const AvmStage_vftable_40[];
+// AvmStage (as3_avm.h): CreateStage inlines its constructor, so its vftables and its bases' are emitted here:
+// MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
+// MS2-PIN: ??_7AvmStage@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317d600
+// MS2-PIN: ??_7AvmStage@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317d6f8
+// MS2-PIN: ??_7AvmStage@AS3@GFx@Scaleform@@6B@ 0x14317d7b0
+// MS2-PIN: ??_7AvmInteractiveObjBase@GFx@Scaleform@@6B@ 0x14317bfe8
+// MS2-PIN: ??_7AvmDisplayObjContainerBase@GFx@Scaleform@@6B@ 0x14317c0a0
+// MS2-PIN: ??_7AvmInteractiveObj@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ca60
+// MS2-PIN: ??_7AvmDisplayObjContainer@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317cbe8
+// MS2-PIN: ??_7AvmDisplayObjContainer@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317cce0
+// MS2-PIN: ??_7AvmDisplayObjContainer@AS3@GFx@Scaleform@@6B@ 0x14317cd98
 }}}
 
 // The Stage constructor (0x1424d9b50, sfr_as3_15) as the exe inlines it in CreateStage.
@@ -670,15 +676,9 @@ AvmInteractiveObj* FUN_1424f4000(MovieRoot* proot, MovieDefImpl* pmovieDef)
     if (proot->pStage)
         proot->pStage->Release();
     proot->pStage = pstage;
-    AvmInteractiveObj* pavmObj = reinterpret_cast<AvmInteractiveObj*>(static_cast<UByte*>(pmem) + sizeof(Stage));
+    AvmInteractiveObj* pavmObj = reinterpret_cast<AvmStage*>(static_cast<UByte*>(pmem) + sizeof(Stage));
     if (pavmObj)
-    {
-        pavmObj->AvmInteractiveObj::AvmInteractiveObj(pstage);   // abstract: explicit ctor call
-        UByte* pavm = reinterpret_cast<UByte*>(pavmObj);
-        *reinterpret_cast<void* const**>(pavm + 0x00) = AvmStage_vftable;
-        *reinterpret_cast<void* const**>(pavm + 0x30) = AvmStage_vftable_30;
-        *reinterpret_cast<void* const**>(pavm + 0x40) = AvmStage_vftable_40;
-    }
+        new (pavmObj) AvmStage(pstage);
     else
         pavmObj = NULL;
     DisplayObject* pch = proot->pStage;
