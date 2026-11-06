@@ -820,16 +820,43 @@ static __forceinline void SetInverseOf(Render::Matrix2F& d, const Render::Matrix
     }
 }
 
-// Matrix2x4::TransformByInverse: a copy of m inverted (SetInverse of a second copy), then p through it.
+// Matrix2x4::TransformByInverse: a copy of m inverted (SetInverse of a second copy), then p through it
+// into an out-parameter. The out-of-line SDK overload is a constructor scope here; that scope gives the exe's SetX registers.
 static __forceinline Render::PointF TransformByInverseOf(const Render::Matrix2F& m, const Render::PointF& p)
 {
-    Render::Matrix2F inv;
-    SetInverseOf(inv, Render::Matrix2F(m));
-    return inv.Transform(p);
+    struct Tbi
+    {
+        __forceinline Tbi(const Render::Matrix2F& m, Render::PointF* result, const Render::PointF& p)
+        {
+            Render::Matrix2F c(m);
+            SetInverseOf(c, Render::Matrix2F(c));
+            result->x = c.M[0][0] * p.x + c.M[0][1] * p.y + c.M[0][3];
+            result->y = c.M[1][0] * p.x + c.M[1][1] * p.y + c.M[1][3];
+        }
+    };
+    Render::PointF pt;
+    Tbi(m, &pt, p);
+    return pt;
+}
+
+// Same, with the result as a member of the helper scope. SetY comes closest with this form.
+static __forceinline Render::PointF TransformByInverseOfV(const Render::Matrix2F& m, const Render::PointF& p)
+{
+    struct Tbi
+    {
+        Render::PointF pt;
+        __forceinline Tbi(const Render::Matrix2F& m, const Render::PointF& p)
+        {
+            Render::Matrix2F c(m);
+            SetInverseOf(c, Render::Matrix2F(c));
+            pt.x = c.M[0][0] * p.x + c.M[0][1] * p.y + c.M[0][3];
+            pt.y = c.M[1][0] * p.x + c.M[1][1] * p.y + c.M[1][3];
+        }
+    };
+    return Tbi(m, p).pt;
 }
 
 // x is where the text rectangle's left side goes (in the parent): the origin moves by the rectangle's offset.
-// MS2-FUNCTIONAL 0x1425be380: same math, inverse inlined as in the exe; float scheduling around it differs
 // @0x1425be380
 void TextField::SetX(Double x)
 {
@@ -858,7 +885,7 @@ void TextField::SetXScale(Double xscale)
 }
 
 // y is where the text rectangle's top goes (in the parent).
-// MS2-FUNCTIONAL 0x1425be670: same math, inverse inlined as in the exe; float scheduling around it differs
+// MS2-FUNCTIONAL 0x1425be670: SDK body and inverse; the exe schedules the inverse's multiplies in another order (no helper form tried gives it)
 // @0x1425be670
 void TextField::SetY(Double y)
 {
@@ -869,7 +896,7 @@ void TextField::SetY(Double y)
     Double newY = Render::PixelsToTwips(y);
     Matrix m    = GetMatrix();
     Render::PointF p(0, (float)newY);
-    p = TransformByInverseOf(m, p);
+    p = TransformByInverseOfV(m, p);
     Render::PointF r = pDocument->GetViewRect().TopLeft();
     p.y -= r.y;
     p = m.Transform(p);
