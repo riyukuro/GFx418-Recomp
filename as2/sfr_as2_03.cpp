@@ -1403,11 +1403,24 @@ void MS2_Sfr03EmitTextFieldObjectDtor(TextFieldObject* p)
 }
 #pragma inline_depth()
 
+// `inline` under cl (COMDAT-any): sfr_as2_04c inlines the same body into the deleting dtors 0x14292d7b0 / 0x14292d830.
+// Sfr03_TextSnapshotObjectDtor::Destroy (uncalled anchor) keeps it emitted here.
 // @0x142925f70
-TextSnapshotObject::~TextSnapshotObject()
+SFR03_TEXTFIELDOBJECT_DTOR TextSnapshotObject::~TextSnapshotObject()
 {
     GetData().~StaticTextSnapshotData();
 }
+// The dtor is protected: a derived view runs it.
+struct Sfr03_TextSnapshotObjectDtor : TextSnapshotObject
+{
+    static void Destroy(TextSnapshotObject* p);
+};
+#pragma inline_depth(0)
+void Sfr03_TextSnapshotObjectDtor::Destroy(TextSnapshotObject* p)
+{
+    static_cast<Sfr03_TextSnapshotObjectDtor*>(p)->TextSnapshotObject::~TextSnapshotObject();
+}
+#pragma inline_depth()
 
 // @0x142925560
 BitmapFilterObject::~BitmapFilterObject()

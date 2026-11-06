@@ -166,11 +166,17 @@ extern const void* DAT_1432174e8[];
 extern const void* DAT_14321d778[];
 extern const void* DAT_14321d7c0[];
 extern const void* DAT_14321d868[];
-extern const void* DAT_14321e2c8[];
-extern const void* DAT_14321e310[];
 extern const void* DAT_14321e3b8[];
 extern const void* DAT_14321e400[];
 extern const void* DAT_14321e4a8[];
+
+// ~TextSnapshotObject (out of line at 0x142925f70, sfr_as2_03; `inline` there under cl) inlines into the deleting dtors.
+// It is protected: a derived view runs it.
+inline TextSnapshotObject::~TextSnapshotObject() { GetData().~StaticTextSnapshotData(); }
+struct Sfr_TextSnapshotObjectDtor : TextSnapshotObject
+{
+    static void Destroy(void* p) { static_cast<Sfr_TextSnapshotObjectDtor*>(p)->TextSnapshotObject::~TextSnapshotObject(); }
+};
 
 // @0x14292b820
 void* DeleteAs2_14292b820(void* p, unsigned flags)
@@ -851,10 +857,7 @@ void* DeleteAs2_14292d740(void* p, unsigned flags)
 // @0x14292d7b0
 void* DeleteAs2_14292d7b0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321e2c8;
-    *(const void**)((char*)p+0x20) = DAT_14321e310;
-    static_cast<StaticTextSnapshotData*>((void*)((char*)p+0x68))->~StaticTextSnapshotData();
-    static_cast<Object*>(p)->Object::~Object();
+    Sfr_TextSnapshotObjectDtor::Destroy(p);
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -872,10 +875,7 @@ void* DeleteAs2_14292d830(void* p, unsigned flags)
     *(const void**)((char*)p+0x20) = DAT_14321e400;
     *(const void**)((char*)p+0x90) = DAT_14321e4a8;
     reinterpret_cast<GASPrototypeBase*>((char*)p+0x90)->GASPrototypeBase::~GASPrototypeBase();
-    *(const void**)p = DAT_14321e2c8;
-    *(const void**)((char*)p+0x20) = DAT_14321e310;
-    static_cast<StaticTextSnapshotData*>((void*)((char*)p+0x68))->~StaticTextSnapshotData();
-    static_cast<Object*>(p)->Object::~Object();
+    Sfr_TextSnapshotObjectDtor::Destroy(p);
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -931,3 +931,5 @@ void* DeleteAs2_14292d9b0(void* p, unsigned flags)
 }
 
 }}} // namespace Scaleform::GFx::AS2
+// MS2-PIN: ??_7TextSnapshotObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321e2c8
+// MS2-PIN: ??_7TextSnapshotObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321e310
