@@ -1332,7 +1332,26 @@ void HAL::clearSolidRectangle(const Rect<int>& r, Color color)
     }
 }
 
-// MS2-FUNCTIONAL: the SDK SetMatrix split per branch; the exe keeps i and count in stack slots across the batch loop
+// the SDK ShaderInterface::SetMatrix(sd, var, m1, HMatrix, Matrices, index, batch)
+static __forceinline void DmcSetMatrix(ShaderInterface* psi, const ShaderPair& sd, const Matrix2F& m1,
+                                       const MatrixPoolImpl::HMatrix& m2, const MatrixState* Matrices, unsigned batch)
+{
+    if (m2.Has3D())
+    {
+        Matrix3F t(Matrix3F::NoInit);
+        t.MultiplyMatrix(m2.GetMatrix3D(), m1);
+        Matrix4F m(Matrix4F::NoInit);
+        m.MultiplyMatrix(Matrices->GetUVPO(), t);
+        psi->SetUniform(sd, Uniform::SU_mvp, &m.M[0][0], 16, 0, batch);
+    }
+    else
+    {
+        Matrix2F m(Matrix2F::NoInit);
+        m.SetToAppend(m1, m2.GetMatrix2D(), Matrices->UserView);
+        psi->SetUniform(sd, Uniform::SU_mvp, &m.M[0][0], 8, 0, batch);
+    }
+}
+// SDK form: the shader pair is read once and SetMatrix is the SDK inline
 // @0x142737c40
 void HAL::drawMaskClearRectangles(const MatrixPoolImpl::HMatrix* matrices, UPInt count)
 {
@@ -1344,28 +1363,13 @@ void HAL::drawMaskClearRectangles(const MatrixPoolImpl::HMatrix* matrices, UPInt
     pDevice->SetStreamSource(0, Cache.pMaskEraseBatchVertexBuffer.GetPtr(), 0, 8);
 
     // the erase buffer holds 30 quads
+    const ShaderPair& pso = psi->GetCurrentShaders();
     unsigned drawRangeCount = 0;
     for (UPInt i = 0; i < count; i += (UPInt)drawRangeCount)
     {
         drawRangeCount = Alg::Min<unsigned>((unsigned)count - (unsigned)i, 30);
         for (unsigned j = 0; j < drawRangeCount; j++)
-        {
-            const MatrixPoolImpl::HMatrix& m = matrices[i + j];
-            if (m.Has3D())
-            {
-                Matrix3F t(Matrix3F::NoInit);
-                t.MultiplyMatrix(m.GetMatrix3D(), Matrix2F::Identity);
-                Matrix4F mvp(Matrix4F::NoInit);
-                mvp.MultiplyMatrix(Matrices.GetUVPO(), t);
-                psi->SetUniform(psi->GetCurrentShaders(), Uniform::SU_mvp, &mvp.M[0][0], 16, 0, j);
-            }
-            else
-            {
-                Matrix2F mvp(Matrix2F::NoInit);
-                mvp.SetToAppend(Matrix2F::Identity, m.GetMatrix2D(), Matrices.UserView);
-                psi->SetUniform(psi->GetCurrentShaders(), Uniform::SU_mvp, &mvp.M[0][0], 8, 0, j);
-            }
-        }
+            DmcSetMatrix(psi, pso, Matrix2F::Identity, matrices[i + j], &Matrices, j);
         psi->Finish(drawRangeCount);
         pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, drawRangeCount * 2);
         AccumulatedStats.Meshes += drawRangeCount;
