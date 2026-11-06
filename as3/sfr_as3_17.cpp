@@ -6908,7 +6908,7 @@ template void AS3GcRootPages::ClearAndRelease();
 namespace GFx { namespace AS2 { class Object; } }
 using AS2ObjectIdentitySet = decltype(HashUncached<GFx::AS2::Object*, GFx::AS2::Object*, IdentityHash<GFx::AS2::Object*> >::mHash)::BaseType;
 template void AS2ObjectIdentitySet::Clear();
-
+template void HashSetBase<const void*, FixedSizeHash<const void*>, FixedSizeHash<const void*>, AllocatorGH<const void*, 2>, HashsetCachedEntry<const void*, FixedSizeHash<const void*> > >::Clear();   // sfr_as3_19's object-pointer set; the exe folds it with the one above
 using AS3ClassTraitsCacheSet = decltype(GFx::AS3::TClassTraitsCache::TContainer::mHash);
 template void AS3ClassTraitsCacheSet::BaseType::Clear();
 using AS3ClassTraitsCacheNode = HashNode<GFx::AS3::TClassTraitsCache::Key, GFx::AS3::ClassTraits::Traits*,
