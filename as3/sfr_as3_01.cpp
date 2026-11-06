@@ -161,7 +161,6 @@ MovieImpl* AS3Support::CreateMovie(MemoryContext* memContext)
 namespace AS3 {
 
 // DoABC tag: UI32 flags, null-terminated name, then the ABC bytes up to the end of the tag.
-// MS2-FUNCTIONAL: same calls and flow; the exe keeps zero in rbp for the null stores (register choice).
 // @0x1423dc7b0
 void SF_STDCALL DoAbcLoader(LoadProcess* p, const TagInfo& tagInfo)
 {

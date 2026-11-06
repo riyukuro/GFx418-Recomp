@@ -153,12 +153,13 @@ public:
     String      Name;           // +0x10
     unsigned    DataSize;       // +0x18
     UByte       Flags;          // +0x1c
-    void*       pReserved;      // +0x20
+    UInt32      SwfHandle;      // +0x20 (SF_AMP_SERVER)
+    int         SwfOffset;      // +0x24
     StringLH    FileName;       // +0x28
     UByte       Data[1];        // +0x30
 
     AbcDataBuffer(const String& name, unsigned dataSize, UByte flags)
-        : Name(name), DataSize(dataSize), Flags(flags), pReserved(0) { }
+        : Name(name), DataSize(dataSize), Flags(flags), SwfHandle(0), SwfOffset(0) { }
 };
 
 // Execute tag created by DoAbcLoader: runs the ABC block when its frame is reached.
