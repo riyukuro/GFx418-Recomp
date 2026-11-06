@@ -165,22 +165,69 @@ void FUN_14295dbe0(void* pctx)
     penv->Drop(count);
 }
 
+// The ToFunction copy with SetLocalFrame expanded in place, as the exe inlines it into the instanceof opcode (the
+// same expansion as sfr_as2_05j's, under this unit's own tag).
+struct SetLocalFrameInlineTag06 {};
+static SF_FORCEINLINE void FunctionRefSetLocalFrame06(FunctionRefBase* p, LocalFrame* localFrame, bool weakRef)
+{
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->Release();
+    p->pLocalFrame = localFrame;
+    if (weakRef)
+        p->Flags |= FunctionRefBase::FuncRef_Weak;
+    else
+        p->Flags &= ~FunctionRefBase::FuncRef_Weak;
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->AddRef();
+}
+template<>
+SF_FORCEINLINE FunctionRef::FunctionRef(const FunctionRefBase& orig, SetLocalFrameInlineTag06)
+{
+    Flags    = 0;
+    Function = orig.Function;
+    if (!(Flags & FuncRef_Internal) && Function)
+        Function->AddRef();
+    pLocalFrame = 0;
+    if (orig.pLocalFrame)
+        FunctionRefSetLocalFrame06(this, orig.pLocalFrame, (orig.Flags & FuncRef_Weak) != 0);
+}
+struct ValueAccess06 : Value
+{
+    using Value::ResolveFunctionName;
+};
+static SF_FORCEINLINE FunctionRef ValueToFunction06(const Value& v, const Environment* penv)
+{
+    switch (v.GetType())
+    {
+    case Value::FUNCTION:
+        return FunctionRef(v.V.FunctionValue, SetLocalFrameInlineTag06());
+    case Value::FUNCTIONNAME:
+        return static_cast<const ValueAccess06&>(v).ResolveFunctionName(penv);
+    }
+    return FunctionRef();
+}
+// The SDK's PagedStack::Top1: the element below the top, on the previous page when the top starts a page.
+static SF_FORCEINLINE Value& EnvTop1(Environment* e)
+{
+    return *((e->Stack.pCurrent > e->Stack.pPageStart) ? (e->Stack.pCurrent - 1) : e->Stack.pPrevPageTop);
+}
+
 // The 'instanceof' opcode (ExecutionContext::InstanceOfOpCode; the context is read as in FUN_14295dbe0): whether the
-// object below the constructor on top is an instance of it, pushed as a boolean.
-// MS2-FUNCTIONAL: the context is read by address
+// object below the constructor on top is an instance of it, pushed as a boolean. The environment is re-read from
+// the context after each call, and the logger is addressed in place.
 // @0x142962420
 void FUN_142962420(void* pctx)
 {
     UByte*        pc   = static_cast<UByte*>(pctx);
-    Environment*  penv = *reinterpret_cast<Environment**>(pc);
-    ActionLogger* plog = reinterpret_cast<ActionLogger*>(pc + 0x40);
+    Environment*& penv = *reinterpret_cast<Environment**>(pc);
+#define plog reinterpret_cast<ActionLogger*>(pc + 0x40) // a local pointer costs a callee-saved register
 
+    Value& objVal  = EnvTop1(penv);
+    Value& ctorVal = *penv->Stack.Top0();
     bool   rv      = false;
-    Value& objVal  = penv->Top(1);
-    Value& ctorVal = penv->Top(0);
     if (ctorVal.IsFunction())
     {
-        FunctionRef ctorFunc = ctorVal.ToFunction(penv);
+        FunctionRef ctorFunc = ValueToFunction06(ctorVal, penv);
         if (!ctorFunc.IsNull())
         {
             ObjectInterface* pobj = objVal.IsCharacter()
@@ -190,7 +237,10 @@ void FUN_142962420(void* pctx)
             {
                 Value protoVal;
                 if (ctorFunc->GetMemberRaw(penv->GetSC(), penv->GetBuiltin(ASBuiltin_prototype), &protoVal))
-                    rv = pobj->InstanceOf(penv, protoVal.ToObject(penv));
+                {
+                    Object* pproto = protoVal.ToObject(penv);
+                    rv = pobj->InstanceOf(penv, pproto);
+                }
                 else if (pc[0x62] & 1)
                     plog->LogScriptError("The constructor function in InstanceOf should have 'prototype'.");
             }
@@ -200,8 +250,9 @@ void FUN_142962420(void* pctx)
         plog->LogScriptError("The parameter of InstanceOf should be a function.");
 
     penv->Drop2();
-    penv->Push(Value(rv));
+    penv->Push(rv);
 }
+#undef plog
 
 // The action disassembly writer (declared in sfr_as2_06, same layout): the log and the message type of its lines.
 class Disasm
