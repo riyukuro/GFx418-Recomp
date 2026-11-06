@@ -68,11 +68,12 @@ public:
     PagedStack() : pReserved(0)
     {
         Page* ppage = (Page*)SF_HEAP_AUTO_ALLOC(this, sizeof(Page));
+        Pages.Reserve(15);
         Pages.PushBack(ppage);
-        pCurrent     = ppage->Values;
         pPageStart   = ppage->Values;
-        pPageEnd     = ppage->Values + PageSize;
-        pPrevPageTop = ppage->Values;
+        pPageEnd     = pPageStart + PageSize;
+        pCurrent     = pPageStart;
+        pPrevPageTop = pCurrent;
         Construct<T>(pCurrent);
     }
 

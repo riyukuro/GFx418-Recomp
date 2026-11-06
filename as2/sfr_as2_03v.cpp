@@ -8,14 +8,12 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-// MS2-FUNCTIONAL: the exe inlines each stack's first page with the array's minimum capacity (16 slots) allocated
-// inside the constructor; the header's PushBack grows the array through its out-of-line Reserve
+// Each stack's first page is inlined (the SDK's Pages.Reserve(15) before the first PushBack).
 // @0x14291b930
 Environment::Environment()
-    : Target(0), pASLogger(0), ExecutionNestingLevel(0), FuncCallNestingLevel(0), Unrolling(false),
-      IsInvalidTarget(false)
+    : Target(0), pASLogger(0), ThrowingValue(Value::UNSET), ExecutionNestingLevel(0), FuncCallNestingLevel(0),
+      Unrolling(false), IsInvalidTarget(false)
 {
-    ThrowingValue.SetUnset();
 }
 
 }}} // namespace Scaleform::GFx::AS2
