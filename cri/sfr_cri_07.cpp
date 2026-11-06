@@ -521,7 +521,7 @@ void SJCRS_Unlock();
 void CRIDLG_Init();
 void CRIDLG_Finish();
 cri_u8 CRIDLG_Create(cri_u8, cri_u4);
-cri_u8 cridlg_Create(longlong, uint);
+extern "C" cri_u8 cridlg_Create(longlong, uint);
 void CRIDLG_Destroy(cri_u8);
 extern "C" void FUN_140067ac0(void *);
 cri_u4 CRIDLG_GetStat(cri_u8);
