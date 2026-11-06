@@ -652,23 +652,28 @@ void ComplexPrimitiveBundle::EmitToHAL(RenderQueueItem& item, RenderQueueProcess
     qp.GetHAL()->DrawProcessedComplexMeshes(e.pMesh, StrideArray<HMatrix>(&e.M, last - index + 1, sizeof(InstanceEntry)));
 }
 
-// MS2-FUNCTIONAL: same logic; the exe copies this before the filter test, scheduling differs
+// SDK ComplexPrimitiveBundle::Prepare (Render_PrimitiveBundle.cpp)
 // @0x1426bdad0
 RenderQueueItem::QIPrepareResult ComplexPrimitiveBundle::Prepare(RenderQueueItem& item, RenderQueueProcessor& qp,
                                                                  bool waitForCache)
 {
-    if (qp.GetQueuePrepareFilter() == RenderQueueProcessor::QPF_All)
+    if ( qp.GetQueuePrepareFilter() != RenderQueueProcessor::QPF_All )
+        return RenderQueueItem::QIP_Done;
+
+    // Upload into cache if not there already.
+    UPInt        index = (UPInt)item.GetData();
+    ComplexMesh* mesh = Instances[index].pMesh;
+
+    bool prepareResult = qp.GetMeshCache()->PrepareComplexMesh(mesh, waitForCache);
+
+    if (prepareResult || qp.GetPrepareItemBuffer()->IsProcessing(&item))
     {
-        UPInt index = (UPInt)item.GetData();
-        if (!qp.GetMeshCache()->PrepareComplexMesh(Instances[index].pMesh, waitForCache) &&
-            !qp.GetPrepareItemBuffer()->IsProcessing(&item))
-        {
-            qp.GetPrepareItemBuffer()->StartProcessing(&item);
-            return RenderQueueItem::QIP_NeedCache;
-        }
         qp.GetPrepareItemBuffer()->ClearItem();
+        return RenderQueueItem::QIP_Done;
     }
-    return RenderQueueItem::QIP_Done;
+
+    qp.GetPrepareItemBuffer()->StartProcessing(&item);
+    return RenderQueueItem::QIP_NeedCache;
 }
 
 // @0x1426bd840
