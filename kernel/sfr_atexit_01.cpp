@@ -76,10 +76,10 @@ extern SoundFileKeyInterface SoundFileKeyInterface_Instance;
 
 // static AS2::Value array at 0x143a51b50.
 extern unsigned char DAT_143a51b50[];
-
+namespace Scaleform { namespace Render { class RenderQueueProcessor; class RenderQueueItem { public: enum QIPrepareResult { QIP_Done, QIP_NeedCache }; class Interface { public: virtual ~Interface() {} virtual QIPrepareResult Prepare(RenderQueueItem&, RenderQueueProcessor&, bool waitForCache) { (void)waitForCache; return QIP_Done; } virtual void EmitToHAL(RenderQueueItem&, RenderQueueProcessor&) {} }; }; }}   // RenderQueueItem::Interface as render_primitivequeue.h has it (that header clashes with this TU kernel headers)
 namespace Scaleform { namespace GFx {
 
-extern "C" char DAT_143191990[];
+// 0x143191990 = RenderQueueItem::Interface vftable (stored by its real inline dtor)
 extern "C" char DAT_143a2fe60[];
 extern "C" char DAT_143a30338[];
 extern "C" char DAT_143a2dd20[];
@@ -365,14 +365,14 @@ void FUN_142cc97b0()
 // @0x142cc97c0
 void FUN_142cc97c0()
 {
-    RawSetVtable(RawObj(Render::SKI_BlendMode::BlendModeItem), DAT_143191990);
+    reinterpret_cast<Render::RenderQueueItem::Interface*>(RawObj(Render::SKI_BlendMode::BlendModeItem))->Render::RenderQueueItem::Interface::~Interface();
 }
 
 // SKI_MaskEnd::EndMaskItem (Render::RenderQueueItem::Interface): back to its interface base vftable.
 // @0x142cc97d0
 void FUN_142cc97d0()
 {
-    RawSetVtable(RawObj(Render::SKI_MaskEnd::EndMaskItem), DAT_143191990);
+    reinterpret_cast<Render::RenderQueueItem::Interface*>(RawObj(Render::SKI_MaskEnd::EndMaskItem))->Render::RenderQueueItem::Interface::~Interface();
 }
 
 // SKI_BlendMode::InstanceStart (Render::SortKeyInterface): back to its interface base vftable.
@@ -421,14 +421,14 @@ void FUN_142cc9830()
 // @0x142cc9840
 void FUN_142cc9840()
 {
-    RawSetVtable(RawObj(Render::HALBeginDisplayItem::Instance), DAT_143191990);
+    reinterpret_cast<Render::RenderQueueItem::Interface*>(RawObj(Render::HALBeginDisplayItem::Instance))->Render::RenderQueueItem::Interface::~Interface();
 }
 
 // HALEndDisplayItem::Instance (Render::RenderQueueItem::Interface): back to its interface base vftable.
 // @0x142cc9850
 void FUN_142cc9850()
 {
-    RawSetVtable(RawObj(Render::HALEndDisplayItem::Instance), DAT_143191990);
+    reinterpret_cast<Render::RenderQueueItem::Interface*>(RawObj(Render::HALEndDisplayItem::Instance))->Render::RenderQueueItem::Interface::~Interface();
 }
 
 // static Ptr<> at 0x143a2fe60.
@@ -513,3 +513,4 @@ void FUN_142cca4d0()
 
 }} // namespace Scaleform::GFx
 // MS2-PIN: ??_7SortKeyInterface@Render@Scaleform@@6B@ 0x1431927c8
+// MS2-PIN: ??_7Interface@RenderQueueItem@Render@Scaleform@@6B@ 0x143191990
