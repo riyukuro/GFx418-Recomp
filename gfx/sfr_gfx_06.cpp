@@ -1765,7 +1765,8 @@ void DisplayObjectBase::TransformPointToLocal(PointF* p, const PointF& pt, bool 
         {
             Matrix2F worldMat;
             GetWorldMatrix(&worldMat);
-            worldMat.TransformByInverse(p, pt);
+            Matrix2F& wm = worldMat;
+            wm.TransformByInverse(p, pt);
         }
     }
     else
