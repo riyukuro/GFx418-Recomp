@@ -18,6 +18,8 @@
 #define SF_AS3_AVMBUTTON_MODEL
 #define MS2_AS3_ASSIGN_NOALIAS
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp weak-ref bodies inline (as3_value.h)
+// The exe's exec_esc_xattr (0x142538700) did not see XML::EscapeElementValue's body (as3_obj_fl.h).
+#define SFR_AS3_ESCAPE_NO_INLINE
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/gfx_input.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
@@ -53,6 +55,22 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace TR { class State
 namespace Scaleform { namespace GFx { namespace AS3 {
 struct ValueAssignCopies
 {
+    // Value::Assign(const ASString&) as the SDK writes it, for the out-of-line operator= copy (FUN_1424e0d40).
+    static SF_INLINE void AssignString19(Value& to, const ASString& v)
+    {
+        to.Release();
+        if (v.GetNode() == v.GetNode()->GetManager()->GetNullStringNode())
+        {
+            to.value = (ASStringNode*)NULL;
+            to.SetKind(Value::kObject);
+        }
+        else
+        {
+            to.SetKind(Value::kString);
+            to.value = v.GetNode();
+            to.AddRefString();
+        }
+    }
     static SF_INLINE void AssignUnsafeCopy(Value& v, const Value& other)
     {
         if (&other != &v)
@@ -212,7 +230,9 @@ inline Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142415520(void* globalObjec
 inline void FUN_14251ccc0(Scaleform::GFx::AS3::TR::State* state, Scaleform::UPInt n) { state->PopOp(n); }   // State::PopOp
 inline void FUN_14251fcd0(Scaleform::UPInt tracer, Scaleform::UPInt regIndex) { reinterpret_cast<Scaleform::GFx::AS3::Tracer*>(tracer)->PushNewOpCodeArg(regIndex); }                    // Tracer: note register write
 inline bool* FUN_1424f1390(Scaleform::GFx::AS3::Value* v, void* tmpNode, void* strOut) { ::new (tmpNode) Scaleform::GFx::AS3::CheckResult(v->Convert2String(*static_cast<Scaleform::GFx::ASString*>(strOut))); return static_cast<bool*>(tmpNode); }   // Value::ToStringValue style conversion
-Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str);   // Value::operator=(const ASString&), out of line in the exe
+// Value::operator=(const ASString&), out of line in the exe. Its callers here see the body (exec_esc_xattr 0x142538700 keeps
+// the new string node in rbx across the call), so it is defined here.
+inline SF_NOINLINE Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str) { Scaleform::GFx::AS3::ValueAssignCopies::AssignString19(v, str); return v; }
 unsigned long long* FUN_1424e0860(unsigned long long*, unsigned long long);
 inline void FUN_1424e0860(void* out, unsigned long long value) { ::FUN_1424e0860(static_cast<unsigned long long*>(out), value); }
 // ArrayDH<Value>::Resize growth, through the real ArrayDataBase<Value, AllocatorDH>::ResizeNoConstruct (0x1424201a0, called out of line)
@@ -3717,29 +3737,27 @@ void Sfr31StoreScopeStack(UPInt self, UPInt start, UPInt* src)
 }
 
 // exec_esc_xattr: converts the top of stack to a string and replaces it with its XML-escaped form.
-// MS2-FUNCTIONAL 0x142538700: the exe sets ok to 1 before the Convert2String call, and releases the escaped string from a register after
-// the assignment; ours reloads it from the temporary.
+// Value::ToStringValue (SDK), inlined in the exe
+static __forceinline CheckResult Sfr31ToStringValue(AS3::Value& v, ASStringManager& mgr)
+{
+    CheckResult rc = true;
+    ASString r = mgr.CreateEmptyString();
+    if (v.Convert2String(r))
+        FUN_1424e0d40(v, r);
+    else
+        rc = false;
+    return rc;
+}
 // @0x142538700
 void Sfr31ExecEscXAttr(UPInt vm)
 {
     const UPInt sm = Sfr31Rd(vm, 0x10);
     AS3::Value* top = reinterpret_cast<AS3::Value*>(Sfr31Rd(vm, 0x50));
-    bool ok;
-    {
-        ASString str(reinterpret_cast<ASStringNode*>(Sfr31Rd(sm, 0x1e8) + 0x40));
-        if (top->Convert2String(str))
-        {
-            *top = str;
-            ok = true;
-        }
-        else
-            ok = false;
-    }
-    if (ok)
+    if (Sfr31ToStringValue(*top, *reinterpret_cast<ASStringManager*>(Sfr31Rd(sm, 0x1e8))))
     {
         StringBuffer buf(Memory::pGlobalHeap);
-        Instances::fl::XML::EscapeElementValue(buf, ASString(reinterpret_cast<ASStringNode*>(Sfr31Rd(reinterpret_cast<UPInt>(top), 0x10))));
-        *top = ASString(reinterpret_cast<ASStringManager*>(Sfr31Rd(sm, 0x1e8))->CreateStringNode(buf.ToCStr(), buf.GetSize()));
+        Instances::fl::XML::EscapeElementValue(buf, top->AsString());
+        FUN_1424e0d40(*top, reinterpret_cast<ASStringManager*>(Sfr31Rd(sm, 0x1e8))->CreateString(buf.ToCStr(), buf.GetSize()));
     }
 }
 // ---- batch 23

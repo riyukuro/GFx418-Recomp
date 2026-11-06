@@ -586,9 +586,12 @@ static_assert(sizeof(Scaleform::GFx::AS3::Classes::Function) == 0x50, "Function 
 static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::Function) == 0x100, "Function size");
 static_assert(sizeof(Scaleform::GFx::AS3::Instances::fl::XML) == 0x48, "XML size");
 
-// The exe's callers of XML::EscapeElementValue (sfr_as3_03/04/19) saw its body: cl /O2 then knows the call writes none
+// The exe's callers of XML::EscapeElementValue (sfr_as3_03/04) saw its body: cl /O2 then knows the call writes none
 // of the caller's escaped slots and keeps an ASString temp's node in a register across it (XMLText::ToXMLString
 // 0x1424270d0). Defined here (inline, never inlined) so every caller TU sees it, as the exe's did.
+// SFR_AS3_ESCAPE_NO_INLINE hides the body from a TU whose exe caller did not see it (sfr_as3_19: exec_esc_xattr
+// 0x142538700 reloads the temp's node after the call); its call then binds to the COMDAT that sfr_as3_04 emits.
+#ifndef SFR_AS3_ESCAPE_NO_INLINE
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {
 // @0x142409f00
 inline __declspec(noinline) void XML::EscapeElementValue(StringBuffer& buf, const ASString& s)
@@ -610,5 +613,6 @@ inline __declspec(noinline) void XML::EscapeElementValue(StringBuffer& buf, cons
     }
 }
 }}}}} // namespace Scaleform::GFx::AS3::Instances::fl
+#endif // SFR_AS3_ESCAPE_NO_INLINE
 
 #endif
