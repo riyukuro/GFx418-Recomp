@@ -218,30 +218,17 @@ unsigned long long* FUN_1423cabb0(unsigned long long*, unsigned long long);
 
 // The class (base IMEManagerBase, the members the slot functions read) is in gfx_imemanagerwin32.h.
 
-#ifndef MS2_HOOK_DLL
-// The manager's own vtable (data_rdata_sf_a): the slots are the class's overrides now, but the constructor and
-// destructor still install the exe's 38-slot image by hand until our ??_7 takes its place.
-extern "C" void* DAT_1431383e0[];
-#endif
-
-// MS2-FUNCTIONAL: constructor frame differs; the vtable is set up by hand (see above).
+// MS2-FUNCTIONAL: constructor frame differs.
 // @0x1423c8a50
 GFxIMEManagerWin32::GFxIMEManagerWin32(::HWND__* window)
     : hwnd(window), p70(0), p78(0)
 {
-#ifndef MS2_HOOK_DLL
-    *reinterpret_cast<void***>(this) = DAT_1431383e0;
-#endif
     pLog = 0;
 }
 
 // @0x1423c8ac0
 GFxIMEManagerWin32::~GFxIMEManagerWin32()
 {
-#ifndef MS2_HOOK_DLL
-    // the exe's 38-slot vtable, as the constructor installs it (our ??_7 is not pinned to it yet)
-    *reinterpret_cast<void***>(this) = DAT_1431383e0;
-#endif
     if (p70)
         (*reinterpret_cast<void (***)(void*, unsigned int)>(p70))[0](p70, 1);
     if (p78)
