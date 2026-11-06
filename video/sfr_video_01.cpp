@@ -45,6 +45,14 @@ extern ExeDecl<void*>::type DAT_1431b54d0;
 #define NetStreamProtoInterfaceVtable DAT_1431b54d0
 extern ExeDecl<void*>::type DAT_1431b5478;
 #define NetStreamProtoBaseVtable DAT_1431b5478
+// NetStreamProto's ctor below (no exe row) emits the three ??_7NetStreamProto tables; the hand-inlined ctors
+// FUN_14000ae30 / FUN_14000cf20 store them through the DAT_ names, so bind those names to the tables here. The hook
+// DLL binds the DAT_ names to the exe by their symbols rows (a second /alternatename would conflict).
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:?DAT_1431b5478@@3PEAXEA=??_7NetStreamProto@AS2@GFx@Scaleform@@6B@")
+#pragma comment(linker, "/alternatename:?DAT_1431b5480@@3PEAXEA=??_7NetStreamProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
+#pragma comment(linker, "/alternatename:?DAT_1431b54d0@@3PEAXEA=??_7NetStreamProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
+#endif
 extern ExeDecl<void*>::type DAT_1431b53c0;
 #define NetStreamPrototypeVtable DAT_1431b53c0
 extern ExeDecl<void*>::type DAT_1431b5310;
