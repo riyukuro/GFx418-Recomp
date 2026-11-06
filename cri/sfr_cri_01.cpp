@@ -1169,10 +1169,11 @@ void VideoProviderNetStream::SendMetaData()
 }
 
 // @0x140025580
-// MS2-FUNCTIONAL: member reloaded after the test
 VideoImage* VideoProviderNetStream::GetTexture(int* width, int* height)
 {
-    if (!pVideoPlayer || !pTextureImage)
+    if (!pVideoPlayer)
+        return NULL;
+    if (!pTextureImage)
         return NULL;
     *width  = VInfo.Width;
     *height = VInfo.Height;
