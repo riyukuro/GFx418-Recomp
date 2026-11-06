@@ -1142,3 +1142,14 @@ namespace Scaleform { namespace Render {
 // render_shapedata.h declares it inline; Draw needs the body here too (also in sfr_gfx_06e), or clang leaves it undefined
 inline ComplexFill::ComplexFill() : BindIndex(~0u) {}
 }} // namespace Scaleform::Render
+
+// The TreeShape::NodeData vftables pinned above are the ones the player, video and AS3 units store by name:
+// gfx_rendertree.h keeps pVTable as a data member (no C++ virtuals, so its includers keep the exe layout without the SDK
+// class tree) and declares each vftable as an extern array. Bind those names to the vftables this unit emits
+// (TreeContainerNodeDataVTable: sfr_render_03c).
+// The hook DLL binds these names to the exe by their symbols rows (a second /alternatename would conflict).
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:?TreeShapeNodeDataVTable@Render@Scaleform@@3QBQEBXB=??_7NodeData@TreeShape@Render@Scaleform@@6B@")
+#pragma comment(linker, "/alternatename:?TreeShapeNodeDataMixinVTable@Render@Scaleform@@3QBQEBXB=??_7?$ContextData_ImplMixin@VNodeData@TreeShape@Render@Scaleform@@V1TreeNode@34@@ContextImpl@Render@Scaleform@@6B@")
+#pragma comment(linker, "/alternatename:?DAT_14317bc40@AS3@GFx@Scaleform@@3PAPEBXA=??_7NodeData@TreeShape@Render@Scaleform@@6B@")
+#endif
