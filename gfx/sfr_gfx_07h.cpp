@@ -4,11 +4,11 @@
 // Sub-unit of queue unit sfr_gfx_07 (the unit spans several original GFx sources).
 // MS2-UNIT: sfr_gfx_07h
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x14261e1c0-0x14261ff80 .text$mn
+// MS2-RANGE: 0x14261e1c0-0x14261fc40 .text$mn
+// MS2-RANGE: 0x14261fd80-0x14261ff80 .text$mn
 // MS2-RANGE: 0x14261ffe0-0x142620040 .text$mn
 // MS2-PIN: ?FUN_14261f940@GFx@Scaleform@@YAXPEA_K@Z 0x14261f940
 // MS2-PIN: ?FUN_14261f9e0@GFx@Scaleform@@YAXPEA_K@Z 0x14261f9e0
-// MS2-PIN: ?FUN_14261fc40@GFx@Scaleform@@YA_KPEAXPEBE@Z 0x14261fc40
 // MS2-PIN: ?FUN_14261fd80@GFx@Scaleform@@YA_KPEAXPEBE@Z 0x14261fd80
 // MS2-FUNCTIONAL: raw-layout transcriptions of the exe's template instances; the algorithms and effects match.
 
@@ -513,8 +513,7 @@ static __forceinline U RawMultinameKeyHash(const unsigned char* k)
     return FixedSizeHash<UByte[16]>::SDBM_Hash(k, 16);
 }
 
-// @0x14261fc40
-U FUN_14261fc40(void*, const unsigned char* key) { return RawMultinameKeyHash(key); }
+// 0x14261fc40 (the same sdbm hash) is defined inline in sfr_gfx_07i, whose ViewStats callers need its body.
 
 // @0x14261fd80
 U FUN_14261fd80(void*, const unsigned char* key) { return RawMultinameKeyHash(key); }

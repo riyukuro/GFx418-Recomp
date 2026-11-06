@@ -4,7 +4,9 @@
 // FUN_<va> names. Sub-unit of queue unit sfr_gfx_07 (the unit spans several original GFx sources).
 // MS2-UNIT: sfr_gfx_07i
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x14261fc40-0x14261fd80 .text$mn
 // MS2-RANGE: 0x1426202f0-0x142623c60 .text$mn
+// MS2-PIN: ?FUN_14261fc40@GFx@Scaleform@@YA_KPEAXPEBE@Z 0x14261fc40
 // MS2-FUNCTIONAL: raw-layout transcriptions of the exe's template instances; the algorithms and effects match.
 
 #include "sfr_gfx_07raw.h"
@@ -63,7 +65,8 @@ void FUN_14261e730(char*, U*);
 void FUN_14261f220(U**, void*, StringKeyOps::Ref*, U);
 void FUN_14261ec70(U**, void*, NodeRef*, U);
 void FUN_14261eae0(U**, void*, WordsRefOps::Ref*, U);
-U FUN_14261fc40(void*, const unsigned char*);   // multiname key hash
+// @0x14261fc40: FixedSizeHash<UByte[16]> (sdbm). Inline so cl sees it writes no memory, as the exe's TU did.
+inline __declspec(noinline) U FUN_14261fc40(void*, const unsigned char* key) { return FixedSizeHash<UByte[16]>::SDBM_Hash(key, 16); }
 void FUN_142624020(U*, void*, U);               // Array<0x18-byte record>::Resize
 void FUN_142623f80(U*, void*, U);               // Array<8-byte>::Reserve
 void FUN_14261ee70(U**, void*, NodeRef*, U);
@@ -1032,78 +1035,106 @@ void FUN_1426233e0(char* self, UInt32 swdHandle, UInt32 swfOffset, U funcTime)
     RawPushCallstack(self, swdHandle, swfOffset, funcTime);
 }
 
-// Adds `delta` to the byte counter kept per (scope, count) multiname key.
-// MS2-FUNCTIONAL 0x142623560: same counter update; the exe inlines the multiname-key find and insert (603 vs 437 bytes, frame differs).
-// @0x142623560
-void FUN_142623560(char* self, U delta)
+// RecordSourceLineTime: SourceLineTimingsMap is a HashLH<FileLinePair, UInt64> at +0xd0
+// (0x28-byte entries: NextInChain, HashValue, FileId, LineNumber, Second).
+struct Sfr07iFileLine { U FileId; unsigned LineNumber; };
+struct Sfr07iLineRef { const Sfr07iFileLine* pFirst; const U* pSecond; };
+struct Sfr07iLineEntry { SPInt NextInChain; U HashValue; Sfr07iFileLine First; U Second; };
+struct Sfr07iLineTable { U EntryCount; U SizeMask; };
+struct Sfr07iLineMap;
+struct Sfr07iLineIt { Sfr07iLineMap* pHash; SPInt Index; };
+struct Sfr07iLineHashF { };
+
+struct Sfr07iLineMap
 {
-    unsigned cnt = RawLocked<unsigned, 0x78, 0x70>(self);
-    if (cnt == 0)
-        return;
-    U scope = RawLocked<U, 0x78, 0x68>(self);
-    U** set = RawFieldPtr<U*>(self, 0xd0);
-    unsigned char key[16];
-    memset(key, 0, sizeof(key));
-    *(U*)key = scope;
-    *(unsigned*)(key + 8) = cnt;
-    U hash = FUN_14261fc40(0, key);
-    U* table = *set;
-    SPInt idx = -1;
-    if (table)
+    Sfr07iLineTable* pTable;
+
+    __forceinline Sfr07iLineEntry& E(UPInt index) { return *(((Sfr07iLineEntry*)(pTable + 1)) + index); }
+
+    __forceinline SPInt FindIndexCore(const Sfr07iFileLine& key, UPInt hashValue)
     {
-        U home = table[1] & hash;
-        U i = home;
-        char* e = RawEntry(table, i, 0x28);
-        if (*(SPInt*)e != -2 && *(U*)(e + 8) == home)
+        UPInt index = hashValue;
+        Sfr07iLineEntry* e = &E(index);
+        if (e->NextInChain == -2 || e->HashValue != index)
+            return -1;
+        for (;;)
         {
-            for (;;)
-            {
-                if (*(U*)(e + 8) == home && RawField<U>(e, 0x10) == scope && RawField<int>(e, 0x18) == (int)cnt)
-                {
-                    idx = (SPInt)i;
-                    break;
-                }
-                SPInt next = *(SPInt*)e;
-                if (next == -1)
-                    break;
-                i = (U)next;
-                e = RawEntry(table, i, 0x28);
-            }
+            if (e->HashValue == hashValue && e->First.FileId == key.FileId && e->First.LineNumber == key.LineNumber)
+                return (SPInt)index;
+            index = (UPInt)e->NextInChain;
+            if (index == (UPInt)-1)
+                break;
+            e = &E(index);
         }
+        return -1;
     }
-    if (idx < 0)
+
+    __forceinline Sfr07iLineIt Find(const Sfr07iFileLine& key)
     {
-        U zero = 0;
-        const void* refs[2] = { key, &zero };
-        FUN_14261eae0(set, set, (WordsRefOps::Ref*)refs, hash);
-        table = *set;
-        idx = -1;
-        if (table)
+        SPInt index = -1;
+        if (pTable)
         {
-            U home = table[1] & hash;
-            U i = home;
-            char* e = RawEntry(table, i, 0x28);
-            if (*(SPInt*)e != -2 && *(U*)(e + 8) == home)
-            {
-                for (;;)
-                {
-                    if (*(U*)(e + 8) == home && RawField<U>(e, 0x10) == scope && RawField<int>(e, 0x18) == (int)cnt)
-                    {
-                        idx = (SPInt)i;
-                        break;
-                    }
-                    SPInt next = *(SPInt*)e;
-                    if (next == -1)
-                        break;
-                    i = (U)next;
-                    e = RawEntry(table, i, 0x28);
-                }
-            }
+            Sfr07iLineHashF hf;
+            UPInt hashValue = FUN_14261fc40(&hf, (const unsigned char*)&key) & pTable->SizeMask;
+            index = FindIndexCore(key, hashValue);
         }
-        if (idx < 0)
-            idx = 0;
+        Sfr07iLineIt it;
+        if (index >= 0)
+        {
+            it.pHash = this;
+            it.Index = index;
+        }
+        else
+        {
+            it.pHash = 0;
+            it.Index = 0;
+        }
+        return it;
     }
-    *(U*)((char*)*set + 0x30 + idx * 0x28) += delta;
+
+    __forceinline void Set(const Sfr07iFileLine& key, const U& value)
+    {
+        Sfr07iLineRef ref = { &key, &value };
+        Sfr07iLineHashF hf;
+        UPInt hashValue = FUN_14261fc40(&hf, (const unsigned char*)ref.pFirst);
+        SPInt index = -1;
+        if (pTable != 0)
+            index = FindIndexCore(*ref.pFirst, hashValue & pTable->SizeMask);
+        if (index >= 0)
+        {
+            Sfr07iLineEntry& e = E(index);
+            e.First = *ref.pFirst;
+            e.Second = value;
+        }
+        else
+            FUN_14261eae0((U**)&pTable, this, (WordsRefOps::Ref*)&ref, hashValue);
+    }
+};
+
+static __forceinline bool RawLineItIsEnd(const Sfr07iLineIt& it)
+{
+    return it.pHash == 0 || it.pHash->pTable == 0 || it.Index > (SPInt)it.pHash->pTable->SizeMask;
+}
+
+// MS2-FUNCTIONAL 0x142623560: SDK ViewStats::RecordSourceLineTime shape (Find, Set(0), re-Find, += lineTime).
+// 600 bytes vs 603: register choice (exe keeps lineTime in r14, the map in rsi) and the Set loop's idx*0x28 entry addressing.
+// @0x142623560
+void FUN_142623560(char* self, U lineTime)
+{
+    Sfr07iFileLine fileLine;
+    fileLine.LineNumber = RawLocked<unsigned, 0x78, 0x70>(self);
+    if (fileLine.LineNumber != 0)
+    {
+        fileLine.FileId = RawLocked<U, 0x78, 0x68>(self);
+        Sfr07iLineMap* map = RawFieldPtr<Sfr07iLineMap>(self, 0xd0);
+        Sfr07iLineIt it = map->Find(fileLine);
+        if (RawLineItIsEnd(it))
+        {
+            map->Set(fileLine, 0);
+            it = map->Find(fileLine);
+        }
+        it.pHash->E((UPInt)it.Index).Second += lineTime;
+    }
 }
 
 // @0x1426237c0
