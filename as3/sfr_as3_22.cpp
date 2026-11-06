@@ -3840,6 +3840,10 @@ void* CreateAudioEventManager()
     }
     return object;
 }
+// 0x142744fe0 is SoundRendererFMOD::CreateSoundRenderer (gfxsoundfmod's caller names it so); bound to the body above.
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:?CreateSoundRenderer@SoundRendererFMOD@Sound@Scaleform@@SAPEAV123@XZ=?CreateAudioEventManager@Scaleform@@YAPEAXXZ")
+#endif
 
 namespace GFx { namespace AMP {
 // @0x14268c080
