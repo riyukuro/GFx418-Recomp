@@ -124,7 +124,6 @@ bool GAS_Invoke(const char* pmethodName, Value* presult, ObjectInterface* pthis,
 }
 
 // The method value, its arguments pushed as the format string describes (%d %u %n %b %f %hf %s %ls), in reverse.
-// MS2-FUNCTIONAL: the stack pushes and the argument reversal are scheduled differently
 // @0x142947360
 bool GAS_InvokeParsed(const Value& method, Value* presult, ObjectInterface* pthis, Environment* penv,
                       const char* pmethodArgFmt, va_list args, const char* pmethodName)
@@ -132,73 +131,67 @@ bool GAS_InvokeParsed(const Value& method, Value* presult, ObjectInterface* pthi
     int nargs = 0;
     if (pmethodArgFmt)
     {
-        int         start = penv->GetTopIndex();
-        const char* p     = pmethodArgFmt;
-        char        c     = *p;
-        while (c != 0)
+        int startingIndex = penv->GetTopIndex();
+        const char* p = pmethodArgFmt;
+        for (;;)
         {
-            ++p;
-            if (c != '%')
-                penv->LogScriptError("InvokeParsed('%s','%s') - invalid char '%c'", pmethodName, pmethodArgFmt, c);
-            else
+            char c = *p++;
+            if (c == 0)
+                break;
+            else if (c == '%')
             {
                 c = *p++;
-                switch (c)
-                {
-                case 'd':
-                    penv->Push(Value(va_arg(args, int)));
-                    break;
-                case 'u':
+                if (c == 'd')
+                    penv->Push(va_arg(args, int));
+                else if (c == 'u')
                     penv->Push(Value());
-                    break;
-                case 'n':
-                    penv->Push(Value(Value::NULLTYPE));
-                    break;
-                case 'b':
-                    penv->Push(Value(va_arg(args, int) != 0));
-                    break;
-                case 'f':
-                    penv->Push(Value(Number(va_arg(args, double))));
-                    break;
-                case 'h':
+                else if (c == 'n')
+                    penv->Push(Value::NULLTYPE);
+                else if (c == 'b')
+                    penv->Push(bool(va_arg(args, int) != 0));
+                else if (c == 'f')
+                    penv->Push((Number)va_arg(args, double));
+                else if (c == 'h')
+                {
                     c = *p++;
-                    if (c != 'f')
+                    if (c == 'f')
+                        penv->Push((Number)va_arg(args, double));
+                    else
                         penv->LogScriptError("InvokeParsed('%s','%s') - invalid format '%%h%c'", pmethodName,
                                              pmethodArgFmt, c);
-                    else
-                        penv->Push(Value(Number(va_arg(args, double))));
-                    break;
-                case 's':
-                    penv->Push(Value(penv->CreateString(va_arg(args, const char*))));
-                    break;
-                case 'l':
+                }
+                else if (c == 's')
+                    penv->Push(penv->CreateString(va_arg(args, const char *)));
+                else if (c == 'l')
+                {
                     c = *p++;
-                    if (c != 's')
+                    if (c == 's')
+                    {
+                        // the string manager is held in a local: the exe's register choice for the chain
+                        ASStringManager* psm = ((MovieRoot*)penv->GetSC()->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->pStringManager;
+                        penv->Push(ASString(psm->CreateStringNode(va_arg(args, const wchar_t*))));
+                    }
+                    else
                         penv->LogScriptError("InvokeParsed('%s','%s') - invalid format '%%l%c'", pmethodName,
                                              pmethodArgFmt, c);
-                    else
-                        penv->Push(Value(penv->GetSC()->CreateString(va_arg(args, const wchar_t*))));
-                    break;
-                default:
+                }
+                else
                     penv->LogScriptError("InvokeParsed('%s','%s') - invalid format '%%%c'", pmethodName,
                                          pmethodArgFmt, c);
-                    break;
-                }
             }
+            else
+                penv->LogScriptError("InvokeParsed('%s','%s') - invalid char '%c'", pmethodName, pmethodArgFmt, c);
             // blanks, tabs and commas between the specifiers
-            c = *p;
-            while (c == ' ' || c == '\t' || c == ',')
-                c = *++p;
+            for (c = *p; c != '\0' && (c == ' ' || c == '\t' || c == ','); c = *++p)
+                ;
         }
-        nargs = penv->GetTopIndex() - start;
         // the callee reads its arguments last-pushed first
-        for (int i = 0; i < nargs / 2; ++i)
+        nargs = penv->GetTopIndex() - startingIndex;
+        for (int i = 0; i < (nargs >> 1); i++)
         {
-            Value* phigh = penv->Bottom(start + nargs - i);
-            Value* plow  = penv->Bottom(start + 1 + i);
-            Value  tmp(*plow);
-            *plow  = *phigh;
-            *phigh = tmp;
+            int i0 = startingIndex + 1 + i;
+            int i1 = startingIndex + nargs - i;
+            Alg::Swap(*penv->Bottom(i0), *penv->Bottom(i1));
         }
     }
     bool ok = GAS_Invoke(method, presult, pthis, penv, nargs, penv->GetTopIndex(), pmethodName);
