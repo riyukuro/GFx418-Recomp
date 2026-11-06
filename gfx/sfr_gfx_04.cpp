@@ -1723,39 +1723,52 @@ Resource* MovieDefImpl::GetResource(const char* pexportName) const
     return pres;
 }
 
+// SDK ResourceHandle::GetResource (pointer test first); the shared gfx_moviedef.h inline tests the index first.
+static __forceinline Resource* MS2_HandleGetResource(const ResourceHandle& rh, ResourceBinding* pbinding)
+{
+    if (rh.GetHandleType() == ResourceHandle::RH_Pointer)
+        return rh.GetResourcePtr();
+
+    ResourceBindData rbd;
+    pbinding->GetResourceData(&rbd, rh.GetBindIndex());
+    return rbd.pResource;
+}
+
 // @0x1425cfbd0
-// MS2-FUNCTIONAL: register allocation of the style flags and the movie pointer across the font and import loops
 FontResource* MovieDefImpl::GetFontResource(const char* pfontName, unsigned styleFlags, SearchInfo* psearchInfo)
 {
     MovieDataDef* pdataDef = GetDataDef();
 
-    // Fonts the file defines itself.
-    for (FontDataUseNode* pfont = pdataDef->GetFirstFont(); pfont != 0; pfont = pfont->pNext)
-    {
-        if (!pfont->pFontData->MatchFont(pfontName, styleFlags))
-            continue;
+    FontDataUseNode* pfont = pdataDef->GetFirstFont();
 
-        ResourceBindData rbd;
-        pBindData->ResourceBinding.GetResourceData(&rbd, pfont->BindIndex);
-        if (rbd.pResource)
+    for (; pfont != 0; pfont = pfont->pNext)
+    {
+        if (pfont->pFontData->MatchFont(pfontName, styleFlags))
         {
-            FontResource* pfontRes = (FontResource*)rbd.pResource.GetPtr();
-            if (psearchInfo)
+            ResourceBindData rbd;
+            pBindData->ResourceBinding.GetResourceData(&rbd, pfont->BindIndex);
+            if (rbd.pResource)
             {
-                if (!pfontRes->GetFont()->IsResolved())
-                    psearchInfo->Status = SearchInfo::FoundInResourcesNoGlyphs;
-                else if ((styleFlags & Render::Font::FF_Style_Mask) && !pfontRes->GetFont()->HasVectorOrRasterGlyphs())
-                    psearchInfo->Status = SearchInfo::FoundInResourcesNeedFaux;
-                else
-                    psearchInfo->Status = SearchInfo::FoundInResources;
+                FontResource* pfont = (FontResource*)rbd.pResource.GetPtr();
+                if (psearchInfo)
+                {
+                    if (!pfont->GetFont()->IsResolved())
+                        psearchInfo->Status = SearchInfo::FoundInResourcesNoGlyphs;
+                    else if ((styleFlags & Render::Font::FF_Style_Mask) && !pfont->GetFont()->HasVectorOrRasterGlyphs())
+                        psearchInfo->Status = SearchInfo::FoundInResourcesNeedFaux;
+                    else
+                        psearchInfo->Status = SearchInfo::FoundInResources;
+                }
+                return pfont;
             }
-            return pfontRes;
         }
     }
 
-    // Imported fonts are found by their import name as well as by the real font name; the search reports
-    // every file it looked in and the one the font came from.
-    for (ImportData* pimport = pdataDef->GetFirstImport(); pimport != 0; pimport = pimport->pNext)
+    // Import names also look like font names for lookup purposes: an imported font is found by its import
+    // name (like $TitleFont) or by the real font name (like Times New Roman).
+    ImportData* pimport = pdataDef->GetFirstImport();
+
+    for (; pimport != 0; pimport = pimport->pNext)
     {
         for (unsigned j = 0; j < pimport->Imports.GetSize(); j++)
         {
@@ -1763,39 +1776,44 @@ FontResource* MovieDefImpl::GetFontResource(const char* pfontName, unsigned styl
                 psearchInfo->ImportSearchUrls.Set(pimport->SourceUrl);
 
             ResourceHandle rh;
-            if (!pdataDef->pData->GetResourceHandle(&rh, ResourceId(pimport->Imports[j].CharacterId)))
-                continue;
-            Resource* pres = rh.GetResource(&pBindData->ResourceBinding);
-            if (!pres || pres->GetResourceType() != Resource::RT_Font)
-                continue;
-
-            FontResource* pfontRes = (FontResource*)pres;
-            if (!pfontRes->GetFont()->MatchFontFlags(styleFlags))
-                continue;
-            if (String::CompareNoCase(pimport->Imports[j].SymbolName.ToCStr(), pfontName) &&
-                String::CompareNoCase(pfontRes->GetName(), pfontName))
-                continue;
-
-            if (psearchInfo)
+            if (pdataDef->GetResourceHandle(&rh, ResourceId(pimport->Imports[j].CharacterId)))
             {
-                static const char fontlibKey[]   = "gfxfontlib.swf";
-                const UPInt       fontlibKeySize = sizeof(fontlibKey) - 1;
+                Resource* pres = MS2_HandleGetResource(rh, &pBindData->ResourceBinding);
+                // The resource must be a font.
+                if (pres && (pres->GetResourceType() == Resource::RT_Font))
+                {
+                    FontResource* pfontRes = (FontResource*)pres;
+                    if (pfontRes->GetFont()->MatchFontFlags(styleFlags))
+                    {
+                        // Compare the import font name and the real font name (SDK SymbolName.CompareNoCase).
+                        if (!String::CompareNoCase(pimport->Imports[j].SymbolName.ToCStr(), pfontName) ||
+                            !String::CompareNoCase(pfontRes->GetName(), pfontName))
+                        {
+                            if (psearchInfo)
+                            {
+                                static const char fontlibKey[]   = "gfxfontlib.swf";
+                                const UPInt       fontlibKeySize = sizeof(fontlibKey) - 1;
 
-                UPInt urlSize = pimport->SourceUrl.GetSize();
-                if (urlSize >= fontlibKeySize &&
-                    !String::CompareNoCase(pimport->SourceUrl.ToCStr() + (urlSize - fontlibKeySize), fontlibKey))
-                    psearchInfo->Status = SearchInfo::FoundInImportsFontLib;
-                else
-                    psearchInfo->Status = SearchInfo::FoundInImports;
-                psearchInfo->ImportFoundUrl = pimport->SourceUrl;
+                                if ((pimport->SourceUrl.GetSize() >= fontlibKeySize) &&
+                                    (String::CompareNoCase(pimport->SourceUrl.ToCStr() +
+                                                               (pimport->SourceUrl.GetSize() - fontlibKeySize),
+                                                           fontlibKey) == 0))
+                                    psearchInfo->Status = SearchInfo::FoundInImportsFontLib;
+                                else
+                                    psearchInfo->Status = SearchInfo::FoundInImports;
+                                psearchInfo->ImportFoundUrl = pimport->SourceUrl;
+                            }
+                            return pfontRes;
+                        }
+                    }
+                }
             }
-            return pfontRes;
         }
     }
 
-    // Exported fonts by their export name.
+    // Look for the names of EXPORTED fonts too.
     Resource* pres = GetResource(pfontName);
-    if (pres && pres->GetResourceType() == Resource::RT_Font)
+    if (pres && (pres->GetResourceType() == Resource::RT_Font))
     {
         FontResource* pfontRes = (FontResource*)pres;
         if (pfontRes->GetFont()->MatchFontFlags(styleFlags))
