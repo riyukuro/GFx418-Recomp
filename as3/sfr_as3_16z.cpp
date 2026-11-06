@@ -908,9 +908,8 @@ static void Sfr21InsertBlockAfter(Sfr21TrBlock* block, Sfr21TrBlock* node)
 
 // Tracer::AddBlock(st, from, type, checkOpCode): the block starting at from with a copy of st as its entry state
 // (NULL past the code's end). A label or debug opcode at from keeps a tDead block alive.
-// MS2-FUNCTIONAL: closer (581 bytes, exe 583). Only the opcode test differs: cl folds the op_debug..op_debugfile
-// range to add cl,0x11 / cmp cl,2, where the exe compares cl with 0xee (jbe) and 0xf1 (ja); a switch, an if chain and
-// nested ifs all fold or move is_dead. Tracer members are private, so raw offsets are used.
+// The opcode test is the SDK's switch over the int-sized Code::OpCode (a UInt8 operand lets cl fold the
+// op_debug..op_debugfile range). Tracer members are private, so raw offsets are used.
 // @0x1424e6aa0
 void* FUN_1424e6aa0(Tracer* self, const void* st, UPInt from, int type, bool checkOpCode)
 {
@@ -930,9 +929,19 @@ void* FUN_1424e6aa0(Tracer* self, const void* st, UPInt from, int type, bool che
 
     if (checkOpCode)
     {
-        const UInt8 op = (*reinterpret_cast<const UInt8**>(t + 0x50))[from];
-        if (op == 0x09 || op == 0xef || op == 0xf0 || op == 0xf1)   // op_label, op_debug, op_debugline, op_debugfile
+        enum Sfr16zOpCode { op_label = 0x09, op_debug = 0xef, op_debugline = 0xf0, op_debugfile = 0xf1 };
+        const Sfr16zOpCode curr_opcode = static_cast<Sfr16zOpCode>((*reinterpret_cast<const UInt8**>(t + 0x50))[from]);
+        switch (curr_opcode)
+        {
+        case op_label:
+        case op_debug:
+        case op_debugline:
+        case op_debugfile:
             is_dead = false;
+            break;
+        default:
+            break;
+        }
     }
 
     // The heap is read from the tracer at each use (no local), as in the exe.
