@@ -826,12 +826,78 @@ bool MovieRoot::ExecuteAbc(const AbcDataBuffer* pabc, DisplayObjContainer* pspr)
     return result;
 }
 
+// Value(const ASString&) (0x1424dbf70), Value(Object*) (0x1424dc050) and Multiname(Namespace&, const Value&)
+// (0x1424d8a90) with SetRTNameUnsafe and PostProcessName, as the exe inlines them into FUN_142502e70 (the same
+// bodies as the sfr_as3_17 / sfr_as3_19 copies).
+SF_FORCEINLINE Value::Value(const ASString& v, InlineStrType)
+    : Flags(kString)
+    , value(v.GetNode())
+{
+    if (v.GetNode() == v.GetManager()->GetNullStringNode())
+    {
+        SetKind(kObject);
+        value = (Object*)NULL;
+    }
+    else
+        value.VS._1.VStr->AddRef();
+}
+
+SF_FORCEINLINE Value::Value(Object* v, InlineObjType)
+    : Flags(kObject)
+    , value(v)
+{
+    if (v)
+        v->AddRef();
+}
+
+void Sfr27MultinameFromQName(Multiname* mn, const Value* qname);   // sfr_as3_19
 }}} // namespace Scaleform::GFx::AS3
 
+// Value::operator=(const ASString&), out of line in the exe (defined in sfr_as3_19).
+Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+static __forceinline void Sfr17dPostProcessName(Multiname& mn)
+{
+    if (!mn.Name.IsString())
+        return;
+    ASString n = mn.Name.AsString();
+    if (n.GetSize() == 0)
+        return;
+    if (n[0] == '*')
+        FUN_1424e0d40(mn.Name, ASString(n.GetManager()->GetEmptyStringNode()));
+    else if (n[0] == '@')
+    {
+        mn.Kind = static_cast<Abc::MultinameKind>(mn.Kind | 8);
+        if (n.GetSize() == 2 && n[1] == '*')
+            FUN_1424e0d40(mn.Name, ASString(n.GetManager()->GetEmptyStringNode()));
+        else
+            FUN_1424e0d40(mn.Name, ASString(n.SubstringNode(1, n.GetSize())));
+    }
+}
+
+__forceinline Multiname::Multiname(Instances::Namespace& ns, const Value& name, InlineCtorTag)
+    : Kind(static_cast<Abc::MultinameKind>(0))
+    , Obj(&ns)
+{
+    const UInt32 k = static_cast<UInt32>(name.GetKind());
+    if (k - 0xc <= 3 && name.GetGASRefCountBase() != NULL)
+    {
+        const Traits& tr = reinterpret_cast<Object*>(name.GetGASRefCountBase())->GetTraits();
+        if (static_cast<int>(tr.TraitsType) == 0xc && (static_cast<UInt8>(~static_cast<UInt8>(static_cast<UInt8>(tr.Flags) >> 5)) & 1) != 0)
+        {
+            Sfr27MultinameFromQName(this, &name);
+            return;
+        }
+    }
+    Name.AssignUnsafe(name);
+    Sfr17dPostProcessName(*this);
+}
+}}} // namespace Scaleform::GFx::AS3
 
 // AvmDisplayObj: fires the display-list event id at the AS3 object (load, enter frame, the timeline instance's
 // creation and parent property, its constructor, added / removed and the frame and activation broadcasts).
-// MS2-FUNCTIONAL 0x142502e70: written from the exe's control flow (the exe inlines the Multiname and Value constructors)
+// MS2-FUNCTIONAL 0x142502e70: SDK case order and SDK Initialize body with the Multiname/Value ctors inlined; regalloc and slots differ (the exe builds the name Value before GetAS3Parent, keeps its flags in r12, and calls CreateASInstanceNoCtor without the false arg)
 // The plain event ids past the sockets (gfx_eventid.h stops at Event_SockXML).
 enum Sfr17dEventIds
 {
@@ -853,42 +919,6 @@ void FUN_142502e70(void* pavm, const Scaleform::GFx::EventId& id)
     {
     case EventId::Event_Load:
         self->pDispObj->OnEventLoad();
-        break;
-    case EventId::Event_EnterFrame:
-        if (!as3obj)
-            return;
-        if (pdisp->MayHaveEnterFrameHandler())
-            pdisp->DispatchTypeToTarget(static_cast<MovieRoot*>(self->pDispObj->pASRoot)->BuiltinsMgr.GetBuiltin(AS3Builtin_enterFrame),
-                                        as3obj, false, self->pDispObj);
-        break;
-    case EventId::Event_Initialize:
-    {
-        DisplayObject* pdispObj = self->pDispObj;
-        if (!(pdispObj->Flags & DisplayObject::Mask_TimelineObject))
-            break;
-        self->CreateASInstanceNoCtor(false);
-        if ((pdispObj->Flags & DisplayObject::Mask_InstanceBasedName) || !self->GetAS3Parent())
-            break;
-        // the timeline object is the parent's property of its name
-        ASString name = pdispObj->GetName();
-        {
-            AS3::Value vname(name);
-            Instances::fl::Object* parent = self->GetAS3Parent();
-            AS3::Value vobj(as3obj.GetPtr());
-            VM& vm = *static_cast<MovieRoot*>(pdispObj->pASRoot)->pAVM;
-            Multiname mn(vm.GetPublicNamespace(), vname);
-            parent->SetProperty(mn, vobj);
-        }
-        VM& vm = *static_cast<MovieRoot*>(self->pDispObj->pASRoot)->pAVM;
-        if (vm.HandleException)
-        {
-            vm.OutputAndIgnoreException();
-            self->pDispObj->pParent->Flags |= DisplayObject::Mask_ExecutionAborted;
-        }
-        break;
-    }
-    case EventId::Event_Construct:
-        self->CallCtor(true);
         break;
     case Sfr17dEvent_Added:
         root = static_cast<MovieRoot*>(self->pDispObj->pASRoot);
@@ -932,42 +962,57 @@ void FUN_142502e70(void* pavm, const Scaleform::GFx::EventId& id)
         }
         self->pDispObj->OnEventUnload();
         break;
-    case Sfr17dEvent_Activate:
-        if (!as3obj)
-            return;
-        if (pdisp->MayHaveActivateHandler())
-            pdisp->Dispatch(id, self->pDispObj);
+    case EventId::Event_Construct:
+        self->CallCtor(true);
         break;
-    case Sfr17dEvent_Deactivate:
-        if (!as3obj)
-            return;
-        if (pdisp->MayHaveDeactivateHandler())
-            pdisp->Dispatch(id, self->pDispObj);
+    case EventId::Event_Initialize:
+        if (self->pDispObj->Flags & DisplayObject::Mask_TimelineObject)
+        {
+            self->CreateASInstanceNoCtor(false);
+            if (!(self->pDispObj->Flags & DisplayObject::Mask_InstanceBasedName) && self->GetAS3Parent())
+            {
+                const ASString& name = self->pDispObj->GetName();
+                // SetProperty() can throw; the result is not checked (DoNotCheck).
+                self->GetAS3Parent()->SetProperty(Multiname(static_cast<MovieRoot*>(self->pDispObj->pASRoot)->pAVM->GetPublicNamespace(),
+                                                            AS3::Value(name, AS3::Value::InlineStr), Multiname::InlineCtorTag()),
+                                                  AS3::Value(self->GetAS3Obj(), AS3::Value::InlineObj));
+                if (static_cast<MovieRoot*>(self->pDispObj->pASRoot)->pAVM->HandleException)
+                {
+                    static_cast<MovieRoot*>(self->pDispObj->pASRoot)->pAVM->OutputAndIgnoreException();
+                    self->pDispObj->pParent->Flags |= DisplayObject::Mask_ExecutionAborted;
+                }
+            }
+        }
         break;
-    case Sfr17dEvent_Render:
-        if (!as3obj)
-            return;
-        if (pdisp->MayHaveRenderHandler())
-            pdisp->Dispatch(id, self->pDispObj);
-        break;
-    case Sfr17dEvent_Resize:
-        if (!as3obj)
-            return;
-        pdisp->Dispatch(id, self->pDispObj);
+    case EventId::Event_EnterFrame:
+        if (as3obj && pdisp->MayHaveEnterFrameHandler())
+            pdisp->DispatchTypeToTarget(static_cast<MovieRoot*>(self->pDispObj->pASRoot)->BuiltinsMgr.GetBuiltin(AS3Builtin_enterFrame),
+                                        as3obj, false, self->pDispObj);
         break;
     case Sfr17dEvent_FrameConstructed:
-        if (!as3obj)
-            return;
-        if (pdisp->MayHaveFrameConstructedHandler())
+        if (as3obj && pdisp->MayHaveFrameConstructedHandler())
             pdisp->DispatchTypeToTarget(static_cast<MovieRoot*>(self->pDispObj->pASRoot)->BuiltinsMgr.GetBuiltin(AS3Builtin_frameConstructed),
                                         as3obj, false, self->pDispObj);
         break;
     case Sfr17dEvent_ExitFrame:
-        if (!as3obj)
-            return;
-        if (pdisp->MayHaveExitFrameHandler())
+        if (as3obj && pdisp->MayHaveExitFrameHandler())
             pdisp->DispatchTypeToTarget(static_cast<MovieRoot*>(self->pDispObj->pASRoot)->BuiltinsMgr.GetBuiltin(AS3Builtin_exitFrame),
                                         as3obj, false, self->pDispObj);
+        break;    case Sfr17dEvent_Activate:
+        if (as3obj && pdisp->MayHaveActivateHandler())
+            pdisp->Dispatch(id, self->pDispObj);
+        break;
+    case Sfr17dEvent_Deactivate:
+        if (as3obj && pdisp->MayHaveDeactivateHandler())
+            pdisp->Dispatch(id, self->pDispObj);
+        break;
+    case Sfr17dEvent_Render:
+        if (as3obj && pdisp->MayHaveRenderHandler())
+            pdisp->Dispatch(id, self->pDispObj);
+        break;
+    case Sfr17dEvent_Resize:
+        if (as3obj)
+            pdisp->Dispatch(id, self->pDispObj);
         break;
     }
 }
