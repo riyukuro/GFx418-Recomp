@@ -2309,7 +2309,7 @@ void FUN_1424feb00(void* self, const Scaleform::GFx::AS3::Value& _this, Scalefor
         root->GFxValue2ASValue(retVal, &result);
 }
 void FUN_14241e4f0(Scaleform::GFx::AS3::Object* self, const Scaleform::GFx::AS3::Value& v);   // UserDefined function: keep the result
-void FUN_142541a60(void* self, void* pheapAddr, Scaleform::UPInt newSize);   // HashSetBase::setRawCapacity copy
+typedef Scaleform::HashSetBase<Scaleform::HashNode<const Scaleform::GFx::AS3::Abc::MethodBodyInfo*,Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::InstanceTraits::Traits>,Scaleform::FixedSizeHash<const Scaleform::GFx::AS3::Abc::MethodBodyInfo*> >,Scaleform::HashNode<const Scaleform::GFx::AS3::Abc::MethodBodyInfo*,Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::InstanceTraits::Traits>,Scaleform::FixedSizeHash<const Scaleform::GFx::AS3::Abc::MethodBodyInfo*> >::NodeHashF,Scaleform::HashNode<const Scaleform::GFx::AS3::Abc::MethodBodyInfo*,Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::InstanceTraits::Traits>,Scaleform::FixedSizeHash<const Scaleform::GFx::AS3::Abc::MethodBodyInfo*> >::NodeAltHashF,Scaleform::AllocatorLH<const Scaleform::GFx::AS3::Abc::MethodBodyInfo*,340>,Scaleform::HashsetCachedNodeEntry<Scaleform::HashNode<const Scaleform::GFx::AS3::Abc::MethodBodyInfo*,Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::InstanceTraits::Traits>,Scaleform::FixedSizeHash<const Scaleform::GFx::AS3::Abc::MethodBodyInfo*> >,Scaleform::HashNode<const Scaleform::GFx::AS3::Abc::MethodBodyInfo*,Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::InstanceTraits::Traits>,Scaleform::FixedSizeHash<const Scaleform::GFx::AS3::Abc::MethodBodyInfo*> >::NodeHashF> > Sfr33MethodBodyHashBase; extern template void Sfr33MethodBodyHashBase::setRawCapacity(void*, Scaleform::UPInt);   // 0x142541a60 (sfr_as3_19)
 static inline void FUN_14251f930(void* tr, int op) { static_cast<Scaleform::GFx::AS3::Tracer*>(tr)->PushNewOpCode(static_cast<Scaleform::GFx::AS3::Abc::Code::OpCode>(op)); }                // Tracer: emit opcode op
 static inline void FUN_14251fb90(void* tr, int op, Scaleform::UPInt arg) { static_cast<Scaleform::GFx::AS3::Tracer*>(tr)->PushNewOpCode(static_cast<Scaleform::GFx::AS3::Abc::Code::OpCode>(op), arg); }   // Tracer: emit opcode op with one argument
 bool FUN_1424f86d0(void* tr, const Scaleform::GFx::AS3::Value& v, bool pop);   // Tracer: push the object constant v
@@ -5501,11 +5501,11 @@ CheckResult Value::Convert2UInt32(UInt32& result) const
 // @0x1424eefa0
 void Sfr33ClassHashCheckExpand(void* self, void* pheapAddr)
 {
-    const UPInt* table = *reinterpret_cast<UPInt* const*>(self);
-    if (!table)
-        FUN_142541a60(self, pheapAddr, 8);
-    else if (table[0] * 5 > (table[1] + 1) * 4)
-        FUN_142541a60(self, pheapAddr, (table[1] + 1) * 2);
+    // the CheckExpand of the MethodBodyInfo hash (one body with this hash's in the exe)
+    reinterpret_cast<Sfr33MethodBodyHashBase*>(self)->CheckExpand(pheapAddr);
+    //
+    //
+    //
 }
 
 // The default value of a slot of type ctr: false, 0, NaN for the primitive types; undefined for the
