@@ -1130,9 +1130,7 @@ void DrawableImageContext::processTreeRootKillList()
 // MS2-PIN: ??_7EntryData@ContextImpl@Render@Scaleform@@6B@ 0x14317b6d0
 // MS2-PIN: ??_7NodeData@TreeNode@Render@Scaleform@@6B@ 0x14317b700
 // MS2-PIN: ??_7?$ContextData_ImplMixin@VNodeData@TreeContainer@Render@Scaleform@@V1TreeNode@34@@ContextImpl@Render@Scaleform@@6B@ 0x143183230
-// MS2-PIN: ??_7NodeData@TreeContainer@Render@Scaleform@@6B@ 0x143183280
 // MS2-PIN: ??_7?$ContextData_ImplMixin@VNodeData@TreeRoot@Render@Scaleform@@V1TreeContainer@34@@ContextImpl@Render@Scaleform@@6B@ 0x1431832d0
-// MS2-PIN: ??_7NodeData@TreeRoot@Render@Scaleform@@6B@ 0x143183320
 // MS2-PIN: ??_7?$RefCountBase@VComplexFill@Render@Scaleform@@$01@Scaleform@@6B@ 0x14317b660
 // MS2-PIN: ??_7ComplexFill@Render@Scaleform@@6B@ 0x14317b668
 // MS2-PIN: ??_7?$ContextData_ImplMixin@VNodeData@TreeShape@Render@Scaleform@@V1TreeNode@34@@ContextImpl@Render@Scaleform@@6B@ 0x14317bbf0
