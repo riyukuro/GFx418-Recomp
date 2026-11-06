@@ -15,7 +15,7 @@
 
 namespace Scaleform { namespace GFx {
 
-void FUN_14015b310(void*, UPInt);
+}} void __empty_global_delete(void*, unsigned __int64) noexcept; namespace Scaleform { namespace GFx {   // 0x14015b310 (was FUN_14015b310)
 
 static inline void RawDeleteBranch(void* self, unsigned flags, UPInt size)
 {
@@ -24,7 +24,7 @@ static inline void RawDeleteBranch(void* self, unsigned flags, UPInt size)
         if (!(flags & 4))
             Memory::Free(self);
         else
-            FUN_14015b310(self, size);
+            ::__empty_global_delete(self, size);
     }
 }
 

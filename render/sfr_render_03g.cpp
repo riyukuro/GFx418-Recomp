@@ -18,7 +18,7 @@ namespace Scaleform { namespace GFx {
 
 extern char DAT_14318efe8[];
 
-void FUN_14015b310(void*, UPInt);
+}} void __empty_global_delete(void*, unsigned __int64) noexcept; namespace Scaleform { namespace GFx {   // 0x14015b310 (was FUN_14015b310)
 
 // The Matrix2F inverse the exe keeps out of line (exe 0x142446cb0, defined by sfr_as2_01).
 namespace AS2 { void Matrix2F_SetInverse(Render::Matrix2F* m, const Render::Matrix2F& src); }
@@ -30,7 +30,7 @@ static inline void RawDeleteBranch(void* self, unsigned flags, UPInt size)
         if (!(flags & 4))
             Memory::Free(self);
         else
-            FUN_14015b310(self, size);
+            ::__empty_global_delete(self, size);
     }
 }
 
