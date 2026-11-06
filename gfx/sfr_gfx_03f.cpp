@@ -595,19 +595,20 @@ void TextField::SetTextFilters(const Render::Text::TextFilter& f)
 
 // The text (UTF-8, HTML when html is set) becomes the field's text unless it is the same and nothing asks for a new
 // layout. The movie's translator may replace it first (HTML is stripped for a translator that takes plain text).
-// MS2-FUNCTIONAL 0x1425bd9a0: same calls and order; the exe inlines GetStyleSheet on the untranslated HTML path,
-// HasStyleSheet and SetDirtyFlag
+// MS2-FUNCTIONAL 0x1425bd9a0: SDK body, same calls and order; register allocation differs (the exe keeps html and
+// translated in stack slots and reads the CondenseWhite flag before the GetStyleSheet call)
 // @0x1425bd9a0
 bool TextField::SetTextValue(const char* ptext, bool html, bool notifyVariable)
 {
-    if (OriginalTextValue == ptext && !(Flags & Flags_NeedUpdateLayout))
+    if (OriginalTextValue == ptext && !((UByte)(Flags >> 16) & 1))
         return false;
-    Flags &= ~Flags_NeedUpdateLayout;
+    else
+        Flags &= ~Flags_NeedUpdateLayout;
 
-    if (HasAvmObject() && GetAvmObjImpl()->ToAvmTextFieldBase()->HasStyleSheet())
+    if (HasAvmObject() ? GetAvmObjImpl()->ToAvmTextFieldBase()->HasStyleSheet() : false)
     {
-        Flags |= Flags_Html;
         html = true;
+        Flags |= Flags_Html;
     }
 
     OriginalTextValue = ptext;
@@ -617,16 +618,18 @@ bool TextField::SetTextValue(const char* ptext, bool html, bool notifyVariable)
         Flags &= ~Flags_OriginalIsHtml;
     ptext = OriginalTextValue.ToCStr();
 
+    bool doNotifyChanged = false;
     bool translated = false;
-    if (!(Flags & Flags_NoTranslate))
+    if (!((UByte)(Flags >> 3) & 1))
     {
         Ptr<Translator> ptrans = *static_cast<Translator*>(
             GetMovieImpl()->GetStateBag()->GetStateAddRef(State::State_Translator));
         if (ptrans)
         {
             // Translator::TranslateInfo (sfr_gfx_02f) with the key and result buffers.
-            struct TextTranslateInfo
+            class TranslateInfo
             {
+            public:
                 enum
                 {
                     Flag_Translated = 0x1,
@@ -637,53 +640,69 @@ bool TextField::SetTextValue(const char* ptext, bool html, bool notifyVariable)
                 WStringBuffer*              pResult;       // +8
                 const char*                 pInstanceName; // +0x10
                 UByte                       Flags;         // +0x18
-                WStringBuffer::Reserve<512> ResultRes;
-                WStringBuffer::Reserve<512> KeyRes;
+                WStringBuffer::Reserve<512> Res1, Res2;
                 WStringBuffer               ResultBuf;
                 WStringBuffer               KeyBuf;
 
-                TextTranslateInfo(const char* pname)
-                    : pKey(NULL), pResult(&ResultBuf), pInstanceName(pname), Flags(0), ResultBuf(ResultRes),
-                      KeyBuf(KeyRes) {}
-            } info(IsInstanceBasedNameFlagSet() ? "" : GetName().ToCStr());
+                TranslateInfo(const char* instanceName)
+                    : pKey(NULL), pResult(NULL), pInstanceName(NULL), Flags(0), ResultBuf(Res1), KeyBuf(Res2)
+                {
+                    pResult       = &ResultBuf;
+                    pInstanceName = instanceName;
+                }
 
-            if (html && !(ptrans->GetCaps() & 1))
+                void SetKey(const char* pkey)
+                {
+                    int nchars = (int)UTF8Util::GetLength(pkey);
+                    KeyBuf.Resize(nchars + 1);
+                    UTF8Util::DecodeString(KeyBuf.GetBuffer(), pkey);
+                    pKey = KeyBuf.GetBuffer();
+                }
+                void SetKey() { pKey = KeyBuf.GetBuffer(); }
+
+                bool IsResultHtml() const { return (Flags & Flag_ResultHtml) != 0; }
+                bool IsTranslated() const { return (Flags & Flag_Translated) != 0; }
+
+                void SetKeyHtml() { Flags |= Flag_SourceHtml; }
+            } translateInfo((!IsInstanceBasedNameFlagSet()) ? GetName().ToCStr() : "");
+
+            if (!html || (ptrans->GetCaps() & 1) != 0)
             {
-                // the translator takes plain text: the HTML is parsed and its text passed
-                Render::Text::TextFormat      textFmt(Memory::GetHeapByAddress(this));
-                Render::Text::ParagraphFormat paraFmt;
-                GetInitialFormats(&textFmt, &paraFmt);
-                pDocument->ParseHtml(ptext, SF_MAX_UPINT, (Flags & Flags_CondenseWhite) != 0, NULL, GetStyleSheet(),
-                                     &textFmt, &paraFmt);
-                pDocument->GetStyledText()->GetText(&info.KeyBuf);
-                if (ptrans->GetCaps() & 2)
-                    info.KeyBuf.StripTrailingNewLines();
-                info.pKey = info.KeyBuf.GetBuffer();
-                ptrans->Translate(&info);
+                translateInfo.SetKey(ptext);
+                if (html)
+                    translateInfo.SetKeyHtml();
+                ptrans->Translate(&translateInfo);
             }
             else
             {
-                info.KeyBuf.Resize(UTF8Util::GetLength(ptext) + 1);
-                UTF8Util::DecodeString(info.KeyBuf.GetBuffer(), ptext);
-                info.pKey = info.KeyBuf.GetBuffer();
-                if (html)
-                    info.Flags |= TextTranslateInfo::Flag_SourceHtml;
-                ptrans->Translate(&info);
+                // the translator takes plain text: the HTML is parsed and its text passed
+                Render::Text::TextFormat      txtFmt(Memory::GetHeapByAddress(this));
+                Render::Text::ParagraphFormat paraFmt;
+                GetInitialFormats(&txtFmt, &paraFmt);
+                pDocument->ParseHtml(ptext, SF_MAX_UPINT, (Flags & Flags_CondenseWhite) != 0, NULL, GetStyleSheet(),
+                                     &txtFmt, &paraFmt);
+                pDocument->GetStyledText()->GetText(&translateInfo.KeyBuf);
+                if ((ptrans->GetCaps() & 2) != 0)
+                    translateInfo.KeyBuf.StripTrailingNewLines();
+                translateInfo.SetKey();
+                ptrans->Translate(&translateInfo);
             }
-
-            translated = (info.Flags & TextTranslateInfo::Flag_Translated) != 0;
+            translated = translateInfo.IsTranslated();
             if (translated)
             {
-                if (info.Flags & TextTranslateInfo::Flag_ResultHtml)
+                if (translateInfo.IsResultHtml())
                 {
-                    Render::Text::TextFormat      textFmt(Memory::GetHeapByAddress(this));
+                    Render::Text::TextFormat      txtFmt(Memory::GetHeapByAddress(this));
                     Render::Text::ParagraphFormat paraFmt;
-                    GetInitialFormats(&textFmt, &paraFmt);
-                    Render::Text::StyledText::HTMLImageTagInfoArray imageInfos(Memory::GetHeapByAddress(this));
-                    pDocument->ParseHtml(info.ResultBuf.ToWStr(), SF_MAX_UPINT, (Flags & Flags_CondenseWhite) != 0,
-                                         &imageInfos, GetStyleSheet(), &textFmt, &paraFmt);
-                    if (imageInfos.GetSize() > 0)
-                        ProcessImageTags(imageInfos);
+                    GetInitialFormats(&txtFmt, &paraFmt);
+                    Render::Text::StyledText::HTMLImageTagInfoArray imageInfoArray(Memory::GetHeapByAddress(this));
+                    pDocument->ParseHtml(translateInfo.ResultBuf.ToWStr(), SF_MAX_UPINT,
+                                         (Flags & Flags_CondenseWhite) != 0, &imageInfoArray, GetStyleSheet(),
+                                         &txtFmt, &paraFmt);
+                    if (imageInfoArray.GetSize() > 0)
+                    {
+                        ProcessImageTags(imageInfoArray);
+                    }
                 }
                 else
                 {
@@ -694,8 +713,9 @@ bool TextField::SetTextValue(const char* ptext, bool html, bool notifyVariable)
                     pstyled->GetTextAndParagraphFormat(&ptextFmt, &pparaFmt, 0);
                     pDocument->GetStyledText()->SetDefaultTextFormat(ptextFmt);
                     pDocument->GetStyledText()->SetDefaultParagraphFormat(pparaFmt);
-                    pDocument->SetText(info.ResultBuf.ToWStr());
+                    pDocument->SetText(translateInfo.ResultBuf.ToWStr());
                 }
+                doNotifyChanged = true;
             }
         }
     }
@@ -704,39 +724,44 @@ bool TextField::SetTextValue(const char* ptext, bool html, bool notifyVariable)
     {
         if (html)
         {
-            Render::Text::TextFormat      textFmt(Memory::GetHeapByAddress(this));
+            Render::Text::TextFormat      txtFmt(Memory::GetHeapByAddress(this));
             Render::Text::ParagraphFormat paraFmt;
-            GetInitialFormats(&textFmt, &paraFmt);
-            Render::Text::StyledText::HTMLImageTagInfoArray imageInfos(Memory::GetHeapByAddress(this));
-            pDocument->ParseHtml(ptext, SF_MAX_UPINT, (Flags & Flags_CondenseWhite) != 0, &imageInfos,
-                                 GetStyleSheet(), &textFmt, &paraFmt);
-            if (imageInfos.GetSize() > 0)
-                ProcessImageTags(imageInfos);
+            GetInitialFormats(&txtFmt, &paraFmt);
+            Render::Text::StyledText::HTMLImageTagInfoArray imageInfoArray(Memory::GetHeapByAddress(this));
+            pDocument->ParseHtml(ptext, SF_MAX_UPINT, (Flags & Flags_CondenseWhite) != 0, &imageInfoArray,
+                                 GetStyleSheet(), &txtFmt, &paraFmt);
+            if (imageInfoArray.GetSize() > 0)
+            {
+                ProcessImageTags(imageInfoArray);
+            }
         }
         else
+        {
             pDocument->SetText(ptext);
+        }
     }
 
     // a cursor past the new text's end goes to it
     if (pDocument->HasEditorKit())
     {
-        Text::EditorKit* peditor = EditorOf(pDocument);
-        if (!peditor->IsReadOnly())
+        if (!EditorOf(pDocument)->IsReadOnly())
         {
-            UPInt len = pDocument->GetStyledText()->GetLength();
-            if (peditor->GetCursorPos() > len)
-                peditor->SetCursorPos(len, false);
+            UPInt docLen = pDocument->GetLength();
+            if (EditorOf(pDocument)->GetCursorPos() > docLen)
+                EditorOf(pDocument)->SetCursorPos(docLen, false);
         }
     }
 
-    if (HasAvmObject() && GetAvmObjImpl()->ToAvmTextFieldBase()->HasStyleSheet() &&
+    if ((HasAvmObject() ? GetAvmObjImpl()->ToAvmTextFieldBase()->HasStyleSheet() : false) &&
         pDocument->MayHaveUrl())
+    {
         CollectUrlZones();
+    }
 
     if (notifyVariable && HasAvmObject())
         GetAvmObjImpl()->ToAvmTextFieldBase()->UpdateVariable();
 
-    if (translated)
+    if (doNotifyChanged)
     {
         if (HasAvmObject())
             GetAvmObjImpl()->ToAvmTextFieldBase()->NotifyChanged();
@@ -953,7 +978,6 @@ void TextField::TextDocumentListener::View_OnHScroll(Render::Text::DocView& view
 }
 
 // The translator decides the line's wrap point; it sees the widths in pixels.
-// MS2-FUNCTIONAL 0x1425bf000: same copy and scaling; the exe inlines GetTextField
 // @0x1425bf000
 bool TextField::TextDocumentListener::View_OnLineFormat(Render::Text::DocView& view,
                                                         Render::Text::DocView::LineFormatDesc& desc)
