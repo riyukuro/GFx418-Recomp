@@ -58,7 +58,11 @@ public:
         pLoader->Load(fileName.ToCStr(), static_cast<FileOpener*>(pLoadStates->GetBindStates()->pFileOpener.GetPtr()));
         Done = 1;
     }
-    bool IsDone() const { return Done == 1; }
+    bool IsDone() const
+    {
+        unsigned done = AtomicOps<unsigned>::Load_Acquire((const volatile unsigned*)&Done);
+        return done == 1;
+    }
 };
 
 class GFxAS2LoadCSSTask : public GFxAS2LoadFileTask<ASCSSFileLoader, URLBuilder::File_LoadCSS>

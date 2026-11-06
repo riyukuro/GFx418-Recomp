@@ -53,7 +53,6 @@ SF_FORCEINLINE Environment* LxCharEnv(InteractiveObject* pchar)
 } // namespace
 
 // The XML is handed to its object once the loader thread has read it; a canceled load just waits for its task.
-// MS2-FUNCTIONAL: register allocation differs.
 // @0x142967010
 bool GFxAS2LoadQueueEntryMT_LoadXML::LoadFinished()
 {

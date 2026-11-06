@@ -28,11 +28,10 @@ namespace {
 // MovieRoot::GetLevelMovie, inlined in the exe.
 SF_FORCEINLINE InteractiveObject* LqLevelMovie(const MovieRoot* proot, int level)
 {
-    MovieImpl* pmovie = proot->pMovieImpl;
-    for (unsigned i = 0; i < pmovie->MovieLevelsSize; i++)
+    for (unsigned i = 0; i < proot->pMovieImpl->MovieLevelsSize; i++)
     {
-        if (pmovie->pMovieLevels[i].Level == level)
-            return pmovie->pMovieLevels[i].pSprite;
+        if (proot->pMovieImpl->pMovieLevels[i].Level == level)
+            return proot->pMovieImpl->pMovieLevels[i].pSprite;
     }
     return 0;
 }
@@ -80,7 +79,6 @@ BitmapData* BitmapData::LoadBitmapA(Environment* penv, const String& linkageId)
 }
 
 // The style sheet is handed to its object once the loader thread has read it; a canceled load just waits for it.
-// MS2-FUNCTIONAL: register allocation differs (the Done load goes through edx).
 // @0x1429665a0
 bool GFxAS2LoadQueueEntryMT_LoadCSS::LoadFinished()
 {
@@ -145,7 +143,6 @@ bool LoadVarsProto::LoadVariables(Environment* penv, ObjectInterface* pobj, cons
 }
 
 // A style sheet load done on the movie thread: the loader reads the file, then fills its object.
-// MS2-FUNCTIONAL: register allocation differs in the inlined level search (the exe uses r8/r10/r11, ours rdx/r8/r10).
 // @0x142970450
 void MovieRoot::ProcessLoadCSS(GFx::LoadQueueEntry* pentry, LoadStates* pls)
 {
@@ -166,7 +163,6 @@ void MovieRoot::ProcessLoadCSS(GFx::LoadQueueEntry* pentry, LoadStates* pls)
 }
 
 // A loadVariables / LoadVars.load done on the movie thread. A LoadVars object that gets no text is dropped.
-// MS2-FUNCTIONAL: register allocation and scheduling differ (the file pointer is kept in rsi).
 // @0x142971360
 void MovieRoot::ProcessLoadVars(GFx::LoadQueueEntry* pentry, LoadStates* pls)
 {
@@ -179,7 +175,8 @@ void MovieRoot::ProcessLoadVars(GFx::LoadQueueEntry* pentry, LoadStates* pls)
         URLBuilder::LocationInfo loc(URLBuilder::File_LoadVars, pentry->URL, level0Path);
         String                   url;
         pls->BuildURL(&url, loc);
-        Ptr<File> pfile = *pls->OpenFile(url.ToCStr(), 0);
+        Ptr<File> pfile;
+        pfile = *pls->OpenFile(url.ToCStr(), 0);
         if (pfile)
         {
             GFxAS2LoadQueueEntry* pas2entry = static_cast<GFxAS2LoadQueueEntry*>(pentry);
