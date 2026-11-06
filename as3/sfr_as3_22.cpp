@@ -683,6 +683,8 @@ struct DICommand_Threshold
 struct DICommand_Merge
 {
     virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+    const Sfr22NoiseImage* pImage; const Sfr22NoiseImage* pSource; Rect<SInt32> SourceRect; Point<SInt32> DestPoint; UByte Pad30[0x10];
+    UInt32 RedMultiplier, GreenMultiplier, BlueMultiplier, AlphaMultiplier; // +0x40..+0x4c
 };
 struct DICommand_Scroll
 {
@@ -693,11 +695,16 @@ struct DICommand_Scroll
 struct DICommand_CopyChannel
 {
     virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+    const Sfr22NoiseImage* pImage; const Sfr22NoiseImage* pSource; Rect<SInt32> SourceRect; Point<SInt32> DestPoint; UByte Pad30[0x10];
+    int SourceChannel, DestChannel; // +0x40 / +0x44 (DrawableImage::ChannelBits)
 };
 struct DICommand_PaletteMap
 {
     virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
     virtual void ExecuteHWCopyAction(DICommandContext& context, Texture** tex, const Matrix2F* texgen) const;
+    static const unsigned ChannelSize = 256 * sizeof(UInt32);
+    const Sfr22NoiseImage* pImage; const Sfr22NoiseImage* pSource; Rect<SInt32> SourceRect; Point<SInt32> DestPoint; UByte Pad30[0x10];
+    UInt32* Channels; unsigned ChannelMask; // +0x40 / +0x48
 };
 struct DICommand_CopyPixels
 {
@@ -735,6 +742,8 @@ struct DICommand_Noise
     bool     GrayScale;          // +0x20
 };
 } }
+static __forceinline Scaleform::UByte Sfr22MapChannelIndex(int channel) { if (channel <= 8) return ChannelIndexMap[channel]; return 0xFF; } // SDK MapChannelIndex
+static __forceinline void Sfr22GetRGBA(const Scaleform::Render::Color& c, Scaleform::UByte* pr, Scaleform::UByte* pg, Scaleform::UByte* pb, Scaleform::UByte* pa) { c.GetRGB(pr, pg, pb); *pa = c.GetAlpha(); } // SDK Color::GetRGBA
 static __forceinline const Scaleform::Render::Rect<Scaleform::SInt32> Sfr22RectPlus(const Scaleform::Render::Rect<Scaleform::SInt32>& r, const Scaleform::Render::Point<Scaleform::SInt32>& pt) { return Scaleform::Render::Rect<Scaleform::SInt32>(r).Offset(pt); }
 // SDK DICommand_SourceRect::CalculateDestClippedRect (the exe inlines it into the ExecuteSW bodies; 0x142675bb0 is its out-of-line copy).
 template<class C> static __forceinline bool Sfr22CalcDestClippedRect(const C& c, const Scaleform::Render::ImageData& src, const Scaleform::Render::ImageData& dest, const Scaleform::Render::Rect<Scaleform::SInt32>& srcRect, Scaleform::Render::Rect<Scaleform::SInt32>& dstClippedRect, Scaleform::Render::Point<Scaleform::SInt32>& delta)
@@ -842,47 +851,40 @@ void Scaleform::Render::DICommand_Threshold::ExecuteSW(Scaleform::Render::DIComm
     }
 }
 
-// MS2-FUNCTIONAL: merge. Each RGBA channel is (dest * (256 - w) + source * w) >> 8 with the weights at +0x40..+0x4c
-// in red, green, blue, alpha order.
+// MS2-FUNCTIONAL: merge (the SDK body without the swizzler contexts); frame layout only: ours saves rsi at rsp+0x110, the exe at 0x118 (it never uses the rcx home slot).
 // @0x142676ef0
-void Scaleform::Render::DICommand_Merge::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& imageRef, Scaleform::Render::ImageData** inputsRef) const
+void Scaleform::Render::DICommand_Merge::ExecuteSW(Scaleform::Render::DICommandContext& context, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData** psrc) const
 {
-    void* operation = const_cast<Scaleform::Render::DICommand_Merge*>(this);
-    Scaleform::Render::ImageData* image = &imageRef;
-    void** inputs = reinterpret_cast<void**>(inputsRef);
-    using Scaleform::Render::ImageData;
-    using Scaleform::Render::ImagePlane;
-    auto* overlay = static_cast<ImageData*>(inputs[0]);
-    ImagePlane imagePlane, overlayPlane;
-    image->GetPlane(0, &imagePlane);
-    overlay->GetPlane(0, &overlayPlane);
-    const auto* op = static_cast<const unsigned char*>(operation);
-    BitmapCopySpan span;
-    if (!ClipBitmapCopy(op, overlayPlane, imagePlane, span)) return;
-    const int* weights = reinterpret_cast<const int*>(op + 0x40);
-    // RGBA channel index -> byte position in the BGRA pixel.
-    static const unsigned BytePos[4] = { 2, 1, 0, 3 };
-    for (int y = span.Y0; y < span.Y1; ++y) {
-        const long long srcRow = BitmapScanline(overlayPlane, y - span.OffY);
-        const long long dstRow = BitmapScanline(imagePlane, y);
-        for (int x = span.X0; x < span.X1; ++x) {
-            unsigned src = 0, dst = 0;
-            FUN_14257bf70(overlay, &src, srcRow, static_cast<unsigned>(x - span.OffX));
-            FUN_14257bf70(image, &dst, dstRow, static_cast<unsigned>(x));
-            auto* sc = reinterpret_cast<unsigned char*>(&src);
-            auto* dc = reinterpret_cast<unsigned char*>(&dst);
-            if (!BitmapHasAlpha(op, 0x10)) sc[3] = 0xff;
-            if (!BitmapHasAlpha(op, 8)) dc[3] = 0xff;
-            unsigned result = 0;
-            auto* rc = reinterpret_cast<unsigned char*>(&result);
-            for (unsigned c = 0; c < 4; ++c) {
-                const unsigned pos = BytePos[c];
-                const int w = weights[c];
-                rc[pos] = static_cast<unsigned char>(
-                    static_cast<unsigned>(dc[pos] * (256 - w) + sc[pos] * w) >> 8);
-            }
-            if (!BitmapHasAlpha(op, 8)) rc[3] = 0xff;
-            FUN_14257d390(image, dstRow, static_cast<unsigned>(x), result);
+    const ImageData& src = *psrc[0];
+    ImagePlane d, s; dest.GetPlane(0, &d); src.GetPlane(0, &s);
+    Point<SInt32> delta; Rect<SInt32> dstClippedRect;
+    if (!Sfr22CalcDestClippedRect(*this, src, dest, SourceRect, dstClippedRect, delta))
+        return;
+
+    SInt32 x, y, channel;
+    for (y = dstClippedRect.y1; y < dstClippedRect.y2; y++)
+    {
+        UByte* dline = dest.GetScanline(y);
+        const UByte* sline = s.GetScanline(y - delta.y);
+        for (x = dstClippedRect.x1; x < dstClippedRect.x2; x++)
+        {
+            Color sCol = src.GetPixelInScanline(sline, x - delta.x);
+            Color dCol = dest.GetPixelInScanline(dline, x);
+            UInt32 factors[4] = { RedMultiplier, GreenMultiplier, BlueMultiplier, AlphaMultiplier };
+            UInt32 sChan[4] = { sCol.GetRed(), sCol.GetGreen(), sCol.GetBlue(), sCol.GetAlpha() };
+            UInt32 dChan[4] = { dCol.GetRed(), dCol.GetGreen(), dCol.GetBlue(), dCol.GetAlpha() };
+            UByte bChan[4];
+
+            if (!pSource->IsTransparent())
+                sChan[3] = 255;
+            if (!pImage->IsTransparent())
+                dChan[3] = 255;
+            for (channel = 0; channel < 4; channel++)
+                bChan[channel] = (UByte)((sChan[channel] * factors[channel] + dChan[channel] * (256 - factors[channel])) >> 8);
+            if (!pImage->IsTransparent())
+                bChan[3] = 255;
+            Color blendedCol(bChan[0], bChan[1], bChan[2], bChan[3]);
+            dest.SetPixelInScanline(dline, x, blendedCol.ToColor32());
         }
     }
 }
@@ -929,82 +931,80 @@ void Scaleform::Render::DICommand_Scroll::ExecuteSW(Scaleform::Render::DICommand
     }
 }
 
-// MS2-FUNCTIONAL: copyChannel. The source and destination channels at +0x40/+0x44 go through the selector table to
-// RGBA indices; an unknown channel copies nothing.
+// MS2-FUNCTIONAL: copyChannel (the SDK body without the swizzler contexts); register allocation and callee-saved spill slots differ (the exe never uses the rcx home slot).
 // @0x142676380
-void Scaleform::Render::DICommand_CopyChannel::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& destinationRef, Scaleform::Render::ImageData** inputsRef) const
+void Scaleform::Render::DICommand_CopyChannel::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData** psrc) const
 {
-    void* operation = const_cast<Scaleform::Render::DICommand_CopyChannel*>(this);
-    Scaleform::Render::ImageData* destination = &destinationRef;
-    void** inputs = reinterpret_cast<void**>(inputsRef);
-    using Scaleform::Render::ImageData;
-    using Scaleform::Render::ImagePlane;
-    auto* source = static_cast<ImageData*>(inputs[0]);
-    ImagePlane dst, src;
-    destination->GetPlane(0, &dst);
-    source->GetPlane(0, &src);
-    const auto* op = static_cast<const unsigned char*>(operation);
-    BitmapCopySpan span;
-    if (!ClipBitmapCopy(op, src, dst, span)) return;
-    unsigned from = *reinterpret_cast<const unsigned*>(op + 0x40);
-    unsigned to = *reinterpret_cast<const unsigned*>(op + 0x44);
-    from = from < 9 ? ChannelIndexMap[from] : 0xff;
-    to = to < 9 ? ChannelIndexMap[to] : 0xff;
-    if (from >= 4 || to >= 4) return;
-    // RGBA channel index -> byte position in the BGRA pixel.
-    static const unsigned BytePos[4] = { 2, 1, 0, 3 };
-    for (int y = span.Y0; y < span.Y1; ++y) {
-        const long long srcRow = BitmapScanline(src, y - span.OffY);
-        const long long dstRow = BitmapScanline(dst, y);
-        for (int x = span.X0; x < span.X1; ++x) {
-            unsigned srcPixel = 0, dstPixel = 0;
-            FUN_14257bf70(destination, &dstPixel, dstRow, static_cast<unsigned>(x));
-            FUN_14257bf70(source, &srcPixel, srcRow, static_cast<unsigned>(x - span.OffX));
-            auto* sc = reinterpret_cast<unsigned char*>(&srcPixel);
-            auto* dc = reinterpret_cast<unsigned char*>(&dstPixel);
-            if (!BitmapHasAlpha(op, 0x10)) sc[3] = 0xff;
-            dc[BytePos[to]] = sc[BytePos[from]];
-            if (!BitmapHasAlpha(op, 8)) dc[3] = 0xff;
-            FUN_14257d390(destination, dstRow, static_cast<unsigned>(x), dstPixel);
+    const ImageData& src = *psrc[0];
+    ImagePlane d, s; dest.GetPlane(0, &d); src.GetPlane(0, &s);
+    Point<SInt32> delta; Rect<SInt32> dstClippedRect;
+    if (!Sfr22CalcDestClippedRect(*this, src, dest, SourceRect, dstClippedRect, delta))
+        return;
+
+    SInt32 x, y;
+    UByte sCI = Sfr22MapChannelIndex(SourceChannel);
+    UByte dCI = Sfr22MapChannelIndex(DestChannel);
+    if ((sCI == 0xFF) || (dCI == 0xFF))
+        return;
+    for (y = dstClippedRect.y1; y < dstClippedRect.y2; y++)
+    {
+        UByte* dline = d.GetScanline(y);
+        const UByte* sline = s.GetScanline(y - delta.y);
+        for (x = dstClippedRect.x1; x < dstClippedRect.x2; x++)
+        {
+            Color dCol = dest.GetPixelInScanline(dline, x);
+            Color sCol = src.GetPixelInScanline(sline, x - delta.x);
+            UByte dChannels[4] = { dCol.GetRed(), dCol.GetGreen(), dCol.GetBlue(), dCol.GetAlpha() };
+            UByte sChannels[4] = { sCol.GetRed(), sCol.GetGreen(), sCol.GetBlue(), sCol.GetAlpha() };
+            if (!pSource->IsTransparent())
+                sChannels[3] = 255;
+            dChannels[dCI] = sChannels[sCI];
+            if (!pImage->IsTransparent())
+                dChannels[3] = 255;
+            dCol.SetRGBA(dChannels[0], dChannels[1], dChannels[2], dChannels[3]);
+            dest.SetPixelInScanline(dline, x, dCol.ToColor32());
         }
     }
 }
 
-// MS2-FUNCTIONAL: paletteMap. The table at +0x40 is four 256-entry UInt32 arrays (red, green, blue, alpha); a
-// channel selected in the mask at +0x48 contributes its table entry, the others their own bits, and the four
-// contributions are summed.
+// MS2-FUNCTIONAL: paletteMap (the SDK body without the swizzler contexts); register allocation of the channel loop and scanline pointers differs.
 // @0x142677460
-void Scaleform::Render::DICommand_PaletteMap::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& destinationRef, Scaleform::Render::ImageData** inputsRef) const
+void Scaleform::Render::DICommand_PaletteMap::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData** psrc) const
 {
-    void* operation = const_cast<Scaleform::Render::DICommand_PaletteMap*>(this);
-    Scaleform::Render::ImageData* destination = &destinationRef;
-    void** inputs = reinterpret_cast<void**>(inputsRef);
-    using Scaleform::Render::ImageData;
-    using Scaleform::Render::ImagePlane;
-    auto* source = static_cast<ImageData*>(inputs[0]);
-    ImagePlane dst, src;
-    destination->GetPlane(0, &dst);
-    source->GetPlane(0, &src);
-    const auto* op = static_cast<const unsigned char*>(operation);
-    BitmapCopySpan span;
-    if (!ClipBitmapCopy(op, src, dst, span)) return;
-    const unsigned mask = *reinterpret_cast<const unsigned*>(op + 0x48);
-    const auto* lut = *reinterpret_cast<const unsigned* const*>(op + 0x40);
-    for (int y = span.Y0; y < span.Y1; ++y) {
-        const long long srcRow = BitmapScanline(src, y - span.OffY);
-        const long long dstRow = BitmapScanline(dst, y);
-        for (int x = span.X0; x < span.X1; ++x) {
-            unsigned pixel = 0;
-            FUN_14257bf70(source, &pixel, srcRow, static_cast<unsigned>(x - span.OffX));
-            auto* c = reinterpret_cast<unsigned char*>(&pixel);
-            if (!BitmapHasAlpha(op, 0x10)) c[3] = 0xff;
-            const unsigned red = mask & 1 ? lut[c[2]] : static_cast<unsigned>(c[2]) << 16;
-            const unsigned green = mask & 2 ? lut[0x100 + c[1]] : static_cast<unsigned>(c[1]) << 8;
-            const unsigned blue = mask & 4 ? lut[0x200 + c[0]] : c[0];
-            const unsigned alpha = mask & 8 ? lut[0x300 + c[3]] : static_cast<unsigned>(c[3]) << 24;
-            unsigned result = red + green + blue + alpha;
-            if (!BitmapHasAlpha(op, 8)) result |= 0xff000000u;
-            FUN_14257d390(destination, dstRow, static_cast<unsigned>(x), result);
+    const ImageData& src = *psrc[0];
+    ImagePlane d, s; dest.GetPlane(0, &d); src.GetPlane(0, &s);
+    Point<SInt32> delta; Rect<SInt32> dstClippedRect;
+    if (!Sfr22CalcDestClippedRect(*this, src, dest, SourceRect, dstClippedRect, delta))
+        return;
+
+    SInt32 x, y, channel;
+    for (y = dstClippedRect.y1; y < dstClippedRect.y2; y++)
+    {
+        UByte* dline = dest.GetScanline(y);
+        const UByte* sline = s.GetScanline(y - delta.y);
+        for (x = dstClippedRect.x1; x < dstClippedRect.x2; x++)
+        {
+            Color sCol = src.GetPixelInScanline(sline, x - delta.x);
+            if (!pSource->IsTransparent())
+                sCol.SetAlpha(255);
+            UByte rgba[4];
+            UInt32 outCols[4];
+            UInt32 total = 0;
+            Sfr22GetRGBA(sCol, rgba + 0, rgba + 1, rgba + 2, rgba + 3);
+            outCols[3] = rgba[3] << 24;
+            outCols[0] = rgba[0] << 16;
+            outCols[1] = rgba[1] << 8;
+            outCols[2] = rgba[2];
+            for (channel = 0; channel < 4; channel++)
+            {
+                if (ChannelMask & (1 << channel))
+                    outCols[channel] = Channels[channel*(ChannelSize/sizeof(UInt32)) + rgba[channel]];
+                total += outCols[channel];
+            }
+            if (!pImage->IsTransparent())
+                total |= (UInt32)255 << 24;
+            Color dCol(total);
+            dest.SetPixelInScanline(dline, x, dCol.ToColor32());
         }
     }
 }
