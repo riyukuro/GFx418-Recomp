@@ -3041,58 +3041,58 @@ namespace Instances { namespace fl_display
 #pragma strict_gs_check(push, on)
     // paletteMap(sourceBitmapData, sourceRect, destPoint, redArray, greenArray, blueArray, alphaArray): the channel
     // arrays are read into 256-entry tables; a missing or null array leaves its channel unmapped.
-    // MS2-FUNCTIONAL: stack layout (the exe frame is 0x10 larger and shares the argument and error slots); same code otherwise
+
     // @0x142450f00
     void BitmapData::paletteMap(Value& result, unsigned argc, const Value* argv)
     {
         SF_UNUSED(result);
+        Instances::fl::Array* colorArray[4];
         if (!pImage)
+            return GetVM().ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, GetVM(), "Invalid BitmapData"));
+        if (argc < 3)
+            return;
+        Instances::fl_display::BitmapData* sourceBitmapData = static_cast<Instances::fl_display::BitmapData*>(argv[0].GetObject());
+        Instances::fl_geom::Rectangle* sourceRect = static_cast<Instances::fl_geom::Rectangle*>(argv[1].GetObject());
+        Instances::fl_geom::Point* destPoint = static_cast<Instances::fl_geom::Point*>(argv[2].GetObject());
+        if (!sourceBitmapData)
+            return GetVM().ThrowArgumentError(VM::Error(VM::eNullPointerError, GetVM(), "sourceBitmapData"));
+        if (!sourceRect)
+            return GetVM().ThrowArgumentError(VM::Error(VM::eNullPointerError, GetVM(), "sourceRect"));
+        if (!destPoint)
+            return GetVM().ThrowArgumentError(VM::Error(VM::eNullPointerError, GetVM(), "destPoint"));
+        UInt32 channelStorage[4][256];
+        UInt32* channels[4];
+        for (unsigned arr = 0; arr < 4; ++arr)
         {
-            VM& vm = GetVM();
-            vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            if (arr >= argc - 3)
+            {
+                channels[arr] = 0;
+                continue;
+            }
+            colorArray[arr] = static_cast<Instances::fl::Array*>(argv[arr + 3].GetObject());
+            if (!colorArray[arr])
+            {
+                channels[arr] = 0;
+                continue;
+            }
+            channels[arr] = channelStorage[arr];
+            for (unsigned i = 0; i < 256; ++i)
+                colorArray[arr]->At(i).Convert2UInt32(channels[arr][i]);
         }
-        else if (argc >= 3)
-        {
-            Instances::fl_display::BitmapData* sourceBitmapData = static_cast<Instances::fl_display::BitmapData*>(argv[0].GetObject());
-            Instances::fl_geom::Rectangle* sourceRect = static_cast<Instances::fl_geom::Rectangle*>(argv[1].GetObject());
-            Instances::fl_geom::Point* destPoint = static_cast<Instances::fl_geom::Point*>(argv[2].GetObject());
-            if (!sourceBitmapData)
-            {
-                VM& vm = GetVM();
-                vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "sourceBitmapData"));
-            }
-            else if (!sourceRect)
-            {
-                VM& vm = GetVM();
-                vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "sourceRect"));
-            }
-            else if (!destPoint)
-            {
-                VM& vm = GetVM();
-                vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "destPoint"));
-            }
-            else
-            {
-                UInt32* channels[4];
-                UInt32 tables[4][256];
-                for (unsigned i = 0; i < 4; ++i)
-                {
-                    Instances::fl::Array* arr = (i < argc - 3) ? static_cast<Instances::fl::Array*>(argv[3 + i].GetObject()) : NULL;
-                    if (arr)
-                    {
-                        channels[i] = tables[i];
-                        for (UPInt j = 0; j < 256; ++j)
-                            arr->SA.At(j).Convert2UInt32(channels[i][j]);
-                    }
-                    else
-                        channels[i] = NULL;
-                }
-                Render::Point<SInt32> dp((SInt32)destPoint->x, (SInt32)destPoint->y);
-                Render::Rect<SInt32> rect((SInt32)sourceRect->x, (SInt32)sourceRect->y,
-                                          (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height));
-                reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr())->PaletteMap(Render::AsDrawableImage(sourceBitmapData->pImage), rect, dp, channels);
-            }
-        }
+        reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr())->PaletteMap(Render::AsDrawableImage(sourceBitmapData->pImage), Render::Rect<SInt32>((SInt32)sourceRect->x, (SInt32)sourceRect->y, (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height)), Render::Point<SInt32>((SInt32)destPoint->x, (SInt32)destPoint->y), channels);
+
+
+
+
+
+
+
+
+
+
+
+
+
     }
 #pragma strict_gs_check(pop)
 
