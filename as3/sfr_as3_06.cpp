@@ -2066,7 +2066,7 @@ namespace Instances { namespace fl_display
     }
 
     // @0x142441cd0
-    // MS2-FUNCTIONAL: written from the exe's control flow
+    // pMainMovieDef is a Ptr<MovieDefImpl> in the SDK; read through that view, as the exe schedules it.
     GFx::DisplayObject* Loader::CreateStageObject()
     {
         if (!pDispObj)
@@ -2076,7 +2076,7 @@ namespace Instances { namespace fl_display
             GFx::DisplayObject* pdisp;
             if (pmem)
             {
-                pdisp = new(pmem) AvmLoader(proot, proot->GetMovieImpl()->pMainMovieDef, NULL, ResourceId(ResourceId::InvalidId));
+                pdisp = new(pmem) AvmLoader(proot, reinterpret_cast<Ptr<MovieDefImpl>&>(proot->GetMovieImpl()->pMainMovieDef), NULL, ResourceId(ResourceId::InvalidId));
             }
             else
                 pdisp = NULL;
