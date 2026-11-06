@@ -48,15 +48,9 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 inline TextFormatObject::TextFormatObject(ASStringContext* psc, Object* pprototype)
     : Object(psc)
 {
-    ::new (Data68) Render::Text::TextFormat(psc->GetHeap());
-    ::new (Data68 + 9) Render::Text::ParagraphFormat();
+    ::new (mTextFormat.Data) Render::Text::TextFormat(psc->GetHeap());
+    ::new (mParagraphFormat.Data) Render::Text::ParagraphFormat();
     Set__proto__(psc, pprototype);
-}
-
-TextFormatObject::~TextFormatObject()
-{
-    GetParagraphFormat().~ParagraphFormat();
-    GetTextFormat().~TextFormat();
 }
 
 // @0x142923030
@@ -66,23 +60,14 @@ TextFormatProto::TextFormatProto(ASStringContext* psc, Object* pprototype, const
     InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
 }
 
-extern const void* DAT_14321d778[];
-extern const void* DAT_14321d7c0[];
-extern const void* DAT_14321d868[];
-
-// The deleting destructor with the chain inlined, a twin of DeleteAs2_14292d6a0 (sfr_as2_04c): the three vftables,
-// the prototype base, the paragraph and text formats, then Object; flag 4 is the sized delete.
+// The deleting destructor with the chain inlined, a twin of DeleteAs2_14292d6a0 (sfr_as2_04c): the Prototype
+// destructor (its vftables, the prototype base, then the object's implicit destructor: the paragraph and text
+// formats, then Object); flag 4 is the sized delete.
 // @0x142928860
 void* DeleteTextFormatProto(TextFormatProto* pthis, unsigned flags)
 {
     void* p = pthis;
-    *(const void**)p = DAT_14321d778;
-    *(const void**)((char*)p+0x20) = DAT_14321d7c0;
-    *(const void**)((char*)p+0xd0) = DAT_14321d868;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0xd0)->GASPrototypeBase::~GASPrototypeBase();
-    reinterpret_cast<Render::Text::ParagraphFormat*>((char*)p+0xb0)->Render::Text::ParagraphFormat::~ParagraphFormat();
-    ::FUN_1424aa0f0((void*)((char*)p+0x68));
-    static_cast<Object*>(pthis)->Object::~Object();
+    static_cast<Prototype<TextFormatObject, Environment>*>(pthis)->Prototype<TextFormatObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))

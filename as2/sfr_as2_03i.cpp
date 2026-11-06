@@ -25,8 +25,8 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 TextFormatObject::TextFormatObject(Environment* penv) : Object(penv)
 {
     ASStringContext* psc = penv->GetSC();
-    ::new (Data68) Render::Text::TextFormat(psc->GetHeap());
-    ::new (Data68 + 9) Render::Text::ParagraphFormat();
+    ::new (mTextFormat.Data) Render::Text::TextFormat(psc->GetHeap());
+    ::new (mParagraphFormat.Data) Render::Text::ParagraphFormat();
     Set__proto__(psc, psc->pContext->GetPrototype(ASBuiltin_TextFormat));
     ObjectInterface* pobj = this;
     {

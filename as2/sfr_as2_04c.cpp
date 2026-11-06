@@ -161,9 +161,6 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 extern const void* DAT_1432173f8[];
 extern const void* DAT_143217440[];
 extern const void* DAT_1432174e8[];
-extern const void* DAT_14321d778[];
-extern const void* DAT_14321d7c0[];
-extern const void* DAT_14321d868[];
 
 // ~TextSnapshotObject (out of line at 0x142925f70, sfr_as2_03; `inline` there under cl) inlines into the deleting dtors.
 // It is protected: a derived view runs it.
@@ -777,9 +774,7 @@ void* DeleteAs2_14292d5b0(void* p, unsigned flags)
 // @0x14292d620
 void* DeleteAs2_14292d620(void* p, unsigned flags)
 {
-    reinterpret_cast<Render::Text::ParagraphFormat*>((char*)p+0xb0)->Render::Text::ParagraphFormat::~ParagraphFormat();
-    ::FUN_1424aa0f0((void*)((char*)p+0x68));
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<TextFormatObject*>(p)->TextFormatObject::~TextFormatObject();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -793,13 +788,7 @@ void* DeleteAs2_14292d620(void* p, unsigned flags)
 // @0x14292d6a0
 void* DeleteAs2_14292d6a0(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_14321d778;
-    *(const void**)((char*)p+0x20) = DAT_14321d7c0;
-    *(const void**)((char*)p+0xd0) = DAT_14321d868;
-    reinterpret_cast<GASPrototypeBase*>((char*)p+0xd0)->GASPrototypeBase::~GASPrototypeBase();
-    reinterpret_cast<Render::Text::ParagraphFormat*>((char*)p+0xb0)->Render::Text::ParagraphFormat::~ParagraphFormat();
-    ::FUN_1424aa0f0((void*)((char*)p+0x68));
-    static_cast<Object*>(p)->Object::~Object();
+    static_cast<Prototype<TextFormatObject, Environment>*>(p)->Prototype<TextFormatObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -902,3 +891,6 @@ void* DeleteAs2_14292d9b0(void* p, unsigned flags)
 // MS2-PIN: ??_7?$Prototype@VTextSnapshotObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321e3b8
 // MS2-PIN: ??_7?$Prototype@VTextSnapshotObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321e4a8
 // MS2-PIN: ??_7?$Prototype@VTextSnapshotObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321e400
+// MS2-PIN: ??_7?$Prototype@VTextFormatObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321d778
+// MS2-PIN: ??_7?$Prototype@VTextFormatObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321d7c0
+// MS2-PIN: ??_7?$Prototype@VTextFormatObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321d868

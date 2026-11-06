@@ -733,6 +733,23 @@ public:
     ArrayObject* pArray; // +0x70
 };
 
+// The out-of-line destructors the exe calls (text_core.h's ~TextFormat is an empty inline; ~ParagraphFormat is
+// FreeTabStops, folded with it).
+void TextFormat_Destruct(Render::Text::TextFormat* p);           // exe 0x1424aa0f0 (~TextFormat)
+void ParagraphFormat_Destruct(Render::Text::ParagraphFormat* p); // exe 0x142606690 (~ParagraphFormat)
+
+// The storage of TextFormatObject's formats, destroyed by those.
+struct TextFormatMember
+{
+    void* Data[9];
+    ~TextFormatMember() { TextFormat_Destruct((Render::Text::TextFormat*)Data); }
+};
+struct ParagraphFormatMember
+{
+    void* Data[4];
+    ~ParagraphFormatMember() { ParagraphFormat_Destruct((Render::Text::ParagraphFormat*)Data); }
+};
+
 // 0x98 bytes.
 class StyleSheetObject : public Object
 {
@@ -786,23 +803,23 @@ public:
     static void Transform(const FnCall& fn);     // exe 0x1428fa620
 };
 
-// 0xd0 bytes.
+// 0xd0 bytes. The destructor is implicit (exe 0x14292d620, the deleting one, stores no vftables).
 class TextFormatObject : public Object
 {
 public:
     TextFormatObject(Environment* penv); // exe 0x1429226d0
     // The prototype instance: empty formats (exe 0x142923030 builds it inline in TextFormatProto's ctor).
     TextFormatObject(ASStringContext* psc, Object* pprototype);
-    virtual ~TextFormatObject();
     virtual ObjectType GetObjectType() const; // exe 0x142954350: Object_TextFormat
     // The AS properties write through to the format (exe 0x142987710).
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
                            const PropFlags& flags = PropFlags());
 
-    void* Data68[13]; // +0x68 Render::Text::TextFormat (0x48 bytes), +0xb0 Render::Text::ParagraphFormat (0x20 bytes)
+    TextFormatMember      mTextFormat;      // +0x68 Render::Text::TextFormat
+    ParagraphFormatMember mParagraphFormat; // +0xb0 Render::Text::ParagraphFormat
 
-    Render::Text::TextFormat&      GetTextFormat()      { return *(Render::Text::TextFormat*)Data68; }
-    Render::Text::ParagraphFormat& GetParagraphFormat() { return *(Render::Text::ParagraphFormat*)(Data68 + 9); }
+    Render::Text::TextFormat&      GetTextFormat()      { return *(Render::Text::TextFormat*)mTextFormat.Data; }
+    Render::Text::ParagraphFormat& GetParagraphFormat() { return *(Render::Text::ParagraphFormat*)mParagraphFormat.Data; }
 
     // (appended for sfr_as2_02) the AS properties from a format.
     void SetTextFormat(ASStringContext* psc, const Render::Text::TextFormat& textFmt);           // exe 0x14298c090
