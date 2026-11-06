@@ -38,6 +38,13 @@ static_assert(offsetof(ExecContextView, LogF) == 0x40, "logger");
 static_assert(offsetof(ExecContextView, Version) == 0x60, "version");
 static_assert(offsetof(ExecContextView, Flags) == 0x62, "flags");
 
+// Environment::Top() / Top1(), inlined: the stack top and the slot below it.
+SF_FORCEINLINE Value& LzTop0(Environment* penv) { return *penv->Stack.pCurrent; }
+SF_FORCEINLINE Value& LzTop1(Environment* penv)
+{
+    return *((penv->Stack.pCurrent > penv->Stack.pPageStart) ? (penv->Stack.pCurrent - 1) : penv->Stack.pPrevPageTop);
+}
+
 // Pixels to twips.
 const float PixelsToTwips = 20.0f;
 } // namespace
@@ -94,36 +101,35 @@ void FUN_14298bb90(void* pctx)
 }
 
 // Stack: target, lockCenter, constrain [, x1, y1, x2, y2 when constrained]. The bounds are in pixels.
-// MS2-FUNCTIONAL: the exe reads the stack slots and stores the drag state through inlined copies
+// MS2-FUNCTIONAL: LTCG store-merge/regalloc: the exe zeroes the DragState points with three qword stores (ours one movups), orders the pEnv load in the error path differently and has no loop-alignment nop before the Drop(4) loop
 // @0x14298fea0
 void FUN_14298fea0(void* pctx)
 {
     ExecContextView&     ctx  = *static_cast<ExecContextView*>(pctx);
-    Environment*         penv = ctx.pEnv;
     MovieImpl::DragState st;
 
-    bool lockCenter = penv->Top(1).ToBool(penv);
-    st.pCharacter   = penv->FindTargetByValue(penv->Top(0));
+    bool lockCenter = LzTop1(ctx.pEnv).ToBool(ctx.pEnv);
+    st.pCharacter   = ctx.pEnv->FindTargetByValue(LzTop0(ctx.pEnv));
     if (!st.pCharacter && ctx.IsVerboseActionErrors())
-        ctx.LogF.LogScriptError("StartDrag of invalid target '%s'.", penv->Top(0).ToStringImpl(penv, -1, true).ToCStr());
+        ctx.LogF.LogScriptError("StartDrag of invalid target '%s'.", LzTop0(ctx.pEnv).ToStringImpl(ctx.pEnv, -1, true).ToCStr());
 
-    st.Bound = penv->Top(2).ToBool(penv);
+    st.Bound = ctx.pEnv->Top(2).ToBool(ctx.pEnv);
     if (st.Bound)
     {
-        st.BoundLT.x = (float)penv->Top(6).ToNumber(penv) * PixelsToTwips;
-        st.BoundLT.y = (float)penv->Top(5).ToNumber(penv) * PixelsToTwips;
-        st.BoundRB.x = (float)penv->Top(4).ToNumber(penv) * PixelsToTwips;
-        st.BoundRB.y = (float)penv->Top(3).ToNumber(penv) * PixelsToTwips;
-        penv->Drop(4);
+        st.BoundLT.x = (float)ctx.pEnv->Top(6).ToNumber(ctx.pEnv) * PixelsToTwips;
+        st.BoundLT.y = (float)ctx.pEnv->Top(5).ToNumber(ctx.pEnv) * PixelsToTwips;
+        st.BoundRB.x = (float)ctx.pEnv->Top(4).ToNumber(ctx.pEnv) * PixelsToTwips;
+        st.BoundRB.y = (float)ctx.pEnv->Top(3).ToNumber(ctx.pEnv) * PixelsToTwips;
+        ctx.pEnv->Drop(4);
     }
 
     if (st.pCharacter)
     {
         st.InitCenterDelta(lockCenter);
-        if (MovieImpl* pmovie = penv->GetTarget()->GetMovieImpl())
+        if (MovieImpl* pmovie = ctx.pEnv->GetTarget()->GetMovieImpl())
             pmovie->SetDragState(st);
     }
-    penv->Drop(3);
+    ctx.pEnv->Stack.Pop3();
 }
 
 }}} // namespace Scaleform::GFx::AS2
