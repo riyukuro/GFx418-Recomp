@@ -18,7 +18,7 @@
 #include "../include/gfx/gfx_displayobject.h"
 #include "../include/gfx/gfx_asstring.h"
 #include "../include/gfx/gfx_playertasks.h"
-
+#include "../include/gfx/as2/as2_loadqueueentry.h"
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 void FUN_142939780(void*);
@@ -73,8 +73,8 @@ struct Sfr_RcgcDtor : RefCountBaseGC<323>
     static void Destroy(void* p) { static_cast<Sfr_RcgcDtor*>(p)->RefCountBaseGC<323>::~RefCountBaseGC(); }
 };
 extern const void* DAT_143215ab0[];
-extern const void* DAT_1432177b0[]; // GFxAS2LoadQueueEntryMT_LoadCSS
-extern const void* DAT_143217780[]; // GFxAS2LoadQueueEntryMT_LoadXML
+// MS2-PIN: ??_7GFxAS2LoadQueueEntryMT_LoadCSS@AS2@GFx@Scaleform@@6B@ 0x1432177b0
+// MS2-PIN: ??_7GFxAS2LoadQueueEntryMT_LoadXML@AS2@GFx@Scaleform@@6B@ 0x143217780
 
 
 // @0x142927640
@@ -119,24 +119,24 @@ void* DeleteAs2_142928fb0(void* p, unsigned flags)
     return p;
 }
 
-// GFxAS2LoadQueueEntryMT_LoadCSS::~GFxAS2LoadQueueEntryMT_LoadCSS: pLoadStates, pTask, then ~LoadQueueEntryMT.
+// GFxAS2LoadQueueEntryMT_LoadCSS::~GFxAS2LoadQueueEntryMT_LoadCSS: pLoadStates, pTask, then ~LoadQueueEntryMT. Defining it emits the class vftable.
 // @0x142925850
-void DtorAs2_142925850(void* p)
+GFxAS2LoadQueueEntryMT_LoadCSS::~GFxAS2LoadQueueEntryMT_LoadCSS()
 {
-    *(const void**)p = DAT_1432177b0;
-    if (*(void**)((char*)p+0x30)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x30))->Release();
-    if (*(void**)((char*)p+0x28)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x28))->Release();
-    static_cast<LoadQueueEntryMT*>((void*)(p))->LoadQueueEntryMT::~LoadQueueEntryMT();
 }
+//
+//
+//
+//
 
-// GFxAS2LoadQueueEntryMT_LoadXML::~GFxAS2LoadQueueEntryMT_LoadXML: pLoadStates, pTask, then ~LoadQueueEntryMT.
+// GFxAS2LoadQueueEntryMT_LoadXML::~GFxAS2LoadQueueEntryMT_LoadXML: pLoadStates, pTask, then ~LoadQueueEntryMT. Defining it emits the class vftable.
 // @0x1429258e0
-void DtorAs2_1429258e0(void* p)
+GFxAS2LoadQueueEntryMT_LoadXML::~GFxAS2LoadQueueEntryMT_LoadXML()
 {
-    *(const void**)p = DAT_143217780;
-    if (*(void**)((char*)p+0x30)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x30))->Release();
-    if (*(void**)((char*)p+0x28)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x28))->Release();
-    static_cast<LoadQueueEntryMT*>((void*)(p))->LoadQueueEntryMT::~LoadQueueEntryMT();
 }
+//
+//
+//
+//
 
 }}} // namespace
