@@ -2940,3 +2940,9 @@ void* FUN_140039ea8(void* work, CriSint32 size);
 extern "C" void* FUN_140039ea8(void* work, int size);
 void* FUN_1400385c8(void* work, CriUint32 size);
 extern "C" void* FUN_1400385c8(void* work, unsigned long long size);
+// The FUN_140045910/FUN_140045ed0 callers above (and sfr_cri_03a's) keep the external call form: a call to the
+// same-TU definition changes their register allocation. The names bind to the definitions here.
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:?FUN_140045910@@YAJPEBJ@Z=?criSjUni_CalculateWorkSize@@YAJPEBJ@Z")
+#pragma comment(linker, "/alternatename:?FUN_140045ed0@@YAJPEBJ@Z=?criSjRbf_CalculateWorkSize@@YAJPEBJ@Z")
+#endif
