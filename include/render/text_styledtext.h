@@ -10,6 +10,11 @@
 #include "ms2/scaleform/kernel/sf_wstring.h"
 #include "ms2/scaleform/include/render/text_core.h"
 
+// A unit whose exe inlines ~Paragraph into its callers defines this as __forceinline before the include.
+#ifndef MS2_SF_PARAGRAPH_DTOR_INLINE
+#define MS2_SF_PARAGRAPH_DTOR_INLINE inline
+#endif
+
 namespace Scaleform { namespace Render { namespace Text {
 
 // A CSS style: a text format and a paragraph format.
@@ -180,7 +185,7 @@ private:
 public:
     Paragraph(Allocator* ptextAllocator);
     Paragraph(const Paragraph& o, Allocator* ptextAllocator);
-    ~Paragraph() {}
+    MS2_SF_PARAGRAPH_DTOR_INLINE ~Paragraph() {}
 
     FormatRunIterator GetIterator() const;
     FormatRunIterator GetIteratorAt(UPInt index) const;

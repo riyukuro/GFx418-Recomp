@@ -23,6 +23,8 @@
 // MS2-PIN: ??_GCompositionString@Text@GFx@Scaleform@@UEAAPEAXI@Z 0x142616320
 // MS2-PIN: ?Reset@?$AutoPtr@URestrictParams@EditorKit@Text@GFx@Scaleform@@@Scaleform@@QEAAXPEAURestrictParams@EditorKit@Text@GFx@2@_N@Z 0x142619740
 
+// The exe inlines ~Paragraph into ~CompositionString.
+#define MS2_SF_PARAGRAPH_DTOR_INLINE __forceinline
 #include "ms2/scaleform/include/gfx/text_editorkit.h"
 #include "../include/kernel/sf_std.h"
 #include "../include/kernel/sf_timer.h"
@@ -1309,8 +1311,6 @@ CompositionString::CompositionString(EditorKit* const peditorKit)
     Styles = GetDefaultStyles();
 }
 
-// MS2-FUNCTIONAL the exe inlines ~Paragraph for the String member; the shared render header keeps it out of line
-// MS2-FUNCTIONAL ??_GCompositionString@Text@GFx@Scaleform@@UEAAPEAXI@Z: inlines ~CompositionString, see there (~Paragraph stays a call)
 // @0x1426160f0
 CompositionString::~CompositionString()
 {
