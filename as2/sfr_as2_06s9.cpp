@@ -86,12 +86,46 @@ SF_FORCEINLINE void AddBuiltinClassRegistry(GlobalContext* pgc, ASStringContext*
 
 } // namespace
 
-// MS2-FUNCTIONAL: the exe inlines the ObjectProto ctor
+// ASStringContext::GetGC through GlobalContext::GetGC, both inlined: the movie's collector, 0 without one.
+static __forceinline ASRefCountCollector* GcG(GlobalContext* p)
+{
+    return p->pMovieRoot ? ((MovieRoot*)p->pMovieRoot->pASMovieRoot)->GetASGC() : 0;
+}
+static __forceinline ASRefCountCollector* GcN(ASStringContext* psc)
+{
+    return psc->pContext ? GcG(psc->pContext) : 0;
+}
+// The exe inlines the ObjectProto ctor in Register, down to the Object base and its Set__proto__.
+__forceinline Object::Object(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
+    : ASRefCountBase<Object>(GcN(psc)), pWatchpoints(0), ArePropertiesSet(false), IsListenerSet(false)
+{
+    // Object::Set__proto__ (0x140007ba0), inlined.
+    if (!pProto)
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(
+            psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
+            Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+    pProto = pprototype;
+}
+
+__forceinline ObjectProto::ObjectProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor,
+                                       ObjectInlineCtorTag)
+    : Prototype<Object>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
 // @0x142975c20
 FunctionRef CapabilitiesCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClass<CapabilitiesCtorFunction, ObjectProto>(pgc, ASBuiltin_Capabilities, ASBuiltin_Object,
-                                                                       pgc->SystemPackage);
+    ASStringContext sc(pgc, 8);
+    FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) CapabilitiesCtorFunction(&sc));
+    Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap)
+        ObjectProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor, ObjectInlineCtorTag());
+    SetBuiltinPrototype(pgc, ASBuiltin_Capabilities, proto);
+    pgc->SystemPackage->SetMemberRaw(
+        &sc, ((MovieRoot*)pgc->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin_Capabilities),
+        Value(ctor));
+    return ctor;
 }
 
 // MS2-FUNCTIONAL: the exe inlines the StageProto ctor
@@ -143,3 +177,16 @@ FunctionRef TextFormatCtorFunction::Register(GlobalContext* pgc)
 }
 
 }}} // namespace Scaleform::GFx::AS2
+
+// MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS2@GFx@Scaleform@@6B@ 0x143215370
+// MS2-PIN: ??_7ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215410
+// MS2-PIN: ??_7?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@AS2@GFx@Scaleform@@6B@ 0x1432154b8
+// MS2-PIN: ??_7Object@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432154d0
+// MS2-PIN: ??_7Object@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215518
+// MS2-PIN: ??_7GASPrototypeBase@AS2@GFx@Scaleform@@6B@ 0x1431b5028
+// MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143215f60
+// MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215fa8
+// MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143216050
+// MS2-PIN: ??_7ObjectProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216058
+// MS2-PIN: ??_7ObjectProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432160a0
+// MS2-PIN: ??_7ObjectProto@AS2@GFx@Scaleform@@6B@ 0x143216148

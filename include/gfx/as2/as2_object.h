@@ -293,6 +293,7 @@ public:
     Object(Environment* penv); // exe 0x14291f810
     Object(ASStringContext* psc); // exe 0x14291f6f0 (appended for sfr_video_01)
     Object(ASStringContext* psc, Object* pprototype); // exe 0x14291f790
+    Object(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06s9
     virtual ~Object();
     virtual const char* GetTextValue(Environment* penv = 0) const; // exe 0x140007dc0
     virtual bool FindMember(ASStringContext* psc, const ASString& name, Member* pmember); // exe 0x142944950

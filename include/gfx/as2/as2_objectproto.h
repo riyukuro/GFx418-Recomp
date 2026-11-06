@@ -98,6 +98,12 @@ public:
     virtual ~Prototype() {}
     // (appended, C3) the first ctor as the exe inlines it (sfr_video_01 FUN_14000e1e0).
     struct InlineCtorTag {}; __forceinline Prototype(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, InlineCtorTag) : BaseClass(psc, pprototype) { Init(this, psc, constructor); }
+    // (appended) the first ctor with the base ctor inlined too (sfr_as2_06s9 Register functions).
+    __forceinline Prototype(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+        : BaseClass(psc, pprototype, ObjectInlineCtorTag())
+    {
+        Init(this, psc, constructor);
+    }
 
     // constructor and __constructor__ come from the prototype part (defined in sfr_as2_05).
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
@@ -223,6 +229,7 @@ public:
     ObjectProto(ASStringContext* psc, Object* pprototype);                                // exe 0x14291fa90
     ObjectProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291fb00
     ObjectProto(ASStringContext* psc, const FunctionRef& constructor);                    // exe 0x14291f9a0
+    ObjectProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06s9
     static const NameFunction FunctionTable[];
 
     static void AddProperty(const FnCall& fn);
