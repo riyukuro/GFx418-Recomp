@@ -698,6 +698,11 @@ struct HashNode
 
     HashNode(const HashNode& src) : First(src.First), Second(src.Second) {}
     HashNode(const NodeRef& src) : First(*src.pFirst), Second(*src.pSecond) {}
+#ifdef MS2_SF_HASHNODE_DTOR
+    // Declared in a unit whose exe calls one node dtor out of line (that unit specializes it SF_NOINLINE).
+    // Members are destroyed as by the implicit dtor.
+    ~HashNode() {}
+#endif
     void operator=(const NodeRef& src)
     {
         First  = *src.pFirst;

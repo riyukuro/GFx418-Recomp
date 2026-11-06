@@ -187,6 +187,8 @@
 // MS2-RANGE: 0x142929140-0x1429291b0 .text$mn
 // MS2-RANGE: 0x1429291b0-0x142929210 .text$mn
 
+// The node dtor is declared, so the FunctionRef node one can be kept out of line below.
+#define MS2_SF_HASHNODE_DTOR
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
@@ -212,6 +214,9 @@ template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Object::Watchpoi
 // The constant pool's string array dtor (exe 0x14256a8e0): ~ActionBuffer calls it out of line.
 template<> Scaleform::ArrayDataBase<Scaleform::GFx::ASString, Scaleform::AllocatorLH<Scaleform::GFx::ASString, 323>,
     Scaleform::ArrayDefaultPolicy>::~ArrayDataBase();
+// ~HashNode<ASString, FunctionRef> (exe 0x142924490): the FunctionRef set's dtor calls it out of line.
+template<> inline SF_NOINLINE Scaleform::HashNode<Scaleform::GFx::ASString, Scaleform::GFx::AS2::FunctionRef,
+    Scaleform::GFx::ASStringHashFunctor>::~HashNode() {}
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -1476,7 +1481,7 @@ template decltype(HashLH<GFx::ASString, GFx::AS2::MovieRoot::InvokeAliasInfo, GF
                          HashsetNodeEntry<MS2_AS2InvokeAliasNode, MS2_AS2InvokeAliasNode::NodeHashF> >::mHash)::
     BaseType::~HashSetBase();
 typedef HashNode<GFx::ASString, GFx::AS2::FunctionRef, GFx::ASStringHashFunctor> MS2_AS2FunctionRefNode;
-// MS2-FUNCTIONAL the exe calls the node dtor out of line (0x142924490)
+// The node dtor is called out of line (~HashNode<ASString, FunctionRef> is SF_NOINLINE above, as in the exe).
 // @0x142924770
 template decltype(HashLH<GFx::ASString, GFx::AS2::FunctionRef, GFx::ASStringHashFunctor, GFx::StatMV_ASString_Mem,
                          MS2_AS2FunctionRefNode,

@@ -59,6 +59,8 @@
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
+// The node dtor is declared, so the FunctionRef node one can be kept out of line below.
+#define MS2_SF_HASHNODE_DTOR
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_bitmapfilter.h"
@@ -90,6 +92,8 @@ template<> SF_NOINLINE void ArrayData<GFx::AS2::Object*, AllocatorGH<GFx::AS2::O
     GFx::AS2::Object* const& val);
 // The event handler hash's Clear calls the Value array destructor out of line (0x142924420, sfr_as2_03).
 template<> ArrayDataBase<GFx::AS2::Value, AllocatorLH<GFx::AS2::Value, 323>, ArrayDefaultPolicy>::~ArrayDataBase();
+// The FunctionRef set's Clear calls the node dtor out of line (0x142924490, sfr_as2_03).
+template<> inline SF_NOINLINE HashNode<GFx::ASString, GFx::AS2::FunctionRef, GFx::ASStringHashFunctor>::~HashNode() {}
 }
 
 namespace Scaleform { namespace GFx {
@@ -1653,7 +1657,7 @@ template void decltype(StringHashLH<GFx::AS2::MovieClipLoader::ProgressDesc>::mH
 // Clearing (destroys every entry and frees the table).
 template void MS2_AS2_STRING_SET(char, HashsetNodeEntry)::Clear();
 // @0x1429340f0
-// MS2-FUNCTIONAL cl inlines the node destructor that the exe calls out of line (~HashNode<ASString, FunctionRef>, 0x142924490)
+// The node dtor is called out of line (~HashNode<ASString, FunctionRef> is SF_NOINLINE above, as in the exe).
 template void MS2_AS2_STRING_SET(GFx::AS2::FunctionRef, HashsetNodeEntry)::Clear();
 template void MS2_AS2_STRING_SET(GFx::AS2::Member, GFx::HashsetNodeEntry_GC)::Clear();
 // @0x142934220
