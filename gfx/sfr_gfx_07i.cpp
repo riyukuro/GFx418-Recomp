@@ -436,40 +436,42 @@ void FUN_142621820(char* self, char* snap)
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
 
-// Copies the marker table into the snapshot as {name, count} objects.
+// ViewStats::CollectMarkers(snap): each marker becomes a value-initialised MarkerInfo {name, count} pushed onto
+// snap->Markers (the PushBack and its ResizeNoConstruct inlined). Its vftable (folded with the RefCountBase<MarkerInfo,
+// 0x242> one) is DAT_14318f048.
+// MS2-FUNCTIONAL: same code; the exe keeps snap in rbp and the array in r15 (ours folds the array into rbp), 2 bytes long.
+// MS2-PIN: ??_7MarkerInfo@MovieProfile@AMP@GFx@Scaleform@@6B@ 0x14318f048
+// MS2-PIN: ??_7?$RefCountBase@UMarkerInfo@MovieProfile@AMP@GFx@Scaleform@@$0CEC@@Scaleform@@6B@ 0x14318f048
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0CEC@@Scaleform@@6B@ 0x14318f020
 // @0x142621c80
 void FUN_142621c80(char* self, char* snap)
 {
-    EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    U* table = RawField<U*>(self, 0x168);
-    if (table)
+    RawLocker lock(self + 0xe0);
+    for (RawSetIterator<0x20> it = RawSetIterator<0x20>::Begin(RawFieldPtr<U*>(self, 0x168)); !it.IsEnd(); ++it)
     {
-        for (U i = 0; i <= table[1]; i++)
+        AMP::MovieProfile::MarkerInfo* info = SF_HEAP_AUTO_NEW(snap) AMP::MovieProfile::MarkerInfo();
+        info->Name = RawField<String>(it.Entry(), 0x10);
+        info->Number = RawField<UInt32>(it.Entry(), 0x18);
+        U* array = RawFieldPtr<U>(snap, 0x40);
+        U oldSize = array[1];
+        U newSize = oldSize + 1;
+        if (newSize < oldSize)
         {
-            char* e = RawEntry(table, i, 0x20);
-            if (*(SPInt*)e == -2)
-                continue;
-            char* obj = (char*)Memory::AllocAutoHeap(snap, 0x20, AllocInfo(0x242, 0, 0));
-            if (obj)
-            {
-                memset(obj + 8, 0, 0x18);
-                *(int*)(obj + 8) = 1;
-                *(void**)obj = DAT_14318f048;
-                new (obj + 0x10) StringLH();
-            }
-            RawField<String>(obj, 0x10) = RawField<String>(e, 0x10);
-            RawField<int>(obj, 0x18) = RawField<int>(e, 0x18);
-            U* array = RawFieldPtr<U>(snap, 0x40);
-            U count = array[1] + 1;
-            if (array[2] <= count)
-                FUN_142623da0(array, array, count + (count >> 2));
-            array[1] = count;
-            FUN_14257dc30(obj);
-            ((void**)array[0])[count - 1] = obj;
-            FUN_14257dcb0(obj);
+            void** p = (void**)array[0] + oldSize - 1;
+            for (U n = oldSize - newSize; n; --n, --p)
+                if (*p)
+                    FUN_14257dcb0(*p);
+            if (newSize < (array[2] >> 1))
+                FUN_142623da0(array, array, newSize);
         }
+        else if (newSize >= array[2])
+            FUN_142623da0(array, array, newSize + (newSize >> 2));
+        array[1] = newSize;
+        void** slot = (void**)array[0] + newSize - 1;
+        FUN_14257dc30(info);
+        *slot = info;
+        FUN_14257dcb0(info);
     }
-    LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
 
 // FuncTreeItem: RefCountBase header, FunctionId, BeginTime, EndTime, TreeItemId, ArrayLH<Ptr<FuncTreeItem>> Children.
