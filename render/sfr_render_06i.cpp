@@ -18,10 +18,6 @@
 
 #include <math.h>
 
-// the round caps/joins call the CRT atan2f import thunk (0x14280f28e); the symbol table's "atan2f" is another TU's
-// cmath float wrapper (0x140a4e660), so the thunk is reached under its own name (as in sfr_render_05d). noalias
-// keeps the optimiser's view of it the same as of the library atan2f
-extern "C" __declspec(noalias) float __cdecl sfr_atan2f_thunk(float y, float x);
 
 namespace Scaleform { namespace Render {
 
@@ -787,7 +783,7 @@ void StrokerAA::calcRoundCap(const StrokeVertex& v0, const StrokeVertex& v1, Coo
     CoordType dxTotalR = dx * totalWidthR;
     CoordType dyTotalR = dy * totalWidthR;
 
-    CoordType a1 = sfr_atan2f_thunk(-dyTotalL, -dxTotalL);
+    CoordType a1 = atan2f(-dyTotalL, -dxTotalL);
     CoordType a2 = a1 + Math2D::Pi;
     CoordType da = acosf(w.totalWidth / (w.totalWidth + 0.25f * Tolerance)) * 2;
     int       i;
@@ -855,7 +851,6 @@ void StrokerAA::calcRoundCap(const StrokeVertex& v0, const StrokeVertex& v1, Coo
 
 // a round join: the inner side as a miter, the outer side as an arc around v1 (a plain miter when the arc would be
 // shorter than the tolerance)
-// MS2-FUNCTIONAL: operand-load vs sign-mask-load order before the first atan2f differs (the renamed CRT thunk extern changes scheduling)
 // @0x1426b1630
 void StrokerAA::calcRoundJoin(const StrokeVertex& v1, const WidthsType& w, const JoinParamType& p)
 {
@@ -911,8 +906,8 @@ void StrokerAA::calcRoundJoin(const StrokeVertex& v1, const WidthsType& w, const
         }
 
         // the arc on the left, clockwise
-        a1 = sfr_atan2f_thunk(-p.dy1TotalL, -p.dx1TotalL);
-        a2 = sfr_atan2f_thunk(-p.dy2TotalL, -p.dx2TotalL);
+        a1 = atan2f(-p.dy1TotalL, -p.dx1TotalL);
+        a2 = atan2f(-p.dy2TotalL, -p.dx2TotalL);
         if (a1 < a2) a2 -= 2 * Math2D::Pi;
         da = acosf(w.totalWidthL / (w.totalWidthL + 0.25f * Tolerance)) * 2;
         n  = int((a1 - a2) / da) + 1;
@@ -984,8 +979,8 @@ void StrokerAA::calcRoundJoin(const StrokeVertex& v1, const WidthsType& w, const
         }
 
         // the arc on the right, counter-clockwise
-        a1 = sfr_atan2f_thunk(p.dy1TotalR, p.dx1TotalR);
-        a2 = sfr_atan2f_thunk(p.dy2TotalR, p.dx2TotalR);
+        a1 = atan2f(p.dy1TotalR, p.dx1TotalR);
+        a2 = atan2f(p.dy2TotalR, p.dx2TotalR);
         if (a1 > a2) a2 += 2 * Math2D::Pi;
         da = acosf(w.totalWidthR / (w.totalWidthR + 0.25f * Tolerance)) * 2;
         n  = int((a2 - a1) / da) + 1;
