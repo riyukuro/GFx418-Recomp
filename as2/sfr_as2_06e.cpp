@@ -98,18 +98,25 @@ SF_FORCEINLINE HitAreaArray& LeHitAreas(MovieRoot* proot)
 }
 
 // AvmCharacter::HasClipEventHandler, inlined in the exe: key down / up handlers are found by the event alone.
+SF_FORCEINLINE EventId LeTreatEventId(const EventId& id)
+{
+    if (id.Id == EventId::Event_KeyDown || id.Id == EventId::Event_KeyUp)
+        return EventId(id.Id);
+    return id;
+}
 SF_FORCEINLINE bool LeHasClipEventHandler(const AvmCharacter* pch, const EventId& id)
 {
-    EventId key = (id.Id == EventId::Event_KeyDown || id.Id == EventId::Event_KeyUp) ? EventId(id.Id) : id;
-    return pch->EventHandlers.Get(key) != 0;
+    return pch->EventHandlers.Get(LeTreatEventId(id)) != 0;
 }
 
 // MovieImpl::IsKeyboardFocused, inlined in the exe.
+SF_FORCEINLINE bool LeGroupIsFocused(const FocusGroupDescr& fg, const InteractiveObject* ch)
+{
+    Ptr<InteractiveObject> lch = fg.LastFocused; return lch.GetPtr() == ch;
+}
 SF_FORCEINLINE bool LeIsKeyboardFocused(const MovieImpl* pmovie, const InteractiveObject* ch, unsigned controllerIdx)
 {
-    const unsigned         group   = pmovie->FocusGroupIndexes[controllerIdx];
-    Ptr<InteractiveObject> focused = pmovie->FocusGroups[group].LastFocused;
-    return focused.GetPtr() == ch && pmovie->FocusGroups[group].FocusRectShown;
+    return (LeGroupIsFocused(pmovie->FocusGroups[pmovie->FocusGroupIndexes[controllerIdx]], ch) && pmovie->IsFocusRectShown(controllerIdx));
 }
 
 // AvmSprite::GetHitAreaIndex, inlined in the exe: the index of the clip in the hit area array of the movie root, -1
@@ -138,6 +145,14 @@ SF_FORCEINLINE void LeSetEventAction(MovieRoot::ActionEntry* pe, InteractiveObje
     if (pe->pActionBuffer)
         pe->pActionBuffer->Release();
     pe->pActionBuffer.GetRawRef() = 0;
+    pe->mEventId = id;
+}
+// ActionEntry::SetAction(pch, id) for OnEvent: the event is taken by value.
+SF_FORCEINLINE void LeSetEventActionV(MovieRoot::ActionEntry* pe, InteractiveObject* pch, EventId id)
+{
+    pe->Type = MovieRoot::ActionEntry::Entry_Event;
+    pe->pCharacter = pch;
+    pe->pActionBuffer = 0;
     pe->mEventId = id;
 }
 // The same for an event built from its id alone: EventId(id) is constructed in place after the releases.
@@ -267,7 +282,7 @@ void AvmSprite::InitializeClassInstance(const FnCall& fn)
 // A clip event: the clip shows its _up / _down / _over frame for a button event, then the event is queued when
 // the clip has an onClipEvent handler or a method of the event's name (onKeyDown / onKeyUp only from SWF 6, and
 // only while the clip has the keyboard focus).
-// MS2-FUNCTIONAL: register allocation and block layout differ.
+// MS2-FUNCTIONAL: one scheduling difference is left. After the EventId_GetFunctionNameBuiltinType call, the exe sign-extends the builtin index before it loads the string context chain, and ours loads the chain first (14 bytes, registers only).
 // @0x14296b490
 bool AvmSprite::OnEvent(const EventId& id)
 {
@@ -297,33 +312,38 @@ bool AvmSprite::OnEvent(const EventId& id)
         }
     }
 
-    if (!LeHasClipEventHandler(this, id))
+    do
     {
-        ASString methodName(GetASEnvironment()->GetSC()->GetBuiltin(EventId_GetFunctionNameBuiltinType(id)));
-        if (methodName.IsEmpty())
-            return false;
-        bool    hasMethod = false;
-        Value   method;
-        Object* pobj = pMovieClipObj ? static_cast<Object*>(pMovieClipObj.GetPtr()) : Get__proto__();
-        if (pobj && pobj->GetMemberRaw(Env.GetSC(), methodName, &method))
-            hasMethod = true;
-        if (id.Id == EventId::Event_KeyDown || id.Id == EventId::Event_KeyUp)
+        if (LeHasClipEventHandler(this, id))
+            continue;
+        ASStringContext* psc = GetASEnvironment()->GetSC();
+        ASString methodName(psc->GetBuiltin(EventId_GetFunctionNameBuiltinType(id)));
+        if (!methodName.IsEmpty())
         {
-            if (Env.GetVersion() >= 6)
+            bool    hasMethod = false;
+            Value   method;
+            Object* asObj = pMovieClipObj ? static_cast<Object*>(pMovieClipObj.GetPtr()) : Get__proto__();
+            if (asObj && asObj->GetMemberRaw(Env.GetSC(), methodName, &method))
+                hasMethod = true;
+            if (id.Id == EventId::Event_KeyDown || id.Id == EventId::Event_KeyUp)
             {
-                if (!LeIsKeyboardFocused(GetSprite()->GetMovieImpl(), GetSprite(), id.KeyboardIndex))
+                if (Env.GetVersion() >= 6)
+                {
+                    if (!LeIsKeyboardFocused(GetSprite()->GetMovieImpl(), GetSprite(), id.KeyboardIndex))
+                        hasMethod = false;
+                }
+                else
                     hasMethod = false;
             }
-            else
-                hasMethod = false;
+            if (hasMethod)
+                continue;
         }
-        if (!hasMethod)
-            return false;
-    }
+        return false;
+    } while (0);
 
     MovieRoot::ActionEntry* pe = GetAS2Root()->InsertEmptyAction(ActionPriority::AP_Frame);
     if (pe)
-        LeSetEventAction(pe, GetSprite(), id);
+        LeSetEventActionV(pe, GetSprite(), id);
     return true;
 }
 
