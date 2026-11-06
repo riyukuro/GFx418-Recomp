@@ -8934,11 +8934,11 @@ float ShapeObject::GetRatio() const
     const UPInt h = AccRd(self, 0x48);
     if (!h)
         return 0.0f;
-    const UPInt tab = AccRd(h & ~UPInt(0xfff), 0x20);
-    const SPInt off = (SPInt)(h & 0xfff) - 0x38;
-    if (*reinterpret_cast<const UInt16*>(AccRd(tab, 0x28 + (UPInt)(UInt32)(off / 0x38) * 8) + 8) != 3)
+    const UInt32 idx = (UInt32)((SPInt)((h & 0xfff) - 0x38) / 0x38);
+    const UPInt node = AccRd(AccRd(h & ~UPInt(0xfff), 0x20), 0x28 + (UPInt)idx * 8);
+    if (*reinterpret_cast<const UInt16*>(node + 8) != 3)
         return 0.0f;
-    return *reinterpret_cast<const float*>(AccRd(tab, 0x28 + (UPInt)(UInt32)(off / 0x38) * 8) + 0x98);
+    return *reinterpret_cast<const float*>(node + 0x98);
 }
 
 // -- tail calls into the shared bodies --
