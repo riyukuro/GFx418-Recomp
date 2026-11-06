@@ -2287,19 +2287,19 @@ void MemoryContextImpl::HeapLimit::Reset(MemoryHeap* heap)
     LastCollectionFootprint = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(heap) + 0x60);
 }
 
-// MS2-FUNCTIONAL: applies the emergency collection threshold, honors the optional user limit, and updates heap limits.
+// The SDK body with the inlined Collect. Our CurrentLimit (+0x20) is the SDK's LastCollectionFootprint and our
+// LastCollectionFootprint (+0x28) is the SDK's CurrentLimit; [heap+0x60] is GetLimit().
 // @0x14296bbf0
 bool MemoryContextImpl::HeapLimit::OnExceedLimit(MemoryHeap* heap, UPInt overLimit)
 {
-    const UPInt footprint = heap->GetFootprint();
-    const UPInt heapLimit = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(heap) + 0x60);
-    const UPInt newLimit = UPInt(float(footprint) * HeapLimitMultiplier) + heapLimit + overLimit;
-    if (SPInt(footprint - CurrentLimit) < SPInt(float(footprint) * HeapLimitMultiplier) &&
-        (!UserLevelLimit || newLimit <= UserLevelLimit))
-    {
-        heap->SetLimit(newLimit);
-    }
-    else
+    UPInt footprint = heap->GetFootprint();
+    UPInt heapLimit = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(heap) + 0x60);
+
+    SPInt allocsSinceLastCollect = (SPInt)footprint - CurrentLimit;
+    UPInt newLimit = (heapLimit + overLimit) + (UPInt)(footprint * HeapLimitMultiplier);
+
+    if (allocsSinceLastCollect >= (SPInt)(footprint * HeapLimitMultiplier) ||
+        (UserLevelLimit != 0 && newLimit > UserLevelLimit))
     {
         if (MemContext->TextAllocator)
         {
@@ -2308,13 +2308,28 @@ bool MemoryContextImpl::HeapLimit::OnExceedLimit(MemoryHeap* heap, UPInt overLim
         }
         MemContext->ASGC->ForceEmergencyCollect();
         CurrentLimit = heap->GetFootprint();
-        if (!UserLevelLimit || newLimit <= UserLevelLimit)
-            return true;
-        if (overLimit > footprint - CurrentLimit)
-            LastCollectionFootprint = heapLimit + (CurrentLimit - footprint) + overLimit;
-        heap->SetLimit(LastCollectionFootprint);
+
+        if (UserLevelLimit != 0 && newLimit > UserLevelLimit)
+        {
+            if (overLimit > (footprint - CurrentLimit))
+            {
+                LastCollectionFootprint = heapLimit + (overLimit - (footprint - CurrentLimit));
+                heap->SetLimit(LastCollectionFootprint);
+                LastCollectionFootprint = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(heap) + 0x60);
+            }
+            else
+            {
+                heap->SetLimit(LastCollectionFootprint);
+                LastCollectionFootprint = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(heap) + 0x60);
+            }
+        }
     }
-    LastCollectionFootprint = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(heap) + 0x60);
+    else
+    {
+        heap->SetLimit(newLimit);
+        LastCollectionFootprint = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(heap) + 0x60);
+    }
+
     return true;
 }
 
