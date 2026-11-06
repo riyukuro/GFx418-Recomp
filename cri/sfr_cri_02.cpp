@@ -52,7 +52,7 @@ extern const void* DAT_1431b93b0[];
 extern const void* DAT_1431b9360[];
 extern const void* DAT_1431b9410[];
 extern const void* DAT_1431b93c0[];
-extern const void* DAT_143183b28[];
+//
 extern const void* DAT_1431b9080[];
 extern const void* DAT_1431b9028[];
 extern const void* DAT_1431b8fd0[];
@@ -494,21 +494,20 @@ bool VideoDecoderThrd::IsDecodingStopped(VideoPlayer* pp)
 // VideoImage (0x48 bytes) is a Render::TextureImage with the player back-pointer at +0x40. The exe inlines the
 // TextureImage constructor here, so these views derive from Render::Image and store the two vftables themselves:
 // TextureImageHead ends with TextureImage's vftable store, before the rest of TextureImage's members are set.
-class __declspec(novtable) TextureImageHead : public Render::Image
-{
-public:
-    Render::ImageFormat Format;        // +0x28
-    UInt32              Size[2];       // +0x2c  a Render::ImageSize, set by the derived constructor
-    unsigned            Use;           // +0x34
-    UInt32              ImageId;       // +0x38
+// (TextureImageHead is gone: VideoImageView builds through the inline SDK TextureImage ctor.)
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
-    TextureImageHead(Render::ImageFormat format, Render::ImageUpdateSync* sync) : Render::Image(0, sync), Format(format)
-    {
-        *(void* volatile*)this = (void*)DAT_143183b28;   // TextureImage
-    }
-};
-
-class __declspec(novtable) VideoImageView : public TextureImageHead
+class __declspec(novtable) VideoImageView : public Render::TextureImage
 {
 public:
     VideoPlayerImpl*    pVideoPlayer;  // +0x40
@@ -526,11 +525,11 @@ public:
 // @0x14002abd0
 VideoImageView::VideoImageView(Render::ImageFormat format, const Render::ImageSize& size,
                                Render::TextureManager* ptexman, VideoPlayerImpl* pplayer)
-    : TextureImageHead(format, ptexman)
+    : Render::TextureImage(format, size, Render::ImageUse_Update, 0, ptexman, (Render::TextureImage::InlineCtorTag*)0)
 {
-    *(Render::ImageSize*)Size = size;
-    Use     = Render::ImageUse_Update;
-    ImageId = Render::ImageBase::GetNextImageId();
+    //
+    //
+    //
     *(void**)this = (void*)DAT_1431b9080;            // VideoImage
     pVideoPlayer = pplayer;
 }
@@ -2402,3 +2401,4 @@ void* FUN_14002de50(char* self, CriUint32 flags)
 // MS2-PIN: ??_7?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@6B@ 0x1431498b8
 // MS2-PIN: ??_7ImageBase@Render@Scaleform@@6B@ 0x1431498d0
 // MS2-PIN: ??_7Image@Render@Scaleform@@6B@ 0x143149940
+// MS2-PIN: ??_7TextureImage@Render@Scaleform@@6B@ 0x143183b28

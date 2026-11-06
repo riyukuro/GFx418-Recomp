@@ -648,6 +648,14 @@ public:
     {
         ImageId = ImageBase::GetNextImageId();
     }
+    // (appended for sfr_cri_02) the same with texture and sync, as the exe inlines it in VideoImage's ctor;
+    // the tag is a pointer (pass 0), as a by-value empty tag leaves a dead byte store
+    __forceinline TextureImage(ImageFormat format, const ImageSize& size, unsigned use, Texture* texture,
+                               ImageUpdateSync* sync, InlineCtorTag*)
+        : Image(texture, sync), Format(format), Size(size), Use(use)
+    {
+        ImageId = ImageBase::GetNextImageId();
+    }
 
     void RefreshCachedFormat()
     {
