@@ -7078,7 +7078,7 @@ RectF Sfr33ContainerBounds::GetBounds(const Render::Matrix2F& t) const
 
 }} // namespace Scaleform::GFx
 
-// MovieRoot's PathTokenizer (AS3_MovieRoot.cpp): the exe inlines it and StringDataPtr::GetNextToken('.').
+// MovieRoot's PathTokenizer (AS3_MovieRoot.cpp): the exe calls StringDataPtr::GetNextToken('.') and inlines the rest.
 class Sfr33PathTokenizer
 {
     mutable Scaleform::StringDataPtr Path;
@@ -7088,25 +7088,107 @@ public:
     bool HasToken() const { return Path.GetSize() > 0; }
     const Scaleform::StringDataPtr& NextToken() const
     {
-        Scaleform::UPInt cur_pos = 0;
-        const char* cur_str = Path.ToCStr();
-        for (; cur_pos < Path.GetSize() && cur_str[cur_pos]; ++cur_pos)
-        {
-            if (cur_str[cur_pos] == '.')
-                break;
-        }
-        Token = Scaleform::StringDataPtr(Path.ToCStr(), cur_pos);
+        Token = Path.GetNextToken('.');
         Path.TrimLeft(Token.GetSize());
         if (Path.ToCStr()[0] == '.') Path.TrimLeft(1);
         return Token;
     }
 };
 
+// FormatD1<const char*> stays out of line in the exe (0x1423e85f0, sfr_as3_01c).
+template<> void Scaleform::MsgFormat::FormatD1<const char*>(const char* const& v);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+// Value::Assign as the exe inlines it into GetASVariableAtPath.
+struct Sfr17ValueInline
+{
+    static __forceinline void Assign(Value& self, const Value& other)
+    {
+        self.Release();
+        SIMD::PrefetchObj(&other);
+        memcpy(&self, &other, sizeof(Value));
+        self.AddRef();
+    }
+};
+
+// Multiname(Namespace&, const Value&) with SetRTNameUnsafe, the QName copy and PostProcessName all inlined, as in
+// GetASVariableAtPath. Same layout as Multiname; the out-of-line Multiname dtor is not called (the exe expands it).
+struct Sfr17PathMultiname
+{
+    Abc::MultinameKind      Kind;
+    SPtr<GASRefCountBase>   Obj;
+    Value                   Name;
+    __forceinline Sfr17PathMultiname(Instances::Namespace& ns, const Value& name)
+        : Kind(static_cast<Abc::MultinameKind>(0))
+        , Obj(&ns)
+    {
+        const UInt32 k = static_cast<UInt32>(name.GetKind());
+        if (k - 0xc <= 3 && name.GetGASRefCountBase() != NULL)
+        {
+            const Traits& tr = reinterpret_cast<Object*>(name.GetGASRefCountBase())->GetTraits();
+            if (static_cast<int>(tr.TraitsType) == 0xc && (static_cast<UInt8>(~static_cast<UInt8>(static_cast<UInt8>(tr.Flags) >> 5)) & 1) != 0)
+            {
+                const UPInt q = reinterpret_cast<UPInt>(name.GetGASRefCountBase());
+                FUN_1424e0d40(Name, *reinterpret_cast<const ASString*>(q + 0x38));
+                if (Name.IsString())
+                {
+                    ASString n = Name.AsString();
+                    if (n.GetSize() != 0 && n[0] == '*')
+                        FUN_1424e0d40(Name, ASString(n.GetManager()->GetEmptyStringNode()));
+                }
+                // SPtr::SetPtr, inlined
+                GASRefCountBase* p = reinterpret_cast<GASRefCountBase*>(*reinterpret_cast<UPInt*>(q + 0x40));
+                GASRefCountBase*& raw = Obj.GetRawRef();
+                if (p != raw)
+                {
+                    if (raw)
+                    {
+                        if (reinterpret_cast<UPInt>(raw) & 1)
+                            raw = reinterpret_cast<GASRefCountBase*>(reinterpret_cast<UPInt>(raw) - 1);
+                        else
+                            raw->Release();
+                    }
+                    if (p)
+                        p->AddRef();
+                    raw = p;
+                }
+                *reinterpret_cast<UInt32*>(this) &= 0xfffffff9;
+                return;
+            }
+        }
+        Name.AssignUnsafe(name);
+        // PostProcessName(false); the three renames share one assignment
+        if (!Name.IsString())
+            return;
+        ASString n = Name.AsString();
+        if (n.GetSize() == 0)
+            return;
+        ASStringNode* node;
+        if (n[0] == '*')
+            node = n.GetManager()->GetEmptyStringNode();
+        else if (n[0] == '@')
+        {
+            Kind = static_cast<Abc::MultinameKind>(Kind | 8);
+            if (n.GetSize() == 2 && n[1] == '*')
+                node = n.GetManager()->GetEmptyStringNode();
+            else
+                node = n.SubstringNode(1, n.GetSize());
+        }
+        else
+            return;
+        FUN_1424e0d40(Name, ASString(node));
+    }
+    Multiname& Get() { return *reinterpret_cast<Multiname*>(this); }
+    const Multiname& Get() const { return *reinterpret_cast<const Multiname*>(this); }
+};
+}}} // namespace Scaleform::GFx::AS3
+
 // MovieRoot::GetASVariableAtPath: the value at the dotted path ppathToVar. A global object property of that name
 // comes first; otherwise the path is walked from the stage, or from root1 under a "_root", "_level0" or "root"
 // prefix, one property (else named display child) per token. A token in the middle that is not an object is logged
 // and ends the walk with null. False when there is no path, no root1 or a token resolves to nothing.
-// MS2-FUNCTIONAL 0x142506000: the tokenizer, Multiname ctor and AS3 object fetches are inlined in the exe
+// MS2-FUNCTIONAL 0x142506000: the Multiname ctor, Value::Assign, GetSlotValueUnsafe, Swap and the log Format are
+// inlined as in the exe
 // @0x142506000
 bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::AS3::Value* pval, const char* ppathToVar)
 {
@@ -7122,7 +7204,7 @@ bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::
     AvmDisplayObjContainer* pstage =
         pmain ? AvmDisplayObjContainer::FromBase(pmain->GetAvmObjImpl()->ToAvmDispContainerBase()) : NULL;
     Value resolvedVal;
-    resolvedVal = Value(pstage->GetAS3Obj());
+    Sfr17ValueInline::Assign(resolvedVal, Value(pstage->GetAS3Obj(), Value::InlineObj));
 
     // a global first
     const Multiname gname(vm, StringDataPtr(ppathToVar));
@@ -7132,9 +7214,9 @@ bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::
     if (Sfr33PropFound(globalProp))
     {
         Value v;
-        if (!globalProp.GetSlotValueUnsafe(vm, v))
+        if (!Sfr17GetSlotValueUnsafe(globalProp, vm, v))
             return false;
-        pval->Swap(v);
+        Sfr18ValueSwap::Swap(*pval, v);
         return true;
     }
 
@@ -7163,7 +7245,8 @@ bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::
             root->BuiltinsMgr.CreateConstString("root1"), true);
         if (!proot1 || !proot1->IsDisplayObjContainer())
             return false;
-        resolvedVal = Value(AvmDisplayObjContainer::FromBase(proot1->GetAvmObjImpl()->ToAvmDispContainerBase())->GetAS3Obj());
+        Sfr17ValueInline::Assign(resolvedVal, Value(AvmDisplayObjContainer::FromBase(
+            proot1->GetAvmObjImpl()->ToAvmDispContainerBase())->GetAS3Obj(), Value::InlineObj));
     }
 
     // one property per token
@@ -7172,7 +7255,7 @@ bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::
     {
         const StringDataPtr& token = pt.NextToken();
         GFx::ASString propName = root->BuiltinsMgr.CreateString(token.ToCStr(), token.GetSize());
-        const Multiname prop(vm.GetPublicNamespace(), Value(propName));
+        const Sfr17PathMultiname prop(vm.GetPublicNamespace(), Value(propName, Value::InlineStr));
         Value subVal;
         Object* pobj = resolvedVal.GetObject();
         if (!pobj)
@@ -7182,7 +7265,7 @@ bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::
                 vm.OutputAndIgnoreException();
             return false;
         }
-        if (!pobj->GetProperty(prop, subVal))
+        if (!pobj->GetProperty(prop.Get(), subVal))
         {
             // not a property: maybe a named child of a display object container
             const Traits& tr = pobj->GetTraits();
@@ -7193,25 +7276,29 @@ bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::
                 GFx::DisplayObject* pdo = static_cast<Instances::fl_display::DisplayObject*>(pobj)->pDispObj;
                 AvmDisplayObjContainer* pcurr = pdo->IsDisplayObjContainer()
                     ? AvmDisplayObjContainer::FromBase(pdo->GetAvmObjImpl()->ToAvmDispContainerBase()) : NULL;
-                SPtr<Instances::fl_display::DisplayObject> pchild = pcurr->GetAS3ChildByName(propName);
+                Instances::fl_display::DisplayObject* pchild = pcurr->GetAS3ChildByName(propName);
                 if (!pchild)
                 {
                     if (vm.IsException())
                         vm.OutputAndIgnoreException();
                     return false;
                 }
-                subVal = Value(pchild.GetPtr());
+                subVal = Value(pchild, Value::InlineObj);
             }
         }
         resolvedVal = subVal;
         if (pt.HasToken() && !resolvedVal.IsObject())
         {
-            if (Ptr<Log> plog = root->GetMovieImpl()->GetLog())
+            if (Log* plog = root->GetMovieImpl()->GetLog().GetPtr())
             {
-                String s;
-                Format(s, "Token '{0}' in path '{1}' was not resolved to a valid Object! This may be caused by a property "
-                          "that is not of Object type, or by using reserved words/properties for MovieClip names in the "
-                          "display tree.", token, ppathToVar);
+                StringBuffer s(Memory::GetGlobalHeap());
+                MsgFormat f((MsgFormat::Sink(s)));
+                f.Parse("Token '{0}' in path '{1}' was not resolved to a valid Object! This may be caused by a property "
+                        "that is not of Object type, or by using reserved words/properties for MovieClip names in the "
+                        "display tree.");
+                f.FormatD1(token);
+                f.FormatD1(ppathToVar);
+                f.FinishFormatD();
                 plog->LogError(s.ToCStr());
             }
             resolvedVal.SetNull();

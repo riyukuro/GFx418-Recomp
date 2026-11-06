@@ -310,6 +310,8 @@ public:
     // The view without leading and trailing white space (exe 0x142587110).
     StringDataPtr GetTruncateWhitespace() const;
 
+    // (appended, fe11) the text up to the first separator (all of it when there is none). exe 0x1425870d0
+    StringDataPtr GetNextToken(char separator = ':') const;
     // (appended, sfr19) index of the last c at or before initInd, -1 for none (exe 0x142586e30).
     SPInt FindLastChar(char c, UPInt initInd = ~0) const;
     // (appended, sfr19) the view without its first size bytes.

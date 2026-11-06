@@ -202,6 +202,7 @@ public:
 
     public:
         Sink(String& str) : Type(tStr) { SinkData.pStr = &str; }
+        Sink(StringBuffer& buffer) : Type(tStrBuffer) { SinkData.pStrBuffer = &buffer; }  // (appended, fe11)
         Sink(const StringDataPtr& strData) : Type(tDataPtr)
         {
             SinkData.DataPtr.pStr = strData.ToCStr();
