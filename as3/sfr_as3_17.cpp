@@ -5829,51 +5829,71 @@ ClassTraits::Traits* Sfr33SlotDataType(const SlotInfo* psi, VM* pvm)
 
 // SlotInfo::GetDataTypeName: the name of the slot's declared type: that of the resolved class traits, else the
 // ABC type multiname's name (Object's name for a runtime one), else the name of the bind type's class.
-// MS2-FUNCTIONAL 0x142508720: a void-typed slot takes the void traits' name (the exe dereferences NULL there).
+// MS2-FUNCTIONAL 0x142508720: SDK body; regalloc only (the exe holds the switch traits in rdi and loads them in each case; ours loads them after the switch).
 // A member (this in rcx, the result slot in rdx), as the exe's callers pass it.
 // @0x142508720
 ASString SlotInfo::GetDataTypeName(VM& vm) const
 {
-    const UByte* si = reinterpret_cast<const UByte*>(this);
-    const UByte* pvm = reinterpret_cast<const UByte*>(&vm);
-    ASString name = vm.GetStringManager().CreateEmptyString();
-    const ClassTraits::Traits* ct = *reinterpret_cast<ClassTraits::Traits* const*>(si + 0x10);
-    if (!ct)
+    ASString result = vm.GetStringManager().CreateEmptyString();
+    if (CTraits.GetPtr() == NULL)
     {
-        VMAbcFile* file = *reinterpret_cast<VMAbcFile* const*>(si + 0x18);
-        const UByte* amn = *reinterpret_cast<const UByte* const*>(si + 0x20);
-        if (file && amn)
+        if (File.GetPtr() != NULL && TI != NULL)
         {
-            if ((*amn & 9) == 0 && (*amn & 0xf) != 2)
+            const UByte* amn = reinterpret_cast<const UByte*>(TI);
+            const int kind = *amn & 0xf;
+            if (kind == 0 || kind == 6 || kind == 4)
             {
-                const UByte* tn = reinterpret_cast<const UByte*>(&FUN_14250f8a0(
-                    amn, *reinterpret_cast<const void* const*>(reinterpret_cast<UByte*>(file) + 0x28)));
-                name = file->GetInternedString(*reinterpret_cast<const int*>(tn + 8));
+                const UByte* mn = reinterpret_cast<const UByte*>(&FUN_14250f8a0(
+                    amn, *reinterpret_cast<const void* const*>(reinterpret_cast<const UByte*>(File.GetPtr()) + 0x28)));
+                result = File->GetInternedString(*reinterpret_cast<const int*>(mn + 8));
             }
             else
-                name = (*reinterpret_cast<ClassTraits::Traits* const*>(pvm + 0x208))->GetName();
-            return name;
+                result = vm.GetClassTraitsFunction().GetName();
         }
-        int off;
-        switch ((*reinterpret_cast<const int*>(si) << 0x16) >> 0x1b)
+        else
         {
-        case 0: case 1: case 2:
-            *reinterpret_cast<SPtr<const ClassTraits::Traits>*>(const_cast<UByte*>(si) + 0x10) =
-                *reinterpret_cast<ClassTraits::Traits* const*>(pvm + 0x1f0);
-            off = 0x1f0; break;
-        case 3: case 4: off = 0x1f8; break;
-        case 5: off = 0x210; break;
-        case 6: off = 0x220; break;
-        case 7: off = 0x228; break;
-        case 8: off = 0x218; break;
-        case 9: case 10: off = 0x230; break;
-        case 11: case 12: case 13: case 14: off = 0x208; break;
-        default: return name;
+            const ClassTraits::Traits* tr = NULL;
+            const BindingType bt = (BindingType)BindType;
+            switch (bt)
+            {
+            case BT_Unknown:
+            case BT_ValueArray:
+            case BT_Value:
+                const_cast<SPtr<const ClassTraits::Traits>&>(CTraits).SetPtr(&vm.GetClassTraitsClassClass());
+                break;
+            case BT_ObjectAS:
+            case BT_ObjectCpp:
+                tr = &vm.GetClassTraitsObject();
+                break;
+            case BT_Boolean:
+                tr = (const ClassTraits::Traits*)&vm.GetClassTraitsBoolean();
+                break;
+            case BT_Int:
+                tr = (const ClassTraits::Traits*)&vm.GetClassTraitsSInt();
+                break;
+            case BT_UInt:
+                tr = (const ClassTraits::Traits*)&vm.GetClassTraitsUInt();
+                break;
+            case BT_Number:
+                tr = (const ClassTraits::Traits*)&vm.GetClassTraitsNumber();
+                break;
+            case BT_String:
+            case static_cast<BindingType>(10):
+                tr = (const ClassTraits::Traits*)&vm.GetClassTraitsString();
+                break;
+            case BT_Code:
+            case BT_Get:
+            case BT_Set:
+            case BT_GetSet:
+                tr = (const ClassTraits::Traits*)&vm.GetClassTraitsFunction();
+                break;
+            }
+            result = tr->GetName();
         }
-        ct = *reinterpret_cast<ClassTraits::Traits* const*>(pvm + off);
     }
-    name = ct->GetName();
-    return name;
+    else
+        result = CTraits->GetName();
+    return result;
 }
 
 // VMAbcFile::GetDetailValue: the constant (an optional parameter's or slot's default) a value detail names;
