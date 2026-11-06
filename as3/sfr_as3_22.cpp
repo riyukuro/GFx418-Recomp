@@ -710,9 +710,24 @@ struct DICommand_Clear
 {
     virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
 };
+// The DrawableImage fields the Noise command reads (Transparent at +0x48) and its channel bits.
+struct Sfr22NoiseImage
+{
+    enum { Channel_Red = 0x01, Channel_Green = 0x02, Channel_Blue = 0x04, Channel_Alpha = 0x08 };
+    UByte Pad[0x48];
+    bool  Transparent;
+    bool  IsTransparent() const { return Transparent; }
+};
 struct DICommand_Noise
 {
+    typedef Sfr22NoiseImage DrawableImage;
     virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+    const DrawableImage* pImage; // +0x08 (Ptr<DrawableImage>)
+    unsigned RandomSeed;         // +0x10
+    unsigned Low;
+    unsigned High;
+    unsigned ChannelMask;
+    bool     GrayScale;          // +0x20
 };
 } }
 
@@ -4091,19 +4106,20 @@ void* CreateBufferedAudioRequest(void* manager, void* backing, unsigned channels
     return object;
 }
 
+// Color::SetRGBAFloat (SDK Render_Color.h): SetRGBFloat, then SetAlphaFloat.
+static __forceinline void Sfr22SetRGBAFloat(Scaleform::Render::Color& c, float r, float g, float b, float a)
+{
+    c.SetRGBFloat(r, g, b);
+    c.SetAlpha(UByte(a * 255));
+}
+
 // Fills every destination pixel with seeded grayscale or masked-channel noise, column by column (the SDK body
 // without the swizzler context).
-// MS2-FUNCTIONAL: register allocation (the 255.0f constant and the gray value swap xmm6/xmm7)
 // @0x142677260
 void Scaleform::Render::DICommand_Noise::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData**) const
 {
-    auto* settings = reinterpret_cast<const unsigned char*>(this);
-    const unsigned& randomSeed = *reinterpret_cast<const unsigned*>(settings + 0x10);
-    const unsigned& channelMask = *reinterpret_cast<const unsigned*>(settings + 0x1c);
-    const bool& grayScale = *reinterpret_cast<const bool*>(settings + 0x20);
-    const unsigned char* const& pImage = *reinterpret_cast<const unsigned char* const*>(settings + 8);
-    Scaleform::Alg::Random::Generator rng;
-    rng.SeedRandom(randomSeed);
+    Alg::Random::Generator rng;
+    rng.SeedRandom(RandomSeed);
 
     for (unsigned x = 0; x < dest.GetSize().Width; ++x)
     {
@@ -4112,29 +4128,26 @@ void Scaleform::Render::DICommand_Noise::ExecuteSW(Scaleform::Render::DICommandC
             UByte* scanline = dest.GetScanline(y);
 
             Color c(0);
-            if (grayScale)
+            if ( GrayScale )
             {
                 float val = rng.GetUnitFloat();
-                float alpha = channelMask & 8 ? rng.GetUnitFloat() : 1.0f;
-                c.SetRGBFloat(val, val, val);
-                c.SetAlpha(UByte(alpha * 255));
+                Sfr22SetRGBAFloat(c, val, val, val, ChannelMask & DrawableImage::Channel_Alpha ? rng.GetUnitFloat() : 1.0f);
             }
             else
             {
-                if (channelMask & 1)
-                    c.SetRed((UByte)(rng.GetUnitFloat() * 255));
-                if (channelMask & 2)
-                    c.SetGreen((UByte)(rng.GetUnitFloat() * 255));
-                if (channelMask & 4)
-                    c.SetBlue((UByte)(rng.GetUnitFloat() * 255));
-                if (channelMask & 8)
-                    c.SetAlpha((UByte)(rng.GetUnitFloat() * 255));
+                if ( ChannelMask & DrawableImage::Channel_Red )
+                    c.SetRed((UByte)(rng.GetUnitFloat()*255));
+                if ( ChannelMask & DrawableImage::Channel_Green )
+                    c.SetGreen((UByte)(rng.GetUnitFloat()*255));
+                if ( ChannelMask & DrawableImage::Channel_Blue )
+                    c.SetBlue((UByte)(rng.GetUnitFloat()*255));
+                if ( ChannelMask & DrawableImage::Channel_Alpha )
+                    c.SetAlpha((UByte)(rng.GetUnitFloat()*255));
                 else
                     c.SetAlpha(255);
             }
 
-            // pImage->IsTransparent() is the image's transparent flag at +0x48.
-            if (!pImage[0x48])
+            if (!pImage->IsTransparent())
                 c.SetAlpha(255);
 
             dest.SetPixelInScanline(scanline, x, c.ToColor32());
