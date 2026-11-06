@@ -2401,33 +2401,35 @@ MovieClipObject* AvmSprite::GetMovieClipObject()
     return pobj;
 }
 
-// MS2-FUNCTIONAL 7 bytes off: the exe walks the builtin chain through rax, tests the flag in ecx, and releases the
-// lowercase name with sub 1 where cl gives add -1
+// AvmCharacter::IsStandardMember (sfr_as2_06) as the exe inlines it into GetStandardMemberConstant.
+static SF_FORCEINLINE bool IsStandardMember_05(const ASString& memberName, ASString* plowerCaseName)
+{
+    if ((UByte)(memberName.GetHashFlags() >> 29) & 1)
+        return true;
+    if (memberName.GetLength() > 0 && memberName.GetCharAt(0) == '_')
+    {
+        ASString lower(memberName.ToLowerNode());
+        if ((UByte)(lower.GetHashFlags() >> 28) & 1)
+        {
+            if (plowerCaseName)
+                *plowerCaseName = lower;
+            return true;
+        }
+    }
+    return false;
+}
+
 // @0x142956090
 AvmCharacter::StandardMember AvmCharacter::GetStandardMemberConstant(const ASString& newname) const
 {
-    char     member = M_InvalidMember;
+    SByte    member = M_InvalidMember;
     ASString name   = GetStrings(GetGC())->GetBuiltin(ASBuiltin_empty_);
-    bool     isStandard = ((newname.GetHashFlags() >> 29) & 1) != 0; // Flag_StandardMember
-    if (!isStandard)
-    {
-        // Only "_"-names have a case-insensitive twin among the standard members.
-        if (newname.GetLength() == 0 || newname.GetCharAt(0) != '_')
-            goto done;
-        {
-            ASString lower(newname.ToLowerNode());
-            bool     isCaseInsensitive = ((lower.GetHashFlags() >> 28) & 1) != 0;
-            if (isCaseInsensitive)
-                name = lower;
-            else
-                goto done;
-        }
-    }
+    if (IsStandardMember_05(newname, &name))
     {
         GlobalContext* pgc = GetGC();
-        pgc->StandardMemberMap.GetCaseCheck(newname, &member, name.IsEmpty());
+        bool cs = name.IsEmpty();
+        pgc->StandardMemberMap.GetCaseCheck(newname, (char*)&member, cs);
     }
-done:
     return (StandardMember)member;
 }
 
