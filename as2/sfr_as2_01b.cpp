@@ -367,7 +367,6 @@ void StyleSheetProto::Load(const FnCall& fn)
 
 // StyleSheet.prototype.setStyle(name, style): replaces the style with the object's properties as CSS, or removes it
 // when the style is missing or null.
-// MS2-FUNCTIONAL: the exe keeps a separate ASString release in the remove path; ours shares the main path's.
 // @0x1428f9cf0
 void StyleSheetProto::SetStyle(const FnCall& fn)
 {
@@ -393,11 +392,12 @@ void StyleSheetProto::SetStyle(const FnCall& fn)
         }
         return;
     }
-
-    ASString name   = fn.Arg(0).ToString(fn.Env);
-    Object*  pstyle = fn.Arg(1).ToObject(fn.Env);
-    if (pstyle)
+    else
     {
+        ASString name   = fn.Arg(0).ToString(fn.Env);
+        Object*  pstyle = fn.Arg(1).ToObject(fn.Env);
+        if (!pstyle)
+            return;
         String css;
         css.AppendString(name.ToCStr());
         css.AppendChar('{');
