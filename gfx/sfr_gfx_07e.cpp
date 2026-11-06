@@ -961,18 +961,18 @@ void LoadProcess::CleanupFrameTags()
     InitActionTags.Clear();
 }
 
+struct Sfr07eTimelineView { virtual void S0() = 0; virtual void S1() = 0; virtual void S2() = 0; virtual void S3() = 0; virtual void S4() = 0; virtual void S5() = 0; virtual void S6() = 0; virtual void S7() = 0; virtual void S8() = 0; virtual void S9() = 0; virtual void S10() = 0; virtual void S11() = 0; virtual void S12() = 0; virtual void S13() = 0; virtual void S14() = 0; virtual void S15() = 0; virtual void S16() = 0; virtual void S17() = 0; virtual void S18() = 0; virtual void SetLoadingPlaylistFrame(const TimelineDef::Frame&) = 0; }; struct Sfr07eLoadDataView { virtual void S0() = 0; virtual void S1() = 0; virtual void SetLoadingPlaylistFrame(const TimelineDef::Frame&) = 0; virtual void SetLoadingInitActionFrame(const TimelineDef::Frame&) = 0; }; // 4.1 slots 19 / 2 / 3: no log argument
 // @0x1426385d0
-// MS2-FUNCTIONAL: the exe's SetLoadingPlaylistFrame / SetLoadingInitActionFrame take no log argument (our headers declare one)
 void LoadProcess::CommitFrameTags()
 {
     if (LoadState == LS_LoadingSprite)
     {
-        pTimelineDef->SetLoadingPlaylistFrame(TagArrayToFrame(FrameTags[LoadState]), 0);
+        reinterpret_cast<Sfr07eTimelineView*>(pTimelineDef)->SetLoadingPlaylistFrame(TagArrayToFrame(FrameTags[LoadState]));
     }
     else
     {
-        pLoadData->SetLoadingPlaylistFrame(TagArrayToFrame(FrameTags[LoadState]), 0);
-        pLoadData->SetLoadingInitActionFrame(TagArrayToFrame(InitActionTags), 0);
+        reinterpret_cast<Sfr07eLoadDataView*>(pLoadData.GetPtr())->SetLoadingPlaylistFrame(TagArrayToFrame(FrameTags[LoadState]));
+        reinterpret_cast<Sfr07eLoadDataView*>(pLoadData.GetPtr())->SetLoadingInitActionFrame(TagArrayToFrame(InitActionTags));
     }
 }
 
