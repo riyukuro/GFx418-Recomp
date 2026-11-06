@@ -158,15 +158,65 @@ void AvmSprite::InitObjectMembers(const FnCall& fn)
     pinitSource->VisitMembers(visitor.pEnv->GetSC(), &visitor);
 }
 
+// ObjectInterface::ToAvmSprite (0x142990e70, sfr_as2_07), which the exe inlines here.
+static SF_FORCEINLINE AvmSprite* MS2_ToAvmSprite(ObjectInterface* po)
+{
+    return po->GetObjectType() == ObjectInterface::Object_Sprite ? static_cast<AvmSprite*>(po) : 0;
+}
+
+// FunctionRefBase::SetLocalFrame (0x142981e70, sfr_as2_07) and the FunctionRef copy around it, which the exe inlines
+// into the ToFunction copy here. Local copies: an inline redefinition of the member would emit a second COMDAT.
+static SF_FORCEINLINE void MS2_SetLocalFrame(FunctionRefBase& r, LocalFrame* localFrame, bool weakRef)
+{
+    if (r.pLocalFrame && !(r.Flags & FunctionRefBase::FuncRef_Weak))
+        r.pLocalFrame->Release();
+    r.pLocalFrame = localFrame;
+    if (weakRef)
+        r.Flags |= FunctionRefBase::FuncRef_Weak;
+    else
+        r.Flags &= ~FunctionRefBase::FuncRef_Weak;
+    if (r.pLocalFrame && !(r.Flags & FunctionRefBase::FuncRef_Weak))
+        r.pLocalFrame->AddRef();
+}
+
+static SF_FORCEINLINE FunctionRef MS2_CopyFuncRef(const FunctionRefBase& orig)
+{
+    FunctionRef r;
+    r.Flags    = 0;
+    r.Function = orig.Function;
+    if (!(r.Flags & FunctionRefBase::FuncRef_Internal) && r.Function)
+        r.Function->AddRef();
+    r.pLocalFrame = 0;
+    if (orig.pLocalFrame)
+        MS2_SetLocalFrame(r, orig.pLocalFrame, (orig.Flags & FunctionRefBase::FuncRef_Weak) != 0);
+    return r;
+}
+
+// Value::ToFunction as the SDK writes it (a switch); the exe inlines it here. The derived view reaches the protected
+// ResolveFunctionName.
+struct MS2_FuncValue : Value
+{
+    SF_FORCEINLINE FunctionRef ToFunctionSw(const Environment* penv) const
+    {
+        switch (T.Type)
+        {
+        case FUNCTIONNAME:
+            return ResolveFunctionName(penv);
+        case FUNCTION:
+            return MS2_CopyFuncRef(V.FunctionValue);
+        default:;
+        }
+        return FunctionRef();
+    }
+};
+
 // This clip takes the prototype of the constructor in Arg(0).
-// MS2-FUNCTIONAL: register allocation differs.
 // @0x142961d80
 void AvmSprite::InitializeClassInstance(const FnCall& fn)
 {
-    AvmSprite*  pavm = fn.ThisPtr->GetObjectType() == Object_Sprite
-                           ? static_cast<AvmSprite*>(static_cast<AvmCharacter*>(fn.ThisPtr)) : 0;
-    FunctionRef ctor = fn.Arg(0).ToFunction(fn.Env);
-    pavm->SetProtoToPrototypeOf(ctor.GetObjectPtr());
+    AvmSprite* pscriptCh = MS2_ToAvmSprite(fn.ThisPtr);
+    FunctionRef ctorFunc = static_cast<const MS2_FuncValue&>(fn.Arg(0)).ToFunctionSw(fn.Env);
+    pscriptCh->SetProtoToPrototypeOf(ctorFunc.GetObjectPtr());
 }
 
 // A clip event: the clip shows its _up / _down / _over frame for a button event, then the event is queued when
