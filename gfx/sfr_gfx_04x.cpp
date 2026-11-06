@@ -668,110 +668,129 @@ void SF_STDCALL GFx_DefineExternalImageLoader(LoadProcess* p, const TagInfo& tag
 }
 
 // FontTextureInfo: the glyph textures of the fonts, packed by the exporter into image files.
-// MS2-FUNCTIONAL 0x1425c6b50: same reads, log text, glyph table and texture binding; the array growth and the
-// reference counting inline differently.
 // @0x1425c6b50
 void SF_STDCALL GFx_FontTextureInfoLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
+    Stream*     pin   = p->GetStream();
     MemoryHeap* pheap = p->GetLoadHeap();
-    Stream*     in    = p->GetStream();
 
-    UInt32 textureId = in->ReadU32();
-    UInt16 format    = in->ReadU16();
-    String fileName;
-    in->ReadStringWithLength(&fileName);
-    UInt16 textureWidth  = in->ReadU16();
-    UInt16 textureHeight = in->ReadU16();
-    UByte  padPixels     = in->ReadU8();
-    UInt16 nominalSize   = in->ReadU16();
-    if (in->IsVerboseParse())
-        in->LogParse("  FontTextureInfo: tagInfo.TagType = %d, id = 0x%X, fmt = %d, name = '%s', w = %d, h = %d\n",
-                     tagInfo.TagType, textureId, format, fileName.ToCStr(), textureWidth, textureHeight);
+    unsigned textureId    = pin->ReadU32();
+    UInt16   bitmapFormat = pin->ReadU16();
+    String   imageFileName;
+    pin->ReadStringWithLength(&imageFileName);
 
-    ResourceId     tid(textureId);
-    ResourceHandle rh = GFx_CreateImageFileResourceHandle(p, tid, fileName.ToCStr(), "", format, textureWidth,
-                                                          textureHeight);
+    // Load texture glyph configuration.
+    TextureGlyphData::TextureConfig tgc;
+    tgc.TextureWidth  = pin->ReadU16();
+    tgc.TextureHeight = pin->ReadU16();
+    tgc.PadPixels     = pin->ReadU8();
+    tgc.NominalSize   = pin->ReadU16();
 
-    unsigned numTexGlyphs = in->ReadU16();
-    if (in->IsVerboseParse())
-        in->LogParse("  PadPixels = %d, nominal glyph size = %d, numTexGlyphs = %d\n", padPixels, nominalSize,
-                     numTexGlyphs);
-
-    Array<Render::TextureGlyph> texGlyphs;
-    for (unsigned i = 0; i < numTexGlyphs; i++)
+    if (pin->IsVerboseParse())
     {
-        Render::RectF  uvBounds;
-        Render::PointF uvOrigin;
-        uvBounds.x1 = in->ReadFloat();
-        uvBounds.y1 = in->ReadFloat();
-        uvBounds.x2 = in->ReadFloat();
-        uvBounds.y2 = in->ReadFloat();
-        uvOrigin.x  = in->ReadFloat();
-        uvOrigin.y  = in->ReadFloat();
-        if (in->IsVerboseParse())
-        {
-            in->LogParse("  TEXGLYPH[%d]: uvBnd.x1 = %f, uvBnd.y1 = %f, uvBnd.x2 = %f, uvBnd.y2 = %f\n", i,
-                         (double)uvBounds.x1, (double)uvBounds.y1, (double)uvBounds.x2, (double)uvBounds.y2);
-            in->LogParse("                uvOrigin.x = %f, uvOrigin.y = %f\n", (double)uvOrigin.x,
-                         (double)uvOrigin.y);
-        }
-
-        Render::TextureGlyph tg;
-        if (rh.IsIndex())
-            tg.BindIndex = rh.GetBindIndex();
-        else if (Resource* pres = rh.GetResourcePtr())
-        {
-            if ((pres->GetResourceTypeCode() & Resource::RT_TypeCode_Mask) ==
-                (Resource::RT_Image << Resource::RT_TypeCode_Shift))
-                tg.pImage = static_cast<Render::Image*>(static_cast<ImageResource*>(pres)->GetImage());
-        }
-        tg.UvBounds = uvBounds;
-        tg.UvOrigin = uvOrigin;
-        texGlyphs.PushBack(tg);
+        pin->LogParse("  FontTextureInfo: tagInfo.TagType = %d, id = 0x%X, fmt = %d, name = '%s', w = %d, h = %d\n",
+                      tagInfo.TagType, textureId, bitmapFormat, imageFileName.ToCStr(), tgc.TextureWidth,
+                      tgc.TextureHeight);
     }
 
-    unsigned numFonts = in->ReadU16();
-    if (in->IsVerboseParse())
-        in->LogParse("  NumFonts = %d\n", numFonts);
-    for (unsigned i = 0; i < numFonts; i++)
-    {
-        UInt16        fontId = in->ReadU16();
-        Render::Font* pfont  = p->GetFontData(ResourceId(fontId));
-        if (!pfont)
-            continue;
+    // Fill in file information.
+    ResourceHandle rh = GFx_CreateImageFileResourceHandle(p, ResourceId(textureId), imageFileName.ToCStr(), "",
+                                                          bitmapFormat, (UInt16)tgc.TextureWidth,
+                                                          (UInt16)tgc.TextureHeight);
 
-        TextureGlyphData* ptgd = (TextureGlyphData*)pfont->GetTextureGlyphData();
-        if (ptgd)
-            ptgd->AddRef();
+    // Load texture glyphs info first
+    Array<Render::TextureGlyph> texGlyphsInTexture;
+    unsigned numTexGlyphs = pin->ReadU16();
+    unsigned i;
+
+    if (pin->IsVerboseParse())
+    {
+        pin->LogParse("  PadPixels = %d, nominal glyph size = %d, numTexGlyphs = %d\n", tgc.PadPixels,
+                      tgc.NominalSize, numTexGlyphs);
+    }
+
+    for (i = 0; i < numTexGlyphs; ++i)
+    {
+        // load TEXGLYPH
+        float uvBoundsLeft   = pin->ReadFloat();
+        float uvBoundsTop    = pin->ReadFloat();
+        float uvBoundsRight  = pin->ReadFloat();
+        float uvBoundsBottom = pin->ReadFloat();
+        float uvOriginX      = pin->ReadFloat();
+        float uvOriginY      = pin->ReadFloat();
+
+        if (pin->IsVerboseParse())
+        {
+            pin->LogParse("  TEXGLYPH[%d]: uvBnd.x1 = %f, uvBnd.y1 = %f,"
+                          " uvBnd.x2 = %f, uvBnd.y2 = %f\n",
+                          i, uvBoundsLeft, uvBoundsTop, uvBoundsRight, uvBoundsBottom);
+            pin->LogParse("                uvOrigin.x = %f, uvOrigin.y = %f\n", uvOriginX, uvOriginY);
+        }
+
+        // create TextureGlyph
+        Render::TextureGlyph texGlyph;
+        if (rh.IsIndex())
+        {
+            texGlyph.BindIndex = rh.GetBindIndex();
+        }
         else
         {
-            ptgd = SF_HEAP_NEW(pheap) TextureGlyphData(pfont->GetGlyphShapeCount(), true);
-            if (ptgd)
+            if (rh.GetResourcePtr() && rh.GetResourcePtr()->GetResourceType() == Resource::RT_Image)
             {
-                TextureGlyphData::TextureConfig config;
-                config.NominalSize   = nominalSize;
-                config.PadPixels     = padPixels;
-                config.TextureWidth  = textureWidth;
-                config.TextureHeight = textureHeight;
-                ptgd->SetTextureConfig(config);
-                pfont->SetTextureGlyphData(ptgd);
+                Render::Image* pimage =
+                    static_cast<Render::Image*>(static_cast<ImageResource*>(rh.GetResourcePtr())->GetImage());
+                texGlyph.pImage = pimage;
             }
         }
-        if (ptgd)
-            ptgd->AddTexture(tid, rh);
-
-        unsigned numGlyphsInFont = in->ReadU16();
-        for (unsigned j = 0; j < numGlyphsInFont; j++)
-        {
-            UInt16 glyphIndex    = in->ReadU16();
-            UInt16 texGlyphIndex = in->ReadU16();
-            if (ptgd)
-                ptgd->AddTextureGlyph(glyphIndex, texGlyphs[texGlyphIndex]);
-        }
-        if (ptgd)
-            ptgd->Release();
+        texGlyph.UvBounds = Render::RectF(uvBoundsLeft, uvBoundsTop, uvBoundsRight, uvBoundsBottom);
+        texGlyph.UvOrigin = Render::PointF(uvOriginX, uvOriginY);
+        texGlyphsInTexture.PushBack(texGlyph);
     }
-    in->LogParse("\n");
+
+    // load fonts' info
+    unsigned numFonts = pin->ReadU16();
+    if (pin->IsVerboseParse())
+    {
+        pin->LogParse("  NumFonts = %d\n", numFonts);
+    }
+
+    for (i = 0; i < numFonts; ++i)
+    {
+        // Load FONTINFO
+        UInt16        fontId = pin->ReadU16();
+        Render::Font* pfd    = p->GetFontData(ResourceId(fontId));
+        if (!pfd)
+        {
+            continue;
+        }
+
+        // Get/Create font texture data.
+        Ptr<TextureGlyphData> ptextureGlyphData = static_cast<TextureGlyphData*>(pfd->GetTextureGlyphData());
+        if (!ptextureGlyphData)
+        {
+            if ((ptextureGlyphData = *SF_HEAP_NEW(pheap) TextureGlyphData(pfd->GetGlyphShapeCount(), true)))
+            {
+                ptextureGlyphData->SetTextureConfig(tgc);
+                pfd->SetTextureGlyphData(ptextureGlyphData);
+            }
+        }
+
+        if (ptextureGlyphData)
+            ptextureGlyphData->AddTexture(ResourceId(textureId), rh);
+
+        unsigned numGlyphsInFont = pin->ReadU16();
+        for (unsigned i = 0; i < numGlyphsInFont; ++i)
+        {
+            // load GLYPHIDX
+            unsigned indexInFont    = pin->ReadU16();
+            unsigned indexInTexture = pin->ReadU16();
+
+            if (ptextureGlyphData)
+                ptextureGlyphData->AddTextureGlyph(indexInFont, texGlyphsInTexture[indexInTexture]);
+        }
+    }
+
+    pin->LogParse("\n");
 }
 
 // DefineExternalGradientImage: a gradient image kept in a file of its own.
