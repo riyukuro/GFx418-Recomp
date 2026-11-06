@@ -98,6 +98,39 @@ enum FocusMovedType
 };
 #endif
 
+#ifdef SF_GFX_PLAYERIMPL
+} // namespace GFx
+// The exe inlines the tab order's Clear -> Resize -> ResizeNoConstruct chain into FocusGroupDescr::ResetTabableArray
+// (exe 0x142574ce0); our cl calls each step out of line unless forced. TU-local to the SF_GFX_PLAYERIMPL units.
+template<> __forceinline void ArrayDataBase<Ptr<GFx::InteractiveObject>, AllocatorDH<Ptr<GFx::InteractiveObject>, 0x147>,
+    ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize)
+{
+    UPInt oldSize = Size;
+    if (newSize < oldSize)
+    {
+        AllocatorType::DestructArray(Data + newSize, oldSize - newSize);
+        if (newSize < (Policy.GetCapacity() >> 1))
+            Reserve(pheapAddr, newSize);
+    }
+    else if (newSize >= Policy.GetCapacity())
+    {
+        Reserve(pheapAddr, newSize + (newSize >> 2));
+    }
+    Size = newSize;
+}
+template<> __forceinline void ArrayDataDH<Ptr<GFx::InteractiveObject>, AllocatorDH<Ptr<GFx::InteractiveObject>, 0x147>,
+    ArrayDefaultPolicy>::Resize(UPInt newSize)
+{
+    UPInt oldSize = this->Size;
+    BaseType::ResizeNoConstruct(pHeap, newSize);
+    if (newSize > oldSize)
+        AllocatorType::ConstructArray(this->Data + oldSize, newSize - oldSize);
+}
+template<> __forceinline void ArrayBase<ArrayDataDH<Ptr<GFx::InteractiveObject>, AllocatorDH<Ptr<GFx::InteractiveObject>, 0x147>,
+    ArrayDefaultPolicy> >::Clear() { Data.Resize(0); }
+namespace GFx {
+#endif
+
 // Keyboard focus state of one focus group (one per controller group; 0x60 bytes, 16-aligned).
 struct FocusGroupDescr
 {
