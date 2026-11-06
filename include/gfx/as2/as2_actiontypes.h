@@ -201,10 +201,11 @@ protected:
 public:
     RefCountBaseGC(Collector* prcc) : pRCC(prcc), RefCount(1) {}
 
-    // Count + 1 and back to the in-use state.
+    // Count + 1 and back to the in-use state. Two statements, as in the SDK: the exe does inc / and in memory.
     void AddRef()
     {
-        RefCount = (RefCount + 1) & ~(Mask_State << Shift_State);
+        Increment();
+        SetState(State_InUse);
     }
     void Release()
     {

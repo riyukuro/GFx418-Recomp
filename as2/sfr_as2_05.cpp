@@ -836,14 +836,37 @@ Object* ObjectInterface::FindOwner(ASStringContext* psc, const ASString& name)
     return 0;
 }
 
-// MS2-FUNCTIONAL the exe AddRefs the copied function in memory (inc / and) and keeps two null returns
+// The SDK's out-of-line Value::ToFunction / ResolveFunctionName, which the exe inlines here.
+// penv is NULL at the only call, so the name-resolve body is dead (a function name gives null).
+static SF_FORCEINLINE FunctionRef Get_constructor_ResolveFunctionName(const Value& v, const Environment* penv)
+{
+    if (penv && v.T.Type == Value::FUNCTIONNAME)
+    {
+        FunctionRef ctor;
+        return ctor;
+    }
+    return FunctionRef();
+}
+static SF_FORCEINLINE FunctionRef Get_constructor_ToFunction(const Value& v, const Environment* penv)
+{
+    switch(v.T.Type)
+    {
+    case Value::FUNCTIONNAME:
+        return Get_constructor_ResolveFunctionName(v, penv);
+    case Value::FUNCTION:
+        return FunctionRef(v.V.FunctionValue);
+    default:;
+    }
+    return FunctionRef();
+}
+
 // @0x1429583d0
 FunctionRef ObjectInterface::Get_constructor(ASStringContext* psc)
 {
-    Value ctorVal;
-    if (GetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_constructor), &ctorVal) && ctorVal.IsFunctionObject())
-        return ctorVal.ToFunction(0);
-    return FunctionRef();
+    Value val;
+    if (GetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_constructor), &val))
+        return Get_constructor_ToFunction(val, NULL);
+    return 0;
 }
 
 // MS2-FUNCTIONAL the exe AddRefs the copied function in memory (inc / and) and indexes the builtin as (id + 0x27) * 8
