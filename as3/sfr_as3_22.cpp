@@ -659,6 +659,14 @@ static bool BitmapHasAlpha(const unsigned char* op, unsigned offset)
 
 namespace Scaleform { namespace Render {
 struct DICommandContext; class Texture;
+// The DrawableImage fields the Noise command reads (Transparent at +0x48) and its channel bits.
+struct Sfr22NoiseImage
+{
+    enum { Channel_Red = 0x01, Channel_Green = 0x02, Channel_Blue = 0x04, Channel_Alpha = 0x08 };
+    UByte Pad[0x48];
+    bool  Transparent;
+    bool  IsTransparent() const { return Transparent; }
+};
 struct DICommand_Compare
 {
     virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
@@ -676,6 +684,7 @@ struct DICommand_Scroll
 {
     virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
     virtual void ExecuteHWCopyAction(DICommandContext& context, Texture** tex, const Matrix2F* texgen) const;
+    const Sfr22NoiseImage* pImage; const Sfr22NoiseImage* pSource; Rect<SInt32> SourceRect; Point<SInt32> DestPoint; // +8 / +0x10 / +0x18 / +0x28
 };
 struct DICommand_CopyChannel
 {
@@ -709,14 +718,6 @@ struct DICommand_FillRect
 struct DICommand_Clear
 {
     virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
-};
-// The DrawableImage fields the Noise command reads (Transparent at +0x48) and its channel bits.
-struct Sfr22NoiseImage
-{
-    enum { Channel_Red = 0x01, Channel_Green = 0x02, Channel_Blue = 0x04, Channel_Alpha = 0x08 };
-    UByte Pad[0x48];
-    bool  Transparent;
-    bool  IsTransparent() const { return Transparent; }
 };
 struct DICommand_Noise
 {
@@ -875,7 +876,8 @@ void Scaleform::Render::DICommand_Merge::ExecuteSW(Scaleform::Render::DICommandC
     }
 }
 
-// MS2-FUNCTIONAL: scroll (the SDK body without the swizzler contexts); scheduling and register allocation only.
+static __forceinline const Scaleform::Render::Rect<Scaleform::SInt32> Sfr22RectPlus(const Scaleform::Render::Rect<Scaleform::SInt32>& r, const Scaleform::Render::Point<Scaleform::SInt32>& pt) { return Scaleform::Render::Rect<Scaleform::SInt32>(r).Offset(pt); }
+// MS2-FUNCTIONAL: scroll (the SDK body without the swizzler contexts); frame layout only: ours packs delta and sCol into home slots, the exe keeps them at rsp+0x20.. and shrink-wraps r15.
 // Copies back to front (so an overlapping self-copy works) and forces opaque alpha when either side lacks
 // alpha.
 // @0x142677c70
@@ -883,32 +885,30 @@ void Scaleform::Render::DICommand_Scroll::ExecuteSW(Scaleform::Render::DICommand
 {
     // DICommand_SourceRect's fields: pImage +8, pSource +0x10, SourceRect +0x18, DestPoint +0x28; an image's
     // IsTransparent() is its flag at +0x48.
-    struct SourceRectView
-    {
-        void* vptr;
-        const unsigned char* pImage;
-        const unsigned char* pSource;
-        Rect<SInt32> SourceRect;
-        Point<SInt32> DestPoint;
-    };
-    const SourceRectView& op = *reinterpret_cast<const SourceRectView*>(this);
+
+
+
+
+
+
+
+
     const ImageData& src = *psrc[0];
     ImagePlane d, s;
     dest.GetPlane(0, &d);
     src.GetPlane(0, &s);
 
     // dst(x,y) = src(x,y) + destPt - SourceRect.TopLeft
-    Point<SInt32> delta = op.DestPoint - op.SourceRect.TopLeft();
+    Point<SInt32> delta = DestPoint - SourceRect.TopLeft();
 
-    ImageSize srcSize = src.GetSize(), dstSize = dest.GetSize();
-    Rect<SInt32> srcImageRect(0, 0, (SInt32)srcSize.Width, (SInt32)srcSize.Height);
-    Rect<SInt32> dstImageRect(0, 0, (SInt32)dstSize.Width, (SInt32)dstSize.Height);
+
+    Rect<SInt32> srcImageRect(src.GetSize());
+    Rect<SInt32> dstImageRect(dest.GetSize());
     Rect<SInt32> srcClippedRect, dstClippedRect;
 
-    if (!srcImageRect.IntersectRect(&srcClippedRect, op.SourceRect))
+    if (!srcImageRect.IntersectRect(&srcClippedRect, SourceRect))
         return;
-    if (!Rect<SInt32>(srcClippedRect.x1 + delta.x, srcClippedRect.y1 + delta.y,
-                      srcClippedRect.x2 + delta.x, srcClippedRect.y2 + delta.y).IntersectRect(&dstClippedRect, dstImageRect))
+    if (!Sfr22RectPlus(srcClippedRect, delta).IntersectRect(&dstClippedRect, dstImageRect))
         return;
 
     SInt32 x, y;
@@ -921,7 +921,7 @@ void Scaleform::Render::DICommand_Scroll::ExecuteSW(Scaleform::Render::DICommand
         {
             Color sCol = src.GetPixelInScanline(sline, x - delta.x);
 
-            if (!op.pSource[0x48] || !op.pImage[0x48])
+            if (!pSource->IsTransparent() || !pImage->IsTransparent())
                 sCol.SetAlpha(255);
 
             dest.SetPixelInScanline(dline, x, sCol.ToColor32());
