@@ -71,7 +71,19 @@ extern const void* DAT_1432155c0[];
 extern const void* DAT_143215648[];
 extern const void* DAT_143218490[];
 extern const void* DAT_1432184d8[];
-extern const void* DAT_143222848[];
+
+// The style sheet loader (full class in sfr_as2_01b / 03ad / 06): its dtor (out of line at 0x1429255c0) inlines here.
+class CSSFileLoaderAndParserImpl : public ASCSSFileLoader
+{
+public:
+    UByte    Unrecovered_10[8];
+    wchar_t* Buffer;
+    int      BufferLen;
+
+    virtual ~CSSFileLoaderAndParserImpl() { if (Buffer) Memory::Free(Buffer); }
+    virtual void Load(const String& fileName, FileOpener* opener);
+    virtual void Init(Environment* penv, Object* sheet);
+};
 
 // The Prototype<X> and SharedObjectPtr destructors called by name emit these vftables here as well.
 // MS2-PIN: ??_7Task@GFx@Scaleform@@6B@ 0x143188d98
@@ -227,9 +239,7 @@ void* DeleteAs2_14292d0b0(void* p, unsigned flags)
 // @0x14292a050
 void* DeleteAs2_14292a050(void* p, unsigned flags)
 {
-    *(const void**)p = DAT_143222848;
-    if (*(void**)((char*)p+0x18)) Memory::Free(*(void**)((char*)p+0x18));
-    static_cast<ASCSSFileLoader*>(p)->ASCSSFileLoader::~ASCSSFileLoader();
+    static_cast<CSSFileLoaderAndParserImpl*>(p)->CSSFileLoaderAndParserImpl::~CSSFileLoaderAndParserImpl();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -426,3 +436,4 @@ void* DeleteAs2_14292ce00(void* p, unsigned flags)
 }
 
 }}} // namespace
+// MS2-PIN: ??_7CSSFileLoaderAndParserImpl@AS2@GFx@Scaleform@@6B@ 0x143222848
