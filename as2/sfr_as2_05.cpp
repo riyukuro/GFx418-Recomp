@@ -2450,68 +2450,104 @@ static SF_FORCEINLINE bool Object_IsBuiltinT(const ASString& builtin, const ASSt
     return CaseSensitive ? builtin.GetNode() == name.GetNode() : builtin.GetNode()->pLower == name.GetNode()->pLower;
 }
 
-// The chain walk of Object::GetMemberRaw in one case mode (pikey: the name's key ignoring case).
-template<bool CaseSensitive>
-static SF_FORCEINLINE bool Object_GetMemberRawT(Object* pthis, ASStringContext* psc, const ASString& name,
-                                                Value* val, const ASStringNoCaseKey* pikey)
-{
-    bool resolveHandlerSet = false;
-    for (Object* pobj = pthis; pobj; pobj = pobj->pProto)
-    {
-        if (Object_IsBuiltinT<CaseSensitive>(psc->GetBuiltin(ASBuiltin___proto__), name))
-        {
-            if (pobj->pProto)
-                val->SetAsObject(pobj->pProto);
-            else
-                val->SetUndefined();
-            return true;
-        }
-        if (Object_IsBuiltinT<CaseSensitive>(psc->GetBuiltin(ASBuiltin___resolve), name))
-        {
-            if (pobj->ResolveHandler.Function)
-                val->SetAsFunction(pobj->ResolveHandler);
-            else
-                val->SetUndefined();
-            return true;
-        }
-        // The exact lookup goes through the out-of-line findIndexAlt.
-        SPInt index = CaseSensitive ? MemberHash_FindIndex(&pobj->Members, name)
-                                    : HashFindIndex(&pobj->Members, *pikey);
-        if (index >= 0)
-        {
-            MemberSet::Iterator it(reinterpret_cast<MemberSet*>(&pobj->Members), index);
-            if (!it.IsEnd())
-            {
-                const Value& mval = it->Second.mValue;
-                // An unset member of a prototype: the prototype resolves it itself.
-                if (!mval.IsSet() && pobj != pthis)
-                    return pobj->GetMemberRaw(psc, name, val);
-                *val = mval;
-                return true;
-            }
-        }
-        // The first __resolve handler up the chain answers when nothing does.
-        if (!resolveHandlerSet && pobj->ResolveHandler.Function)
-        {
-            val->DropRefs();
-            val->T.Type = Value::RESOLVEHANDLER;
-            val->V.FunctionValue.Init(pobj->ResolveHandler);
-            resolveHandlerSet = true;
-        }
-    }
-    return false;
-}
-
-// MS2-FUNCTIONAL same logic; the exe shares the found, __proto__ and __resolve tails between the two case modes and
-// keeps the chain start in one register for both
+// The SDK body: one chain start and resolve flag for both case modes, a for loop per mode.
 // @0x142953280
 bool Object::GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val)
 {
+    Object* current = this;
+    bool resolveHandlerSet = false;
+
     if (psc->IsCaseSensitive())
-        return Object_GetMemberRawT<true>(this, psc, name, val, 0);
-    name.ResolveLowercase();
-    ASStringNoCaseKey ikey(name);
-    return Object_GetMemberRawT<false>(this, psc, name, val, &ikey);
+    {
+        for (; current; current = current->pProto)
+        {
+            if (name == psc->GetBuiltin(ASBuiltin___proto__))
+            {
+                if (current->pProto)
+                    val->SetAsObject(current->pProto);
+                else
+                    val->SetUndefined();
+                return true;
+            }
+            else if (name == psc->GetBuiltin(ASBuiltin___resolve))
+            {
+                if (current->ResolveHandler.Function)
+                    val->SetAsFunction(current->ResolveHandler);
+                else
+                    val->SetUndefined();
+                return true;
+            }
+
+            SPInt index = MemberHash_FindIndex(&current->Members, name);
+            if (index >= 0)
+            {
+                MemberSet::Iterator it(reinterpret_cast<MemberSet*>(&current->Members), index);
+                if (!it.IsEnd())
+                {
+                    const Value& memval = it->Second.mValue;
+                    if (!memval.IsSet() && current != this)
+                        return current->GetMemberRaw(psc, name, val);
+                    *val = memval;
+                    return true;
+                }
+            }
+
+            if (!resolveHandlerSet && current->ResolveHandler.Function)
+            {
+                val->DropRefs();
+                val->T.Type = Value::RESOLVEHANDLER;
+                val->V.FunctionValue.Init(current->ResolveHandler);
+                resolveHandlerSet = true;
+            }
+        }
+    }
+    else
+    {
+        name.ResolveLowercase();
+        ASStringNoCaseKey ikey(name);
+        for (; current; current = current->pProto)
+        {
+            if (Object_IsBuiltinT<false>(psc->GetBuiltin(ASBuiltin___proto__), name))
+            {
+                if (current->pProto)
+                    val->SetAsObject(current->pProto);
+                else
+                    val->SetUndefined();
+                return true;
+            }
+            else if (Object_IsBuiltinT<false>(psc->GetBuiltin(ASBuiltin___resolve), name))
+            {
+                if (current->ResolveHandler.Function)
+                    val->SetAsFunction(current->ResolveHandler);
+                else
+                    val->SetUndefined();
+                return true;
+            }
+
+            SPInt index = HashFindIndex(&current->Members, ikey);
+            if (index >= 0)
+            {
+                MemberSet::Iterator it(reinterpret_cast<MemberSet*>(&current->Members), index);
+                if (!it.IsEnd())
+                {
+                    const Value& memval = it->Second.mValue;
+                    if (!memval.IsSet() && current != this)
+                        return current->GetMemberRaw(psc, name, val);
+                    *val = memval;
+                    return true;
+                }
+            }
+
+            if (!resolveHandlerSet && current->ResolveHandler.Function)
+            {
+                val->DropRefs();
+                val->T.Type = Value::RESOLVEHANDLER;
+                val->V.FunctionValue.Init(current->ResolveHandler);
+                resolveHandlerSet = true;
+            }
+        }
+    }
+    return false;
 }
 
 // Value::SetAsFunction where the exe inlines it.
