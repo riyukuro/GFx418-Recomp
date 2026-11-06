@@ -262,8 +262,8 @@ void SF_STDCALL GFx_JpegTablesLoader(LoadProcess* p, const TagInfo& tagInfo)
 }
 
 // Defines a JPEG image whose stream relies on the tables from the preceding JPEGTables tag.
-// MS2-FUNCTIONAL 0x1425c4500: same reads, checks, log text and reader calls; register allocation and the scheduling
-// of the ImageCreateArgs stores differ.
+// The SDK default-constructs the ImageCreateArgs and then sets pHeap; that fixes the order of the args stores
+// and the register allocation.
 // @0x1425c4500
 void SF_STDCALL GFx_DefineBitsJpegLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
@@ -286,13 +286,13 @@ void SF_STDCALL GFx_DefineBitsJpegLoader(LoadProcess* p, const TagInfo& tagInfo)
                 RefCountImpl* ptables = reinterpret_cast<Ptr<RefCountImpl>*>(reinterpret_cast<UByte*>(p) + 0x360)->GetPtr();
                 if (ptables)
                 {
-                    Render::ImageCreateArgs args(Render::Image_None, 0, p->GetLoadHeap());
+                    Render::ImageCreateArgs args; args.pHeap = p->GetLoadHeap();
                     psource = preader->CreateImageSource(p->GetStream()->GetUnderlyingFile(), args,
                         reinterpret_cast<Render::JPEG::ExtraData*>(ptables), tagInfo.TagLength - 2, false);
                 }
                 else
                 {
-                    Render::ImageCreateArgs args(Render::Image_None, 0, p->GetLoadHeap());
+                    Render::ImageCreateArgs args; args.pHeap = p->GetLoadHeap();
                     psource = preader->CreateImageSource(p->GetStream()->GetUnderlyingFile(), args, 0,
                         tagInfo.TagLength - 2, false);
                 }
@@ -305,7 +305,7 @@ void SF_STDCALL GFx_DefineBitsJpegLoader(LoadProcess* p, const TagInfo& tagInfo)
 }
 
 // Defines a self-contained JPEG image (SWF DefineBitsJPEG2).
-// MS2-FUNCTIONAL 0x1425c4740: only the ImageCreateArgs heap load is scheduled before the args store.
+// As in the SDK, the ImageCreateArgs is default-constructed and pHeap is set afterwards.
 // @0x1425c4740
 void SF_STDCALL GFx_DefineBitsJpeg2Loader(LoadProcess* p, const TagInfo& tagInfo)
 {
@@ -324,7 +324,7 @@ void SF_STDCALL GFx_DefineBitsJpeg2Loader(LoadProcess* p, const TagInfo& tagInfo
                 p->LogError("Jpeg System is not installed - can't load jpeg image data");
             else
             {
-                Render::ImageCreateArgs args(Render::Image_None, 0, p->GetLoadHeap());
+                Render::ImageCreateArgs args; args.pHeap = p->GetLoadHeap();
                 psource = preader->CreateImageSource(p->GetStream()->GetUnderlyingFile(), args, 0,
                     tagInfo.TagLength - 2, true);
             }
