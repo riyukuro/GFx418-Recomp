@@ -5279,26 +5279,42 @@ ClassTraits::Traits* FUN_14250f9a0(VM& vm, VMAbcFile& file, const Abc::ClassInfo
     return *ptr;
 }
 
-// An ABC multiname in a public (or explicit) namespace: its namespace, or any of its namespace set.
-// MS2-FUNCTIONAL the namespace index is loaded once ahead of the kind test (the exe loads it in each branch)
+// ConstPool::GetNamespace(UPInt) and NamespaceInfo::IsPublic (AS3_Abc_ConstPool.h).
+static inline const Abc::NamespaceInfo& Sfr18GetNs(const Abc::ConstPool& cp, UPInt ind)
+{
+    if (ind == 0)
+        return cp.any_namespace;
+    return cp.ConstNamespace[ind];
+}
+
+static inline bool Sfr18IsPublic(const Abc::NamespaceInfo& ns)
+{
+    return ns.Kind == 0 || ns.Kind == 4;
+}
+
+// HasPublicNamespace (AS3_Object.cpp): a multiname in a public (or explicit) namespace, either
+// its own namespace or any of its namespace set.
 // @0x1425112f0
 bool FUN_1425112f0(const Abc::ConstPool& cp, const Abc::Multiname& mn)
 {
-    if ((mn.Kind & 3) >= 2)
+    // QName case ...
+    if ((mn.Kind & 3) == 0 || (mn.Kind & 3) == 1)
+        return Sfr18IsPublic(Sfr18GetNs(cp, mn.Ind));
+
+    // Multiname case ...
+    const UInt8* ptr = cp.const_ns_set[mn.Ind].Data;
+    UInt32 size;
+    UInt32 ns_ind;
+    Abc::Read(ptr, size);
+
+    for (UInt32 i = 0; i < size; ++i)
     {
-        const UInt8*  p = cp.const_ns_set[mn.Ind].Data;
-        const UInt32  n = Abc::ReadU30(p);
-        for (UInt32 i = 0; i < n; ++i)
-        {
-            const UInt32              ind = Abc::ReadU30(p);
-            const Abc::NamespaceInfo& ns  = ind == 0 ? cp.any_namespace : cp.ConstNamespace[ind];
-            if ((ns.Kind & ~4) == 0)
-                return true;
-        }
-        return false;
+        Abc::Read(ptr, ns_ind);
+        if (Sfr18IsPublic(Sfr18GetNs(cp, ns_ind)))
+            return true;
     }
-    const Abc::NamespaceInfo& ns = mn.Ind == 0 ? cp.any_namespace : cp.ConstNamespace[mn.Ind];
-    return (ns.Kind & ~4) == 0;
+
+    return false;
 }
 
 } } } // namespace Scaleform::GFx::AS3
