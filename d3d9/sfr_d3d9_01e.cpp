@@ -1531,7 +1531,19 @@ void HAL::PushMask_BeginSubmit(MaskPrimitive* prim)
     ++AccumulatedStats.Masks;
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+}}} // namespace Scaleform::Render::D3D9
+// the fe8 helpers below (defined after this function)
+namespace SR = Scaleform::Render;
+static __forceinline const SR::Cxform& SpfGetCxform(const SR::MatrixPoolImpl::HMatrix& m);
+static __forceinline SR::Cxform SpfProfileCxform(const SR::Cxform& cx);
+static __forceinline void SpfSetCxform(SR::D3D9::ShaderInterface* psi, const SR::D3D9::ShaderPair& sd,
+                                       const SR::Cxform& cx, unsigned index, unsigned batch);
+static __forceinline unsigned SpfGetPlaneCount(const SR::Texture* t);
+static __forceinline Scaleform::UByte SpfGetTextureCount(const SR::PrimitiveFillData& d);
+static __forceinline const SR::PrimitiveFillData& SpfData(const SR::PrimitiveFill* fill);
+namespace Scaleform { namespace Render { namespace D3D9 {
+
+// MS2-FUNCTIONAL: the SDK 4.1.19 body; left: register allocation (fillFlags in a register, fill-record pointer IV) and block order (the exe puts the loop tail before the instanced draw)
 // @0x14272fcf0
 void HAL::DrawProcessedComplexMeshes(ComplexMesh* complexMesh, const StrideArray<MatrixPoolImpl::HMatrix>& matrices)
 {
@@ -1545,145 +1557,133 @@ void HAL::DrawProcessedComplexMeshes(ComplexMesh* complexMesh, const StrideArray
     if (!pmesh)
         return;
 
-    const ComplexMesh::FillRecord* fillRecords = complexMesh->FillRecords.GetDataPtr();
-    unsigned  fillCount     = (unsigned)complexMesh->FillRecords.GetSize();
-    unsigned  matrixCount   = (unsigned)matrices.GetSize();
-    unsigned  startIndex    = (unsigned)(pmesh->IBAllocOffset >> 1);
-    unsigned  maxDrawCount  = 1;
-    unsigned  vertexBaseIndex = 0;
-    unsigned  prevStride    = 0;
+    const ComplexMesh::FillRecord* fillRecords       = complexMesh->FillRecords.GetDataPtr();
+    unsigned                       fillCount         = (unsigned)complexMesh->FillRecords.GetSize();
+    unsigned                       instanceCount     = (unsigned)matrices.GetSize();
+    PrimitiveBatch::BatchType      batchType         = PrimitiveBatch::DP_Single;
+    unsigned                       formatIndex;
+    unsigned                       maxDrawCount      = 1;
+    unsigned                       vertexBaseIndex   = 0;
+    unsigned                       vertexSize        = 0;
+    unsigned                       indexBufferOffset = (unsigned)(pmesh->IBAllocOffset / sizeof(UInt16));
 
-    // several instances of the mesh draw instanced when the device can
-    PrimitiveBatch::BatchType batchType = PrimitiveBatch::DP_Single;
-    unsigned                  formatIndex = 0;
-    if (matrixCount > 1 && SManager.HasInstancingSupport())
+    if (instanceCount > 1 && SManager.HasInstancingSupport())
     {
+        maxDrawCount = Alg::Min(instanceCount, Cache.GetParams().MaxBatchInstances);
         batchType    = PrimitiveBatch::DP_Instanced;
         formatIndex  = 1;
-        maxDrawCount = Alg::Min(matrixCount, Cache.GetParams().MaxBatchInstances);
     }
     else
-        setLinearStreamSource(PrimitiveBatch::DP_Single);
+    {
+        batchType   = PrimitiveBatch::DP_Single;
+        formatIndex = 0;
+        setLinearStreamSource(batchType);
+    }
 
     const Matrix2F* textureMatrices = complexMesh->FillMatrixCache.GetDataPtr();
     pDevice->SetIndices(((IndexBuffer*)pmesh->pIndexBuffer)->pBuffer);
-
     for (unsigned fillIndex = 0; fillIndex < fillCount; fillIndex++)
     {
         const ComplexMesh::FillRecord& fr = fillRecords[fillIndex];
 
-        // bit 3: 3D meshes; bit 2: some instance has a color transform
-        unsigned fillFlags = DeviceFlags;
-        if (matrixCount)
+        unsigned fillFlags  = DeviceFlags;
+        unsigned startIndex = 0;
+        if (instanceCount > 0)
         {
-            fillFlags |= (matrices[0].GetFormatBits() >> 1) & 8;
-            for (unsigned i = 0; i < matrixCount; i++)
+            const MatrixPoolImpl::HMatrix& hm = matrices[0];
+            fillFlags |= hm.Has3D() ? 8 : 0;
+
+            for (unsigned i = 0; i < instanceCount; i++)
             {
-                const MatrixPoolImpl::HMatrix& hm = matrices[i];
-                const Cxform& cx = (hm.GetFormatBits() & MatrixPoolImpl::HMatrixConstants::Has_Cxform)
-                                       ? *hm.pHandle->GetCxformPtr() : Cxform::Identity;
-                if (!(cx == Cxform::Identity))
+                const MatrixPoolImpl::HMatrix& hm = matrices[startIndex + i];
+                if (!(::SpfProfileCxform(::SpfGetCxform(hm)) == Cxform::Identity))
                     fillFlags |= 4;
             }
         }
 
+        // Apply fill (the SDK StaticShaderManager::SetFill).
         PrimitiveFillType fillType = fr.pFill->GetType();
-        unsigned          shader   = SManager.StaticShaderForFill(fillType, fillFlags, batchType);
+        unsigned (ShaderManager::*const sff)(PrimitiveFillType, unsigned&, unsigned) const = &ShaderManager::StaticShaderForFill;
+        unsigned          shader   = (SManager.*sff)(fillType, fillFlags, batchType);   // out of line in the exe
         ShaderData.SetStaticShader((VertexShaderDesc::ShaderType)shader, (FragShaderDesc::ShaderType)shader,
                                    fr.pFormats[formatIndex]);
         ShaderInterfaceAccess::BeginPrimitive(&ShaderData);
-        const ShaderPair& cur = ShaderData.GetCurrentShaders();
+        const ShaderPair& pso = ShaderData.GetCurrentShaders();
 
-        // a new vertex size restarts the stream at the fill's vertices
-        if (fr.pFormats[formatIndex]->Size != prevStride)
+        // Optimization: Modify stream source only when VertexSize changes.
+        if (fr.pFormats[formatIndex]->Size != vertexSize)
         {
-            prevStride = fr.pFormats[formatIndex]->Size;
+            vertexSize = fr.pFormats[formatIndex]->Size;
             pDevice->SetStreamSource(0, ((VertexBuffer*)pmesh->pVertexBuffer)->pBuffer,
-                                     (UINT)(fr.VertexByteOffset + pmesh->VBAllocOffset), prevStride);
+                                     (UINT)(fr.VertexByteOffset + pmesh->VBAllocOffset), vertexSize);
             vertexBaseIndex = 0;
         }
 
-        unsigned fillTextureCount = 0;
-        if ((unsigned)fillType - PrimFill_Texture < 6)
-            fillTextureCount = (fillType > PrimFill_Texture_VColor_EAlpha) + 1;   // the 2Texture fills take two
+        UByte textureCount = ::SpfGetTextureCount(::SpfData(fr.pFill));
+        bool  solid = (fillType == PrimFill_None || fillType == PrimFill_Mask || fillType == PrimFill_SolidColor);
 
-        for (unsigned i = 0; i < matrixCount; i++)
+        for (unsigned i = 0; i < instanceCount; i++)
         {
-            unsigned                       drawIndex = i % maxDrawCount;
-            const MatrixPoolImpl::HMatrix& hm        = matrices[i];
+            const MatrixPoolImpl::HMatrix& hm = matrices[startIndex + i];
 
-            if (!hm.Has3D())
-            {
-                Matrix2F m;
-                m.SetToAppend(complexMesh->VertexMatrix, hm.GetMatrix2D(), Matrices.UserView);
-                ShaderData.SetUniform(cur, Uniform::SU_mvp, &m.M[0][0], 8, 0, drawIndex);
-            }
-            else
-            {
-                Matrix3F t;
-                t.MultiplyMatrix(hm.GetMatrix3D(), complexMesh->VertexMatrix);
-                Matrix4F m;
-                m.MultiplyMatrix(Matrices.GetUVPO(), t);
-                ShaderData.SetUniformInline(cur, Uniform::SU_mvp, &m.M[0][0], 16, 0, drawIndex);
-            }
-
-            if (fillType <= PrimFill_SolidColor)
-                ShaderData.SetColor(cur, Uniform::SU_cxmul, fr.pFill->GetSolidColor(), 0, drawIndex);
+            DmcSetMatrix(&ShaderData, pso, complexMesh->VertexMatrix, hm, &Matrices, i % maxDrawCount);
+            if (solid)
+                ShaderData.SetColor(pso, Uniform::SU_cxmul, fr.pFill->GetSolidColor(), 0, i % maxDrawCount);
             else if (fillFlags & 4)
-            {
-                const Cxform& cx = (hm.GetFormatBits() & MatrixPoolImpl::HMatrixConstants::Has_Cxform)
-                                       ? *hm.pHandle->GetCxformPtr() : Cxform::Identity;
-                ShaderData.SetCxform(cur, cx, 0, drawIndex);
-            }
+                ::SpfSetCxform(&ShaderData, pso, ::SpfProfileCxform(::SpfGetCxform(hm)), 0, i % maxDrawCount);
 
-            unsigned stageIndex = 0;
-            for (unsigned tm = 0; tm < fillTextureCount; tm++)
+            for (unsigned tm = 0, stage = 0; tm < textureCount; tm++)
             {
-                ShaderData.SetUniform(cur, Uniform::SU_texgen, &textureMatrices[fr.FillMatrixIndex[tm]].M[0][0], 8,
-                                      tm * 2, drawIndex);
+                ShaderData.SetUniform(pso, Uniform::SU_texgen, &textureMatrices[fr.FillMatrixIndex[tm]].M[0][0], 8,
+                                      tm * 2, i % maxDrawCount);
                 Render::Texture* ptex = fr.pFill->GetTexture(tm);
-                ShaderData.SetTexture(cur, Uniform::SU_tex, ptex, fr.pFill->GetFillMode(tm), stageIndex);
-                // (the exe reads +0x3e bit 1 and the byte at +0x3c)
-                unsigned stages = (ptex->Use & 2) ? 1 : ptex->MipLevels;
-                stageIndex += ImageData::GetFormatPlaneCount((ImageFormat)ptex->GetFormat()) * stages;
+                ShaderData.SetTexture(pso, Uniform::SU_tex, ptex, fr.pFill->GetFillMode(tm), stage);
+                stage += ::SpfGetPlaneCount(ptex);
             }
 
-            if (batchType == PrimitiveBatch::DP_Instanced)
-            {
-                unsigned next = (i + 1) % maxDrawCount;
-                if ((next == 0 && i != 0) || i == matrixCount - 1)
-                {
-                    unsigned drawCount = maxDrawCount;
-                    if (i == matrixCount - 1 && next != 0)
-                        drawCount = next;
-                    setInstancedStreamSource(drawCount);
-                    ShaderData.Finish(drawCount);
-                    pDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, vertexBaseIndex, 0, fr.VertexCount,
-                                                  startIndex + fr.IndexOffset, fr.IndexCount / 3);
-                    AccumulatedStats.Primitives++;
-                    if (i != matrixCount - 1)
-                        ShaderInterfaceAccess::BeginPrimitive(&ShaderData);
-                }
-            }
-            else
+            bool lastPrimitive = (i == instanceCount - 1);
+            if (batchType != PrimitiveBatch::DP_Instanced)
             {
                 ShaderData.Finish(1);
                 pDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, vertexBaseIndex, 0, fr.VertexCount,
-                                              startIndex + fr.IndexOffset, fr.IndexCount / 3);
+                                              fr.IndexOffset + indexBufferOffset, fr.IndexCount / 3);
                 AccumulatedStats.Primitives++;
-                if (i != matrixCount - 1)
+                if (!lastPrimitive)
+                    ShaderInterfaceAccess::BeginPrimitive(&ShaderData);
+            }
+            else if (((i + 1) % maxDrawCount == 0 && i != 0) || lastPrimitive)
+            {
+                unsigned drawCount = maxDrawCount;
+                if (lastPrimitive && (i + 1) % maxDrawCount != 0)
+                    drawCount = (i + 1) % maxDrawCount;
+                setInstancedStreamSource(drawCount);
+                ShaderData.Finish(drawCount);
+                pDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, vertexBaseIndex, 0, fr.VertexCount,
+                                              fr.IndexOffset + indexBufferOffset, fr.IndexCount / 3);
+                AccumulatedStats.Primitives++;
+                if (!lastPrimitive)
                     ShaderInterfaceAccess::BeginPrimitive(&ShaderData);
             }
         }
-
-        AccumulatedStats.Meshes += matrixCount;
-        AccumulatedStats.Triangles += (fr.IndexCount / 3) * matrixCount;
+        AccumulatedStats.Meshes += instanceCount;
+        AccumulatedStats.Triangles += (fr.IndexCount / 3) * instanceCount;
         vertexBaseIndex += fr.VertexCount;
     }
 
     pmesh->GPUFence = Cache.GetRenderSync()->InsertFence();
     pmesh->MoveToCacheListFront(MCL_ThisFrame);
 }
+
+
+
+
+
+
+
+
+
+
+
 
 } // namespace D3D9
 
