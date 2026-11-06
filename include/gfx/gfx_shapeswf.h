@@ -157,7 +157,8 @@ class ShapeSwfReader
     int ReadStrokeStyles(LoadProcess* p, TagType tagType);
 
 public:
-    ShapeSwfReader(ShapeDataBase& shape, PathAllocator* allocator) : Shape(shape), pAllocator(allocator) {}
+    // pAllocator is set in the body: the exe loads it after zeroing the style arrays.
+    ShapeSwfReader(ShapeDataBase& shape, LoadProcess* p) : Shape(shape) { pAllocator = p->GetLoadTaskData()->GetPathAllocator(); }
 
     bool Read(LoadProcess* p, TagType tagType, unsigned lenInBytes, bool withStyle);
 

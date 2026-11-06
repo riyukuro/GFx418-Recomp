@@ -297,20 +297,20 @@ bool ShapeDataBase::IsEqualGeometry(const ShapeBaseCharacterDef& cmpWith) const
     return false;
 }
 
-// MS2-FUNCTIONAL: instruction scheduling of the reader setup differs.
+// MS2-FUNCTIONAL: scheduling only (the exe stores the stroke array's last zeroed 16 bytes after the reader's pAllocator, ours before)
 // @0x14265ac00
 bool ConstShapeNoStyles::Read(LoadProcess* p, TagType tagType, unsigned lenInBytes, bool withStyle)
 {
-    ShapeSwfReader reader(*this, p->GetLoadTaskData()->GetPathAllocator());
+    ShapeSwfReader reader(*this, p);
     return reader.Read(p, tagType, lenInBytes, withStyle);
 }
 
 // The styles read go to one block of the load heap.
-// MS2-FUNCTIONAL: the exe loads the reader's style arrays after each loop guard and indexes by pointer; ours loads them up front.
+// MS2-FUNCTIONAL: scheduling only (the exe stores the stroke array's last zeroed 16 bytes after the reader's pAllocator, ours before)
 // @0x14265ac70
 bool ConstShapeWithStyles::Read(LoadProcess* p, TagType tagType, unsigned lenInBytes, bool withStyle)
 {
-    ShapeSwfReader reader(*this, p->GetLoadTaskData()->GetPathAllocator());
+    ShapeSwfReader reader(*this, p);
     if (!reader.Read(p, tagType, lenInBytes, withStyle))
         return false;
 
@@ -319,15 +319,29 @@ bool ConstShapeWithStyles::Read(LoadProcess* p, TagType tagType, unsigned lenInB
     MemoryHeap* pheap = p->GetLoadHeap();
     if (FillStylesNum || StrokeStylesNum)
     {
-        Styles = pheap->Alloc(sizeof(FillStyleType) * FillStylesNum + sizeof(StrokeStyleType) * StrokeStylesNum);
-        FillStyleType*       pfill    = GetFills();
-        const FillStyleType* psrcFill = reader.GetFillStyle(0);
-        for (unsigned i = 0; i < FillStylesNum; i++, pfill++)
-            Construct<FillStyleType>(pfill, psrcFill[i]);
-        StrokeStyleType*       pstroke    = (StrokeStyleType*)pfill;
-        const StrokeStyleType* psrcStroke = reader.GetStrokeStyle(0);
-        for (unsigned i = 0; i < StrokeStylesNum; i++)
-            Construct<StrokeStyleType>(&pstroke[i], psrcStroke[i]);
+        Styles = (UByte*)SF_HEAP_ALLOC(pheap, sizeof(FillStyleType) * FillStylesNum + sizeof(StrokeStyleType) * StrokeStylesNum, StatMD_ShapeData_Mem);
+
+        FillStyleType* destFillStyles = (FillStyleType*)Styles;
+        unsigned       i              = 0;
+        if (i < FillStylesNum)
+        {
+            const FillStyleType* psrcFill = reader.GetFillStyle(0);
+            do
+            {
+                Construct<FillStyleType>(destFillStyles, psrcFill[i]);
+                ++destFillStyles;
+            } while (++i < FillStylesNum);
+        }
+
+        StrokeStyleType* destStrokeStyles = (StrokeStyleType*)destFillStyles;
+        unsigned         j                = 0;
+        if (j < StrokeStylesNum)
+        {
+            const StrokeStyleType* psrcStroke = reader.GetStrokeStyle(0);
+            do
+                Construct<StrokeStyleType>(&destStrokeStyles[j], psrcStroke[j]);
+            while (++j < StrokeStylesNum);
+        }
     }
     else
         Styles = 0;
@@ -335,7 +349,6 @@ bool ConstShapeWithStyles::Read(LoadProcess* p, TagType tagType, unsigned lenInB
 }
 
 // Each image or gradient fill gets a copy of its own.
-// MS2-FUNCTIONAL: register allocation and loop induction differ.
 // @0x14265d6a0
 void ConstShapeWithStyles::SetStyles(unsigned fillStyleCount, const FillStyleType* fillStyles,
                                      unsigned strokeStyleCount, const StrokeStyleType* strokeStyles)
@@ -344,26 +357,30 @@ void ConstShapeWithStyles::SetStyles(unsigned fillStyleCount, const FillStyleTyp
         SF_FREE(Styles);
     FillStylesNum   = fillStyleCount;
     StrokeStylesNum = strokeStyleCount;
-    if (fillStyleCount == 0 && strokeStyleCount == 0)
+    if (FillStylesNum || StrokeStylesNum)
     {
-        Styles = 0;
-        return;
+        Styles = SF_HEAP_AUTO_ALLOC(this, sizeof(FillStyleType) * FillStylesNum + sizeof(StrokeStyleType) * StrokeStylesNum);
+
+        FillStyleType* destFillStyles = (FillStyleType*)Styles;
+        for (unsigned i = 0; i < FillStylesNum; ++i)
+        {
+            Construct<FillStyleType>(destFillStyles, fillStyles[i]);
+            if (destFillStyles->pFill)
+                destFillStyles->pFill = *SF_HEAP_AUTO_NEW(this) Render::ComplexFill(*destFillStyles->pFill);
+            ++destFillStyles;
+        }
+
+        // As in the SDK, the clone test reads the first stroke style's pFill for every i.
+        StrokeStyleType* destStrokeStyles = (StrokeStyleType*)destFillStyles;
+        for (UPInt i = 0; i < StrokeStylesNum; ++i)
+        {
+            Construct<StrokeStyleType>(&destStrokeStyles[i], strokeStyles[i]);
+            if (destStrokeStyles->pFill)
+                destStrokeStyles->pFill = *SF_HEAP_AUTO_NEW(this) Render::ComplexFill(*destStrokeStyles->pFill);
+        }
     }
-    Styles = SF_HEAP_AUTO_ALLOC(this, sizeof(FillStyleType) * fillStyleCount + sizeof(StrokeStyleType) * strokeStyleCount);
-    FillStyleType* pfill = GetFills();
-    for (unsigned i = 0; i < FillStylesNum; pfill++, i++)
-    {
-        Construct<FillStyleType>(pfill, fillStyles[i]);
-        if (pfill->pFill)
-            pfill->pFill = *SF_HEAP_AUTO_NEW(this) Render::ComplexFill(*pfill->pFill);
-    }
-    StrokeStyleType* pstroke = (StrokeStyleType*)pfill;
-    for (UPInt i = 0; i < StrokeStylesNum; i++, pstroke++)
-    {
-        Construct<StrokeStyleType>(pstroke, strokeStyles[i]);
-        if (pstroke->pFill)
-            pstroke->pFill = *SF_HEAP_AUTO_NEW(this) Render::ComplexFill(*pstroke->pFill);
-    }
+    else
+        Styles = NULL;
 }
 
 }} // namespace Scaleform::GFx

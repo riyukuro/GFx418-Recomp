@@ -517,8 +517,8 @@ void DrawingContext::SetNoLine()
 }
 
 // @0x1426006a0
-// MS2-FUNCTIONAL: scheduling (the exe reloads pTreeContainer for Insert and stores the node's pMeshProvider after
-// its vftable; same operations)
+// MS2-FUNCTIONAL: scheduling only (the exe stores the new TreeShape::NodeData's pMeshProvider after its vftable,
+// ours before it; one mov rdx,rax moves past a load; same operations)
 void DrawingContext::UpdateRenderNode() const
 {
     // Const for the hit tests and bounds; the shape drawn so far moves into a node of its own.
@@ -533,7 +533,8 @@ void DrawingContext::UpdateRenderNode() const
         Ptr<ShapeMeshProvider> meshProv = *SF_HEAP_NEW(pHeap) ShapeMeshProvider(Shapes);
         Ptr<TreeShape>         tshp     = *RenContext.CreateEntry<TreeShape>();
         tshp->SetShape(meshProv);
-        pTreeContainer->Add(tshp);
+        UPInt n = pTreeContainer->GetSize();
+        pTreeContainer->Insert(n, tshp);
 
         self->Shapes = *SF_HEAP_NEW(pHeap) PackedShape(pHeap);
 
