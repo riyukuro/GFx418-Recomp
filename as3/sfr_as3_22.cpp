@@ -662,7 +662,7 @@ struct DICommandContext; class Texture;
 // The DrawableImage fields the Noise command reads (Transparent at +0x48) and its channel bits.
 struct Sfr22NoiseImage
 {
-    enum { Channel_Red = 0x01, Channel_Green = 0x02, Channel_Blue = 0x04, Channel_Alpha = 0x08 };
+    enum { Channel_Red = 0x01, Channel_Green = 0x02, Channel_Blue = 0x04, Channel_Alpha = 0x08 }; enum { Operator_LT, Operator_LE, Operator_GT, Operator_GE, Operator_EQ, Operator_NE };
     UByte Pad[0x48];
     bool  Transparent;
     bool  IsTransparent() const { return Transparent; }
@@ -670,11 +670,15 @@ struct Sfr22NoiseImage
 struct DICommand_Compare
 {
     virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+    const Sfr22NoiseImage* pImage; const Sfr22NoiseImage* pSource; UByte Pad18[0x28]; const Sfr22NoiseImage* pImageCompare1; // +8 / +0x10 / +0x40
 };
 struct DICommand_Threshold
 {
+    typedef Sfr22NoiseImage DrawableImage;
     virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
     virtual void ExecuteHWCopyAction(DICommandContext& context, Texture** tex, const Matrix2F* texgen) const;
+    const Sfr22NoiseImage* pImage; const Sfr22NoiseImage* pSource; Rect<SInt32> SourceRect; Point<SInt32> DestPoint; UByte Pad30[0x10]; // +8 / +0x10 / +0x18 / +0x28
+    int Operation; UInt32 Threshold; UInt32 ThresholdColor; UInt32 Mask; // +0x40 / +0x44 / +0x48 / +0x4c
 };
 struct DICommand_Merge
 {
@@ -731,102 +735,109 @@ struct DICommand_Noise
     bool     GrayScale;          // +0x20
 };
 } }
+static __forceinline const Scaleform::Render::Rect<Scaleform::SInt32> Sfr22RectPlus(const Scaleform::Render::Rect<Scaleform::SInt32>& r, const Scaleform::Render::Point<Scaleform::SInt32>& pt) { return Scaleform::Render::Rect<Scaleform::SInt32>(r).Offset(pt); }
+// SDK DICommand_SourceRect::CalculateDestClippedRect (the exe inlines it into the ExecuteSW bodies; 0x142675bb0 is its out-of-line copy).
+template<class C> static __forceinline bool Sfr22CalcDestClippedRect(const C& c, const Scaleform::Render::ImageData& src, const Scaleform::Render::ImageData& dest, const Scaleform::Render::Rect<Scaleform::SInt32>& srcRect, Scaleform::Render::Rect<Scaleform::SInt32>& dstClippedRect, Scaleform::Render::Point<Scaleform::SInt32>& delta)
+{   using namespace Scaleform; using namespace Scaleform::Render;
+    delta = c.DestPoint - srcRect.TopLeft(); Rect<SInt32> srcImageRect(src.GetSize()); Rect<SInt32> dstImageRect(dest.GetSize()); Rect<SInt32> srcClippedRect;
+    if (!srcImageRect.IntersectRect(&srcClippedRect, srcRect)) return false;
+    if (!Sfr22RectPlus(srcClippedRect, delta).IntersectRect(&dstClippedRect, dstImageRect)) return false;
+    return true; }
 
-// MS2-FUNCTIONAL: reproduces the executable's per-pixel difference image, including optional alpha comparison.
+// DICommand_Compare::ExecuteSW: the per-pixel difference image, including the optional alpha comparison.
 // @0x142676190
-void Scaleform::Render::DICommand_Compare::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& outputRef, Scaleform::Render::ImageData** inputsRef) const
+void Scaleform::Render::DICommand_Compare::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData** psrc) const
 {
-    void* operation = const_cast<Scaleform::Render::DICommand_Compare*>(this);
-    Scaleform::Render::ImageData* output = &outputRef;
-    void** inputs = reinterpret_cast<void**>(inputsRef);
-    using Scaleform::Render::ImageData;
-    using Scaleform::Render::ImagePlane;
-    auto* reference = static_cast<ImageData*>(inputs[0]);
-    auto* candidate = static_cast<ImageData*>(inputs[1]);
-    ImagePlane outPlane, referencePlane, candidatePlane;
-    output->GetPlane(0, &outPlane);
-    reference->GetPlane(0, &referencePlane);
-    candidate->GetPlane(0, &candidatePlane);
+    // SDK body (Render_DrawableImage_SW.cpp) with plane scanlines in place of the swizzler contexts.
+    const ImageData& src0 = *psrc[0];
+    const ImageData& src1 = *psrc[1];
+    ImagePlane d, s[2];
+    dest.GetPlane(0, &d);
+    src0.GetPlane(0, &s[0]);
+    src1.GetPlane(0, &s[1]);
 
-    auto* operationBytes = static_cast<unsigned char*>(operation);
-    const auto* referenceConfig = static_cast<const unsigned char*>(*reinterpret_cast<void**>(operationBytes + 0x10));
-    const auto* candidateConfig = static_cast<const unsigned char*>(*reinterpret_cast<void**>(operationBytes + 0x40));
-    const bool compareReferenceAlpha = *reinterpret_cast<const bool*>(referenceConfig + 0x48);
-    const bool compareCandidateAlpha = *reinterpret_cast<const bool*>(candidateConfig + 0x48);
-    const unsigned width = referencePlane.Width < outPlane.Width ? referencePlane.Width : outPlane.Width;
-    const unsigned height = referencePlane.Height < outPlane.Height ? referencePlane.Height : outPlane.Height;
-    for (unsigned y = 0; y < height; ++y) {
-        const auto referenceRow = BitmapScanline(referencePlane, static_cast<int>(y));
-        const auto candidateRow = BitmapScanline(candidatePlane, static_cast<int>(y));
-        const auto outputRow = BitmapScanline(outPlane, static_cast<int>(y));
-        for (unsigned x = 0; x < width; ++x) {
-            unsigned referencePixel = 0, candidatePixel = 0;
-            FUN_14257bf70(reference, &referencePixel, referenceRow, x);
-            FUN_14257bf70(candidate, &candidatePixel, candidateRow, x);
-            const auto* referenceChannels = reinterpret_cast<const std::int8_t*>(&referencePixel);
-            const auto* candidateChannels = reinterpret_cast<const std::int8_t*>(&candidatePixel);
-            int r = referenceChannels[0] - candidateChannels[0];
-            int g = referenceChannels[1] - candidateChannels[1];
-            int b = referenceChannels[2] - candidateChannels[2];
-            int a = (compareReferenceAlpha ? referenceChannels[3] : -1) -
-                    (compareCandidateAlpha ? candidateChannels[3] : -1);
-            // Equal colours with a different alpha give 0xZZFFFFFF (ZZ = alpha difference); otherwise alpha is 0xff.
-            if (r == 0 && g == 0 && b == 0 && a != 0)
-                r = g = b = -1;
+    for (unsigned y = 0; y < src0.GetSize().Height; ++y)
+    {
+        UByte* dline = d.GetScanline(y);
+        const UByte* s0line = s[0].GetScanline(y);
+        const UByte* s1line = s[1].GetScanline(y);
+
+        for (unsigned x = 0; x < src0.GetSize().Width; ++x)
+        {
+            Color s0Col = src0.GetPixelInScanline(s0line, x);
+            Color s1Col = src1.GetPixelInScanline(s1line, x);
+
+            UByte s0Alpha = pSource->IsTransparent() ? s0Col.GetAlpha() : 255;
+            UByte s1Alpha = pImageCompare1->IsTransparent() ? s1Col.GetAlpha() : 255;
+
+            UByte delta[4] = { (UByte)(s0Col.GetRed()   - s1Col.GetRed()),
+                               (UByte)(s0Col.GetGreen() - s1Col.GetGreen()),
+                               (UByte)(s0Col.GetBlue()  - s1Col.GetBlue()),
+                               (UByte)(s0Alpha          - s1Alpha) };
+            if (delta[0] == 0 && delta[1] == 0 && delta[2] == 0 && delta[3] != 0)
+            {
+                delta[0] = 0xff;
+                delta[1] = 0xff;
+                delta[2] = 0xff;
+            }
             else
-                a = 0xff;
-            unsigned result = static_cast<unsigned char>(r) |
-                              (static_cast<unsigned>(static_cast<unsigned char>(g)) << 8) |
-                              (static_cast<unsigned>(static_cast<unsigned char>(b)) << 16) |
-                              (static_cast<unsigned>(static_cast<unsigned char>(a)) << 24);
-            FUN_14257d390(output, outputRow, x, result);
+            {
+                delta[3] = 0xff;
+            }
+
+            Color dCol(delta[0], delta[1], delta[2], delta[3]);
+
+            if (!pImage->IsTransparent())
+                delta[3] = 0xff;
+
+            dest.SetPixelInScanline(dline, x, dCol.ToColor32());
         }
     }
 }
 
-// MS2-FUNCTIONAL: threshold. The masked pixel is compared with the masked reference using the op at +0x40 (six
-// unsigned comparisons, anything else selects nothing) and selected pixels take the colour at +0x48.
+// MS2-FUNCTIONAL: threshold (the SDK body without the swizzler contexts); frame layout only: ours spills delta to home slots and drops r12, the exe keeps delta.x in r12 and sCol at rsp+0x20.
 // @0x142677ea0
-void Scaleform::Render::DICommand_Threshold::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& outputRef, Scaleform::Render::ImageData** inputsRef) const
+void Scaleform::Render::DICommand_Threshold::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData** psrc) const
 {
-    void* operation = const_cast<Scaleform::Render::DICommand_Threshold*>(this);
-    Scaleform::Render::ImageData* output = &outputRef;
-    void** inputs = reinterpret_cast<void**>(inputsRef);
-    using Scaleform::Render::ImageData;
-    using Scaleform::Render::ImagePlane;
-    auto* source = static_cast<ImageData*>(inputs[0]);
-    ImagePlane destinationPlane, sourcePlane;
-    output->GetPlane(0, &destinationPlane);
-    source->GetPlane(0, &sourcePlane);
-    const auto* op = static_cast<const unsigned char*>(operation);
-    BitmapCopySpan span;
-    if (!ClipBitmapCopy(op, sourcePlane, destinationPlane, span)) return;
+    const ImageData& src = *psrc[0];
+    ImagePlane d, s;
+    dest.GetPlane(0, &d);
+    src.GetPlane(0, &s);
+    Point<SInt32> delta;
+    Rect<SInt32> dstClippedRect;
+    if (!Sfr22CalcDestClippedRect(*this, src, dest, SourceRect, dstClippedRect, delta))
+        return;
+    SInt32 x, y;
+    for (y = dstClippedRect.y1; y < dstClippedRect.y2; y++)
+    {
+        UByte* dline = dest.GetScanline(y);
+        const UByte* sline = s.GetScanline(y - delta.y);
 
-    const unsigned mode = *reinterpret_cast<const unsigned*>(op + 0x40);
-    const unsigned mask = *reinterpret_cast<const unsigned*>(op + 0x4c);
-    const unsigned reference = *reinterpret_cast<const unsigned*>(op + 0x44) & mask;
-    const unsigned replacement = *reinterpret_cast<const unsigned*>(op + 0x48);
-    for (int y = span.Y0; y < span.Y1; ++y) {
-        const long long sourceRow = BitmapScanline(sourcePlane, y - span.OffY);
-        const long long destinationRow = BitmapScanline(destinationPlane, y);
-        for (int x = span.X0; x < span.X1; ++x) {
-            unsigned pixel = 0;
-            FUN_14257bf70(source, &pixel, sourceRow, static_cast<unsigned>(x - span.OffX));
-            const unsigned lhs = pixel & mask;
-            bool selected = false;
-            switch (mode) {
-            case 0: selected = lhs < reference; break;
-            case 1: selected = lhs <= reference; break;
-            case 2: selected = lhs > reference; break;
-            case 3: selected = lhs >= reference; break;
-            case 4: selected = lhs == reference; break;
-            case 5: selected = lhs != reference; break;
-            default: break;
+        for (x = dstClippedRect.x1; x < dstClippedRect.x2; x++)
+        {
+            Color sCol = src.GetPixelInScanline(sline, x - delta.x);
+            UInt32 rVal = Threshold & Mask;
+            UInt32 lVal = sCol.ToColor32() & Mask;
+
+            bool compareSuccess = false;
+            switch (Operation)
+            {
+            case DrawableImage::Operator_EQ: compareSuccess = (lVal == rVal); break;
+            case DrawableImage::Operator_GE: compareSuccess = (lVal >= rVal); break;
+            case DrawableImage::Operator_GT: compareSuccess = (lVal > rVal); break;
+            case DrawableImage::Operator_LE: compareSuccess = (lVal <= rVal); break;
+            case DrawableImage::Operator_LT: compareSuccess = (lVal < rVal); break;
+            case DrawableImage::Operator_NE: compareSuccess = (lVal != rVal); break;
             }
-            if (!BitmapHasAlpha(op, 0x10)) pixel |= 0xff000000u;
-            unsigned result = selected ? replacement : pixel;
-            if (!BitmapHasAlpha(op, 8)) result |= 0xff000000u;
-            FUN_14257d390(output, destinationRow, static_cast<unsigned>(x), result);
+
+            if (!pSource->IsTransparent())
+                sCol.SetAlpha(255);
+            UInt32 outColor = compareSuccess ? ThresholdColor : sCol.ToColor32();
+
+            if (!pImage->IsTransparent())
+                outColor |= (UInt32)255 << 24;
+
+            dest.SetPixelInScanline(dline, x, outColor);
         }
     }
 }
@@ -876,23 +887,12 @@ void Scaleform::Render::DICommand_Merge::ExecuteSW(Scaleform::Render::DICommandC
     }
 }
 
-static __forceinline const Scaleform::Render::Rect<Scaleform::SInt32> Sfr22RectPlus(const Scaleform::Render::Rect<Scaleform::SInt32>& r, const Scaleform::Render::Point<Scaleform::SInt32>& pt) { return Scaleform::Render::Rect<Scaleform::SInt32>(r).Offset(pt); }
 // MS2-FUNCTIONAL: scroll (the SDK body without the swizzler contexts); frame layout only: ours packs delta and sCol into home slots, the exe keeps them at rsp+0x20.. and shrink-wraps r15.
 // Copies back to front (so an overlapping self-copy works) and forces opaque alpha when either side lacks
 // alpha.
 // @0x142677c70
 void Scaleform::Render::DICommand_Scroll::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData** psrc) const
 {
-    // DICommand_SourceRect's fields: pImage +8, pSource +0x10, SourceRect +0x18, DestPoint +0x28; an image's
-    // IsTransparent() is its flag at +0x48.
-
-
-
-
-
-
-
-
     const ImageData& src = *psrc[0];
     ImagePlane d, s;
     dest.GetPlane(0, &d);
@@ -1520,15 +1520,15 @@ bool ClipImageRect(void* command, void* firstImage, void* secondImage, const int
         *reinterpret_cast<const Render::Point<SInt32>*>(static_cast<char*>(command) + 0x28);
     delta = destPoint - srcRect.TopLeft();
 
-    const Render::ImageSize srcSize = static_cast<Render::ImageData*>(firstImage)->GetSize();
-    const Render::ImageSize destSize = static_cast<Render::ImageData*>(secondImage)->GetSize();
-    Render::Rect<SInt32> srcImageRect(0, 0, static_cast<SInt32>(srcSize.Width), static_cast<SInt32>(srcSize.Height));
-    Render::Rect<SInt32> dstImageRect(0, 0, static_cast<SInt32>(destSize.Width), static_cast<SInt32>(destSize.Height));
+    Render::Rect<SInt32> srcImageRect(static_cast<Render::ImageData*>(firstImage)->GetSize());
+    Render::Rect<SInt32> dstImageRect(static_cast<Render::ImageData*>(secondImage)->GetSize());
+
+
     Render::Rect<SInt32> srcClippedRect;
 
     if (!srcImageRect.IntersectRect(&srcClippedRect, srcRect))
         return false;
-    if (!srcClippedRect.Offset(delta).IntersectRect(&dstClippedRect, dstImageRect))
+    if (!Sfr22RectPlus(srcClippedRect, delta).IntersectRect(&dstClippedRect, dstImageRect))
         return false;
     return true;
 }
