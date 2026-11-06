@@ -8779,11 +8779,11 @@ void MemoryContextImpl::HeapLimit::OnFreeSegment(MemoryHeap* heap, UPInt freeing
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// @0x142510dc0
+bool AvmDisplayObj::HasEventHandler(const EventId&) const { return false; }
+bool AvmInteractiveObj::HasEventHandler(const EventId&) const { return false; }   // the exe folds it into the one above
 // @0x142510dd0
-bool AvmDisplayObjContainer::HasEventHandler(const EventId&) const
-{
-    return false;
-}
+bool AvmDisplayObjContainer::HasEventHandler(const EventId&) const { return false; }
 
 // @0x142514290
 bool AvmDisplayObjContainer::IsFocusEnabled(FocusMovedType) const
