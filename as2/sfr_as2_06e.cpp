@@ -410,54 +410,62 @@ void AvmTextField::NotifyChanged()
 
 // A click on an "asfunction:name,arg" link calls the method name (with the text after the comma) on the field's
 // parent clip, or on _level0 when the parent is not a sprite.
-// MS2-FUNCTIONAL: register allocation and block layout differ.
+// IsUrlSet is called out of line (0x142515160) through a member pointer, and the point is left uninitialised.
+// The parent's sprite test is the SDK's CharToSprite: IsSprite() ? this : NULL.
+static SF_FORCEINLINE InteractiveObject* Cts06(InteractiveObject* p) { return p->IsSprite() ? p : NULL; }
 // @0x14296c8c0
 bool AvmTextField::OnMouseEvent(const EventId& event)
 {
-    if (event.Id != EventId::Event_Release)
-        return false;
-    TextField* ptf = reinterpret_cast<TextField*>(pDispObj);
-    if (ptf->IsHtml() && LeMayHaveUrl(ptf->GetDocument()))
+    if (event.Id == EventId::Event_Release)
     {
-        Render::PointF p;
-        if (ptf->IsUrlUnderMouseCursor(event.MouseIndex, &p))
+        TextField* ptf = reinterpret_cast<TextField*>(pDispObj);
+        if (ptf->IsHtml() && LeMayHaveUrl(ptf->GetDocument()))
         {
-            UPInt pos = ptf->GetDocument()->GetCharIndexAtPoint(p.x, p.y);
-            if (pos != SF_MAX_UPINT)
+            Render::PointF p(Render::PointF::NoInit);
+            if (ptf->IsUrlUnderMouseCursor(event.MouseIndex, &p))
             {
-                const Render::Text::TextFormat* ptextFmt;
-                if (reinterpret_cast<Render::Text::StyledText*>(LeStyledText(ptf->GetDocument()))->GetTextAndParagraphFormat(&ptextFmt, NULL, pos) && ptextFmt->IsUrlSet())
+                UPInt pos = ptf->GetDocument()->GetCharIndexAtPoint(p.x, p.y);
+                if (pos != SF_MAX_UPINT)
                 {
-                    const String& url    = ptextFmt->GetUrl();
-                    MovieImpl*    pmovie = pDispObj->GetMovieImpl();
-                    if (pmovie && String::CompareNoCase(url.ToCStr(), "asfunction:", 11) == 0)
+                    const Render::Text::TextFormat* ptextFmt;
+                    if (reinterpret_cast<Render::Text::StyledText*>(LeStyledText(ptf->GetDocument()))->GetTextAndParagraphFormat(&ptextFmt, NULL, pos) && (ptextFmt->*&Render::Text::TextFormat::IsUrlSet)())
                     {
-                        const char* pstr   = url.ToCStr() + 11;
-                        const char* pcomma = strchr(pstr, ',');
-                        String      funcName;
-                        GFx::Value  param;
-                        unsigned    nargs = 0;
-                        if (pcomma)
+                        const char* purl   = ptextFmt->GetUrl().ToCStr();
+                        MovieImpl*  pmovie = pDispObj->GetMovieImpl();
+                        if (pmovie && String::CompareNoCase(purl, "asfunction:", 11) == 0)
                         {
-                            funcName.AppendString(pstr, pcomma - pstr);
-                            param.SetString(pcomma + 1);
-                            nargs = 1;
+                            purl += 11;
+                            const char* pcomma = strchr(purl, ',');
+                            const char* pstr   = purl;
+                            String      funcName;
+                            GFx::Value  param;
+                            unsigned    nargs = 0;
+                            if (pcomma)
+                            {
+                                funcName.AppendString(pstr, pcomma - pstr);
+                                ++pcomma;
+                                nargs = 1;
+                                param.SetString(pcomma);
+                            }
+                            else
+                                funcName = pstr;
+                            GFx::Value             result;
+                            Ptr<InteractiveObject> pparent = pDispObj->GetParent();
+                            InteractiveObject*     psprite = NULL;
+                            if (pparent)
+                                psprite = Cts06(pparent);
+                            if (psprite)
+                                static_cast<MovieRoot*>(pmovie->pASMovieRoot)->Invoke(psprite, funcName.ToCStr(), &result, &param, nargs);
+                            else
+                                static_cast<MovieRoot*>(pmovie->pASMovieRoot)->Invoke(funcName.ToCStr(), &result, &param, nargs);
                         }
-                        else
-                            funcName = pstr;
-                        GFx::Value             result;
-                        Ptr<InteractiveObject> pparent = pDispObj->GetParent();
-                        MovieRoot*             proot   = static_cast<MovieRoot*>(pmovie->pASMovieRoot);
-                        if (pparent && pparent->IsSprite())
-                            proot->Invoke(pparent, funcName.ToCStr(), &result, &param, nargs);
-                        else
-                            proot->Invoke(funcName.ToCStr(), &result, &param, nargs);
                     }
                 }
             }
         }
+        return true;
     }
-    return true;
+    return false;
 }
 
 // The field scrolled: onScroller (with the field) goes to its listeners from the frame actions, queued once.
