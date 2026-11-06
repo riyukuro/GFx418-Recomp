@@ -153,10 +153,10 @@ struct ValueAssignCopies
     static void ReleaseInternal(Value& v) { v.ReleaseInternal(); }
 };
 }}}
-namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_1425245c0(UPInt* a, UPInt n); }}}
-namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524470(UPInt* a, UPInt n); }}}
+namespace Scaleform { extern template void ArrayData<Ptr<GFx::InteractiveObject>, AllocatorLH<Ptr<GFx::InteractiveObject>, GFx::AS3::StatMV_ActionScript_Mem>, ArrayDefaultPolicy>::Resize(UPInt); typedef ArrayData<Ptr<GFx::InteractiveObject>, AllocatorLH<Ptr<GFx::InteractiveObject>, GFx::AS3::StatMV_ActionScript_Mem>, ArrayDefaultPolicy> Sfr19RolloverData; }   // RolloverStack, 0x1425245c0
+namespace Scaleform { extern template void ArrayDataCC<GFx::ASString, AllocatorLH<GFx::ASString, GFx::AS3::StatMV_VM_VTable_Mem>, ArrayDefaultPolicy>::Resize(UPInt); typedef ArrayDataCC<GFx::ASString, AllocatorLH<GFx::ASString, GFx::AS3::StatMV_VM_VTable_Mem>, ArrayDefaultPolicy> Sfr19NamesData; }   // VTable::NamesT, 0x142524470 (instantiated at the end)
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_1425247f0(UPInt* a, UPInt n); }}}
-namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524870(UPInt* a, UPInt n); }}}
+namespace Scaleform { extern template void ArrayDataDH<UPInt, AllocatorDH_POD<UPInt, GFx::AS3::StatMV_VM>, ArrayDefaultPolicy>::Resize(UPInt); typedef ArrayDataDH<UPInt, AllocatorDH_POD<UPInt, GFx::AS3::StatMV_VM>, ArrayDefaultPolicy> Sfr19PosData; }   // Tracer TCodeOffset arrays, 0x142524870
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_1425248e0(UPInt* a, const void* addr, UPInt n); }}}
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524c30(UPInt* a, const void* addr, UPInt n); }}}
 namespace Scaleform { typedef ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>, 340>, ArrayDefaultPolicy> Sfr19TraitsArr; template<> void Sfr19TraitsArr::ResizeNoConstruct(const void*, UPInt); } // (C3) FUN_142524af0
@@ -406,7 +406,7 @@ void  Sfr31StateTraceOp(UPInt state, unsigned char op, UPInt* pos);
 UPInt Sfr31ResolveClassTraits(UPInt vmAddr, UPInt link, UPInt entry);
 //void  FUN_142524af0(UPInt* a, const void* addr, UPInt n);   // = Sfr19TraitsArr::ResizeNoConstruct
 UPInt Sfr31FindClassTraitsByMn(UPInt vm, UPInt mn);
-void  FUN_1425245c0(UPInt* a, UPInt n);
+//
 }}} // namespace Scaleform::GFx::AS3
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace ClassTraits {
@@ -5872,7 +5872,7 @@ __declspec(noinline) void Sfr31StoreSlotName(UPInt vt, UInt32 idx, int kind, con
 {
     UPInt* names = reinterpret_cast<UPInt*>(vt + 0x20);
     if (names[1] <= idx)
-        FUN_142524470(names, idx + 1);
+        reinterpret_cast<Scaleform::Sfr19NamesData*>(names)->Resize(idx + 1);
     UPInt slotIdx = idx;
     const char* prefix = 0;
     if (kind == 0xc)
@@ -5881,7 +5881,7 @@ __declspec(noinline) void Sfr31StoreSlotName(UPInt vt, UInt32 idx, int kind, con
     {
         slotIdx = idx + 1;
         if (names[1] <= slotIdx)
-            FUN_142524470(names, idx + 2);
+            reinterpret_cast<Scaleform::Sfr19NamesData*>(names)->Resize(idx + 2);
         prefix = "set ";
     }
     else if (kind != 0xb)
@@ -6543,7 +6543,7 @@ bool Sfr31TracerOptRegIncDec(UPInt tracer, UPInt* pos, UPInt code0, UPInt state,
     UPInt p = code0 + 1;
     if (op != 0x91 && op != 0x93 && op - 0xc0u > 1)
         return false;
-    FUN_142524870(posArr, posArr[1] + 1);
+    reinterpret_cast<Scaleform::Sfr19PosData*>(posArr)->Resize(posArr[1] + 1);
     reinterpret_cast<UPInt*>(posArr[0])[posArr[1] - 1] = p;
     int curTy = 4;
     int want;
@@ -6552,7 +6552,7 @@ bool Sfr31TracerOptRegIncDec(UPInt tracer, UPInt* pos, UPInt code0, UPInt state,
     if (next == 0x73 || next == 0x74 || next == 0x75)
     {
         want = next == 0x73 ? 2 : (next == 0x74 ? 3 : 4);
-        FUN_142524870(posArr, posArr[1] + 1);
+        reinterpret_cast<Scaleform::Sfr19PosData*>(posArr)->Resize(posArr[1] + 1);
         pushed = 2;
         reinterpret_cast<UPInt*>(posArr[0])[posArr[1] - 1] = p;
         next = code[p++];
@@ -6571,7 +6571,7 @@ bool Sfr31TracerOptRegIncDec(UPInt tracer, UPInt* pos, UPInt code0, UPInt state,
         r = 0xffffffffu - 1;
     if ((next != 0x63 && !(next >= 0xd4 && next <= 0xd7)) || r != reg)
     {
-        FUN_142524870(posArr, posArr[1] - pushed);
+        reinterpret_cast<Scaleform::Sfr19PosData*>(posArr)->Resize(posArr[1] - pushed);
         return false;
     }
     const UInt32 k = regv[0] & 0x1f;
@@ -7931,7 +7931,7 @@ static void Sfr31DropDispOfDef(UPInt* arr, UPInt def)
         if (!Sfr31DispBelongsTo(elem, def))
             ++i;
         else if (arr[1] == 1)
-            FUN_1425245c0(arr, 0);
+            reinterpret_cast<Scaleform::Sfr19RolloverData*>(arr)->Resize(0);
         else
         {
             FUN_14257dcd0(reinterpret_cast<void*>(elem));
@@ -8680,7 +8680,7 @@ char Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state
         if (c != '+')
             return 0;
         UPInt* posArr = reinterpret_cast<UPInt*>(tracer + 0x70);
-        FUN_142524870(posArr, posArr[1] + 1);
+        reinterpret_cast<Scaleform::Sfr19PosData*>(posArr)->Resize(posArr[1] + 1);
         reinterpret_cast<UPInt*>(posArr[0])[posArr[1] - 1] = p;
         const UInt8 d = code[p++];
         if (d == 'm')
@@ -8693,7 +8693,7 @@ char Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state
             Sfr31TracerSkipOrigOpCode(tracer, pos, p);
             return 1;
         }
-        FUN_142524870(posArr, posArr[1] - 1);
+        reinterpret_cast<Scaleform::Sfr19PosData*>(posArr)->Resize(posArr[1] - 1);
         return 0;
     }
     case 0x70:
