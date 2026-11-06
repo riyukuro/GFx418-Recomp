@@ -8985,19 +8985,23 @@ void InteractiveObject::RemoveDisplayObject(DisplayObjectBase*)
 
 }} // namespace Scaleform::GFx
 
-// MovieRoot::GetMouseCursorTypeString of the cursor mouse mouseIndex shows (MovieImpl +0x1260: 4 MouseStates of 0x50
-// bytes, CursorType at +0x40); an index past them reads through the NULL state, as the exe does.
-// MS2-FUNCTIONAL: raw-layout MouseState read; the protected member is reached through a using-declaration
+// MovieRoot::GetMouseCursorType (SDK): GetMouseCursorTypeString of the cursor mouse mouseIndex shows. The MouseState
+// comes from the SDK's MovieImpl::GetMouseState (+0x1260: 4 MouseStates of 0x50 bytes, CursorType at +0x40); an index
+// past them reads through the NULL state, as the exe does. The protected member is reached through a using-declaration.
 // @0x14250bad0
 void FUN_14250bad0(void* proot, Scaleform::GFx::ASString& result, Scaleform::UInt32 mouseIndex)
 {
     using namespace Scaleform;
     using namespace Scaleform::GFx::AS3;
     struct Access : MovieRoot { using MovieRoot::GetMouseCursorTypeString; };
-    const UPInt states = AccRd(reinterpret_cast<UPInt>(proot), 0x10) + 0x1260;
-    const UPInt st = mouseIndex < 4 ? states + (UPInt)mouseIndex * 0x50 : 0;
-    const UInt32 type = *reinterpret_cast<const volatile UInt32*>(st + 0x40);
-    (static_cast<const MovieRoot*>(proot)->*&Access::GetMouseCursorTypeString)(result, type);
+    struct MS { static __forceinline const UInt32* Get(UPInt impl, unsigned i)
+    {
+        if (i >= 4)
+            return NULL;
+        return reinterpret_cast<const UInt32*>(impl + 0x1260 + (UPInt)i * 0x50);
+    } };
+    const UInt32* ms = MS::Get(AccRd(reinterpret_cast<UPInt>(proot), 0x10), mouseIndex);
+    (static_cast<const MovieRoot*>(proot)->*&Access::GetMouseCursorTypeString)(result, ms[0x10]);
 }
 
 // AvmButton / AvmTextField come from the SDK MI layout (SF_AS3_AVMBUTTON_MODEL). Copy-constructing them stores
