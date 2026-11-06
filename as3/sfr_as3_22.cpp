@@ -575,7 +575,7 @@ unsigned FUN_142745f50(void* player)
     return got_bytes;
 }
 
-// MS2-FUNCTIONAL: null-checks the channel and returns the isPlaying flag without checking the FMOD result, like the executable.
+// Null-checks the channel and returns the isPlaying flag without checking the FMOD result, like the executable.
 // @0x142745c40
 bool QueryChannelPlaying(void* soundSource)
 {
@@ -809,7 +809,7 @@ void Scaleform::Render::DICommand_Compare::ExecuteSW(Scaleform::Render::DIComman
     }
 }
 
-// MS2-FUNCTIONAL: threshold (the SDK body without the swizzler contexts); frame layout only: ours spills delta to home slots and drops r12, the exe keeps delta.x in r12 and sCol at rsp+0x20.
+// MS2-FUNCTIONAL: permanent: threshold (the SDK body without the swizzler contexts); frame layout only: ours spills delta to home slots and drops r12, the exe keeps delta.x in r12 and sCol at rsp+0x20.
 // @0x142677ea0
 void Scaleform::Render::DICommand_Threshold::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData** psrc) const
 {
@@ -897,7 +897,7 @@ void Scaleform::Render::DICommand_Merge::ExecuteSW(Scaleform::Render::DICommandC
     }
 }
 
-// MS2-FUNCTIONAL: scroll (the SDK body without the swizzler contexts); frame layout only: ours packs delta and sCol into home slots, the exe keeps them at rsp+0x20.. and shrink-wraps r15.
+// MS2-FUNCTIONAL: permanent: scroll (the SDK body without the swizzler contexts); frame layout only: ours packs delta and sCol into home slots, the exe keeps them at rsp+0x20.. and shrink-wraps r15.
 // Copies back to front (so an overlapping self-copy works) and forces opaque alpha when either side lacks
 // alpha.
 // @0x142677c70
@@ -939,7 +939,7 @@ void Scaleform::Render::DICommand_Scroll::ExecuteSW(Scaleform::Render::DICommand
     }
 }
 
-// MS2-FUNCTIONAL: copyChannel (the SDK body without the swizzler contexts); register allocation and callee-saved spill slots differ (the exe never uses the rcx home slot).
+// MS2-FUNCTIONAL: permanent: copyChannel (the SDK body without the swizzler contexts); register allocation and callee-saved spill slots differ (the exe never uses the rcx home slot).
 // @0x142676380
 void Scaleform::Render::DICommand_CopyChannel::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData** psrc) const
 {
@@ -979,7 +979,7 @@ void Scaleform::Render::DICommand_CopyChannel::ExecuteSW(Scaleform::Render::DICo
     }
 }
 
-// MS2-FUNCTIONAL: paletteMap (the SDK body without the swizzler contexts); register allocation of the channel loop and scanline pointers differs.
+// MS2-FUNCTIONAL: permanent: paletteMap (the SDK body without the swizzler contexts); register allocation of the channel loop and scanline pointers differs.
 // @0x142677460
 void Scaleform::Render::DICommand_PaletteMap::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData** psrc) const
 {
@@ -1024,7 +1024,7 @@ void Scaleform::Render::DICommand_PaletteMap::ExecuteSW(Scaleform::Render::DICom
     }
 }
 
-// MS2-FUNCTIONAL: copyPixels (the SDK body without the swizzler contexts, ImageData scanlines as in the exe); scheduling of the two inlined clips and the frame size differ (ours 0x80, the exe 0x90).
+// MS2-FUNCTIONAL: permanent: copyPixels (the SDK body without the swizzler contexts, ImageData scanlines as in the exe); scheduling of the two inlined clips and the frame size differ (ours 0x80, the exe 0x90).
 // @0x142676660
 void Scaleform::Render::DICommand_CopyPixels::ExecuteSW(Scaleform::Render::DICommandContext& context, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData** psrc) const
 {
@@ -1151,7 +1151,7 @@ void Scaleform::Render::DICommand_ColorTransform::ExecuteSW(Scaleform::Render::D
 }
 
 struct Sfr22FillPoint { Scaleform::SInt32 x, y; Sfr22FillPoint() { } Sfr22FillPoint(Scaleform::SInt32 x2, Scaleform::SInt32 y2) { x = x2; y = y2; } Sfr22FillPoint(const Sfr22FillPoint& pt) { x = pt.x; y = pt.y; } }; // SDK Point<SInt32> (empty default ctor)
-// MS2-FUNCTIONAL: SDK floodFill; the exe hoists the overwriteColor load past the out-of-TU GetPixel (LTCG mod-ref) and reloads dest, ours keeps dest in rbx
+// MS2-FUNCTIONAL: permanent: SDK floodFill; the exe hoists the overwriteColor load past the out-of-TU GetPixel (LTCG mod-ref) and reloads dest, ours keeps dest in rbx
 // @0x142676bd0
 void Scaleform::Render::DICommand_FloodFill::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData**) const
 {
@@ -1301,7 +1301,7 @@ float QueryMasterVolume(void* player)
     return volume;
 }
 
-// MS2-FUNCTIONAL: mirrors the channel null check and reads the pan value through the executable wrapper.
+// Mirrors the channel null check and reads the pan value through the executable wrapper.
 // @0x1427458b0
 float QueryChannelPan(void* player)
 {
@@ -1312,7 +1312,7 @@ float QueryChannelPan(void* player)
     return pan;
 }
 
-// MS2-FUNCTIONAL: the sound read count is initialized to zero and returned only for a non-null sound.
+// The sound read count is initialized to zero and returned only for a non-null sound.
 // @0x142745880
 unsigned ReadSoundData(void* player, void* buffer, unsigned bytes)
 {
@@ -1323,7 +1323,7 @@ unsigned ReadSoundData(void* player, void* buffer, unsigned bytes)
     return read;
 }
 
-// MS2-FUNCTIONAL: returns the channel volume when present, otherwise the executable's default of one.
+// Returns the channel volume when present, otherwise the executable's default of one.
 // @0x142745b90
 float QueryChannelVolume(void* player)
 {
@@ -2284,7 +2284,7 @@ void Scaleform::Render::DICommand_Clear::ExecuteSW(Scaleform::Render::DICommandC
 
 
 namespace Scaleform {
-// MS2-FUNCTIONAL: closes the callback stream with the executable's common state reset helper.
+// Closes the callback stream with the executable's common state reset helper.
 // @0x142745410
 unsigned long long CloseAudioStream(void*, void* stream)
 {
@@ -2292,7 +2292,7 @@ unsigned long long CloseAudioStream(void*, void* stream)
     return 0;
 }
 
-// MS2-FUNCTIONAL: initializes a callback stream, stores its handle and the executable's 0x0fffffff limit.
+// Initializes a callback stream, stores its handle and the executable's 0x0fffffff limit.
 // @0x142745430
 unsigned long long OpenAudioStream(void* stream, void*, unsigned* length, void*, void** handle)
 {
@@ -2314,7 +2314,7 @@ unsigned long long ValidateAudioStream(void*, void* position, void* stream)
 
 
 namespace Scaleform {
-// MS2-FUNCTIONAL: reads callback bytes from the fifth-argument stream state and reports the count.
+// Reads callback bytes from the fifth-argument stream state and reports the count.
 // @0x142745470
 unsigned long long ReadAudioCallback(void*, void* buffer, unsigned bytes, unsigned* bytesRead, void* stream)
 {
@@ -2341,7 +2341,7 @@ FMOD_RESULT CreateAudioSound(void* player, void* request, FMOD::Sound** sound)
 
 
 namespace Scaleform {
-// MS2-FUNCTIONAL: validates the encoded sample format, prepares the 0xd8-byte FMOD info block, and creates the sound.
+// Validates the encoded sample format, prepares the 0xd8-byte FMOD info block, and creates the sound.
 // @0x1427452e0
 FMOD_RESULT CreateAudioSoundFromRequest(void* player, void* request, FMOD::Sound** sound)
 {
@@ -3259,7 +3259,7 @@ GFx::AMP::ProfileFrame::ProfileFrame() :
     DisplayStats = *SF_HEAP_AUTO_NEW(this) MovieFunctionStats();
     DisplayFunctionStats = *SF_HEAP_AUTO_NEW(this) MovieFunctionTreeStats();
 }
-
+// MS2-FUNCTIONAL: permanent: register choice only; the exe hoists the derived vtable and orders the Set hash byte sums differently.
 // @0x14268c930
 void GFx::AMP::MovieFunctionTreeStats::Read(File& str, UInt32 version)
 {
@@ -3287,7 +3287,7 @@ void GFx::AMP::MovieFunctionTreeStats::Read(File& str, UInt32 version)
         FunctionInfo.Set(iKey, pDesc);
     }
 }
-
+// MS2-FUNCTIONAL: permanent: register and frame only; the exe keeps &FunctionInfo in r15, spills this and shrink-wraps r12 (frame 0x90 vs 0x80).
 // @0x14268c510
 void GFx::AMP::MovieFunctionStats::Read(File& str, UInt32 version)
 {
@@ -4381,7 +4381,7 @@ void* FUN_142745b70(void* player)
     return *reinterpret_cast<void**>(static_cast<char*>(player) + 0x28);
 }
 
-// MS2-FUNCTIONAL: byte-identical to 0x142745b70; emitted as a distinct exe copy.
+// Byte-identical to 0x142745b70; emitted as a distinct exe copy.
 // @0x142745b80
 void* FUN_142745b80(void* player)
 {
