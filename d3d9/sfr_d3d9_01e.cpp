@@ -947,7 +947,7 @@ void HAL::DrawableCopyback(Render::Texture* tex, const Matrix2F& mvpIn, const Ma
     drawScreenQuad();
 }
 
-// MS2-FUNCTIONAL: SDK form; the exe keeps the area matrix's Format byte in a register across operator* (10 diff lines)
+// SDK form; the area Cxform is read with the Format byte loaded before operator*.
 // @0x142737f70
 void HAL::drawUncachedFilter(const FilterStackEntry& e)
 {
@@ -1058,11 +1058,15 @@ void HAL::drawUncachedFilter(const FilterStackEntry& e)
     {
         const MatrixPoolImpl::HMatrix& area = e.pPrimitive->GetFilterAreaMatrix();
         MatrixPoolImpl::DataHeader*    header = area.pHandle->pHeader;
+        // the exe keeps the Format byte read before operator* for the Cxform test and lookup
+        typedef MatrixPoolImpl::HMatrixConstants HMC;
+        const unsigned format = header->Format;
         Matrix2F       mvp = Matrices.UserView * *header->GetMatrixPtr();
-        const Cxform*  cx  = &Cxform::Identity;
-        if (header->HasElement(MatrixPoolImpl::HMatrixConstants::Element_Cxform))
-            cx = header->GetCxformPtr();
-        FUN_142734e10(&SManager, mvp, *cx, filter, temporaries, shaders, pass, passes,
+        const Cxform&  cx  = (format & (1 << HMC::Element_Cxform))
+            ? *reinterpret_cast<Cxform*>(header->GetDataStart()
+                + HMC::MatrixElementSizeTable[format & HMC::Has_TableMask].Offsets[HMC::Element_Cxform] * MatrixPoolImpl::Pool_DataUnitSize)
+            : Cxform::Identity;
+        FUN_142734e10(&SManager, mvp, cx, filter, temporaries, shaders, pass, passes,
                       MappedXY16iAlphaTexture[0], &ShaderData);
     }
     applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, true, true);
