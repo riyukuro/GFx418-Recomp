@@ -162,9 +162,57 @@ static SF_FORCEINLINE InteractiveObject* LevelMovieInline(MovieImpl* pmovie, int
     return 0;
 }
 
+// FunctionRefBase::SetLocalFrame (0x142981e70, sfr_as2_07) and the FunctionRef copy around it, which the exe inlines
+// into the ToFunction copy below. Local copies: an inline redefinition of the member would emit a second COMDAT.
+static SF_FORCEINLINE void MS2_SetLocalFrame(FunctionRefBase& r, LocalFrame* localFrame, bool weakRef)
+{
+    if (r.pLocalFrame && !(r.Flags & FunctionRefBase::FuncRef_Weak))
+        r.pLocalFrame->Release();
+    r.pLocalFrame = localFrame;
+    if (weakRef)
+        r.Flags |= FunctionRefBase::FuncRef_Weak;
+    else
+        r.Flags &= ~FunctionRefBase::FuncRef_Weak;
+    if (r.pLocalFrame && !(r.Flags & FunctionRefBase::FuncRef_Weak))
+        r.pLocalFrame->AddRef();
+}
+
+static SF_FORCEINLINE FunctionRef MS2_CopyFuncRef(const FunctionRefBase& orig)
+{
+    FunctionRef r(orig.Function);
+    if (orig.pLocalFrame)
+        MS2_SetLocalFrame(r, orig.pLocalFrame, (orig.Flags & FunctionRefBase::FuncRef_Weak) != 0);
+    return r;
+}
+
+// Value::ToFunction as the SDK writes it (a switch); the exe inlines it here. The derived view reaches the protected
+// ResolveFunctionName.
+struct MS2_FuncValue : Value
+{
+    SF_FORCEINLINE FunctionRef ToFunctionSw(const Environment* penv) const
+    {
+        switch (T.Type)
+        {
+        case FUNCTIONNAME:
+            return ResolveFunctionName(penv);
+        case FUNCTION:
+            return MS2_CopyFuncRef(V.FunctionValue);
+        default:;
+        }
+        return FunctionRef();
+    }
+};
+
+// MovieImpl::mMouseState[] (0x50 bytes each, from +0x1260) as far as the cursor type at +0x44.
+struct MS2_MouseStateView
+{
+    UByte    Pad[0x44];
+    unsigned CursorType;
+    UByte    Rest[0x50 - 0x48];
+};
+
 // The cursor of a mouse changed: with the extensions and a script replacement the Mouse.setCursorType handler is
 // called, otherwise the host is asked to show the shape.
-// MS2-FUNCTIONAL: the exe keeps 0 in esi (push r12/r13, 0xe0 frame) and inlines ToFunction as a switch
 // @0x142933010
 void MovieRoot::ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType)
 {
@@ -183,7 +231,7 @@ void MovieRoot::ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType)
                 Value scval;
                 if (pobj->GetMember(penv, penv->GetBuiltin(ASBuiltin_setCursorType), &scval))
                 {
-                    FunctionRef funcRef = scval.ToFunction(penv);
+                    FunctionRef funcRef = static_cast<const MS2_FuncValue&>(scval).ToFunctionSw(penv);
                     if (!funcRef.IsNull())
                     {
                         Value res;
@@ -199,11 +247,11 @@ void MovieRoot::ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType)
     else
     {
         // MouseCtorFunction::SetCursorType inlined: the host is asked to show the shape
-        if (newCursorType != *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(pMovieImpl) + 0x12a4 + mouseIdx * 0x50))
+        if (newCursorType != reinterpret_cast<const MS2_MouseStateView*>(reinterpret_cast<UByte*>(pMovieImpl) + 0x1260)[mouseIdx].CursorType)
         {
-            if (UserEventHandler* phandler = pMovieImpl->pUserEventHandler)
-                phandler->HandleEvent(reinterpret_cast<Movie*>(pMovieImpl),
-                                      MouseCursorEvent(static_cast<MouseCursorEvent::CursorShapeType>(newCursorType), mouseIdx));
+            if (pMovieImpl->pUserEventHandler)
+                pMovieImpl->pUserEventHandler->HandleEvent(reinterpret_cast<Movie*>(pMovieImpl),
+                    MouseCursorEvent((MouseCursorEvent::CursorShapeType)newCursorType, mouseIdx));
         }
     }
 }
