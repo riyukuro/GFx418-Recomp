@@ -1943,7 +1943,7 @@ bool FUN_142926ab0(const ASString* pthis, const ASString& str)
 // MS2-PIN: ??_7RectangleProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432196b8
 // MS2-PIN: ??_7RectangleProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143219700
 // MS2-PIN: ??_7RectangleProto@AS2@GFx@Scaleform@@6B@ 0x1432197a8
-// MS2-PIN: ??_7?$RefCountBase@VFilter@Render@Scaleform@@$01@Scaleform@@6B@ 0x14318ccd8
+// MS2-PIN: ??_7?$RefCountBase@VFilter@Render@Scaleform@@$01@Scaleform@@6B@ 0x14315ac70
 // MS2-PIN: ??_7Filter@Render@Scaleform@@6B@ 0x14315ac78
 // MS2-PIN: ??_7BlurFilterImpl@Render@Scaleform@@6B@ 0x14315ac90
 // MS2-PIN: ??_7BlurFilter@Render@Scaleform@@6B@ 0x14315aca8
