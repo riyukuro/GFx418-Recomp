@@ -5929,6 +5929,12 @@ void Sfr31StoreSlotValue(UPInt vt, UPInt idx, const Value* v, int kind, const UP
     else
         cell->Assign(*v);
 }
+// The two bodies above are VTable::SetMethodName and VTable::SetMethod (sfr_as3_16 calls them by those names); the
+// member names bind to them here. The hook DLL binds the member names by their symbols rows.
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:?SetMethodName@VTable@AS3@GFx@Scaleform@@QEAAXVAbsoluteIndex@234@W4BindingType@SlotInfo@234@AEBVASString@34@@Z=?Sfr31StoreSlotName@AS3@GFx@Scaleform@@YAX_KKHPEB_K@Z")
+#pragma comment(linker, "/alternatename:?SetMethod@VTable@AS3@GFx@Scaleform@@QEAAXVAbsoluteIndex@234@AEBVValue@234@W4BindingType@SlotInfo@234@AEBVASString@34@@Z=?Sfr31StoreSlotValue@AS3@GFx@Scaleform@@YAX_K0PEBVValue@123@HPEB_K@Z")
+#endif
 // ---- batch 50
 // ArrayData::Resize, which cl keeps out of line here; the exe has it inline in both branches.
 static SF_INLINE void Sfr31ResizeStateChars(ArrayData<Button::CharToRec, AllocatorLH<Button::CharToRec, Stat_Default_Mem>, ArrayDefaultPolicy>& a, UPInt newSize)
