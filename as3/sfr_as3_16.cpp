@@ -1345,7 +1345,8 @@ namespace fl { extern const char* NS_AS3; }
 static SlotInfo::BindingType GetNewBT(SlotInfo::BindingType bt, SlotInfo::BindingType new_bt)
 {
     if ((bt == SlotInfo::BT_Get && new_bt == SlotInfo::BT_Set) || (bt == SlotInfo::BT_Set && new_bt == SlotInfo::BT_Get))
-        return SlotInfo::BT_GetSet;
+        bt = SlotInfo::BT_GetSet;
+
     return bt;
 }
 
@@ -1386,31 +1387,38 @@ void Traits::Add2StoredScopeStack(const Value& o)
     InitScope.PushBack(o);
 }
 
-// MS2-FUNCTIONAL: the exe keeps the name temp's node in a saved register across SetMethod and AddMethod (its SCU
-// knew they leave the temp alone; SetMethod is out of line in another unit here), and its GetNewBT merge keeps
-// new_bt in a register where ours folds the BT_GetSet constant into the Bind. VTable::AddMethod is SF_NOINLINE
-// below: the exe calls it.
+// MS2-FUNCTIONAL: SDK body (new_bt reused for the GetNewBT result, empty getter/setter else-if). What is left: the
+// exe keeps the name temp's node in a saved register across SetMethod and AddMethod (its SCU knew they leave the
+// temp alone; SetMethod is out of line in another unit here). VTable::AddMethod is SF_NOINLINE below: the exe
+// calls it.
 // @0x1424e5510
-void Traits::Add2VT(SlotInfo& si, const Value& v, SlotInfo::BindingType bt)
+void Traits::Add2VT(SlotInfo& si, const Value& v, SlotInfo::BindingType new_bt)
 {
     VTable& vt = GetVT();
+    AbsoluteIndex method_ind(si.ValueInd);
 
-    si.CppBinding = 1;
-    const AbsoluteIndex ind(si.ValueInd);
-    if (ind.IsValid())
+    si.CppBinding = true;
+
+    if (method_ind.IsValid())
     {
-        const SlotInfo::BindingType cur_bt = static_cast<SlotInfo::BindingType>(si.BindType);
-        // a plain method is not replaced by an accessor
-        if (cur_bt == SlotInfo::BT_Code && bt != SlotInfo::BT_Code)
-            return;
-        vt.SetMethod(ind, v, bt, ASString(si.Name.GetPtr()));
+        const SlotInfo::BindingType bt = static_cast<SlotInfo::BindingType>(si.BindType);
 
-        const SlotInfo::BindingType new_bt = GetNewBT(cur_bt, bt);
-        if (new_bt != cur_bt)
-            si.Bind(new_bt, ind);
+        if (bt == SlotInfo::BT_Code && new_bt != bt)
+        {
+            return;
+        } else if ((bt == SlotInfo::BT_GetSet || bt == SlotInfo::BT_Get || bt == SlotInfo::BT_Set) && new_bt == SlotInfo::BT_Code)
+        {
+        }
+
+        vt.SetMethod(method_ind, v, new_bt, ASString(si.Name.GetPtr()));
+
+        new_bt = GetNewBT(bt, new_bt);
+        if (new_bt != bt)
+            si.Bind(new_bt, method_ind);
+    } else
+    {
+        si.Bind(new_bt, vt.AddMethod(v, new_bt, ASString(si.Name.GetPtr())));
     }
-    else
-        si.Bind(bt, vt.AddMethod(v, bt, ASString(si.Name.GetPtr())));
 }
 
 // @0x1424e5660
