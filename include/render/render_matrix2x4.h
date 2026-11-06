@@ -314,12 +314,12 @@ Matrix2x4<T>& Matrix2x4<T>::SetParlToParl(const T* src, const T* dst)
     return *this;
 }
 
-template<class T> SF_FORCEINLINE void MS2_Transform(const Matrix2x4<T>& m, Point<T>* result, const Point<T>& p)
+template<class T> __forceinline void MS2_Transform(const Matrix2x4<T>& m, Point<T>* result, const Point<T>& p)
 {
     result->x = m.M[0][0] * p.x + m.M[0][1] * p.y + m.M[0][3];
     result->y = m.M[1][0] * p.x + m.M[1][1] * p.y + m.M[1][3];
 }
-template<class T> SF_FORCEINLINE void MS2_SetMatrix(Matrix2x4<T>& d, const Matrix2x4<T>& m)
+template<class T> __forceinline void MS2_SetMatrix(Matrix2x4<T>& d, const Matrix2x4<T>& m)
 {
     d.M[0][0] = m.M[0][0]; d.M[0][1] = m.M[0][1]; d.M[0][2] = m.M[0][2]; d.M[0][3] = m.M[0][3];
     d.M[1][0] = m.M[1][0]; d.M[1][1] = m.M[1][1]; d.M[1][2] = m.M[1][2]; d.M[1][3] = m.M[1][3];
