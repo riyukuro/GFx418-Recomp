@@ -16,9 +16,9 @@
 #include <math.h>
 #include <string.h>
 
-// the exe calls the CRT atan2f import thunk (0x14280f28e) here; the "atan2f" of the symbol table is the cmath
-// float overload wrapper of another TU (0x140a4e660), so the thunk goes by its own name
-extern "C" float __cdecl sfr_atan2f_thunk(float y, float x);
+// the exe calls the CRT atan2f import thunk (0x14280f28e) here: atan2f is not dllimport on x64, so a plain
+// call binds to the thunk (symbols row atan2f 0x14280f28e; the cmath float overload at 0x140a4e660 is
+// ?atan2@@YAMMM@Z)
 
 namespace Scaleform { namespace Render {
 
@@ -220,7 +220,7 @@ bool MeshKey::CalcMatrixKey_NonOpt(const Matrix2F& m, float* key, Matrix2F* m2)
                 best    = i;
             }
         }
-        m2->AppendRotation(3.141592653589793f / 2 - sfr_atan2f_thunk(p[best + 1], p[best + 0]));
+        m2->AppendRotation(3.141592653589793f / 2 - atan2f(p[best + 1], p[best + 0]));
     }
     return true;
 }
