@@ -35,7 +35,6 @@ public:
 };
 
 // The deleting destructor of SoundFileInfo (0x142646410) is emitted here, where SoundFileInfo is constructed.
-// MS2-FUNCTIONAL 0x142646410: same code, this and the -1 release constant are kept in swapped registers (rbx/rdi)
 
 // @0x142646200
 SoundInfo::~SoundInfo()
