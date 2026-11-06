@@ -618,6 +618,11 @@ template struct ThunkFunc0<Instances::fl_text::TextField, 14, SInt32>;
 
 
 const Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142525270(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Multiname& mn);  // VM::Resolve2ClassTraits
+// The body is sfr_as3_19's Sfr31FindClassTraitsByMn (0x142525270). A typed declaration keeps the callers' register
+// allocation (an inline UPInt forwarder does not). The hook DLL binds the FUN_ name by its symbols row.
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:?FUN_142525270@@YAPEBVTraits@ClassTraits@AS3@GFx@Scaleform@@AEAVVM@345@AEBVMultiname@345@@Z=?Sfr31FindClassTraitsByMn@AS3@GFx@Scaleform@@YA_K_K0@Z")
+#endif
 
 // ==== flash.system: natives of the class objects ====================================================================
 
