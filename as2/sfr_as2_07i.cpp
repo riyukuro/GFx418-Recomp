@@ -151,18 +151,17 @@ void MovieRoot::Shutdown()
 }
 
 // The field's autoSize goes to its document: the width only follows the text when it does not wrap.
-// MS2-FUNCTIONAL: flag reads are scheduled differently; same behavior
 // @0x142992880
 void AvmTextField::UpdateAutosizeSettings()
 {
-    TextField*             ptf      = static_cast<TextField*>(pDispObj);
-    const bool             autoSize = (ptf->GetFlags418() & TextField::Flags_AutoSize) != 0;
-    Render::Text::DocView* pdoc     = ptf->GetDocument();
-    if (autoSize && !pdoc->IsWordWrap())
-        pdoc->SetAutoSizeX();
+    TextField* ptf         = static_cast<TextField*>(pDispObj);
+    const bool autoSizeByY = ((ptf->GetFlags418() & TextField::Flags_AutoSize) != 0);
+    const bool autoSizeByX = (autoSizeByY && !ptf->GetDocument()->IsWordWrap());
+    if (autoSizeByX)
+        ptf->GetDocument()->SetAutoSizeX();
     else
-        pdoc->ClearAutoSizeX();
-    if (autoSize)
+        ptf->GetDocument()->ClearAutoSizeX();
+    if (autoSizeByY)
         ptf->GetDocument()->SetAutoSizeY();
     else
         ptf->GetDocument()->ClearAutoSizeY();
