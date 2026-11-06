@@ -42,6 +42,10 @@ namespace Scaleform { class Range; } // gfx_textfield.h (WIP header) names Range
 #include "../include/render/render_font.h"
 
 
+namespace Scaleform { namespace Render { namespace Text {
+void TextFormat_SetFontSize(TextFormat* pfmt, float pixels); // the exe calls the out-of-line copy (sfr_as2_07p)
+}}}
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // @0x142954350
@@ -61,180 +65,176 @@ static int ClampTwips(int value, int lo)
         return TextFormatMaxTwips;
     return value;
 }
+#pragma intrinsic(strcmp)                     // the exe expands every strcmp in SetMember
 
 // @0x142987710
-// MS2-FUNCTIONAL: the property chain is written as direct comparisons; the exe compares the names one character at a time
 bool TextFormatObject::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
 {
     Value v(val);
-    const char* pname = name.ToCStr();
-    Render::Text::TextFormat&      tf = GetTextFormat();
-    Render::Text::ParagraphFormat& pf = GetParagraphFormat();
-    const bool clear = val.IsUndefined() || val.IsNull();
 
-    if (!strcmp(pname, "align"))
+    if (!strcmp(name.ToCStr(), "align"))
     {
         ASString s = val.ToString(penv);
         const char* ps = s.ToCStr();
         if (!strcmp(ps, "left"))
-            pf.SetAlignment(Render::Text::ParagraphFormat::Align_Left);
+            GetParagraphFormat().SetAlignment(Render::Text::ParagraphFormat::Align_Left);
         else if (!strcmp(ps, "right"))
-            pf.SetAlignment(Render::Text::ParagraphFormat::Align_Right);
+            GetParagraphFormat().SetAlignment(Render::Text::ParagraphFormat::Align_Right);
         else if (!strcmp(ps, "center"))
-            pf.SetAlignment(Render::Text::ParagraphFormat::Align_Center);
+            GetParagraphFormat().SetAlignment(Render::Text::ParagraphFormat::Align_Center);
         else if (!strcmp(ps, "justify"))
-            pf.SetAlignment(Render::Text::ParagraphFormat::Align_Justify);
+            GetParagraphFormat().SetAlignment(Render::Text::ParagraphFormat::Align_Justify);
         else
         {
-            pf.ClearAlignment();
+            GetParagraphFormat().ClearAlignment();
             v.SetNull();
         }
     }
-    else if (!strcmp(pname, "blockIndent"))
+    else if (!strcmp(name.ToCStr(), "blockIndent"))
     {
-        if (clear)
+        if (val.IsUndefined() || val.IsNull())
         {
-            pf.ClearBlockIndent();
+            GetParagraphFormat().ClearBlockIndent();
             v.SetNull();
         }
         else
         {
             int n = val.ToInt32(penv);
             v.SetNumber((double)n);
-            pf.SetBlockIndent((unsigned)ClampTwips(n, 0));
+            GetParagraphFormat().SetBlockIndent((unsigned)ClampTwips(n, 0));
         }
     }
-    else if (!strcmp(pname, "bold"))
+    else if (!strcmp(name.ToCStr(), "bold"))
     {
-        if (clear)
+        if (val.IsUndefined() || val.IsNull())
         {
-            tf.ClearBold();
+            GetTextFormat().ClearBold();
             v.SetNull();
         }
         else
         {
             bool b = val.ToBool(penv);
             v.SetBool(b);
-            tf.SetBold(b);
+            GetTextFormat().SetBold(b);
         }
     }
-    else if (!strcmp(pname, "bullet"))
+    else if (!strcmp(name.ToCStr(), "bullet"))
     {
-        if (clear)
+        if (val.IsUndefined() || val.IsNull())
         {
-            pf.ClearBullet();
+            GetParagraphFormat().ClearBullet();
             v.SetNull();
         }
         else
         {
             bool b = val.ToBool(penv);
             v.SetBool(b);
-            pf.SetBullet(b);
+            GetParagraphFormat().SetBullet(b);
         }
     }
-    else if (!strcmp(pname, "color"))
+    else if (!strcmp(name.ToCStr(), "color"))
     {
-        if (clear)
+        if (val.IsUndefined() || val.IsNull())
         {
-            tf.ClearColor();
+            GetTextFormat().ClearColor();
             v.SetNull();
         }
         else
         {
             unsigned c = (unsigned)val.ToInt32(penv);
             v.SetNumber((double)c);
-            tf.SetColor32(c);
+            GetTextFormat().SetColor32(c);
         }
     }
-    else if (!strcmp(pname, "font"))
+    else if (!strcmp(name.ToCStr(), "font"))
     {
-        if (clear)
+        if (val.IsUndefined() || val.IsNull())
         {
-            tf.ClearFontList();
+            GetTextFormat().ClearFontList();
             v.SetNull();
         }
         else
         {
             ASString s = val.ToString(penv);
             v.SetString(s);
-            tf.SetFontList(s.ToCStr());
+            GetTextFormat().SetFontList(s.ToCStr());
         }
     }
-    else if (!strcmp(pname, "indent"))
+    else if (!strcmp(name.ToCStr(), "indent"))
     {
-        if (clear)
+        if (val.IsUndefined() || val.IsNull())
         {
-            pf.ClearIndent();
+            GetParagraphFormat().ClearIndent();
             v.SetNull();
         }
         else
         {
             int n = val.ToInt32(penv);
             v.SetNumber((double)n);
-            pf.SetIndent(ClampTwips(n, -TextFormatMaxTwips));
+            GetParagraphFormat().SetIndent(ClampTwips(n, -TextFormatMaxTwips));
         }
     }
-    else if (!strcmp(pname, "italic"))
+    else if (!strcmp(name.ToCStr(), "italic"))
     {
-        if (clear)
+        if (val.IsUndefined() || val.IsNull())
         {
-            tf.ClearItalic();
+            GetTextFormat().ClearItalic();
             v.SetNull();
         }
         else
         {
             bool b = val.ToBool(penv);
             v.SetBool(b);
-            tf.SetItalic(b);
+            GetTextFormat().SetItalic(b);
         }
     }
-    else if (!strcmp(pname, "leading"))
+    else if (!strcmp(name.ToCStr(), "leading"))
     {
-        if (clear)
+        if (val.IsUndefined() || val.IsNull())
         {
-            pf.ClearLeading();
+            GetParagraphFormat().ClearLeading();
             v.SetNull();
         }
         else
         {
             int n = val.ToInt32(penv);
             v.SetNumber((double)n);
-            pf.SetLeading(ClampTwips(n, -TextFormatMaxTwips));
+            GetParagraphFormat().SetLeading(ClampTwips(n, -TextFormatMaxTwips));
         }
     }
-    else if (!strcmp(pname, "leftMargin"))
+    else if (!strcmp(name.ToCStr(), "leftMargin"))
     {
-        if (clear)
+        if (val.IsUndefined() || val.IsNull())
         {
-            pf.ClearLeftMargin();
+            GetParagraphFormat().ClearLeftMargin();
             v.SetNull();
         }
         else
         {
             int n = val.ToInt32(penv);
             v.SetNumber((double)n);
-            pf.SetLeftMargin((unsigned)ClampTwips(n, 0));
+            GetParagraphFormat().SetLeftMargin((unsigned)ClampTwips(n, 0));
         }
     }
-    else if (!strcmp(pname, "rightMargin"))
+    else if (!strcmp(name.ToCStr(), "rightMargin"))
     {
-        if (clear)
+        if (val.IsUndefined() || val.IsNull())
         {
-            pf.ClearRightMargin();
+            GetParagraphFormat().ClearRightMargin();
             v.SetNull();
         }
         else
         {
             int n = val.ToInt32(penv);
             v.SetNumber((double)n);
-            pf.SetRightMargin((unsigned)ClampTwips(n, 0));
+            GetParagraphFormat().SetRightMargin((unsigned)ClampTwips(n, 0));
         }
     }
-    else if (!strcmp(pname, "size"))
+    else if (!strcmp(name.ToCStr(), "size"))
     {
-        if (clear)
+        if (val.IsUndefined() || val.IsNull())
         {
-            tf.ClearFontSize();
+            GetTextFormat().ClearFontSize();
             v.SetNull();
         }
         else
@@ -244,104 +244,99 @@ bool TextFormatObject::SetMember(Environment* penv, const ASString& name, const 
             if (n >= 0)
             {
                 if (n < 0x80)
-                    tf.SetFontSize((float)n);
+                    Render::Text::TextFormat_SetFontSize(&GetTextFormat(), (float)(unsigned)n);
                 else
-                    tf.SetFontSizeInFixp(0x9ec); // 127 pixels
+                    GetTextFormat().SetFontSizeInFixp(0x9ec); // 127 pixels
             }
         }
     }
-    else if (!strcmp(pname, "tabStops"))
+    else if (!strcmp(name.ToCStr(), "tabStops"))
     {
-        if (clear)
+        if (val.IsUndefined() || val.IsNull())
         {
-            pf.ClearTabStops();
+            GetParagraphFormat().ClearTabStops();
             v.SetNull();
         }
-        else if (val.GetType() == Value::OBJECT)
+        else if (val.GetType() == Value::OBJECT && val.ToObject(penv)->GetObjectType() == Object_Array)
         {
-            Object* pobj = val.ToObject(penv);
-            if (pobj->GetObjectType() == Object_Array)
+            ArrayObject* parr  = static_cast<ArrayObject*>(val.ToObject(penv));
+            GetParagraphFormat().BeginTabStops((unsigned)parr->GetSize());
+            int count = parr->GetSize();
+            for (int i = 0; i < count; i++)
             {
-                ArrayObject* parr  = static_cast<ArrayObject*>(pobj);
-                int          count = parr->GetSize();
-                pf.BeginTabStops((unsigned)count);
-                for (int i = 0; i < count; i++)
-                {
-                    double stop = parr->GetElementPtr(i)->ToNumber(penv);
-                    parr->SetElement(i, Value((Number)(double)(unsigned)(long long)stop));
-                    pf.SetTabStopsElement((unsigned)i, (unsigned)(long long)stop);
-                }
-                Value arr(pobj);
-                return Object::SetMember(penv, name, arr, flags);
+                double stop = parr->GetElementPtr(i)->ToNumber(penv);
+                parr->SetElement(i, Value((Number)(double)(unsigned)(long long)stop));
+                GetParagraphFormat().SetTabStopsElement((unsigned)i, (unsigned)(long long)stop);
             }
+            return Object::SetMember(penv, name, Value(parr), flags);
         }
     }
-    else if (!strcmp(pname, "underline"))
+    else if (!strcmp(name.ToCStr(), "underline"))
     {
-        if (clear)
+        if (val.IsUndefined() || val.IsNull())
         {
-            tf.ClearUnderline();
+            GetTextFormat().ClearUnderline();
             v.SetNull();
         }
         else
         {
             bool b = val.ToBool(penv);
             v.SetBool(b);
-            tf.SetUnderline(b);
+            GetTextFormat().SetUnderline(b);
         }
     }
-    else if (!strcmp(pname, "url"))
+    else if (!strcmp(name.ToCStr(), "url"))
     {
-        if (clear)
+        if (val.IsUndefined() || val.IsNull())
         {
-            tf.ClearUrl();
+            GetTextFormat().ClearUrl();
             v.SetNull();
         }
         else
         {
             ASString s = val.ToString(penv);
             v.SetString(s);
-            tf.SetUrl(s.ToCStr());
+            GetTextFormat().SetUrl(s.ToCStr());
         }
     }
     else
     {
         if (penv->GetVersion() >= 8)
         {
-            if (!strcmp(pname, "letterSpacing"))
+            if (!strcmp(name.ToCStr(), "letterSpacing"))
             {
-                if (clear)
+                if (val.IsUndefined() || val.IsNull())
                 {
-                    tf.ClearLetterSpacing();
+                    GetTextFormat().ClearLetterSpacing();
                     v.SetNull();
                 }
                 else
                 {
                     int n = val.ToInt32(penv);
                     v.SetNumber((double)n);
-                    tf.SetLetterSpacing((float)ClampTwips(n, -TextFormatMaxTwips));
+                    GetTextFormat().SetLetterSpacing((float)ClampTwips(n, -TextFormatMaxTwips));
                 }
             }
-            else if (!strcmp(pname, "kerning"))
+            else if (!strcmp(name.ToCStr(), "kerning"))
             {
-                if (clear)
+                if (val.IsUndefined() || val.IsNull())
                 {
-                    tf.ClearKerning();
+                    GetTextFormat().ClearKerning();
                     v.SetNull();
                 }
                 else
                 {
                     bool b = val.ToBool(penv);
                     v.SetBool(b);
-                    tf.SetKerning(b);
+                    GetTextFormat().SetKerning(b);
                 }
             }
         }
-        if (penv->CheckExtensions() && !strcmp(pname, "alpha"))
+        if (penv->CheckExtensions() && !strcmp(name.ToCStr(), "alpha"))
         {
-            if (clear)
+            if (val.IsUndefined() || val.IsNull())
             {
-                tf.ClearAlpha();
+                GetTextFormat().ClearAlpha();
                 v.SetNull();
             }
             else
@@ -349,11 +344,12 @@ bool TextFormatObject::SetMember(Environment* penv, const ASString& name, const 
                 int n = val.ToInt32(penv);
                 v.SetNumber((double)n);
                 int percent = n < 0 ? 0 : (n > 100 ? 100 : n);
-                tf.SetAlpha((UInt8)(int)(((double)percent * 255.0) / 100.0));
+                GetTextFormat().SetAlpha((UInt8)(int)(((double)percent * 255.0) / 100.0));
             }
         }
     }
     return Object::SetMember(penv, name, v, flags);
 }
+#pragma function(strcmp)
 
 }}} // namespace Scaleform::GFx::AS2
