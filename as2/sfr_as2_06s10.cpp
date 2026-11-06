@@ -26,29 +26,38 @@ namespace {
 
 // A builtin class created on first use: its registration function under the type's name, and the name published
 // in pdest as a function name value until then.
+// GlobalContext::GetBuiltin: the builtin name from the string manager of the movie's AS2 root.
+SF_FORCEINLINE const ASString& GcBuiltin(GlobalContext* pgc, ASBuiltinType type)
+{
+    return ((MovieRoot*)pgc->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(type);
+}
+
 SF_FORCEINLINE void AddBuiltinClassRegistry(GlobalContext* pgc, ASStringContext* psc, Object* pdest,
                                             ASBuiltinType type, GlobalContext::ClassRegEntry::RegisterFunc func)
 {
-    const ASString& name = psc->GetBuiltin(type);
-    if (::FUN_140001bd0(&pgc->BuiltinClassesRegistry, (void*)&name))
-        return;
+    const ASString& name = GcBuiltin(pgc, type);
+    if (::FUN_140001bd0(&pgc->BuiltinClassesRegistry, (void*)&name) == NULL)
     {
-        GlobalContext::ClassRegEntry entry;
-        entry.Register = func;
-        pgc->BuiltinClassesRegistry.Add(name, entry);
+        {
+            GlobalContext::ClassRegEntry entry;
+            entry.Register = func;
+            pgc->BuiltinClassesRegistry.Add(name, entry);
+        }
+        {
+            Value fname;
+            fname.T.Type        = Value::FUNCTIONNAME;
+            fname.V.pStringNode = GcBuiltin(pgc, type).GetNode();
+            fname.V.pStringNode->AddRef();
+            pdest->SetMemberRaw(psc, GcBuiltin(pgc, type), fname);
+        }
     }
-
-    Value fname;
-    fname.T.Type        = Value::FUNCTIONNAME;
-    fname.V.pStringNode = psc->GetBuiltin(type).GetNode();
-    fname.V.pStringNode->AddRef();
-    pdest->SetMemberRaw(psc, name, fname);
 }
 
 } // namespace
 
-// MS2-FUNCTIONAL: the movie's states are read through its own state bag; the video glue takes the string context
-// under the GFx-level name its header declares.
+// MS2-FUNCTIONAL: register allocation only: the exe keeps the global context in rbx and the builtin name in rdi
+// (ours swaps them), and stores the class entry's null ResolvedFunc as an immediate where ours reuses the zero
+// Get result.
 // @0x14297c6e0
 void MovieRoot::RegisterAuxASClasses()
 {
