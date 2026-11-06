@@ -90,15 +90,13 @@ static inline const ASString& MS2_GcBuiltin(GlobalContext* pgc, int btype)
 }
 
 // The builtins 66 and 67 are "_level0" and "_level0."
-// MS2-FUNCTIONAL: the exe saves rsi only around the _root rewrite and puts the string context below the path;
-// register choice and frame slots differ
 // @0x1429306a0
 void MovieRoot::AddStickyVariable(const ASString& fullPath, const Value& val, SetVarTypeArg setType)
 {
     GlobalContext*  pgc = pGlobalContext;
+    ASStringContext sc(pgc, 8);
     ASString        path(MS2_GcBuiltin(pgc, ASBuiltin_empty_));
     ASString        name(MS2_GcBuiltin(pgc, ASBuiltin_empty_));
-    ASStringContext sc(pgc, 8);
     if (!Environment::ParsePath(&sc, fullPath, &path, &name))
     {
         if (name.IsEmpty())
