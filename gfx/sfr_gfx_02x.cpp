@@ -358,7 +358,6 @@ SF_NOINLINE bool RefCountCollector<Stat>::RootArray::allocatePageSafe(UPInt inde
 // and freed. An object in a work list only has its release delayed.
 // The work-list head is read through a volatile pointer, so it is loaded again after the loop test, as in the exe.
 // RemoveFromRoots is called through a member pointer, so it stays an out-of-line call (0x1425927d0), as in the exe.
-// MS2-FUNCTIONAL: the exe calls pGlobalHeap->Free and returns through the shared epilog; ours tail-jumps to it
 // @0x1425925f0
 template<int Stat>
 void RefCountBaseGC<Stat>::ReleaseInternal()
@@ -409,20 +408,25 @@ void RefCountBaseGC<Stat>::ReleaseInternal()
             p->pPrev->pNext = p->pNext;
             p->pNext->pPrev = p->pPrev;
             p->RefCount &= ~(Flag_Buffered | Flag_InList);
-            p->RootIndex = ~0u;
             p->pNext     = 0;
+            p->RootIndex = ~0u;
         };
         if (!buffered)
         {
             if (inlist)
                 removeFromList(this);
+            Finalize_GC();
+            Memory::Free(this);
         }
-        else if (!inlist)
-            (pRCC->*(&Collector::RemoveFromRoots))(this);
         else
-            removeFromList(this);
-        Finalize_GC();
-        Memory::Free(this);
+        {
+            if (!inlist)
+                (pRCC->*(&Collector::RemoveFromRoots))(this);
+            else
+                removeFromList(this);
+            Finalize_GC();
+            Memory::Free(this);
+        }
     }
     else
     {
