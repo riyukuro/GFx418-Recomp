@@ -343,9 +343,9 @@ void* Object::Unk15()
 void Object::InitInstance(bool)
 {
 }
-
-// Only AS3 objects say so; the collector base is not one.
-template <int Stat>
+// @0x1423df430 (the collector base has no name; the exe folds it with Object::GetAS3ObjectName)
+template <int Stat> String RefCountBaseGC<Stat>::GetAS3ObjectName() const { return ""; } template String RefCountBaseGC<323>::GetAS3ObjectName() const;
+template <int Stat>   // only AS3 objects say so; the collector base is not one
 bool RefCountBaseGC<Stat>::IsAS3Object() const
 {
     return false;
