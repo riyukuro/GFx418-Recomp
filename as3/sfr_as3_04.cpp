@@ -281,20 +281,35 @@ CheckResult InstanceTraits::UserDefined::PreInit(const Value& _this) const
     return SetupSlotValues(*_this.GetObject());
 }
 
-// MS2-FUNCTIONAL: register allocation of the file pointer differs (r9 in the exe)
+// Abc::Instance::Interfaces::GetName (SDK): the multiname of interface i
+static inline const Abc::Multiname& Sfr04InterfaceName(const Abc::Instance::Interfaces& ifs, const Abc::ConstPool& cp, UPInt i)
+{
+    return cp.GetMultiname(ifs.info[static_cast<UInt32>(i)]);
+}
+
 // @0x142425370
 bool InstanceTraits::UserDefined::SupportsInterface(const Traits& t) const
 {
     const Abc::Instance::Interfaces& ifs = class_info.inst_info.implemented_interfaces;
     VM& vm = GetVM();
     const UPInt n = ifs.info.GetSize();
-    for (UPInt i = 0; i < n; ++i)
+    for (UPInt i = 0; i < n; i++)
     {
-        VMAbcFile& file = GetFile();
-        const Multiname mn(file, file.GetAbcFile().Const_Pool.GetMultiname(ifs.info[static_cast<UInt32>(i)]));
+        const Multiname mn(GetFile(), Sfr04InterfaceName(ifs, GetFile().GetAbcFile().Const_Pool, i));
+
         const ClassTraits::Traits* ctr = FUN_14250d760(vm, mn);
-        if (ctr && (&ctr->GetInstanceTraits() == &t || ctr->GetInstanceTraits().SupportsInterface(t)))
-            return true;
+
+        if (ctr)
+        {
+            InstanceTraits::Traits& itr = ctr->GetInstanceTraits();
+
+            if (&itr == &t)
+                return true;
+
+            // Recursive handling of nested interfaces.
+            if (itr.SupportsInterface(t))
+                return true;
+        }
     }
     return false;
 }
