@@ -47,7 +47,8 @@ static inline void Sfr05dSetProto(ObjectInterface* pobj, ASStringContext* psc, O
 inline ButtonObject::ButtonObject(GlobalContext* pgc, InteractiveObject* pbutton)
     : Object(Sfr05dGetGC(pgc)), pButton(pbutton)
 {
-    AvmCharacter* pavm = pbutton ? AS2::ToAvmCharacter(pbutton) : 0;
+    AvmCharacter* pavm = 0;
+    if (pbutton) pavm = AS2::ToAvmCharacter(pbutton); // the SDK ToAvmCharacter null check
     ASStringContext* psc = pavm->GetASEnvironment()->GetSC();
     Sfr05dSetProto(this, psc, pavm->Get__proto__());
 }
@@ -71,7 +72,6 @@ unsigned AvmButton::GetCursorType() const
     return 0;
 }
 
-// MS2-FUNCTIONAL: register choice for the GetASEnvironment vtable load (the exe uses rdx, ours rax)
 // @0x142949960
 ButtonObject* AvmButton::GetButtonASObject()
 {
