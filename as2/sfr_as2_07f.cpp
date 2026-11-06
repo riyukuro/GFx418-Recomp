@@ -446,56 +446,52 @@ bool AS2ValueObjectInterface::SetDisplayInfo(void* pdata, const Value::DisplayIn
 }
 
 // Sets the 2D matrix (translation in pixels) and the AS geometry from it.
-// MS2-FUNCTIONAL: instruction scheduling of the vtable load and matrix stores
 // @0x142981130
 bool AS2ValueObjectInterface::SetDisplayMatrix(void* pdata, const Render::Matrix2F& mat)
 {
     DisplayObject* pch = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pMovieRoot);
-    if (pch && mat.IsValid())
-    {
-        Render::Matrix2F m = mat;
-        m.Tx()             = m.Tx() * 20.f;
-        m.Ty()             = m.Ty() * 20.f;
-        pch->SetMatrix(m);
-
-        DisplayObjectBase::GeomDataType gd;
-        pch->GetGeomData(gd);
-        gd.X        = int(mat.Tx());
-        gd.Y        = int(mat.Ty());
-        gd.XScale   = mat.GetXScaleDouble() * 100.;
-        gd.YScale   = mat.GetYScaleDouble() * 100.;
-        gd.Rotation = mat.GetRotationDouble() * 180. / SF_MATH_PI;
-        pch->SetGeomData(gd);
-        return true;
-    }
-    return false;
+    if (!pch) return false;
+    if (!mat.IsValid())
+        return false;
+    Render::Matrix2F m = mat;
+    m.Tx() = m.Tx() * 20.f;
+    m.Ty() = m.Ty() * 20.f;
+    pch->SetMatrix(m);
+    DisplayObjectBase::GeomDataType gd;
+    pch->GetGeomData(gd);
+    gd.X        = int(mat.Tx());
+    gd.Y        = int(mat.Ty());
+    gd.XScale   = mat.GetXScaleDouble() * 100.;
+    gd.YScale   = mat.GetYScaleDouble() * 100.;
+    gd.Rotation = mat.GetRotationDouble() * 180. / SF_MATH_PI;
+    pch->SetGeomData(gd);
+    return true;
 }
 
 // Sets the 3D matrix (translation in pixels) and the 3D AS geometry from it.
-// MS2-FUNCTIONAL: instruction scheduling of the vtable load and matrix stores
 // @0x142981f00
 bool AS2ValueObjectInterface::SetMatrix3D(void* pdata, const Render::Matrix3F& mat)
 {
     DisplayObject* pch = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pMovieRoot);
-    if (pch && VoiValid3D(mat))
-    {
-        Render::Matrix3F m = mat;
-        m.Tx()             = m.Tx() * 20.f;
-        m.Ty()             = m.Ty() * 20.f;
-        pch->SetMatrix3D(m);
+    if (!pch) return false;
+    if (!VoiValid3D(mat))
+        return false;
 
-        DisplayObjectBase::GeomDataType gd;
-        pch->GetGeomData(gd);
-        gd.Z      = mat.Tz();
-        gd.ZScale = mat.GetZScale() * 100.;
-        float xr, yr;
-        mat.GetRotation(&xr, &yr, 0);
-        gd.XRotation = xr * 180. / SF_MATH_PI;
-        gd.YRotation = yr * 180. / SF_MATH_PI;
-        pch->SetGeomData(gd);
-        return true;
-    }
-    return false;
+    Render::Matrix3F m = mat;
+    m.Tx()             = m.Tx() * 20.f;
+    m.Ty()             = m.Ty() * 20.f;
+    pch->SetMatrix3D(m);
+
+    DisplayObjectBase::GeomDataType gd;
+    pch->GetGeomData(gd);
+    gd.Z      = mat.Tz();
+    gd.ZScale = mat.GetZScale() * 100.;
+    float xr, yr;
+    mat.GetRotation(&xr, &yr, 0);
+    gd.XRotation = xr * 180. / SF_MATH_PI;
+    gd.YRotation = yr * 180. / SF_MATH_PI;
+    pch->SetGeomData(gd);
+    return true;
 }
 
 // @0x1429803d0
