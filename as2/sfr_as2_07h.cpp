@@ -139,32 +139,34 @@ void SelectionCtorFunction::SetControllerFocusGroup(const FnCall& fn)
     }
 }
 
-static SF_INLINE int SetHitAreaNotify_Find(const SpritesWithHitAreaArray& sprites, const Sprite* psprite)
+// The SDK's AvmSprite::GetHitAreaIndex, which the exe inlines.
+static SF_FORCEINLINE int GetHitAreaIndexLocal(const AvmSprite* ps)
 {
-    const UPInt n = sprites.GetSize();
-    for (unsigned i = 0; i < n; i++)
+    UPInt spriteArraySize = SpritesWithHitAreaOf(ps->GetAS2Root()).GetSize();
+    if (ps->GetSprite()->pHitAreaHandle)
     {
-        if (sprites[i] == psprite)
-            return (int)i;
+        for (unsigned i = 0; i < spriteArraySize; i++)
+            if (SpritesWithHitAreaOf(ps->GetAS2Root())[i] == ps->GetSprite())
+                return i;
     }
     return -1;
 }
 
 // The sprite joins the movie's hit area sprites when it gets a hit area, and leaves when it loses it.
-// MS2-FUNCTIONAL: this and phitArea sit in swapped scratch registers (r10/r11); same behavior
 // @0x142981670
 void AvmSprite::SetHitAreaNotify(Sprite* phitArea)
 {
-    SpritesWithHitAreaArray& sprites = SpritesWithHitAreaOf(GetAS2Root());
-    int index =
-        GetSprite()->pHitAreaHandle ? SetHitAreaNotify_Find(SpritesWithHitAreaOf(GetAS2Root()), GetSprite()) : -1;
+    int haIndex = GetHitAreaIndexLocal(this);
     if (phitArea)
     {
-        if (index == -1)
+        if (haIndex == -1)
             SpritesWithHitAreaOf(GetAS2Root()).PushBack(GetSprite());
     }
-    else if (index > -1)
-        sprites.RemoveAt(index);
+    else
+    {
+        if (haIndex > -1)
+            SpritesWithHitAreaOf(GetAS2Root()).RemoveAt(haIndex);
+    }
 }
 
 // The styles of the IME composition string, allocated on first use.
