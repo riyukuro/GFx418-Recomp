@@ -33,6 +33,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include "ms2/scaleform/include/kernel/sf_std.h"
+#include "ms2/scaleform/include/kernel/sf_simd.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vec_base.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
@@ -935,6 +936,20 @@ static __forceinline void Sfr17dPostProcessName(Multiname& mn)
     }
 }
 
+// Value::AssignUnsafe(const Value&) (0x1424edce0, defined in sfr_as3_17), which the exe inlines into the Multiname
+// ctor: the same definition as sfr_as3_17's Sfr17ValueInline (a Value friend). Name is a fresh kUndefined Value
+// there, so the Release folds away and only the prefetch, the copy and the AddRef remain.
+struct Sfr17ValueInline
+{
+    static __forceinline void Assign(Value& self, const Value& other)
+    {
+        self.Release();
+        SIMD::PrefetchObj(&other);
+        memcpy(&self, &other, sizeof(Value));
+        self.AddRef();
+    }
+};
+
 __forceinline Multiname::Multiname(Instances::Namespace& ns, const Value& name, InlineCtorTag)
     : Kind(static_cast<Abc::MultinameKind>(0))
     , Obj(&ns)
@@ -952,11 +967,30 @@ __forceinline Multiname::Multiname(Instances::Namespace& ns, const Value& name, 
     Name.AssignUnsafe(name);
     Sfr17dPostProcessName(*this);
 }
+
+// The same, with AssignUnsafe inlined as FireEvent 0x142502e70 has it (AttachMovie 0x1424ede80 calls it).
+__forceinline Multiname::Multiname(Instances::Namespace& ns, const Value& name, InlineAssignTag)
+    : Kind(static_cast<Abc::MultinameKind>(0))
+    , Obj(&ns)
+{
+    const UInt32 k = static_cast<UInt32>(name.GetKind());
+    if (k - 0xc <= 3 && name.GetGASRefCountBase() != NULL)
+    {
+        const Traits& tr = reinterpret_cast<Object*>(name.GetGASRefCountBase())->GetTraits();
+        if (static_cast<int>(tr.TraitsType) == 0xc && (static_cast<UInt8>(~static_cast<UInt8>(static_cast<UInt8>(tr.Flags) >> 5)) & 1) != 0)
+        {
+            Sfr27MultinameFromQName(this, &name);
+            return;
+        }
+    }
+    Sfr17ValueInline::Assign(Name, name);
+    Sfr17dPostProcessName(*this);
+}
 }}} // namespace Scaleform::GFx::AS3
 
 // AvmDisplayObj: fires the display-list event id at the AS3 object (load, enter frame, the timeline instance's
 // creation and parent property, its constructor, added / removed and the frame and activation broadcasts).
-// MS2-FUNCTIONAL 0x142502e70: SDK case order and SDK Initialize body with the Multiname/Value ctors inlined; regalloc and slots differ (the exe builds the name Value before GetAS3Parent, keeps its flags in r12, and calls CreateASInstanceNoCtor without the false arg)
+// MS2-FUNCTIONAL 0x142502e70: SDK case order and per-case as3obj; 1984 of 2001 bytes. Regalloc and slots differ (the exe keeps the name's kind in r12, shrink-wraps r12/r13/r15/xmm6, reads InstanceBasedName as a bit field and calls CreateASInstanceNoCtor without the false arg)
 // The plain event ids past the sockets (gfx_eventid.h stops at Event_SockXML).
 enum Sfr17dEventIds
 {
@@ -980,13 +1014,17 @@ void FUN_142502e70(void* pavm, const Scaleform::GFx::EventId& id)
         self->pDispObj->OnEventLoad();
         break;
     case Sfr17dEvent_Added:
-        root = static_cast<MovieRoot*>(self->pDispObj->pASRoot);
-        if (pdisp && pdisp->HasEventHandler(root->BuiltinsMgr.GetBuiltin(AS3Builtin_added), false) &&
-            !self->GetAVM()->HandleException)
         {
-            SPtr<Instances::fl_events::Event> evt = pdisp->CreateEventObject(root->BuiltinsMgr.GetBuiltin(AS3Builtin_added), true, false);
-            evt->Target = pdisp;
-            pdisp->DispatchEventObject(evt, self->pDispObj);
+            root = static_cast<MovieRoot*>(self->pDispObj->pASRoot);
+            // the SDK's per-case as3obj: GetAS3Obj() read again here
+            Instances::fl_events::EventDispatcher* const as3o = self->GetAS3Obj();
+            if (as3o && as3o->HasEventHandler(root->BuiltinsMgr.GetBuiltin(AS3Builtin_added), false) &&
+                !self->GetAVM()->HandleException)
+            {
+                SPtr<Instances::fl_events::Event> evt = as3o->CreateEventObject(root->BuiltinsMgr.GetBuiltin(AS3Builtin_added), true, false);
+                evt->Target = as3o;
+                as3o->DispatchEventObject(evt, self->pDispObj);
+            }
         }
         if (self->IsStageAccessible())
         {
@@ -1003,13 +1041,17 @@ void FUN_142502e70(void* pavm, const Scaleform::GFx::EventId& id)
         break;
     case Sfr17dEvent_Removed:
         self->pDispObj->Depth = 0;
-        root = static_cast<MovieRoot*>(self->pDispObj->pASRoot);
-        if (pdisp && pdisp->HasEventHandler(root->BuiltinsMgr.GetBuiltin(AS3Builtin_removed), false) &&
-            !self->GetAVM()->HandleException)
         {
-            SPtr<Instances::fl_events::Event> evt = pdisp->CreateEventObject(root->BuiltinsMgr.GetBuiltin(AS3Builtin_removed), true, false);
-            evt->Target = pdisp;
-            pdisp->DispatchEventObject(evt, self->pDispObj);
+            root = static_cast<MovieRoot*>(self->pDispObj->pASRoot);
+            // the SDK's per-case as3obj: GetAS3Obj() read again here
+            Instances::fl_events::EventDispatcher* const as3o = self->GetAS3Obj();
+            if (as3o && as3o->HasEventHandler(root->BuiltinsMgr.GetBuiltin(AS3Builtin_removed), false) &&
+                !self->GetAVM()->HandleException)
+            {
+                SPtr<Instances::fl_events::Event> evt = as3o->CreateEventObject(root->BuiltinsMgr.GetBuiltin(AS3Builtin_removed), true, false);
+                evt->Target = as3o;
+                as3o->DispatchEventObject(evt, self->pDispObj);
+            }
         }
         if ((self->Flags & AvmDisplayObj::Flag_Unloaded) && !self->GetAVM()->HandleException)
         {
@@ -1031,9 +1073,11 @@ void FUN_142502e70(void* pavm, const Scaleform::GFx::EventId& id)
             if (!(self->pDispObj->Flags & DisplayObject::Mask_InstanceBasedName) && self->GetAS3Parent())
             {
                 const ASString& name = self->pDispObj->GetName();
+                // the name's Value is built before GetAS3Parent() is called again, as in the exe
+                const AS3::Value namev(name, AS3::Value::InlineStr);
                 // SetProperty() can throw; the result is not checked (DoNotCheck).
                 self->GetAS3Parent()->SetProperty(Multiname(static_cast<MovieRoot*>(self->pDispObj->pASRoot)->pAVM->GetPublicNamespace(),
-                                                            AS3::Value(name, AS3::Value::InlineStr), Multiname::InlineCtorTag()),
+                                                            namev, Multiname::InlineAssignTag()),
                                                   AS3::Value(self->GetAS3Obj(), AS3::Value::InlineObj));
                 if (static_cast<MovieRoot*>(self->pDispObj->pASRoot)->pAVM->HandleException)
                 {

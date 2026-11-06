@@ -971,6 +971,9 @@ public:
     // (appended, sfr19) the same constructor, inlined (LTCG) into exec_in 0x14253b020 (defined in sfr_as3_19).
     struct InlineCtorTag {};
     inline Multiname(Instances::Namespace& ns, const Value& name, InlineCtorTag);
+    // (appended, fe11) the same, with Value::AssignUnsafe inlined too (AvmDisplayObj::FireEvent 0x142502e70, sfr_as3_17d).
+    struct InlineAssignTag {};
+    inline Multiname(Instances::Namespace& ns, const Value& name, InlineAssignTag);
     Multiname(const Multiname& other);
     // (appended) the copy constructor, inlined into CTraits::RegisterImplementedInterface 0x142446010 (defined in
     // sfr_as3_06; the out-of-line one is 0x1424d8f90 in sfr_as3_15). For ArrayLH::PushBackAlt.
