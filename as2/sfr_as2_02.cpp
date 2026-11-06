@@ -3178,7 +3178,15 @@ MS2_AS2_STRING_HASH_ADD(char, GFx::ASStringHash_GC<char>::NodeType::NodeRef)
 MS2_AS2_STRING_HASH_ADD(GFx::AS2::SharedObjectPtr, GFx::ASStringHash_GC<GFx::AS2::SharedObjectPtr>::NodeType::NodeRef)
 MS2_AS2_STRING_HASH_ADD(GFx::AS2::Value, GFx::ASStringHash_GC<GFx::AS2::Value>::NodeType::NodeRef)
 MS2_AS2_STRING_HASH_ADD(GFx::AS2::Object::Watchpoint, GFx::ASStringHash_GC<GFx::AS2::Object::Watchpoint>::NodeType)
-// MS2-FUNCTIONAL the exe inlines CheckExpand here (pinned below)
+// The exe inlines CheckExpand into the FunctionRef node add.
+template<> SF_FORCEINLINE void GFx::ASStringHash_GC<GFx::AS2::FunctionRef>::SetType::SelfType::CheckExpand(void* pheapAddr)
+{
+    if (pTable == 0)
+        setRawCapacity(pheapAddr, HashMinSize);
+    else if (pTable->EntryCount * 5 > (pTable->SizeMask + 1) * 4)
+        setRawCapacity(pheapAddr, (pTable->SizeMask + 1) * 2);
+}
+// (pinned below)
 // @0x142915300
 MS2_AS2_STRING_HASH_ADD(GFx::AS2::FunctionRef, GFx::ASStringHash_GC<GFx::AS2::FunctionRef>::NodeType)
 // (pinned below)
@@ -3248,10 +3256,18 @@ template SPInt decltype(MS2_AS2EventHandlerHash::mHash)::BaseType::findIndexAlt<
 typedef decltype(MS2_AS2EventHandlerHash::mHash)::BaseType MS2_AS2EventHandlerSet;
 typedef HashNode<GFx::EventId, ArrayLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>, GFx::EventIdHashFunctor>
     MS2_AS2EventHandlerNode;
-// MS2-FUNCTIONAL the exe inlines CheckExpand and assigns the EventId field by field (pinned below)
+// The exe inlines CheckExpand into both event handler adds.
+template<> SF_FORCEINLINE void MS2_AS2EventHandlerSet::CheckExpand(void* pheapAddr)
+{
+    if (pTable == 0)
+        setRawCapacity(pheapAddr, HashMinSize);
+    else if (pTable->EntryCount * 5 > (pTable->SizeMask + 1) * 4)
+        setRawCapacity(pheapAddr, (pTable->SizeMask + 1) * 2);
+}
+// (pinned below)
 // @0x1429159d0
 template void MS2_AS2EventHandlerSet::add<MS2_AS2EventHandlerNode>(void*, const MS2_AS2EventHandlerNode&, UPInt);
-// MS2-FUNCTIONAL as the node add (pinned below)
+// (pinned below)
 // @0x142916a70
 template void MS2_AS2EventHandlerSet::add<MS2_AS2EventHandlerHash::NodeRef>(void*, const MS2_AS2EventHandlerHash::NodeRef&,
                                                                           UPInt);

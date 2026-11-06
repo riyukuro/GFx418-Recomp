@@ -102,6 +102,20 @@ public:
     // The button key code (on(keyPress)) of a key down event, 0 when the key has none (0x142603da0).
     int ConvertToButtonKeyCode() const;
 
+    // The SDK's field by field assignment (the TouchID bytes past AsciiCode are not copied).
+    EventId& operator=(const EventId& o)
+    {
+        Id              = o.Id;
+        WcharCode       = o.WcharCode;
+        KeyCode         = o.KeyCode;
+        AsciiCode       = o.AsciiCode;
+        RollOverCnt     = o.RollOverCnt;
+        ControllerIndex = o.ControllerIndex;
+        KeysState       = o.KeysState;
+        MouseWheelDelta = o.MouseWheelDelta;
+        return *this;
+    }
+
     // (appended for the AS2 event handler tables, sfr_as2_02) key press events also compare the key code.
     bool operator==(const EventId& id) const
     {
