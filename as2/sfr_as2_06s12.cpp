@@ -22,11 +22,10 @@ namespace {
 // MovieRoot::GetLevelMovie, inlined in the exe.
 SF_FORCEINLINE InteractiveObject* LxLevelMovie(const MovieRoot* proot, int level)
 {
-    MovieImpl* pmovie = proot->pMovieImpl;
-    for (unsigned i = 0; i < pmovie->MovieLevelsSize; i++)
+    for (unsigned i = 0; i < proot->pMovieImpl->MovieLevelsSize; i++)
     {
-        if (pmovie->pMovieLevels[i].Level == level)
-            return pmovie->pMovieLevels[i].pSprite;
+        if (proot->pMovieImpl->pMovieLevels[i].Level == level)
+            return proot->pMovieImpl->pMovieLevels[i].pSprite;
     }
     return 0;
 }
@@ -69,7 +68,6 @@ bool GFxAS2LoadQueueEntryMT_LoadXML::LoadFinished()
 }
 
 // An XML.load done on the movie thread: the loader reads the file, then fills the XML object.
-// MS2-FUNCTIONAL: register allocation differs.
 // @0x142971660
 void MovieRoot::ProcessLoadXML(GFx::LoadQueueEntry* pentry, LoadStates* pls)
 {
@@ -81,10 +79,10 @@ void MovieRoot::ProcessLoadXML(GFx::LoadQueueEntry* pentry, LoadStates* pls)
         String                   url;
         pls->BuildURL(&url, loc);
         GFxAS2LoadQueueEntry* pas2entry = static_cast<GFxAS2LoadQueueEntry*>(pentry);
-        XMLFileLoader*        ploader   = static_cast<XMLFileLoader*>(pas2entry->XMLHolder.Loader.GetPtr());
-        ploader->Load(String(url.ToCStr()), static_cast<FileOpener*>(pls->GetBindStates()->pFileOpener.GetPtr()));
-        Environment* penv = LxCharEnv(LxLevelMovie(this, 0));
-        ploader = static_cast<XMLFileLoader*>(pas2entry->XMLHolder.Loader.GetPtr());
+        static_cast<XMLFileLoader*>(pas2entry->XMLHolder.Loader.GetPtr())
+            ->Load(url.ToCStr(), static_cast<FileOpener*>(pls->GetBindStates()->pFileOpener.GetPtr()));
+        Environment*   penv    = LxCharEnv(LxLevelMovie(this, 0));
+        XMLFileLoader* ploader = static_cast<XMLFileLoader*>(pas2entry->XMLHolder.Loader.GetPtr());
         ploader->InitASXml(penv, pas2entry->XMLHolder.ASObj.ToObject(penv));
     }
 }
