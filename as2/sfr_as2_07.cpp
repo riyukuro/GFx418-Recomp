@@ -1596,8 +1596,7 @@ Object* Value::ToObject(const Environment* penv) const
     case PROPERTY:
         if (IsProperty())
         {
-            InteractiveObject* ptarget = penv->GetTarget();
-            AvmCharacter*      paschar = ptarget ? AS2::ToAvmCharacter(ptarget) : 0;
+            AvmCharacter* paschar = AS2::ToAvmCharacter(penv->GetTarget());
             if (paschar)
             {
                 Value val;

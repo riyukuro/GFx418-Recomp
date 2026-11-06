@@ -202,6 +202,8 @@ public:
 // The script side of a character of an AS2 movie.
 inline AvmCharacter* ToAvmCharacter(InteractiveObject* pchar)
 {
+    if (!pchar)
+        return NULL;
     return static_cast<AvmCharacter*>(pchar->GetAvmIntObj());
 }
 

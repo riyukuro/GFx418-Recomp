@@ -233,7 +233,6 @@ bool MovieRoot::InvokeArgs(const char* ppathToMethod, GFx::Value* presult, const
 }
 
 // Calls the function of an invoke alias with this its object (or character) and numArgs values already pushed.
-// MS2-FUNCTIONAL: register allocation and prologue differ.
 // @0x142963b90
 bool MovieRoot::InvokeAlias(const char* pmethodName, const InvokeAliasInfo& iai, Value* presult, unsigned numArgs)
 {
@@ -246,17 +245,14 @@ bool MovieRoot::InvokeAlias(const char* pmethodName, const InvokeAliasInfo& iai,
     ObjectInterface* pthis;
     if (pobj)
         pthis = pobj;
-    else if (pch)
-        pthis = ToAvmCharacter(pch);
     else
-        pthis = 0;
+        pthis = ToAvmCharacter(pch);
     Environment* penv = AvmOfMovie(GetMovieAtLevel(pMovieImpl, 0))->GetASEnvironment();
     Value        func(iai.Function);
     return GAS_Invoke(func, presult, pthis, penv, numArgs, penv->GetTopIndex(), pmethodName);
 }
 
 // The same with the arguments pushed from pmethodArgFmt and args.
-// MS2-FUNCTIONAL: register allocation differs (rsi/rbp/r14 swapped).
 // @0x142963db0
 bool MovieRoot::InvokeAliasArgs(const char* pmethodName, const InvokeAliasInfo& iai, Value* presult,
                                 const char* pmethodArgFmt, va_list args)
@@ -270,10 +266,8 @@ bool MovieRoot::InvokeAliasArgs(const char* pmethodName, const InvokeAliasInfo& 
     ObjectInterface* pthis;
     if (pobj)
         pthis = pobj;
-    else if (pch)
-        pthis = ToAvmCharacter(pch);
     else
-        pthis = 0;
+        pthis = ToAvmCharacter(pch);
     Environment* penv = AvmOfMovie(GetMovieAtLevel(pMovieImpl, 0))->GetASEnvironment();
     return GAS_InvokeParsed(Value(iai.Function), presult, pthis, penv, pmethodArgFmt, args, pmethodName);
 }

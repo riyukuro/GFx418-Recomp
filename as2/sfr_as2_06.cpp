@@ -2450,7 +2450,7 @@ void AvmTextField::OnEventLoad()
     UpdateTextFromVariable();
 }
 
-// MS2-FUNCTIONAL: invokes the registered watch callback with user data, new value, old value, and property name.
+// Invokes the registered watch callback with user data, new value, old value, and property name.
 // @0x142964b90
 const Object::Watchpoint* WatchpointHash_GetCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash,
                                                       const ASString& key, bool caseSensitive);
@@ -2882,7 +2882,7 @@ struct InlineAS2ObjectData
     }
 };
 
-// MS2-FUNCTIONAL: the exe null-checks the character +8 adjust with cmove and loads the string manager before strlen
+// Whether the AS object (or the character) in pdata has the member name.
 // @0x14295d5e0
 bool AS2ValueObjectInterface::HasMember(void* pdata, const char* name, bool isCharacter) const
 {
