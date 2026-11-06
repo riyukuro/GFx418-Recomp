@@ -307,12 +307,11 @@ UPInt MeshCache::Evict(Render::MeshCacheItem* pbatch, AllocAddr* allocator, Mesh
     return result;
 }
 
-// MS2-FUNCTIONAL: frame-slot placement only: the exe gives the loop counter its own slot and puts convertArgs in the
-// large-mesh result slot, so the locals after it sit 8 bytes higher
 // @0x14273abb0
 bool MeshCache::PreparePrimitive(PrimitiveBatch* batch, MeshCacheItem::MeshContent& mc, bool waitForCache)
 {
     Primitive* prim = batch->GetPrimitive();
+    unsigned   i;
 
     if (mc.GetMeshCount() && mc[0]->LargeMesh)
     {
@@ -341,7 +340,7 @@ bool MeshCache::PreparePrimitive(PrimitiveBatch* batch, MeshCacheItem::MeshConte
     const VertexFormat* dstFormat   = batch->pFormat;
     const VertexFormat* srcFormat   = prim->GetVertexFormat();
     unsigned            indexDelta  = 0;
-    for (unsigned i = 0; i < mc.GetMeshCount(); i++)
+    for (i = 0; i < mc.GetMeshCount(); i++)
     {
         Mesh* mesh = mc[i];
         void* convertArgs[1] = { &i };
