@@ -2496,6 +2496,7 @@ void RectangleProto::ToString(const FnCall& fn)
 }
 
 // New rectangle enclosing both (NaN edges count as 0); NaN without an argument.
+// MS2-FUNCTIONAL: LTCG schedule sinks the ret.x2/y2 NaN stores past the inlined fn.Arg(0) index math (ctor, named-local, SetRect and Arg-ref variants all identical)
 // @0x1428f1a60
 void RectangleProto::Union(const FnCall& fn)
 {

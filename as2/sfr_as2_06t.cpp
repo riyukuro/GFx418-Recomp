@@ -39,41 +39,40 @@ static SF_FORCEINLINE bool ConstName_CompareNoCase(const ASString& constName, co
 }
 
 // The view alignment named by the first two letters of an uppercased Stage.align string.
-static MovieSlots418::AlignType Stage_ParseAlign(const ASString& align)
+static MovieSlots418::AlignType Stage_ParseAlign(const ASString& alignStr)
 {
-    unsigned len = align.GetLength();
-    if (len == 0)
-        return MovieSlots418::Align_Center;
-    unsigned long c0 = align.GetCharAt(0);
-    unsigned long c1 = 0;
-    if (len > 1)
-        c1 = align.GetCharAt(1);
-    switch (c0)
+    MovieSlots418::AlignType align;
+    unsigned char1 = 0, char2 = 0;
+    unsigned len = alignStr.GetLength();
+    if (len >= 1)
     {
-    case 'T':
-        if (c1 == 'L') return MovieSlots418::Align_TopLeft;
-        if (c1 == 'R') return MovieSlots418::Align_TopRight;
-        return MovieSlots418::Align_TopCenter;
-    case 'L':
-        if (c1 == 'T') return MovieSlots418::Align_TopLeft;
-        if (c1 == 'B') return MovieSlots418::Align_BottomLeft;
-        return MovieSlots418::Align_CenterLeft;
-    case 'R':
-        if (c1 == 'T') return MovieSlots418::Align_TopRight;
-        if (c1 == 'B') return MovieSlots418::Align_BottomRight;
-        return MovieSlots418::Align_CenterRight;
-    case 'B':
-        if (c1 == 'L') return MovieSlots418::Align_BottomLeft;
-        if (c1 == 'R') return MovieSlots418::Align_BottomRight;
-        return MovieSlots418::Align_BottomCenter;
-    default:
-        return MovieSlots418::Align_Center;
+        char1 = alignStr.GetCharAt(0);
+        if (len >= 2)
+            char2 = alignStr.GetCharAt(1);
     }
+    if ((char1 == 'T' && char2 == 'L') || (char1 == 'L' && char2 == 'T'))
+        align = MovieSlots418::Align_TopLeft;
+    else if ((char1 == 'T' && char2 == 'R') || (char1 == 'R' && char2 == 'T'))
+        align = MovieSlots418::Align_TopRight;
+    else if ((char1 == 'B' && char2 == 'L') || (char1 == 'L' && char2 == 'B'))
+        align = MovieSlots418::Align_BottomLeft;
+    else if ((char1 == 'B' && char2 == 'R') || (char1 == 'R' && char2 == 'B'))
+        align = MovieSlots418::Align_BottomRight;
+    else if (char1 == 'T')
+        align = MovieSlots418::Align_TopCenter;
+    else if (char1 == 'B')
+        align = MovieSlots418::Align_BottomCenter;
+    else if (char1 == 'L')
+        align = MovieSlots418::Align_CenterLeft;
+    else if (char1 == 'R')
+        align = MovieSlots418::Align_CenterRight;
+    else
+        align = MovieSlots418::Align_Center;
+    return align;
 }
 
 // scaleMode and align go to the view of the movie (onResize fires on a switch to noScale); the rest is a plain
 // member.
-// MS2-FUNCTIONAL: the align letter tests are laid out as a branch tree in the exe
 // @0x1429872b0
 bool StageCtorFunction::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
 {
@@ -96,11 +95,14 @@ bool StageCtorFunction::SetMember(Environment* penv, const ASString& name, const
             NotifyOnResize(penv);
         return true;
     }
-    if (!ConstName_CompareCaseCheck(psc->CreateConstString("align"), name, psc->IsCaseSensitive()))
-        return Object::SetMember(penv, name, val, flags);
-    ASString align(val.ToString(penv).ToUpperNode());
-    AsMovieSlots(pMovieRoot)->SetViewAlignment(Stage_ParseAlign(align));
-    return true;
+    else if (ConstName_CompareCaseCheck(psc->CreateConstString("align"), name, psc->IsCaseSensitive()))
+    {
+        ASString align(val.ToString(penv).ToUpperNode());
+        MovieSlots418::AlignType a = Stage_ParseAlign(align);
+        AsMovieSlots(pMovieRoot)->SetViewAlignment(a);
+        return true;
+    }
+    return Object::SetMember(penv, name, val, flags);
 }
 
 // The movie loaded as _level<level>, 0 if none.
