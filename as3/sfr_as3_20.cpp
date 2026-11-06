@@ -350,32 +350,37 @@ bool IMEManager::IsTextFieldFocused() const
 }
 
 // Calls the candidate list's method at the dotted path pmethodName (the object path walked member by member).
-// MS2-FUNCTIONAL: register allocation and local order
+// The SDK body (AS3_IMEManager.h); the exe has no pMovie test.
 // @0x142544a00
 bool IMEManager::Invoke(const char* pmethodName, GFx::Value* presult, const GFx::Value* pargs, unsigned numArgs)
 {
     if (CandListVal.IsUndefined() || CandListVal.IsNull())
         return false;
-    int len = (int)strlen(pmethodName);
-    char* pbuf = (char*)SF_ALLOC(len + 1, StatIME_Mem);
-    char* pcontext = NULL;
-    memcpy(pbuf, pmethodName, len);
-    pbuf[len] = 0;
-    char* ptoken = strtok_s(pbuf, ".", &pcontext);
-    GFx::Value obj = CandListVal;
-    GFx::Value member = CandListVal;
-    char* pname = NULL;
-    while (!obj.IsNull() && ptoken)
+
+    char* result = NULL;
+    int len = static_cast<int>(SFstrlen(pmethodName));
+    char* tmpBuf = (char*)SF_ALLOC((len + 1), StatIME_Mem);
+    char* pcommand = 0;
+    char* context = 0;
+    memcpy(tmpBuf, pmethodName, len);
+    tmpBuf[len] = 0;
+    result = strtok_s(tmpBuf, ".", &context);
+    GFx::Value mem = CandListVal;
+    GFx::Value func = CandListVal;
+    while (!mem.IsNull() && (result != NULL))
     {
-        obj = member;
-        obj.GetMember(ptoken, &member);
-        pname = ptoken;
-        ptoken = strtok_s(NULL, ".", &pcontext);
+        mem = func;
+        pcommand = result;
+        mem.GetMember(result, &func);
+        result = strtok_s(NULL, ".", &context);
     }
-    if (!obj.IsNull())
-        obj.Invoke(pname, presult, pargs, numArgs);
-    SF_FREE(pbuf);
-    return false;
+    bool retVal = false;
+    if (!mem.IsNull())
+    {
+        mem.Invoke(pcommand, presult, pargs, numArgs);
+    }
+    SF_FREE(tmpBuf);
+    return retVal;
 }
 
 // Clicks on the IME movies keep the focus where it is; a text field taking the focus gives the candidate list
