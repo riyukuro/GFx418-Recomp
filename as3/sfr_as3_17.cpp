@@ -3486,6 +3486,7 @@ struct Sfr33TrBlockView
     UInt32      Flags;      // +0x10 bit 0: not yet traced
     UInt32      Type;       // +0x14 bit 1: try start, bit 2: catch target
     TR::State*  pState;     // +0x18
+    __forceinline TR::State& GetState() const { return *pState; }   // TR::Block::GetState (SDK GetFirstBlock().GetState())
 };
 
 // vm.ThrowVerifyError(e): raises e as a VerifyError.
@@ -3494,9 +3495,19 @@ static SF_FORCEINLINE void Sfr33ThrowVerifyError(VM& vm, const VM::Error& e)
     FUN_14252ecb0(&vm, &e, &fl::VerifyErrorCI);
 }
 
+// The SDK ExceptionInfo getters (GetFrom ... GetVariableNameInd), inline: they fix the argument load order.
+struct Sfr17ExcGet
+{
+    typedef Abc::MethodBodyInfo::ExceptionInfo EI;
+    static __forceinline UInt32 From(const EI& e) { return static_cast<UInt32>(e.from); }
+    static __forceinline UInt32 To(const EI& e) { return static_cast<UInt32>(e.to); }
+    static __forceinline UInt32 Target(const EI& e) { return static_cast<UInt32>(e.target); }
+    static __forceinline UInt32 ExcType(const EI& e) { return static_cast<UInt32>(e.exc_type_ind); }
+    static __forceinline UInt32 VarName(const EI& e) { return static_cast<UInt32>(e.var_name_ind); }
+};
+
 // Tracer::EmitCode: seeds each exception handler block with its caught type, traces the body from the
 // first block, then patches the recorded branch offsets and copies the remapped exception table.
-// MS2-FUNCTIONAL 0x1424f7840: TR::Block is a layout view; register choice and the exception-info argument load order
 // @0x1424f7840
 void Tracer::EmitCode()
 {
@@ -3510,14 +3521,14 @@ void Tracer::EmitCode()
         {
             const ExcInfo& ei = e.info[i];
             Sfr33TrBlockView* try_block = reinterpret_cast<Sfr33TrBlockView*>(
-                FUN_1424e6aa0(this, reinterpret_cast<Sfr33TrBlockView*>(Blocks.pNext)->pState, static_cast<UInt32>(ei.from), 0, false));
+                FUN_1424e6aa0(this, &reinterpret_cast<const Sfr33TrBlockView*>(Blocks.pNext)->GetState(), static_cast<UInt32>(ei.from), 0, false));
             if (try_block)
             {
                 try_block->Flags &= ~1u;
                 try_block->Type |= 2;
             }
             Sfr33TrBlockView* catch_block = reinterpret_cast<Sfr33TrBlockView*>(
-                FUN_1424e6aa0(this, reinterpret_cast<Sfr33TrBlockView*>(Blocks.pNext)->pState, static_cast<UInt32>(ei.target), 0, false));
+                FUN_1424e6aa0(this, &reinterpret_cast<const Sfr33TrBlockView*>(Blocks.pNext)->GetState(), static_cast<UInt32>(ei.target), 0, false));
             if (catch_block)
             {
                 catch_block->Type |= 4;
@@ -3575,10 +3586,10 @@ void Tracer::EmitCode()
     for (UPInt i = 0; i < e2.info.GetSize(); ++i)
     {
         const ExcInfo& e = e2.info[i];
-        WException.info.PushBack(ExcInfo(static_cast<Abc::SInd>(Orig2newPosMap[static_cast<UInt32>(e.from)]),
-                                         static_cast<Abc::SInd>(Orig2newPosMap[static_cast<UInt32>(e.to)]),
-                                         static_cast<Abc::SInd>(Orig2newPosMap[static_cast<UInt32>(e.target)]), e.exc_type_ind,
-                                         e.var_name_ind));
+        WException.info.PushBack(ExcInfo(static_cast<Abc::SInd>(Orig2newPosMap[Sfr17ExcGet::From(e)]),
+                                         static_cast<Abc::SInd>(Orig2newPosMap[Sfr17ExcGet::To(e)]),
+                                         static_cast<Abc::SInd>(Orig2newPosMap[Sfr17ExcGet::Target(e)]), Sfr17ExcGet::ExcType(e),
+                                         Sfr17ExcGet::VarName(e)));
     }
     Done = true;
 }
