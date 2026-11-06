@@ -738,9 +738,9 @@ void MovieClipObject::SetMemberCommon(ASStringContext* psc, const ASString& name
                 {
                     ArrayObject* parr = static_cast<ArrayObject*>(pobj.GetPtr());
                     float        matrix[16];
-                    unsigned     count = parr->GetSize();
-                    if ((int)count > 16)
-                        count = 16;
+                    // The SDK's Alg::Min(16, GetSize()): a signed int min on the size,
+                    // then an unsigned count.
+                    unsigned     count = Alg::Min(16, parr->GetSize());
                     for (unsigned i = 0; i < count; ++i)
                         matrix[i] = (float)parr->GetElementPtr(i)->ToNumber(avmSpr->GetASEnvironment());
                     spr->SetRendererMatrix(matrix, count);
