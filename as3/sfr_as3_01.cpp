@@ -249,7 +249,7 @@ void SF_STDCALL SymbolClassLoader(LoadProcess* p, const TagInfo& tagInfo)
 
 typedef RefCountCollector<StatMV_ActionScript_Mem> ASCollector;
 
-// MS2-FUNCTIONAL: the exe stores root to the reused slot before the next free index (ours after).
+// The SDK body (AS2_RefCountCollector.h AddRoot): the reused slot's next-free link is read through a union.
 // @0x1423de620
 template <int Stat>
 void RefCountCollector<Stat>::AddRoot(const BaseType* root)
@@ -262,9 +262,16 @@ void RefCountCollector<Stat>::AddRoot(const BaseType* root)
         // reuse a free slot: free slots chain the next free index as (index << 1) | 1
         root->RefCount |= BaseType::Flag_InRootList;
         root->RootIndex = (UInt32)freeIndex;
-        const BaseType** slot = &Roots[FirstFreeRootIndex];
-        FirstFreeRootIndex = (UPInt)((SPInt)*slot >> 1);
-        *slot = root;
+        union
+        {
+            const BaseType* Ptr;
+            UPInt           UPtrValue;
+            SPInt           SPtrValue;
+        } u;
+        u.Ptr = Roots[FirstFreeRootIndex];
+        u.SPtrValue >>= 1;
+        Roots[FirstFreeRootIndex] = root;
+        FirstFreeRootIndex = u.UPtrValue;
         return;
     }
     UPInt size = Roots.GetSize();
