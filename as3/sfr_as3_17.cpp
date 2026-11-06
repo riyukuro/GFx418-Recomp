@@ -3244,12 +3244,13 @@ bool Sfr33CheckAvm(MovieRoot* self)
 // Runs the class PostInit of the AS3 object without arguments. When that pushed a call frame, it runs now (execute)
 // or stays queued (1); an exception is reported and flags the display object (+0x88).
 // Returns from each branch as the SDK does (AS3_AvmDisplayObj.cpp), which gives the exe's registers.
-// MS2-FUNCTIONAL 0x1424ee800: the exe tests the collectible pointer against the zero raw pointer
-// (cmp [rcx+8],rax) and loads it again for GetAS3Obj; ours keeps the first load in r8.
+// AvmDisplayObj::HasAS3Obj (SDK header inline): the bool result makes the exe test the collectible pointer
+// against the zero raw pointer and load it again for GetAS3Obj.
+static __forceinline bool Sfr17HasAS3Obj(const AvmDisplayObj& d) { return d.pAS3RawPtr || d.pAS3CollectiblePtr.pObject; }
 // @0x1424ee800
 SF_NOINLINE unsigned AvmDisplayObj::CallCtor(bool execute)
 {
-    if (!pAS3RawPtr && !pAS3CollectiblePtr)
+    if (!Sfr17HasAS3Obj(*this))
         return 0;
     Class& cls = reinterpret_cast<Object*>(GetAS3Obj())->GetTraits().GetConstructor();
     Sfr17ObjectValue v(reinterpret_cast<Object*>(GetAS3Obj()));
