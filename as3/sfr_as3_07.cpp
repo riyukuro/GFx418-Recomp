@@ -4941,7 +4941,7 @@ static SF_FORCEINLINE bool Sfr07ConstructBuiltinValue(VM& vm, Value& v, const ch
 #pragma strict_gs_check(push, on)
     // The alpha hit test of this bitmap at firstPoint against a Rectangle, a Point (a 1x1 rect), the image of a
     // Bitmap or a second BitmapData at secondBitmapDataPoint.
-    // MS2-FUNCTIONAL: register allocation and frame size differ (the exe re-reads pImage after the check)
+    // MS2-FUNCTIONAL: frame layout (the exe keeps one rect slot apart from sp, with no zero init) and register allocation; same calls and checks
     // @0x14244ed10
     void BitmapData::hitTest(bool& result, Instances::fl_geom::Point* firstPoint, UInt32 firstAlphaThreshold,
                              const Value& secondObject, Instances::fl_geom::Point* secondBitmapDataPoint,
@@ -4955,19 +4955,19 @@ static SF_FORCEINLINE bool Sfr07ConstructBuiltinValue(VM& vm, Value& v, const ch
         }
         Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
         Render::Point<SInt32> fp((SInt32)firstPoint->x, (SInt32)firstPoint->y);
-        Render::Rect<SInt32> rect;
+
         if (FUN_1425145d0(GetVM(), secondObject, "flash.geom.Rectangle"))
         {
             Instances::fl_geom::Rectangle* r = static_cast<Instances::fl_geom::Rectangle*>(secondObject.GetObject());
-            rect = Render::Rect<SInt32>((SInt32)r->x, (SInt32)r->y, (SInt32)(r->x + r->width), (SInt32)(r->y + r->height));
+            Render::Rect<SInt32> rect = Sfr07RectangleToRect(*r);
+            result = pimage->HitTest(fp, rect, firstAlphaThreshold); return;
         }
         else if (FUN_1425145d0(GetVM(), secondObject, "flash.geom.Point"))
         {
             Instances::fl_geom::Point* pt = static_cast<Instances::fl_geom::Point*>(secondObject.GetObject());
-            SInt32 x = (SInt32)pt->x, y = (SInt32)pt->y;
-            rect = Render::Rect<SInt32>(x, y, x + 1, y + 1);
+            Render::Point<SInt32> p((SInt32)pt->x, (SInt32)pt->y); Render::Rect<SInt32> rect(p.x, p.y, p.x + 1, p.y + 1);
+            result = pimage->HitTest(fp, rect, firstAlphaThreshold); return;
         }
-        else
         {
             Render::ImageBase* psecond = NULL;
             Render::Point<SInt32> sp(0, 0);
@@ -4997,9 +4997,9 @@ static SF_FORCEINLINE bool Sfr07ConstructBuiltinValue(VM& vm, Value& v, const ch
                 return;
             }
             result = pimage->HitTest(psecond, fp, sp, firstAlphaThreshold, secondAlphaThreshold);
-            return;
+
         }
-        result = pimage->HitTest(fp, rect, firstAlphaThreshold);
+
     }
 #pragma strict_gs_check(pop)
 
