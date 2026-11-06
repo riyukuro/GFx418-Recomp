@@ -60,6 +60,17 @@ SF_FORCEINLINE FunctionRef::FunctionRef(const FunctionRefBase& orig, ToNumberInl
 }
 
 namespace {
+// ASString::AssignNode, inlined (the exe shares its tail with the other cases).
+struct ToStringAssignAccess : ASString
+{
+    static SF_FORCEINLINE void AssignNode(ASString& s, ASStringNode* pnode)
+    {
+        ToStringAssignAccess& t = static_cast<ToStringAssignAccess&>(s);
+        pnode->AddRef();
+        t.pNode->Release();
+        t.pNode = pnode;
+    }
+};
 // Value::ToFunction (exe 0x142991190), inlined.
 struct ToNumberValueAccess : Value
 {
@@ -81,7 +92,7 @@ struct ToNumberValueAccess : Value
 // The script number of a string (sfr_as2_07).
 SF_NOINLINE __declspec(noalias) bool StringToNumber(Number* result, const char* str);
 // Value::GetCharacterNamePath as the exe has it out of line (sfr_as2_05).
-SF_NOINLINE const ASString& Value_GetCharacterNamePath(const Value* pval, Environment* penv);
+SF_NOINLINE __declspec(noalias) const ASString& Value_GetCharacterNamePath(const Value* pval, Environment* penv);
 
 namespace {
 
@@ -190,100 +201,132 @@ Number Value::ToNumber(Environment* penv) const
 
 // An object (or clip, or function) is what its valueOf gives; without one, a clip is its target path and an object
 // its text value or string. A function name becomes its function; the rest are primitive already.
-// MS2-FUNCTIONAL: the FunctionRef copies and the result copy are scheduled differently; same behavior
+// MS2-FUNCTIONAL: the exe (LTCG) treats CreateStringNode and ToStringImpl as non-throwing here, so it has no UNDEFINED store and no DropRefs type checks on ret; same behavior
 // @0x142991850
 Value Value::ToPrimitive(Environment* penv, hint h) const
 {
     SF_UNUSED(h);
-    if (T.Type == OBJECT || T.Type == CHARACTER || T.Type == FUNCTION)
+    if ((T.Type == OBJECT) || (T.Type == CHARACTER) || (T.Type == FUNCTION))
     {
-        Value            val;
-        ObjectInterface* pobj = ToObjectInterface(penv);
-        if (penv && pobj && pobj->GetMemberRaw(&penv->StringContext, penv->GetBuiltin(Builtin_valueOf), &val))
+        Value            toValueFunc;
+        ObjectInterface* piobj = ToObjectInterface(penv);
+
+        if (penv && piobj && piobj->GetMemberRaw(penv->GetSC(), penv->GetBuiltin(Builtin_valueOf), &toValueFunc))
         {
             Value result;
-            if (penv->FuncCallNestingLevel++ < 255)
+            if (ToNumberRecursionGuardStart(penv))
             {
-                FunctionRef func = val.ToFunction(penv);
+                FunctionRef func(ToNumberValueAccess::ToFunction(toValueFunc, penv));
                 if (func.Function)
-                    func.Invoke(FnCall(&result, pobj, penv, 0, 0));
+                {
+                    FnCall fnCall(&result, piobj, penv, 0, 0);
+                    func.Function->Invoke(fnCall, func.pLocalFrame, NULL);
+                }
             }
-            else if (penv->IsVerboseActionErrors())
-                penv->LogScriptError("Stack overflow, max level of 255 nested calls of valueOf is reached.");
+            else
+            {
+                if (penv->IsVerboseActionErrors())
+                    penv->LogScriptError("Stack overflow, max level of 255 nested calls of valueOf is reached.");
+            }
             --penv->FuncCallNestingLevel;
+
             return result;
         }
-
-        Value str;
-        if (T.Type == CHARACTER && V.pCharHandle)
-            str = Value(Value_GetCharacterNamePath(this, penv));
         else
         {
-            const char* ptext = (T.Type == OBJECT && V.pObjectValue) ? V.pObjectValue->GetTextValue(penv) : 0;
-            if (ptext)
-                str = Value(penv->CreateString(ptext));
+            Value       ret;
+            const char* pstr;
+
+            if ((T.Type == CHARACTER) && V.pCharHandle)
+            {
+                ret.SetString(Value_GetCharacterNamePath(this, penv));
+            }
+            else if ((T.Type == OBJECT) && V.pObjectValue &&
+                     (pstr = V.pObjectValue->GetTextValue(penv)) != 0)
+            {
+                ret.SetString(penv->CreateString(pstr));
+            }
             else
-                str = Value(ToStringImpl(penv, -1, false));
+            {
+                ret.SetString(ToString(penv));
+            }
+            return ret;
         }
-        return str;
     }
     else if (T.Type == FUNCTIONNAME)
     {
-        FunctionRef func = ResolveFunctionName(penv);
-        if (func.Function)
-            return Value(func);
+        FunctionRef funcRef = ResolveFunctionName(penv);
+        if (!funcRef.IsNull())
+        {
+            return funcRef;
+        }
     }
+
     return *this;
 }
 
 // The string of a value: numbers with the given precision (-1 for the default), an object its toString's result (not
 // asked in debug mode), else its text value, a clip its target path.
-// MS2-FUNCTIONAL: branch layout and string refcount scheduling differ; same behavior
+// MS2-FUNCTIONAL: the exe inlines the assign of the toString result (its temp in the lowest stack slot), ours calls ASString::operator=; same behavior
 // @0x142991e70
 ASString Value::ToStringImpl(Environment* penv, int precision, bool debug) const
 {
-    ASString stringVal = penv->GetBuiltin(ASBuiltin_empty_);
+    ASString stringVal(penv->GetBuiltin(ASBuiltin_empty_));
+
     switch (T.Type)
     {
-    case UNDEFINED:
-    case UNSET:
-        stringVal = penv->GetBuiltin(ASBuiltin_undefined);
-        break;
-    case NULLTYPE:
-        stringVal = penv->GetBuiltin(Builtin_null);
-        break;
-    case BOOLEAN:
-        stringVal = penv->GetBuiltin(V.BooleanValue ? Builtin_true : Builtin_false);
-        break;
+    case STRING:
+    {
+        ToStringAssignAccess::AssignNode(stringVal, V.pStringNode);
+    }
+    break;
+
     case NUMBER:
     {
-        char buffer[64];
-        stringVal = penv->CreateString(
-            NumberUtil::ToString(NV.NumberValue, buffer, sizeof(buffer), (precision < 0) ? 10 : -precision));
-        break;
+        char buf[64];
+        stringVal =
+            penv->CreateString(NumberUtil::ToString(NV.NumberValue, buf, sizeof(buf), (precision < 0) ? 10 : -precision));
     }
+    break;
     case INTEGER:
     {
-        char buffer[64];
-        stringVal = penv->CreateString(NumberUtil::IntToString(NV.Int32Value, buffer, sizeof(buffer)));
-        break;
+        char buf[64];
+        stringVal = penv->CreateString(NumberUtil::IntToString(NV.Int32Value, buf, sizeof(buf)));
     }
-    case STRING:
-        stringVal.AssignNode(V.pStringNode);
-        break;
+    break;
+    case UNSET:
+    case UNDEFINED:
+    {
+        stringVal = penv->GetBuiltin(ASBuiltin_undefined);
+    }
+    break;
+    case NULLTYPE:
+    {
+        stringVal = penv->GetBuiltin(Builtin_null);
+    }
+    break;
+    case BOOLEAN:
+    {
+        stringVal = penv->GetBuiltin(V.BooleanValue ? Builtin_true : Builtin_false);
+    }
+    break;
     case OBJECT:
     case CHARACTER:
     {
-        Value            val;
-        ObjectInterface* pobj = ToObjectInterface_Call(penv);
-        if (!debug && pobj && pobj->GetMemberRaw(&penv->StringContext, penv->GetBuiltin(ASBuiltin_toString), &val))
+        Value            toStringFunc;
+        ObjectInterface* piobj = ToObjectInterface_Call(penv);
+
+        if (!debug && piobj && piobj->GetMemberRaw(penv->GetSC(), penv->GetBuiltin(ASBuiltin_toString), &toStringFunc))
         {
-            if (penv->FuncCallNestingLevel++ < 255)
+            if (ToNumberRecursionGuardStart(penv))
             {
                 Value       result;
-                FunctionRef func = val.ToFunction(penv);
+                FunctionRef func(ToNumberValueAccess::ToFunction(toStringFunc, penv));
                 if (func.Function)
-                    func.Invoke(FnCall(&result, pobj, penv, 0, 0));
+                {
+                    FnCall fnCall(&result, piobj, penv, 0, 0);
+                    func.Function->Invoke(fnCall, func.pLocalFrame, NULL);
+                }
                 stringVal = result.ToStringImpl(penv, -1, false);
             }
             else
@@ -293,30 +336,46 @@ ASString Value::ToStringImpl(Environment* penv, int precision, bool debug) const
                     penv->LogScriptError("Stack overflow, max level of 255 nested calls of toString is reached.");
             }
             --penv->FuncCallNestingLevel;
-            break;
         }
-        const char* ptext = (T.Type == OBJECT && V.pObjectValue) ? V.pObjectValue->GetTextValue(penv) : 0;
-        if (ptext)
-            stringVal = penv->CreateString(ptext);
-        else if (T.Type == CHARACTER && V.pCharHandle)
-            stringVal = Value_GetCharacterNamePath(this, penv);
         else
-            stringVal = penv->GetBuiltin(ASBuiltin_objectObject_);
-        break;
+        {
+            const char* ptext;
+
+            if ((T.Type == OBJECT) && V.pObjectValue && (ptext = V.pObjectValue->GetTextValue(penv)) != 0)
+            {
+                stringVal = penv->CreateString(ptext);
+            }
+            else if ((T.Type == CHARACTER) && V.pCharHandle)
+            {
+                stringVal = Value_GetCharacterNamePath(this, penv);
+            }
+            else
+            {
+                stringVal = penv->GetBuiltin(ASBuiltin_objectObject_);
+            }
+        }
     }
+    break;
     case FUNCTION:
     case FUNCTIONNAME:
+    {
         stringVal = penv->GetBuiltin(ASBuiltin_typeFunction_);
-        break;
+    }
+    break;
     case PROPERTY:
+    {
         stringVal = penv->CreateConstString("[property]");
-        break;
+    }
+    break;
     case RESOLVEHANDLER:
+    {
         stringVal = penv->CreateConstString("[resolveHandler]");
-        break;
+    }
+    break;
     default:
+    {
         stringVal = penv->GetBuiltin(Builtin_badtype_);
-        break;
+    }
     }
     return stringVal;
 }
