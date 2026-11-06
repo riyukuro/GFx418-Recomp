@@ -37,13 +37,23 @@ struct AsFunctionBody
     UByte          LocalRegisterCount;     // +0xcb
 };
 
+// The SDK's ArgSpec: the default argument spec (register 0, empty name) is built as a temporary and copied in.
+struct Sfr03afArgSpec
+{
+    int      Register;
+    ASString Name;
+    Sfr03afArgSpec(int r, const ASString& n) : Register(r), Name(n) {}
+    Sfr03afArgSpec(const Sfr03afArgSpec& s) : Register(s.Register), Name(s.Name) {}
+};
+// The exe inlines FunctionObject(Environment*) (0x14291c0c0) into the AsFunctionObject ctor.
+inline FunctionObject::FunctionObject(Environment* penv, ObjectInlineCtorTag) : Object(penv) {}
+
 // A function made by a script (DefineFunction) is bound to the character it is defined in, except the kinds 3 and 4
 // which run without one.
-// MS2-FUNCTIONAL: register choice in the empty-string load chain (the exe loads pASMovieRoot into rax, ours into rcx)
 // @0x142918690
 AsFunctionObject::AsFunctionObject(Environment* penv, ActionBuffer* pactionBuffer, unsigned startPc, unsigned length,
                                    const void* pwithStack, int execType)
-    : FunctionObject(penv), pMovieRoot(0), TargetHandle(0)
+    : FunctionObject(penv, ObjectInlineCtorTag()), pMovieRoot(0), TargetHandle(0)
 {
     AsFunctionBody* pbody = reinterpret_cast<AsFunctionBody*>(reinterpret_cast<UByte*>(this) + 0x78);
     if (pactionBuffer)
@@ -53,12 +63,11 @@ AsFunctionObject::AsFunctionObject(Environment* penv, ActionBuffer* pactionBuffe
     pbody->StartPc = startPc;
     pbody->Length  = length;
     {
-        ASString empty(penv->GetBuiltin(ASBuiltin_empty_));
+        Sfr03afArgSpec spec(0, penv->GetBuiltin(ASBuiltin_empty_));
         pbody->ArgSpecs[0] = 0;
         pbody->ArgSpecs[1] = 0;
         pbody->ArgSpecs[2] = 0;
-        pbody->ArgSpecsFlags = 0;
-        ::new (&pbody->Name) ASString(empty);
+        ::new (&pbody->ArgSpecsFlags) Sfr03afArgSpec(spec);
     }
     pbody->Function2Flags     = 0;
     pbody->ExecType           = static_cast<UByte>(execType);
@@ -92,3 +101,5 @@ int AsFunctionObject::GetNumArgs() const { return *reinterpret_cast<const int*>(
 
 // MS2-PIN: ??_7AsFunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218058
 // MS2-PIN: ??_7AsFunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432180e0
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432155c0
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215648
