@@ -1065,68 +1065,90 @@ namespace InstanceTraits { namespace fl
 
 namespace Instances { namespace fl
 {
-    // MS2-FUNCTIONAL: scheduling (the exe restores rbx after the string releases)
+    // The SDK body: everything inside one argc/null test (the exe restores rbx after the string releases).
     // @0x1423f5d90
     void RegExp::AS3Constructor(unsigned argc, const Value* argv)
     {
-        if (argc < 1 || argv[0].IsNullOrUndefined())
-            return;
+        if (argc >= 1 && !argv[0].IsNullOrUndefined())
+        {
+            VM& vm = GetVM();
+            StringManager& sm = vm.GetStringManager();
 
-        VM& vm = GetVM();
-        StringManager& sm = vm.GetStringManager();
-        ASString source = sm.CreateEmptyString();
-        ASString flags = sm.CreateEmptyString();
-        if (argv[0].IsObject() && FUN_1425145d0(vm, argv[0], "RegExp"))
-        {
-            RegExp* re = static_cast<RegExp*>(argv[0].GetObject());
-            {
-                ASString str = re->GetVM().GetStringManager().CreateEmptyString();
-                str = re->GetVM().GetStringManager().CreateString(re->Pattern);
-                source = str;
-            }
-            flags = re->GetFlags();
-            if (argc >= 2 && !argv[1].IsNullOrUndefined())
-            {
-                vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(1100), vm));
-                return;
-            }
-        }
-        else
-        {
-            if (!argv[0].Convert2String(source))
-                return;
-            if (argc >= 2 && !argv[1].IsNullOrUndefined() && !argv[1].Convert2String(flags))
-                return;
-        }
+            ASString src = sm.CreateEmptyString();
+            ASString opt = sm.CreateEmptyString();
 
-        const char* s = source.ToCStr();
-        const char* f = flags.ToCStr();
-        Pattern = s;
-        int slashes = 0;
-        for (const char* p = s; *p; ++p)
-        {
-            if (p[0] == '(' && p[1] == '?' && p[2] == 'P' && p[3] == '<')
-                HasNamedGroups = true;
-            else if (!f && p[0] == '/' && (p == source.ToCStr() || p[-1] != '\\') && slashes++ > 0)
-                f = p;
-        }
-        if (f)
-        {
-            for (; *f; ++f)
+            // RegExp class object
+            if (argv[0].IsObject() && FUN_1425145d0(vm, argv[0], "RegExp"))
             {
-                switch (*f)
+                RegExp* pobj = static_cast<Instances::fl::RegExp*>(argv[0].GetObject());
                 {
-                case 'g': IsGlobal = true; break;
-                case 'i': OptionFlags |= 1; break;
-                case 'm': OptionFlags |= 2; break;
-                case 's': OptionFlags |= 4; break;
-                case 'x': OptionFlags |= 8; break;
+                    ASString result = pobj->GetVM().GetStringManager().CreateEmptyString();
+                    result = pobj->GetVM().GetStringManager().CreateString(pobj->Pattern);
+                    src = result;
+                }
+                opt = pobj->GetFlags();
+
+                // Error #1100: Cannot supply flags when constructing one RegExp from another
+                if (argc >= 2 && !argv[1].IsNullOrUndefined())
+                {
+                    vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(1100), vm));
+                    return;
                 }
             }
+            else {
+                // re:String - The pattern of the regular expression
+                if (!argv[0].Convert2String(src))
+                    return;
+                // flags:String - The modifiers of the regular expression
+                if (argc >= 2 && !argv[1].IsNullOrUndefined())
+                {
+                    if (!argv[1].Convert2String(opt))
+                        return;
+                }
+            }
+            const char* pattern = src.ToCStr();
+            const char* flags = opt.ToCStr();
+            Pattern = pattern;
+
+            // Check pattern for options if any
+            int slashNum = 0;
+            while(*pattern)
+            {
+                if (pattern[0] == '(' && pattern[1] == '?' &&
+                    pattern[2] == 'P' && pattern[3] == '<')
+                {
+                    HasNamedGroups = true;
+                }
+                else if (flags == NULL && pattern[0] == '/' &&
+                        (pattern == src.ToCStr() || pattern[-1] != '\\') && slashNum++ > 0)
+                {
+                    flags = pattern;
+                }
+                pattern++;
+            }
+
+            // Option flags
+            if (flags)
+            {
+                for(; *flags; flags++)
+                {
+                    switch(*flags)
+                    {
+                    case 'g': IsGlobal = true;
+                        break;
+                    case 'i': OptionFlags |= 1; break;
+                    case 'm': OptionFlags |= 2; break;
+                    case 's': OptionFlags |= 4; break;
+                    case 'x': OptionFlags |= 8; break;
+                    }
+                }
+            }
+
+            // Compile source pattern
+            const char *error;
+            int errorOffset;
+            CompRegExp = pcre_compile(Pattern.ToCStr(), OptionFlags, &error, &errorOffset, NULL);
         }
-        const char* error;
-        int errorOffset;
-        CompRegExp = pcre_compile(Pattern.ToCStr(), OptionFlags, &error, &errorOffset, NULL);
     }
 
     // MS2-FUNCTIONAL: regalloc (the exe also saves rdi and keeps this in rbp)
