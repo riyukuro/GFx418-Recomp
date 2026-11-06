@@ -3276,6 +3276,14 @@ VMAbcFile::VMAbcFile(VM& vm, const Ptr<Abc::File>& file)
         vm.VMAbcFilesWeak.PushBack(this);
 }
 
+// This unit emits ??_7VMAbcFile (0x14317b750). The hand-written VMAbcFile teardowns (sfr_as3_16's FUN_1424dfa30 and
+// sfr_as3_16z's deleting dtor 0x1424e3eb0) store it through DAT_14317b750, so bind both spellings of that name to the
+// table here. The hook DLL binds them to the exe by their symbols rows (a second /alternatename would conflict).
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:?DAT_14317b750@@3PAPEBXA=??_7VMAbcFile@AS3@GFx@Scaleform@@6B@")
+#pragma comment(linker, "/alternatename:?DAT_14317b750@AS3@GFx@Scaleform@@3PAPEBXA=??_7VMAbcFile@AS3@GFx@Scaleform@@6B@")
+#endif
+
 // MS2-FUNCTIONAL: the exe has no out-of-line ~VMAbcFile; it is inlined in the scalar deleting destructor 0x1424e3eb0
 // (the unmodeled hash sets are cleared through the exe's helpers, the modeled members by their own destructors).
 VMAbcFile::~VMAbcFile()
