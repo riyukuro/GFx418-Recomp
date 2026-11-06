@@ -2688,7 +2688,8 @@ template void ArrayDataBase<Render::FillStyleType, AllocatorLH<Render::FillStyle
 template void ArrayDataBase<GFx::Button::CharToRec, AllocatorLH<GFx::Button::CharToRec, 2>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
 template void ArrayDataBase<GFx::MovieImpl::LevelInfo, AllocatorLH<GFx::MovieImpl::LevelInfo, 327>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
 template void Hash<GFx::AS3::GASRefCountBase*, GFx::AS3::WeakProxy*>::Remove(GFx::AS3::GASRefCountBase* const&);
-// MS2-FUNCTIONAL 0x142522350: exe folds Remove into the inlined RemoveAlt<Key> body; ours tail-calls RemoveAlt
+// MS2-FUNCTIONAL 0x142522350: RemoveAlt<Key> is inlined in both; the exe's inlined Key hash takes the namespace
+// half first and its probe loop re-reads the key's pNs->Uri on each compare (ours keeps it in a register)
 template void HashDH<GFx::AS3::MultinameHash<GFx::AS3::ClassTraits::Traits*, 329>::Key, GFx::AS3::ClassTraits::Traits*,
     GFx::AS3::MultinameHash<GFx::AS3::ClassTraits::Traits*, 329>::Key::HashFunctor, 329>::BaseType::Remove(
     const GFx::AS3::MultinameHash<GFx::AS3::ClassTraits::Traits*, 329>::Key&);
@@ -7779,40 +7780,102 @@ error_exit:
 // VM::IsVMCachedType(const InstanceTraits::Traits&) and (const ClassTraits::Traits&), inline here.
 static SF_FORCEINLINE bool Sfr18IsVMCachedITraits(const VM& vm, const Traits* p)
 {
-    if (p == &vm.TraitsBoolean->GetInstanceTraits() || p == &vm.TraitsNumber->GetInstanceTraits() ||
-        p == &vm.TraitsInt->GetInstanceTraits() || p == &vm.TraitsUint->GetInstanceTraits() ||
-        p == &vm.TraitsString->GetInstanceTraits() || p == &vm.TraitsClassClass->GetInstanceTraits() ||
-        p == &vm.TraitsObject->GetInstanceTraits() || p == &vm.TraitsNamespace->GetInstanceTraits() ||
-        p == &vm.TraitsFunction->GetInstanceTraits() || p == &vm.TraitsArray->GetInstanceTraits() ||
-        p == &vm.TraitsVector_int->GetInstanceTraits() || p == &vm.TraitsVector_uint->GetInstanceTraits() ||
-        p == &vm.TraitsVector_double->GetInstanceTraits() || p == &vm.TraitsVector_String->GetInstanceTraits())
-        return true;
-    const XMLSupport& xml = vm.GetXMLSupport();
-    if (!xml.IsEnabled())
-        return false;
-    return p == xml.GetITraitsQName() || p == xml.GetITraitsXML() || p == xml.GetITraitsXMLList();
+    bool result = false;
+
+    if (p == &vm.TraitsBoolean->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsNumber->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsInt->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsUint->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsString->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsClassClass->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsObject->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsNamespace->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsFunction->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsArray->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsVector_int->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsVector_uint->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsVector_double->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsVector_String->GetInstanceTraits())
+        result = true;
+    else if (vm.GetXMLSupport().IsEnabled())
+    {
+        const XMLSupport& xmls = vm.GetXMLSupport();
+        if (p == xmls.GetITraitsQName())
+            result = true;
+        else if (p == xmls.GetITraitsXML())
+            result = true;
+        else if (p == xmls.GetITraitsXMLList())
+            result = true;
+    }
+
+    return result;
 }
 
 static SF_FORCEINLINE bool Sfr18IsVMCachedCTraits(const VM& vm, const Traits* p)
 {
-    if (p == vm.TraitsBoolean.GetPtr() || p == vm.TraitsNumber.GetPtr() || p == vm.TraitsInt.GetPtr() ||
-        p == vm.TraitsUint.GetPtr() || p == vm.TraitsString.GetPtr() || p == vm.TraitsClassClass.GetPtr() ||
-        p == vm.TraitsObject.GetPtr() || p == vm.TraitsNamespace.GetPtr() || p == vm.TraitsFunction.GetPtr() ||
-        p == vm.TraitsArray.GetPtr() || p == vm.TraitsVector_int.GetPtr() ||
-        p == vm.TraitsVector_uint.GetPtr() || p == vm.TraitsVector_double.GetPtr() ||
-        p == vm.TraitsVector_String.GetPtr())
-        return true;
-    const XMLSupport& xml = vm.GetXMLSupport();
-    if (!xml.IsEnabled())
-        return false;
-    return p == xml.GetClassTraitsQName() || p == xml.GetClassTraitsXML() || p == xml.GetClassTraitsXMLList();
+    bool result = false;
+
+    if (p == vm.TraitsBoolean.GetPtr())
+        result = true;
+    else if (p == vm.TraitsNumber.GetPtr())
+        result = true;
+    else if (p == vm.TraitsInt.GetPtr())
+        result = true;
+    else if (p == vm.TraitsUint.GetPtr())
+        result = true;
+    else if (p == vm.TraitsString.GetPtr())
+        result = true;
+    else if (p == vm.TraitsClassClass.GetPtr())
+        result = true;
+    else if (p == vm.TraitsObject.GetPtr())
+        result = true;
+    else if (p == vm.TraitsNamespace.GetPtr())
+        result = true;
+    else if (p == vm.TraitsFunction.GetPtr())
+        result = true;
+    else if (p == vm.TraitsArray.GetPtr())
+        result = true;
+    else if (p == vm.TraitsVector_int.GetPtr())
+        result = true;
+    else if (p == vm.TraitsVector_uint.GetPtr())
+        result = true;
+    else if (p == vm.TraitsVector_double.GetPtr())
+        result = true;
+    else if (p == vm.TraitsVector_String.GetPtr())
+        result = true;
+    else if (vm.GetXMLSupport().IsEnabled())
+    {
+        const XMLSupport& xmls = vm.GetXMLSupport();
+        if (p == xmls.GetClassTraitsQName())
+            result = true;
+        else if (p == xmls.GetClassTraitsXML())
+            result = true;
+        else if (p == xmls.GetClassTraitsXMLList())
+            result = true;
+    }
+
+    return result;
 }
+
 
 // VM::IsVMCachedType(const Traits&): whether tr is one of the class traits the VM keeps (or, for instance traits,
 // one of their instance traits): the primitives, Class, Object, Namespace, Function, Array, the typed vectors and,
 // with XML support, QName, XML and XMLList.
-// MS2-FUNCTIONAL free function (not declared in the shared VM class; no caller in the exe); the exe keeps the
-// result in dil across the XML-support calls
+// MS2-FUNCTIONAL free function (not declared in the shared VM class; no caller in the exe); the exe gives the
+// instance and class halves their own result cmov and epilogue (ours shares one)
 // @0x1425151a0
 bool FUN_1425151a0(const VM& vm, const Traits& tr)
 {
