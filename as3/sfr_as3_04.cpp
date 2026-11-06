@@ -1431,7 +1431,8 @@ namespace Instances { namespace fl
         return String_Invalid;
     }
 
-    // MS2-FUNCTIONAL: the exe indexes the day / month name tables off __ImageBase (SF_EXE_DATA here) and calls the DateHolder ctor
+    // MS2-FUNCTIONAL: register allocation only: the exe keeps needTime in r12 and bufferSize in r15, ours swaps them.
+    // The TimeHolder sits in its own block so its slot is reused by the Sink temp, as in the exe.
     // @0x1424284c0
     UPInt Date::formatDateTimeString(char* buffer, UPInt bufferSize, Value::Number t, int tza,
                                      bool needDate, bool needTime, bool utc)
@@ -1442,14 +1443,14 @@ namespace Instances { namespace fl
             return 12;
         }
 
-        const Value::Number local = utc ? t : t + tza;
-        UPInt size = 0;
-        DateHolder dh(local, 0);
+        if (!utc) t += tza;
 
-        // "Www Mmm d "
+        UPInt size = 0;
+        DateHolder dh(t, 0.0);
+
         if (needDate)
         {
-            const int weekDay = WeekDay(local);
+            int weekDay = WeekDay(t);
             const int day = static_cast<int>(dh.Entries[Date_Day]);
             MsgFormat f(MsgFormat::Sink(StringDataPtr(buffer, bufferSize)));
             f.Parse("{0} {1} {2} ");
@@ -1457,49 +1458,44 @@ namespace Instances { namespace fl
             f.FormatD1(SF_EXE_DATA(DateMonthNames)[static_cast<int>(dh.Entries[Date_Month])]);
             f.FormatD1(day);
             f.FinishFormatD();
-            size = f.GetStrSize();
+            size += f.GetStrSize();
         }
 
-        // "hh:mm:ss[ GMT+hhmm]"
         if (needTime)
         {
-            TimeHolder th(local, 0);
-            const char* fmt = "{0:02}:{1:02}:{2:02}";
-            const int tzMinutes = tza / 60000;
-            int tzValue = tzMinutes + (tzMinutes / 60) * 40;
-            const char* gmt = "GMT+";
-            if (!utc)
+            int         tzaDelta;
+            const char* gmtString;
+            const char* format;
+            int         hour, minute, second;
             {
-                fmt = "{0:02}:{1:02}:{2:02} {3}{4:04}";
-                if (tzValue < 0)
+                TimeHolder  th(t, 0.0);
+                int         tzaMinutes = (tza / 60000);
+                tzaDelta   = (tzaMinutes / 60) * 100 + tzaMinutes % 60;
+                gmtString  = "GMT+";
+                format     = "{0:02}:{1:02}:{2:02}";
+
+                if (!utc)
                 {
-                    tzValue = -tzValue;
-                    gmt = "GMT-";
+                    format = "{0:02}:{1:02}:{2:02} {3}{4:04}";
+                    if (tzaDelta < 0)
+                    {
+                        tzaDelta  = -tzaDelta;
+                        gmtString = "GMT-";
+                    }
                 }
+                second = (int)th.Entries[Time_Second];
+                minute = (int)th.Entries[Time_Minute];
+                hour = (int)th.Entries[Time_Hour];
             }
-            const int sec = static_cast<int>(th.Entries[Time_Second]);
-            const int min = static_cast<int>(th.Entries[Time_Minute]);
-            const int hour = static_cast<int>(th.Entries[Time_Hour]);
-            MsgFormat f(MsgFormat::Sink(StringDataPtr(buffer + size, bufferSize - size)));
-            f.Parse(fmt);
-            f.FormatD1(hour);
-            f.FormatD1(min);
-            f.FormatD1(sec);
-            f.FormatD1(gmt);
-            f.FormatD1(tzValue);
-            f.FinishFormatD();
-            size += f.GetStrSize();
+
+            size += Format(MsgFormat::Sink(StringDataPtr(buffer+size, bufferSize-size)), format,
+                           hour, minute, second, gmtString, tzaDelta);
         }
 
-        // year
         if (needDate)
         {
-            const int year = static_cast<int>(dh.Entries[Date_Year]);
-            MsgFormat f(MsgFormat::Sink(StringDataPtr(buffer + size, bufferSize - size)));
-            f.Parse(needTime ? " {0}" : "{0}");
-            f.FormatD1(year);
-            f.FinishFormatD();
-            size += f.GetStrSize();
+            size += Format(MsgFormat::Sink(StringDataPtr(buffer+size, bufferSize-size)),
+                           needTime ? " {0}" : "{0}", (int)dh.Entries[Date_Year]);
         }
 
         if (needTime && utc)
