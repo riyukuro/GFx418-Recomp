@@ -483,9 +483,24 @@ namespace Scaleform {
                 AllocatorLH<GFx::ASString, GFx::StatMV_ASString_Mem>,                                                \
                 HashsetNodeEntry<HashNode<GFx::ASString, GFx::AS2::GlobalContext::ClassRegEntry, GFx::ASStringHashFunctor>, \
                                  HashNode<GFx::ASString, GFx::AS2::GlobalContext::ClassRegEntry, GFx::ASStringHashFunctor>::NodeHashF> >
+// The exe folds setRawCapacity's emptied newHash away: its destructor is inlined there (forceinline specialization,
+// the sf_hash.h body).
+template <> __forceinline MS2_GFX02X_CLASSREG_SET::~HashSetBase()
+{
+    if (pTable)
+    {
+        for (UPInt i = 0, n = pTable->SizeMask; i <= n; i++)
+        {
+            auto* e = &E(i);
+            if (!e->IsEmpty())
+                e->Free();
+        }
+        AllocatorLH<GFx::ASString, GFx::StatMV_ASString_Mem>::Free(pTable);
+        pTable = NULL;
+    }
+}
 // @0x1425921b0
 template void MS2_GFX02X_CLASSREG_SET::CheckExpand(void*);
-// MS2-FUNCTIONAL cl inlines the Clear / Add the exe calls out of line (paired by the pin below)
 // @0x142592a10
 template void MS2_GFX02X_CLASSREG_SET::setRawCapacity(void*, UPInt);
 #undef MS2_GFX02X_CLASSREG_SET
