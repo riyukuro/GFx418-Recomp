@@ -171,6 +171,30 @@ struct ValueAssignCopies
 }}}
 namespace Scaleform { extern template void ArrayData<Ptr<GFx::InteractiveObject>, AllocatorLH<Ptr<GFx::InteractiveObject>, GFx::AS3::StatMV_ActionScript_Mem>, ArrayDefaultPolicy>::Resize(UPInt); typedef ArrayData<Ptr<GFx::InteractiveObject>, AllocatorLH<Ptr<GFx::InteractiveObject>, GFx::AS3::StatMV_ActionScript_Mem>, ArrayDefaultPolicy> Sfr19RolloverData; }   // RolloverStack, 0x1425245c0
 namespace Scaleform { extern template void ArrayDataCC<GFx::ASString, AllocatorLH<GFx::ASString, GFx::AS3::StatMV_VM_VTable_Mem>, ArrayDefaultPolicy>::Resize(UPInt); typedef ArrayDataCC<GFx::ASString, AllocatorLH<GFx::ASString, GFx::AS3::StatMV_VM_VTable_Mem>, ArrayDefaultPolicy> Sfr19NamesData; }   // VTable::NamesT, 0x142524470 (instantiated at the end)
+namespace Scaleform {
+// TU-local forceinline copies of the DynAttrs Hash::Set chain (the exe's LTCG inlines it into newobject).
+typedef GFx::AS3::Object::DynAttrsType::BaseType Sfr19DynHash;
+typedef Sfr19DynHash::NodeRef Sfr19DynNodeRef;
+typedef decltype(((Sfr19DynHash*)0)->mHash) Sfr19DynSet;
+typedef Sfr19DynSet::BaseType Sfr19DynSetBase;
+template<> template<> __forceinline void Sfr19DynSetBase::Set<Sfr19DynNodeRef>(void* pheapAddr, const Sfr19DynNodeRef& key)
+{
+    UPInt h   = HashNode<GFx::AS3::Object::DynAttrsKey, GFx::AS3::Value, GFx::AS3::Object::DynAttrsKeyHashFunctor>::NodeHashF()(key);
+    SPInt idx = (SPInt)-1;
+    if (pTable != 0)
+        idx = findIndexCore(key, h & pTable->SizeMask);
+    if (idx >= 0)
+        E(idx).Value = key;
+    else
+        add(pheapAddr, key, h);
+}
+template<> template<> __forceinline void Sfr19DynSet::Set<Sfr19DynNodeRef>(const Sfr19DynNodeRef& key) { BaseType::Set(this, key); }
+template<> __forceinline void Sfr19DynHash::Set(const GFx::AS3::Object::DynAttrsKey& key, const GFx::AS3::Value& value)
+{
+    NodeRef e(key, value);
+    mHash.Set(e);
+}
+}
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_1425247f0(UPInt* a, UPInt n); }}}
 namespace Scaleform { extern template void ArrayDataDH<UPInt, AllocatorDH_POD<UPInt, GFx::AS3::StatMV_VM>, ArrayDefaultPolicy>::Resize(UPInt); typedef ArrayDataDH<UPInt, AllocatorDH_POD<UPInt, GFx::AS3::StatMV_VM>, ArrayDefaultPolicy> Sfr19PosData; }   // Tracer TCodeOffset arrays, 0x142524870
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_1425248e0(UPInt* a, const void* addr, UPInt n); }}}
@@ -5870,25 +5894,99 @@ ASString* Sfr31ValueTypeName(UPInt vmAddr, ASString* out, const UInt32* v)
     return out;
 }
 // ---- batch 47
+// Storage for a Value whose dtor expands Value::ReleaseInternal in place (as sfr_as3_17's Sfr33InlineReleaseValue).
+struct Sfr19InlineReleaseValue
+{
+    union
+    {
+        UPInt Align;
+        UByte Buf[sizeof(Value)];
+    };
+    Value& Get() { return *reinterpret_cast<Value*>(Buf); }
+    static void ReleaseGC(Object* p)
+    {
+        if (!(reinterpret_cast<UPInt>(p) & 1) && p)
+            p->Release();
+    }
+    __forceinline ~Sfr19InlineReleaseValue()
+    {
+        Value& v = Get();
+        if (!v.IsRefCounted())
+            return;
+        if (v.IsWeakRef())
+        {
+            (*reinterpret_cast<WeakProxy**>(Buf + 0x08))->Release();
+            return;
+        }
+        switch (v.GetKind())
+        {
+        case Value::kString:
+            (*reinterpret_cast<ASStringNode**>(Buf + 0x10))->Release();
+            break;
+        case Value::kNamespace:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kObject:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kClass:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kFunction:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kThunkFunction:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kThunkClosure:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x18));
+            break;
+        case Value::kVTableIndClosure:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x18));
+            break;
+        default:
+            break;
+        }
+    }
+};
+// Value(Pickable<Object>): a picked kObject (no AddRef); the dtor is the kObject arm of Value::ReleaseInternal.
+struct Sfr19PickedObjectValue
+{
+    UInt32  Flags;
+    UPInt   Bonus;
+    Object* Obj;
+    UPInt   Pad;
+    __forceinline explicit Sfr19PickedObjectValue(Object* p) : Flags(Value::kObject), Bonus(0), Obj(p) {}
+    const Value& Get() const { return *reinterpret_cast<const Value*>(this); }
+    __forceinline ~Sfr19PickedObjectValue() { Sfr19InlineReleaseValue::ReleaseGC(Obj); }
+};
+// The SDK Object::AddDynamicSlotValuePair(const ASString&), which the exe inlines (LTCG) into newobject.
+struct Sfr19DynObj : public Object
+{
+    __forceinline void AddDyn(const ASString& prop_name, const Value& v, SlotInfo::Attribute a = SlotInfo::aNone)
+    {
+        DynAttrs.Set(DynAttrsKey(prop_name, a == SlotInfo::aDontEnum), v);
+    }
+};
 // newobject: builds a plain Object from n name/value pairs popped off the operand stack and pushes it.
-// MS2-FUNCTIONAL 0x14253cdc0: raw-offset model; codegen differs from the exe
+// MS2-FUNCTIONAL 0x14253cdc0: SDK VM::exec_newobject shape with the exe's inlined Hash::Set, ~Value and PushBack; regalloc differs
+// (the exe keeps the count in rbx/r12 and zero in r14, ours r12/esi; the SDK up-counting loop does not become the exe's count-down here)
 // @0x14253cdc0
 void Sfr31ExecNewObject(UPInt vmAddr, UInt32 n)
 {
     InstanceTraits::Interface* tr = reinterpret_cast<InstanceTraits::Interface*>(Sfr31Rd(Sfr31Rd(vmAddr, 0x1f8), 0xc0));
-    Value result(tr->MakeInstance(*tr));
-    Instances::fl::Object* o = static_cast<Instances::fl::Object*>(result.GetObject());
-    for (UInt32 i = 0; i < n; ++i)
+    Pickable<Instances::fl::Object> o = tr->MakeInstance(*tr);
+    for (UInt32 i = n; i != 0; --i)
     {
-        Sfr31RawTraitsVal val;
-        Sfr31TakeTop(vmAddr, val);
-        Sfr31RawTraitsVal name;
-        Sfr31TakeTop(vmAddr, name);
-        o->AddDynamicSlotValuePair(*reinterpret_cast<const Value*>(&name), *reinterpret_cast<const Value*>(&val));
-        reinterpret_cast<Value*>(&name)->~Value();
-        reinterpret_cast<Value*>(&val)->~Value();
+        Sfr19InlineReleaseValue value;
+        ::new (value.Buf) Value(ValueStack::Of(*reinterpret_cast<VM*>(vmAddr)));
+        Sfr19InlineReleaseValue name;
+        ::new (name.Buf) Value(ValueStack::Of(*reinterpret_cast<VM*>(vmAddr)));
+        static_cast<Sfr19DynObj*>(static_cast<Object*>(o.GetPtr()))->AddDyn(name.Get().AsString(), value.Get());
     }
-    ExecPushCopy(reinterpret_cast<VM*>(vmAddr), result);
+    // OpStack.PushBack(o): the Value(Pickable) temporary is a picked kObject (no AddRef), released after the copy.
+    Sfr19PickedObjectValue tmp(o.GetPtr());
+    ExecPushCopy(reinterpret_cast<VM*>(vmAddr), tmp.Get());
 }
 // ---- batch 48
 // The SDK ReadArgsMn: the call arguments, the file, then the multiname read off the stack.
@@ -7172,61 +7270,6 @@ void Sfr31ExecConstructProp(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
         return vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x42d), vm, *reinterpret_cast<const Value*>(&args.ArgMN.w2), args.ArgObject));
 }
 // ---- batch 68
-// Storage for a Value whose dtor expands Value::ReleaseInternal in place (as sfr_as3_17's Sfr33InlineReleaseValue).
-struct Sfr19InlineReleaseValue
-{
-    union
-    {
-        UPInt Align;
-        UByte Buf[sizeof(Value)];
-    };
-    Value& Get() { return *reinterpret_cast<Value*>(Buf); }
-    static void ReleaseGC(Object* p)
-    {
-        if (!(reinterpret_cast<UPInt>(p) & 1) && p)
-            p->Release();
-    }
-    __forceinline ~Sfr19InlineReleaseValue()
-    {
-        Value& v = Get();
-        if (!v.IsRefCounted())
-            return;
-        if (v.IsWeakRef())
-        {
-            (*reinterpret_cast<WeakProxy**>(Buf + 0x08))->Release();
-            return;
-        }
-        switch (v.GetKind())
-        {
-        case Value::kString:
-            (*reinterpret_cast<ASStringNode**>(Buf + 0x10))->Release();
-            break;
-        case Value::kNamespace:
-            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
-            break;
-        case Value::kObject:
-            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
-            break;
-        case Value::kClass:
-            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
-            break;
-        case Value::kFunction:
-            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
-            break;
-        case Value::kThunkFunction:
-            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
-            break;
-        case Value::kThunkClosure:
-            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x18));
-            break;
-        case Value::kVTableIndClosure:
-            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x18));
-            break;
-        default:
-            break;
-        }
-    }
-};
 
 // newfunction opcode: builds the closure scope (the running frame's saved scope followed by what the innermost frame pushed on the scope
 // stack), creates the Function of method methodInd on the Function class and pushes it.
