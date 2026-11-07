@@ -67,9 +67,12 @@ public:
     // (implicit destructor: the ??_G 0x14000ec40 inlines it; FUN_14000ebe0 is the out-of-line ~Prototype<VideoObject>)
     static void AttachVideo(const FnCall& fn);   // exe 0x14000d400
 };
-class VideoCtorFunction
+class VideoCtorFunction : public CFunctionObject
 {
 public:
+    VideoCtorFunction(ASStringContext* psc) : CFunctionObject(psc, GlobalCtor) {}
+    // (implicit destructor: the ??_G 0x14000ed20 calls the out-of-line ~CFunctionObject)
+    virtual Object* CreateNewObject(Environment* penv) const;   // exe 0x14000e0c0 (sfr_video_01)
     static void GlobalCtor(const FnCall& fn);   // exe 0x14000e100
 };
 Object* FUN_14000e1e0(Object* pthis, ASStringContext* psc, Object* prototype, const FunctionRef& constructor);   // sfr_video_01
@@ -384,14 +387,7 @@ Scaleform::GFx::InteractiveObject* FUN_140010530(Scaleform::GFx::InteractiveObje
     return object;
 }
 
-// @0x14000ed20
-Scaleform::GFx::AS2::CFunctionObject* FUN_14000ed20(
-    Scaleform::GFx::AS2::CFunctionObject* object, unsigned flags)
-{
-    object->Scaleform::GFx::AS2::CFunctionObject::~CFunctionObject();
-    if (flags & 1) Scaleform::Memory::Free(object);
-    return object;
-}
+// (0x14000ed20 is VideoCtorFunction's ??_G, emitted by Video02EmitVideoCtorVftables)
 
 // VideoCharacter's image/update entry points are called from the AS2 provider in video_01.
 // Releases the image and refreshes the render tree. The exe tests the slot in memory, then reloads it for the release (the volatile read).
@@ -3606,12 +3602,7 @@ void FUN_140011ac0(Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::Env
 
 // (0x14000ebc0 / 0x14000ebd0, this - 0x20 / - 0x70 into 0x14000ec40, are cl's adjustor thunks of VideoProto's ??_G)
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 0x20) into FUN_14000ed20.
-// @0x14000ed10
-Scaleform::GFx::AS2::CFunctionObject* FUN_14000ed10(void* self, unsigned flags)
-{
-    return FUN_14000ed20((Scaleform::GFx::AS2::CFunctionObject*)((Scaleform::UByte*)self - 0x20), flags);
-}
+// (0x14000ed10, this - 0x20 into 0x14000ed20, is cl's adjustor thunk of VideoCtorFunction's ??_G)
 
 // MS2-FUNCTIONAL: adjustor thunk (this - 0x18) into FUN_140010530.
 // @0x140010180
@@ -3851,12 +3842,22 @@ void Video02EmitVideoProtoVftables(void* p, ASStringContext* psc, Object* pproto
 {
     ::new (p) VideoProto(psc, pprototype, constructor);
 }
+
+// The Video constructor function (vftables 0x1431b5f20 / +0x20 0x1431b5fb0, stored by FUN_14000ecc0). Its ??_G is
+// 0x14000ed20 and the ObjectInterface slot 0 is cl's adjustor thunk 0x14000ed10.
+void Video02EmitVideoCtorVftables(void* p, ASStringContext* psc)
+{
+    ::new (p) VideoCtorFunction(psc);
+}
 }}} // namespace Scaleform::GFx::AS2
 #ifndef MS2_HOOK_DLL
 // FUN_14000eb50 stores VideoProto's vftables through these names (the hook DLL binds them by their symbols rows).
 #pragma comment(linker, "/alternatename:?PTR_FUN_1431b5e20@@3PEAXEA=??_7VideoProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
 #pragma comment(linker, "/alternatename:?PTR_LAB_1431b5e70@@3PEAXEA=??_7VideoProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
 #pragma comment(linker, "/alternatename:?PTR_LAB_1431b5e18@@3PEAXEA=??_7VideoProto@AS2@GFx@Scaleform@@6B@")
+// FUN_14000ecc0 stores VideoCtorFunction's vftables through these names.
+#pragma comment(linker, "/alternatename:?PTR_LAB_1431b5f20@@3PEAXEA=??_7VideoCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
+#pragma comment(linker, "/alternatename:?PTR_LAB_1431b5fb0@@3PEAXEA=??_7VideoCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
 #endif
 
 // MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
@@ -3907,3 +3908,8 @@ void Video02EmitVideoProtoVftables(void* p, ASStringContext* psc, Object* pproto
 // MS2-PIN: ??_7VideoProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b5e20
 // MS2-PIN: ??_7VideoProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b5e70
 // MS2-PIN: ??_7GASPrototypeBase@AS2@GFx@Scaleform@@6B@ 0x1431b5028
+// The Video constructor function's vftables, deleting destructor and cl's adjustor thunk for the ObjectInterface slot.
+// MS2-PIN: ??_GVideoCtorFunction@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x14000ed20
+// MS2-PIN: ??_EVideoCtorFunction@AS2@GFx@Scaleform@@WCA@EAAPEAXI@Z 0x14000ed10
+// MS2-PIN: ??_7VideoCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b5f20
+// MS2-PIN: ??_7VideoCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b5fb0
