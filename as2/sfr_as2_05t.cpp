@@ -35,6 +35,13 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 
 struct ExtendsLocalFrameInlineTag {};
 
+// FunctionProto(psc, pprototype, constructor, false) (exe 0x14291c0f0), inlined in the function opcodes.
+__forceinline FunctionProto::FunctionProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor,
+                                           Prototype<Object>::InlineCtorTag)
+    : Prototype<Object>(psc, pprototype, constructor, Prototype<Object>::InlineCtorTag())
+{
+}
+
 // FunctionRefBase::SetLocalFrame (exe 0x142981e70), expanded in place as the exe has it in the extends opcode.
 static SF_FORCEINLINE void ExtendsFunctionRefSetLocalFrame(FunctionRefBase* p, LocalFrame* localFrame, bool weakRef)
 {
@@ -172,7 +179,9 @@ inline FnDefBody* BodyOf(AsFunctionObject* pfunc)
 inline FnArgSpec& AddArg(AsFunctionObject* pfunc, int argRegister, const ASString& name)
 {
     ArrayCC<FnArgSpec, StatMV_ActionScript_Mem>& args = BodyOf(pfunc)->Args;
-    args.Resize(args.GetSize() + 1);
+    UPInt newSize = args.GetSize() + 1;
+    _ReadWriteBarrier();
+    args.Resize(newSize);
     FnArgSpec& arg = args.Back();
     arg.Register   = argRegister;
     arg.Name       = name;
@@ -181,21 +190,61 @@ inline FnArgSpec& AddArg(AsFunctionObject* pfunc, int argRegister, const ASStrin
 
 // The common tail of both definitions: the function is stored on the target under its name (or left on the stack
 // when anonymous), with a fresh prototype whose constructor is the function.
-inline void PublishFunction(Environment* penv, Ptr<AsFunctionObject>& funcObj, const ASString& name)
+// GlobalContext::GetPrototype (out of line at exe 0x142954ba0), inlined here as the exe has it.
+SF_FORCEINLINE Object* FnGetPrototype(GlobalContext* pgc, ASBuiltinType type)
+{
+    Ptr<Object>* presult = pgc->Prototypes.Get(type);
+    if (!presult)
+    {
+        pgc->ResolveFunctionName(static_cast<MovieRoot*>(pgc->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(type));
+        presult = pgc->Prototypes.Get(type);
+    }
+    return presult ? presult->GetPtr() : 0;
+}
+
+// Environment::GetTopLocalFrame(0) (exe 0x142956740), GetAvmTarget and FunctionObject::SetPrototype (sfr_as2_07),
+// inlined here in the exe.
+SF_FORCEINLINE LocalFrame* FnTopLocalFrame(const Environment* penv)
+{
+    if (penv->LocalFrames.GetSize() > 0)
+        return penv->LocalFrames[penv->LocalFrames.GetSize() - 1];
+    return 0;
+}
+// FunctionRefBase::SetLocalFrame(frame, false) as the function opcodes expand it: no weak flag to clear.
+SF_FORCEINLINE void FnSetLocalFrame(FunctionRefBase* p, LocalFrame* localFrame)
+{
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->Release();
+    p->pLocalFrame = localFrame;
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->AddRef();
+}
+SF_FORCEINLINE AvmCharacter* FnAvmTarget(const Environment* penv)
+{
+    if (!penv->Target)
+        return 0;
+    return ToAvmCharacter(penv->Target);
+}
+SF_FORCEINLINE void FnSetPrototype(FunctionObject* pfunc, ASStringContext* psc, Object* pprototype)
+{
+    pfunc->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_prototype), Value(pprototype));
+}
+
+SF_FORCEINLINE void PublishFunction(Environment* const& penv, Ptr<AsFunctionObject>& funcObj, const ASString& name)
 {
     FunctionRef funcRef(funcObj.GetPtr());
-    if (LocalFrame* plocalFrame = penv->GetTopLocalFrame())
-        funcRef.SetLocalFrame(plocalFrame);
+    if (LocalFrame* plocalFrame = FnTopLocalFrame(penv))
+        FnSetLocalFrame(&funcRef, plocalFrame);
 
     Value functionValue(funcRef);
     if (name.GetSize() != 0)
-        penv->GetAvmTarget()->SetMemberRaw(penv->GetSC(), name, functionValue);
+        FnAvmTarget(penv)->SetMemberRaw(penv->GetSC(), name, functionValue);
 
     ASStringContext*   psc = penv->GetSC();
     Ptr<FunctionProto> funcProto =
-        *SF_HEAP_NEW(psc->GetHeap()) FunctionProto(psc, penv->GetPrototype(ASBuiltin_Object), funcRef, false);
-    funcRef->SetProtoAndCtor(psc, penv->GetPrototype(ASBuiltin_Function));
-    funcObj->SetPrototype(psc, funcProto);
+        *SF_HEAP_NEW(psc->GetHeap()) FunctionProto(psc, FnGetPrototype(psc->pContext, ASBuiltin_Object), funcRef, Prototype<Object>::InlineCtorTag());
+    funcRef->SetProtoAndCtor(psc, FnGetPrototype(psc->pContext, ASBuiltin_Function));
+    FnSetPrototype(funcObj, psc, funcProto);
 
     if (name.GetSize() == 0)
         penv->Push(functionValue);
@@ -206,14 +255,14 @@ inline void PublishFunction(Environment* penv, Ptr<AsFunctionObject>& funcObj, c
 // The 'function' opcode (ExecutionContext::Function1OpCode; the context is not modelled: +0 the environment, +0x10
 // the code bytes, +0x24 the next pc, +0x28 the pc, +0x38 the with stack): name, argument names and body length;
 // the body is skipped.
-// MS2-FUNCTIONAL: the context is read by address; AddArg, the FunctionProto constructor and SetPrototype are inlined
+// MS2-FUNCTIONAL: AddArg, the FunctionProto tag ctor, GetPrototype and SetPrototype are inlined as in the exe; the frame is 0x20 larger and r12/r13 and the zero register are allocated differently
 // in the exe
 // @0x142945da0
 void FUN_142945da0(void* pctx, ActionBuffer* pactions)
 {
     UByte*       pc      = static_cast<UByte*>(pctx);
-    Environment* penv    = *reinterpret_cast<Environment**>(pc);
-    const UByte* pbuffer = *reinterpret_cast<const UByte**>(pc + 0x10);
+    Environment*&       penv    = *reinterpret_cast<Environment**>(pc);
+    const UByte*&       pbuffer = *reinterpret_cast<const UByte**>(pc + 0x10);
     unsigned&    nextPc  = *reinterpret_cast<unsigned*>(pc + 0x24);
 
     // The function object is 0xd0 bytes in the exe; the header models only its first 0x78.
@@ -246,8 +295,8 @@ void FUN_142945da0(void* pctx, ActionBuffer* pactions)
 void FUN_142946390(void* pctx, ActionBuffer* pactions)
 {
     UByte*       pc      = static_cast<UByte*>(pctx);
-    Environment* penv    = *reinterpret_cast<Environment**>(pc);
-    const UByte* pbuffer = *reinterpret_cast<const UByte**>(pc + 0x10);
+    Environment*&       penv    = *reinterpret_cast<Environment**>(pc);
+    const UByte*&       pbuffer = *reinterpret_cast<const UByte**>(pc + 0x10);
     unsigned&    nextPc  = *reinterpret_cast<unsigned*>(pc + 0x24);
 
     // The function object is 0xd0 bytes in the exe; the header models only its first 0x78.
@@ -289,3 +338,6 @@ void FUN_142946390(void* pctx, ActionBuffer* pactions)
 // MS2-PIN: ??_7ObjectProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216058
 // MS2-PIN: ??_7ObjectProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432160a0
 // MS2-PIN: ??_7ObjectProto@AS2@GFx@Scaleform@@6B@ 0x143216148
+// MS2-PIN: ??_7FunctionProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216150
+// MS2-PIN: ??_7FunctionProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216198
+// MS2-PIN: ??_7FunctionProto@AS2@GFx@Scaleform@@6B@ 0x143216240

@@ -254,6 +254,8 @@ class FunctionProto : public Prototype<Object>
 public:
     // The Function prototype; apply and call are added only when asked (exe 0x14291c0f0).
     FunctionProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, bool addApply);
+    // The addApply=false constructor that the function opcodes inline (defined in sfr_as2_05t).
+    FunctionProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, Prototype<Object>::InlineCtorTag);
     static const NameFunction FunctionTable[]; // exe 0x143213e80
 
     static void Apply(const FnCall& fn);
