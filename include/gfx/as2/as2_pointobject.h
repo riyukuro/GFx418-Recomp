@@ -44,6 +44,7 @@ public:
     {
         Set__proto__(psc, pprototype);
     }
+    PointObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual ObjectType GetObjectType() const; // exe 0x1429542e0
 
@@ -75,6 +76,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143213530
 
     PointProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291fe60
+    PointProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     static void Add(const FnCall& fn);
     static void Clone(const FnCall& fn);
@@ -90,6 +92,7 @@ class PointCtorFunction : public CFunctionObject
 {
 public:
     PointCtorFunction(ASStringContext* psc); // exe 0x14291fb70
+    PointCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429371b0
 

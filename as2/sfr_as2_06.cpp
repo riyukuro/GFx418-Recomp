@@ -1258,6 +1258,234 @@ __forceinline DateCtorFunction::DateCtorFunction(ASStringContext* psc, ObjectInl
                                   PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
 }
 
+// BooleanObject(psc, pprototype), BooleanProto and BooleanCtorFunction (sfr_as2_03), inlined like the exe.
+__forceinline BooleanObject::BooleanObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
+    : Object(psc, ObjectInlineCtorTag()), BValue(false)
+{
+    if (!pProto)
+        Object::SetMemberRaw(
+            psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
+            Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+    pProto = pprototype;
+}
+__forceinline BooleanProto::BooleanProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+    : Prototype<BooleanObject>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+__forceinline BooleanCtorFunction::BooleanCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
+    : CFunctionObject(psc, GlobalCtor, t)
+{
+}
+
+// RegisterBuiltinClass with the CtorFunction and Proto ctors inlined down to Object(psc), as in the exe.
+template<class CtorFunctionType, class ProtoType>
+static SF_FORCEINLINE FunctionRef RegisterBuiltinClassInline(GlobalContext* pgc, ASBuiltinType type, ASBuiltinType parentType,
+                                                     Object* ptarget)
+{
+    ASStringContext sc(pgc, 8);
+    FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) CtorFunctionType(&sc, ObjectInlineCtorTag()));
+    Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) ProtoType(&sc, pgc->GetPrototype(parentType), ctor, ObjectInlineCtorTag());
+    SetBuiltinPrototype(pgc, type, proto);
+    ptarget->SetMemberRaw(&sc, sc.GetBuiltin(type), Value(ctor));
+    return ctor;
+}
+
+
+__forceinline AmpMarker::AmpMarker(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
+    : Object(psc, ObjectInlineCtorTag())
+{
+    if (!pProto)
+        Object::SetMemberRaw(
+            psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
+            Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+    pProto = pprototype;
+}
+
+__forceinline AmpMarkerProto::AmpMarkerProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+    : Prototype<AmpMarker>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+}
+
+__forceinline AmpMarkerCtorFunction::AmpMarkerCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
+    : CFunctionObject(psc, GlobalCtor, t)
+{
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+__forceinline TextSnapshotObject::TextSnapshotObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
+    : Object(psc, ObjectInlineCtorTag())
+{
+    ::new (Data68) StaticTextSnapshotData();
+    if (!pProto)
+        Object::SetMemberRaw(
+            psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
+            Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+    pProto = pprototype;
+}
+
+__forceinline TextSnapshotProto::TextSnapshotProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+    : Prototype<TextSnapshotObject>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
+}
+
+__forceinline TextSnapshotCtorFunction::TextSnapshotCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
+    : CFunctionObject(psc, 0, t)
+{
+}
+
+__forceinline Selection::Selection(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
+    : Object(psc, ObjectInlineCtorTag())
+{
+    if (!pProto)
+        Object::SetMemberRaw(
+            psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
+            Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+    pProto = pprototype;
+}
+
+__forceinline SelectionProto::SelectionProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+    : Prototype<Selection>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+__forceinline SelectionCtorFunction::SelectionCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
+    : CFunctionObject(psc, GlobalCtor, t)
+{
+    // AsBroadcaster::Initialize, its InitializeProto inlined.
+    ObjectInterface* pobj = this;
+    if (pobj)
+        NameFunction::AddConstMembers(pobj, psc, AsBroadcasterProto::FunctionTable, PropFlags::PropFlag_DontEnum);
+    AsBroadcaster::InitializeInstance(psc, pobj);
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+__forceinline PointObject::PointObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
+    : Object(psc, ObjectInlineCtorTag())
+{
+    if (!pProto)
+        Object::SetMemberRaw(
+            psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
+            Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+    pProto = pprototype;
+}
+
+__forceinline PointProto::PointProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+    : Prototype<PointObject>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete));
+    SetMemberRaw(psc, psc->CreateConstString("length"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
+}
+
+__forceinline PointCtorFunction::PointCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
+    : CFunctionObject(psc, GlobalCtor, t)
+{
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+__forceinline StringObject::StringObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
+    : Object(psc, ObjectInlineCtorTag()), sValue(psc->GetBuiltin(ASBuiltin_empty_))
+{
+    if (!pProto)
+        Object::SetMemberRaw(
+            psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
+            Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+    pProto = pprototype;
+}
+
+__forceinline StringProto::StringProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+    : Prototype<StringObject>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+    sValue = psc->GetBuiltin(ASBuiltin_typeObject_);
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+__forceinline StringCtorFunction::StringCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
+    : CFunctionObject(psc, GlobalCtor, t)
+{
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+__forceinline NumberObject::NumberObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
+    : Object(psc, ObjectInlineCtorTag()), NumberValue(0)
+{
+    if (!pProto)
+        Object::SetMemberRaw(
+            psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
+            Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+    pProto = pprototype;
+}
+
+__forceinline NumberProto::NumberProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+    : Prototype<NumberObject>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+__forceinline NumberCtorFunction::NumberCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
+    : CFunctionObject(psc, GlobalCtor, t)
+{
+    for (int i = 0; ConstTable[i].Name; i++)
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString(ConstTable[i].Name), Value(ConstTable[i].Function()),
+                                                          PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+__forceinline AsBroadcaster::AsBroadcaster(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
+    : Object(psc, ObjectInlineCtorTag())
+{
+    if (!pProto)
+        Object::SetMemberRaw(
+            psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
+            Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+    pProto = pprototype;
+}
+
+__forceinline AsBroadcasterProto::AsBroadcasterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+    : Prototype<AsBroadcaster>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+__forceinline AsBroadcasterCtorFunction::AsBroadcasterCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
+    : CFunctionObject(psc, GlobalCtor, t)
+{
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+__forceinline ExternalInterface::ExternalInterface(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
+    : Object(psc, ObjectInlineCtorTag())
+{
+    if (!pProto)
+        Object::SetMemberRaw(
+            psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
+            Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+    pProto = pprototype;
+}
+
+__forceinline ExternalInterfaceProto::ExternalInterfaceProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+    : Prototype<ExternalInterface>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+__forceinline ExternalInterfaceCtorFunction::ExternalInterfaceCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
+    : CFunctionObject(psc, GlobalCtor, t)
+{
+    {
+        Value unset(Value::UNSET);
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString("available"), unset);
+    }
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
 // The filter classes derive from BitmapFilter: it is registered first unless the registry knows the name.
 static SF_FORCEINLINE void RegisterBitmapFilterBase(GlobalContext* pgc)
 {
@@ -1266,30 +1494,33 @@ static SF_FORCEINLINE void RegisterBitmapFilterBase(GlobalContext* pgc)
         BitmapFilterCtorFunction::Register(pgc);
 }
 
-// MS2-FUNCTIONAL the exe inlines the BooleanCtorFunction and BooleanProto ctors (sfr_as2_03)
+// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x1429752b0
 FunctionRef BooleanCtorFunction::Register(GlobalContext* pgc)
 {
     ASStringContext sc(pgc, 8);
-    FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) BooleanCtorFunction(&sc));
-    Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) BooleanProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor);
+    FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) BooleanCtorFunction(&sc, ObjectInlineCtorTag()));
+    Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) BooleanProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor, ObjectInlineCtorTag());
     SetBuiltinPrototype(pgc, ASBuiltin_Boolean, proto);
     pgc->pGlobal->SetMemberRaw(&sc, sc.GetBuiltin(ASBuiltin_Boolean), Value(ctor));
     return ctor;
 }
 
-// MS2-FUNCTIONAL the exe inlines the AmpMarkerCtorFunction and AmpMarkerProto ctors (sfr_as2_03)
+// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x142973080
 FunctionRef AmpMarkerCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClass<AmpMarkerCtorFunction, AmpMarkerProto>(pgc, ASBuiltin_Amp, ASBuiltin_Object, pgc->pGlobal);
+    return RegisterBuiltinClassInline<AmpMarkerCtorFunction, AmpMarkerProto>(pgc, ASBuiltin_Amp, ASBuiltin_Object, pgc->pGlobal);
 }
 
-// MS2-FUNCTIONAL the exe inlines the AsBroadcasterCtorFunction and AsBroadcasterProto ctors (sfr_as2_03)
+// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x142973a80
 FunctionRef AsBroadcasterCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClass<AsBroadcasterCtorFunction, AsBroadcasterProto>(pgc, ASBuiltin_AsBroadcaster, ASBuiltin_Object, pgc->pGlobal);
+    return RegisterBuiltinClassInline<AsBroadcasterCtorFunction, AsBroadcasterProto>(pgc, ASBuiltin_AsBroadcaster, ASBuiltin_Object, pgc->pGlobal);
 }
 
 // MS2-FUNCTIONAL the exe inlines the BevelFilterCtorFunction and BevelFilterProto ctors and GetBuiltinClassRegistrar (sfr_as2_03)
@@ -1375,11 +1606,12 @@ FunctionRef MovieClipLoaderCtorFunction::Register(GlobalContext* pgc)
     return RegisterBuiltinClass<MovieClipLoaderCtorFunction, MovieClipLoaderProto>(pgc, ASBuiltin_MovieClipLoader, ASBuiltin_Object, pgc->pGlobal);
 }
 
-// MS2-FUNCTIONAL the exe inlines the PointCtorFunction and PointProto ctors (sfr_as2_03)
+// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x1429797e0
 FunctionRef PointCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClass<PointCtorFunction, PointProto>(pgc, ASBuiltin_Point, ASBuiltin_Object, pgc->FlashGeomPackage);
+    return RegisterBuiltinClassInline<PointCtorFunction, PointProto>(pgc, ASBuiltin_Point, ASBuiltin_Object, pgc->FlashGeomPackage);
 }
 
 // MS2-FUNCTIONAL the exe inlines the SharedObjectCtorFunction and SharedObjectProto ctors (sfr_as2_03)
@@ -1389,18 +1621,20 @@ FunctionRef SharedObjectCtorFunction::Register(GlobalContext* pgc)
     return RegisterBuiltinClass<SharedObjectCtorFunction, SharedObjectProto>(pgc, ASBuiltin_SharedObject, ASBuiltin_Object, pgc->pGlobal);
 }
 
-// MS2-FUNCTIONAL the exe inlines the StringCtorFunction and StringProto ctors (sfr_as2_03)
+// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x14297aca0
 FunctionRef StringCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClass<StringCtorFunction, StringProto>(pgc, ASBuiltin_String, ASBuiltin_Object, pgc->pGlobal);
+    return RegisterBuiltinClassInline<StringCtorFunction, StringProto>(pgc, ASBuiltin_String, ASBuiltin_Object, pgc->pGlobal);
 }
 
-// MS2-FUNCTIONAL the exe inlines the TextSnapshotCtorFunction and TextSnapshotProto ctors (sfr_as2_03)
+// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x14297bf80
 FunctionRef TextSnapshotCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClass<TextSnapshotCtorFunction, TextSnapshotProto>(pgc, ASBuiltin_TextSnapshot, ASBuiltin_Object, pgc->pGlobal);
+    return RegisterBuiltinClassInline<TextSnapshotCtorFunction, TextSnapshotProto>(pgc, ASBuiltin_TextSnapshot, ASBuiltin_Object, pgc->pGlobal);
 }
 
 // MS2-FUNCTIONAL regalloc floor: ctor inlined down to Object(psc) like the exe (731 vs 730 B); pgc lives in r13
@@ -1468,26 +1702,29 @@ FunctionRef ArrayCtorFunction::Register(GlobalContext* pgc)
     return RegisterBuiltinClass<ArrayCtorFunction, ArrayProto>(pgc, ASBuiltin_Array, ASBuiltin_Object, pgc->pGlobal);
 }
 
-// MS2-FUNCTIONAL the exe inlines the ExternalInterfaceCtorFunction and ExternalInterfaceProto ctors (sfr_as2_03)
+// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x1429775b0
 FunctionRef ExternalInterfaceCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClass<ExternalInterfaceCtorFunction, ExternalInterfaceProto>(pgc, ASBuiltin_ExternalInterface, ASBuiltin_Object,
+    return RegisterBuiltinClassInline<ExternalInterfaceCtorFunction, ExternalInterfaceProto>(pgc, ASBuiltin_ExternalInterface, ASBuiltin_Object,
                                                                                       pgc->FlashExternalPackage);
 }
 
-// MS2-FUNCTIONAL the exe inlines the NumberCtorFunction and NumberProto ctors (sfr_as2_03)
+// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x142979260
 FunctionRef NumberCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClass<NumberCtorFunction, NumberProto>(pgc, ASBuiltin_Number, ASBuiltin_Object, pgc->pGlobal);
+    return RegisterBuiltinClassInline<NumberCtorFunction, NumberProto>(pgc, ASBuiltin_Number, ASBuiltin_Object, pgc->pGlobal);
 }
 
-// MS2-FUNCTIONAL the exe inlines the SelectionCtorFunction ctor (sfr_as2_03)
+// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x142979fe0
 FunctionRef SelectionCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClass<SelectionCtorFunction, SelectionProto>(pgc, ASBuiltin_Selection, ASBuiltin_Object, pgc->pGlobal);
+    return RegisterBuiltinClassInline<SelectionCtorFunction, SelectionProto>(pgc, ASBuiltin_Selection, ASBuiltin_Object, pgc->pGlobal);
 }
 
 // MovieImpl keeps one MouseState per mouse (4, 0x50 bytes each) at +0x1260, not recovered in gfx_movieimpl.h

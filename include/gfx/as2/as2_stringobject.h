@@ -24,6 +24,7 @@ public:
     {
         Set__proto__(psc, pprototype);
     }
+    StringObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual const char* GetTextValue(Environment* penv = 0) const; // exe 0x142956730
     virtual ObjectType  GetObjectType() const;                     // exe 0x142954320: Object_String
@@ -45,6 +46,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143213770
 
     StringProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142920fc0
+    StringProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     static void StringCharAt(const FnCall& fn);
     static void StringCharCodeAt(const FnCall& fn);
@@ -74,6 +76,7 @@ class StringCtorFunction : public CFunctionObject
 {
 public:
     StringCtorFunction(ASStringContext* psc); // exe 0x142920d70
+    StringCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142937290
 

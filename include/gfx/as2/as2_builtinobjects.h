@@ -38,6 +38,7 @@ public:
     {
         Set__proto__(psc, pprototype);
     }
+    AmpMarker(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
 
 protected:
     void commonInit(Environment* penv); // exe 0x142994e10
@@ -47,6 +48,7 @@ class AmpMarkerProto : public Prototype<AmpMarker>
 {
 public:
     AmpMarkerProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142917c90
+    AmpMarkerProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 };
 // The listener list behind AsBroadcaster.initialize (the _listeners array of the broadcaster).
 class AsBroadcaster : public Object
@@ -84,6 +86,7 @@ public:
     {
         Set__proto__(psc, pprototype);
     }
+    AsBroadcaster(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
     virtual ObjectType GetObjectType() const; // exe 0x142954140: Object_AsBroadcaster
 
 protected:
@@ -97,6 +100,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143213460
 
     AsBroadcasterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142918580
+    AsBroadcasterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
     static void AddListener(const FnCall& fn);      // exe 0x1428fbd10
     static void BroadcastMessage(const FnCall& fn); // exe 0x1428fbdc0
     static void RemoveListener(const FnCall& fn);   // exe 0x1428fbea0
@@ -110,6 +114,7 @@ public:
     {
         Set__proto__(psc, pprototype);
     }
+    ExternalInterface(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual ObjectType GetObjectType() const; // exe 0x142954240: Object_ExternalInterface
 };
@@ -120,6 +125,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143213e30
 
     ExternalInterfaceProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291bd50
+    ExternalInterfaceProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 };
 class KeyObject : public Object
 {
@@ -185,6 +191,7 @@ public:
     {
         Set__proto__(psc, pprototype);
     }
+    Selection(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     // (appended for sfr_as2_06) queues the focus change for the action queue (exe 0x142972490).
     static void QueueSetFocus(Environment* penv, InteractiveObject* pnewFocus, unsigned controllerIdx,
@@ -205,6 +212,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143213040
 
     SelectionProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142920600
+    SelectionProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 };
 class StageObject : public Object
 {
@@ -241,6 +249,7 @@ public:
     {
         Set__proto__(psc, pprototype);
     }
+    BooleanObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
     virtual const char* GetTextValue(Environment* penv = 0) const; // exe 0x1429566a0
     virtual ObjectType  GetObjectType() const;                     // exe 0x1429541d0: Object_Boolean
     virtual void SetValue(Environment* penv, const Value& v); // exe 0x14298cc30
@@ -258,6 +267,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143213630
 
     BooleanProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142919af0
+    BooleanProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 };
 class ButtonObject : public Object
 {
@@ -537,6 +547,7 @@ public:
     NumberObject(Environment* penv, Number v); // exe 0x14291f4b0
     // The prototype instance holds 0.
     NumberObject(ASStringContext* psc, Object* pprototype) : Object(psc), NumberValue(0) { Set__proto__(psc, pprototype); }
+    NumberObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual ObjectType GetObjectType() const; // exe 0x1429542b0: Object_Number
     virtual Value      GetValue() const;      // exe 0x142956c90: NumberValue
@@ -684,6 +695,7 @@ public:
         ::new (Data68) StaticTextSnapshotData();
         Set__proto__(psc, pprototype);
     }
+    TextSnapshotObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual ObjectType GetObjectType() const; // exe 0x142954360: Object_TextSnapshot
 
@@ -702,6 +714,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143214250
 
     TextSnapshotProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142923250
+    TextSnapshotProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     static void FindTextA(const FnCall& fn);
     static void GetCount(const FnCall& fn);
@@ -720,6 +733,7 @@ class TextSnapshotCtorFunction : public CFunctionObject
 {
 public:
     TextSnapshotCtorFunction(ASStringContext* psc); // exe 0x1429231b0
+    TextSnapshotCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     // (appended for sfr_as2_06) Creates the class and its prototype and publishes "TextSnapshot" (exe 0x14297bf80).
     static FunctionRef Register(GlobalContext* pgc);
@@ -1157,6 +1171,7 @@ class AmpMarkerCtorFunction : public CFunctionObject
 {
 public:
     AmpMarkerCtorFunction(ASStringContext* psc); // exe 0x142917bf0
+    AmpMarkerCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936790
 
@@ -1190,6 +1205,7 @@ public:
     static void AddCallback(const FnCall& fn); // exe 0x1428ff660
     // (appended for sfr_as2_06) "available" and the static functions (exe 0x14291bc40).
     ExternalInterfaceCtorFunction(ASStringContext* psc);
+    ExternalInterfaceCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
     static const NameFunction StaticFunctionTable[]; // exe 0x143213d90: addCallback, call
 
     // (appended for sfr_as2_06) Creates the class and its prototype and publishes "ExternalInterface" (exe 0x1429775b0).
@@ -1235,6 +1251,7 @@ class SelectionCtorFunction : public CFunctionObject
 public:
     // A broadcaster with the static methods (exe 0x142920540).
     SelectionCtorFunction(ASStringContext* psc);
+    SelectionCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     // Selection cannot be instantiated (exe 0x142937230).
     virtual Object* CreateNewObject(Environment*) const { return 0; }
@@ -1321,6 +1338,7 @@ class BooleanCtorFunction : public CFunctionObject
 {
 public:
     BooleanCtorFunction(ASStringContext* psc); // exe 0x142919980
+    BooleanCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429369b0
 
@@ -1338,6 +1356,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x1432141a0
 
     NumberProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291f540
+    NumberProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 };
 
 // The Number class.
@@ -1349,6 +1368,7 @@ public:
     static void GlobalCtor(const FnCall& fn);
     // (appended for sfr_as2_06) The constants MAX_VALUE, MIN_VALUE, NaN, ... as members (exe 0x14291f2c0).
     NumberCtorFunction(ASStringContext* psc);
+    NumberCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
     // A constant member of Number and the function computing it.
     struct NameConstFunction
     {
@@ -1416,6 +1436,7 @@ class AsBroadcasterCtorFunction : public CFunctionObject
 {
 public:
     AsBroadcasterCtorFunction(ASStringContext* psc); // exe 0x1429184e0
+    AsBroadcasterCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429367e0
 
