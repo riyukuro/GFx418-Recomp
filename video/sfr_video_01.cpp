@@ -3676,15 +3676,19 @@ void VideoProviderNetStream::SendNotification(const char* note, bool error)
 }
 
 // A cue point as a script object: name, time in seconds, type and its parameters.
-// MS2-FUNCTIONAL: other scheduling
+// MS2-FUNCTIONAL: exe keeps pobj in its r9 home slot (rsp+0xc8, ours rsp+0x30), stores the default PropFlags temp after the value string is built (ours before), and other scheduling; 1411 vs 1413 bytes
 // @0x140008bb0
 static Object* ConvertCuePoint(const VideoPlayer::CuePoint& cp, Environment* penv)
 {
     Object* pobj = SF_HEAP_NEW(penv->GetHeap()) Object(penv);
-    pobj->SetMemberRaw(penv->GetSC(), penv->CreateConstString("name"), Value(penv->CreateString(cp.Name)));
-    pobj->SetMemberRaw(penv->GetSC(), penv->CreateConstString("time"), Value((Number)(cp.Time / 1000.0f)));
-    pobj->SetMemberRaw(penv->GetSC(), penv->CreateConstString("type"),
-                       Value(penv->CreateConstString(cp.Type == VideoPlayer::NavigationCuePoint ? "navigation" : "event")));
+    pobj->SetMemberRaw(penv->GetSC(), penv->GetSC()->pContext->GetStringManager()->CreateConstString("name"),
+                       Value(penv->GetSC()->pContext->GetStringManager()->CreateString(cp.Name.ToCStr())));
+    pobj->SetMemberRaw(penv->GetSC(), penv->GetSC()->pContext->GetStringManager()->CreateConstString("time"),
+                       Value((Number)(cp.Time / 1000.0f)));
+    pobj->SetMemberRaw(penv->GetSC(), penv->GetSC()->pContext->GetStringManager()->CreateConstString("type"),
+                       Value(cp.Type == VideoPlayer::NavigationCuePoint
+                                 ? penv->GetSC()->pContext->GetStringManager()->CreateConstString("navigation")
+                                 : penv->GetSC()->pContext->GetStringManager()->CreateConstString("event")));
     if (cp.Params.GetSize() > 0)
     {
         Ptr<Object> pparams = *SF_HEAP_NEW(penv->GetHeap()) Object(penv);
@@ -3692,10 +3696,10 @@ static Object* ConvertCuePoint(const VideoPlayer::CuePoint& cp, Environment* pen
         {
             // The exe builds an object per parameter that it never uses.
             Ptr<Object> pparam = *SF_HEAP_NEW(penv->GetHeap()) Object(penv);
-            pparams->SetMemberRaw(penv->GetSC(), penv->CreateString(cp.Params[i].Name),
-                                  Value(penv->CreateString(cp.Params[i].Value)));
+            pparams->SetMemberRaw(penv->GetSC(), penv->GetSC()->pContext->GetStringManager()->CreateString(cp.Params[i].Name.ToCStr()),
+                                  Value(penv->GetSC()->pContext->GetStringManager()->CreateString(cp.Params[i].Value.ToCStr())));
         }
-        pobj->SetMemberRaw(penv->GetSC(), penv->CreateConstString("parameters"), Value(pparams));
+        pobj->SetMemberRaw(penv->GetSC(), penv->GetSC()->pContext->GetStringManager()->CreateConstString("parameters"), Value(pparams));
     }
     return pobj;
 }
