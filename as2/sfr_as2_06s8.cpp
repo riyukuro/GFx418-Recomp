@@ -21,6 +21,8 @@ class AvmButton : public AvmCharacter
 {
     // A character made from a button record gets the class registered for its export name (0x142935820).
     void ConstructCharacter(InteractiveObject* pchar, const ButtonRecord& rec);
+    // FindCharacterAndRemove (0x142943360 in sfr_as2_05d), inlined in the exe: a TU-local copy under its own name.
+    Button::CharToRec FindCharacterAndRemoveInline(const ButtonRecord& rec);
 public: // public in the exe (the symbols row and sfr_as2_03z's callers use the public mangling)
     void RecreateCharacters(ButtonRecord::MouseState mouseState);
 private:
@@ -40,52 +42,75 @@ SF_FORCEINLINE void AddChild(Render::TreeContainer* pcontainer, Render::TreeNode
 // The record shows its character in the mouse state.
 SF_FORCEINLINE bool MatchMouseState(const ButtonRecord& rec, ButtonRecord::MouseState mouseState)
 {
-    switch (mouseState)
-    {
-    case ButtonRecord::MouseUp:   return rec.IsUp();
-    case ButtonRecord::MouseDown: return rec.IsDown();
-    case ButtonRecord::MouseOver: return rec.IsOver();
-    default:                      return false;
-    }
+    if ((mouseState == ButtonRecord::MouseUp && rec.IsUp())      ||
+        (mouseState == ButtonRecord::MouseDown && rec.IsDown())  ||
+        (mouseState == ButtonRecord::MouseOver && rec.IsOver()) )
+        return true;
+    return false;
 }
 
-// The record's character as the record placed it.
-SF_FORCEINLINE void PlaceRecordCharacter(Render::TreeContainer* pcontainer, DisplayObjectBase* pch,
-                                         const ButtonRecord& rec)
+// DisplayObjectBase::CharToInteractiveObject (SF_INLINE in the SDK's GFx_InteractiveObject.h).
+SF_FORCEINLINE InteractiveObject* CharToInteractiveObject(DisplayObjectBase* pch)
 {
-    AddChild(pcontainer, pch->GetRenderNode());
-    if (rec.pFilters)
-        pch->SetFilters(rec.pFilters);
-    pch->SetMatrix(rec.ButtonMatrix);
-    pch->SetCxform(rec.ButtonCxform);
-    pch->SetBlendMode(rec.BlendMode);
+    return pch->IsInteractiveObject() ? static_cast<InteractiveObject*>(pch) : 0;
 }
 
 } // namespace
 
+// AvmButton::FindCharacterAndRemove (inlined in the exe): the character another state made from the record, taken
+// out of that state.
+inline Button::CharToRec AvmButton::FindCharacterAndRemoveInline(const ButtonRecord& rec)
+{
+    Button* button  = GetButton();
+    for (unsigned i = 0; i < Button::StatesCount; ++i)
+    {
+        if (i != Button::Hit)
+        {
+            Button::ButtonState curState = (Button::ButtonState)i;
+            Button::StateCharArray&
+                chars = button->GetCharacters(curState).Characters;
+            for (UPInt j = 0, n = chars.GetSize(); j < n; ++j)
+            {
+                if (chars[j].Record == &rec)
+                {
+                    Button::CharToRec chr = chars[j];
+                    chars.RemoveAt(j);
+                    return chr;
+                }
+            }
+        }
+    }
+    return Button::CharToRec();
+}
+
 // The other states' render trees are cleared; the new state and the hit state get their characters (a character
 // of another state made from the same record is moved over, the rest are created and constructed) and the new
 // state's container joins the button's render tree; then the other states' characters are unloaded.
-// MS2-FUNCTIONAL: register allocation and stack layout differ.
 // @0x1429729b0
 void AvmButton::RecreateCharacters(ButtonRecord::MouseState mouseState)
 {
-    Button*             button = GetButton();
-    ButtonDef*          pdef   = GetButtonDef();
-    Button::ButtonState bs     = Button::GetButtonState(mouseState);
+    ButtonDef* pdef = GetButtonDef();
+    Button* button  = GetButton();
+
+    Button::ButtonState bs = button->GetButtonState(mouseState);
 
     for (unsigned i = 0; i < Button::StatesCount; ++i)
     {
         if (i != unsigned(bs) && i != Button::Hit)
-            button->ClearRenderTreeForState(Button::ButtonState(i));
+        {
+            button->ClearRenderTreeForState((Button::ButtonState)i);
+        }
     }
     for (unsigned i = 0; i < Button::StatesCount; ++i)
     {
         if (i != unsigned(bs) && i != Button::Hit)
+        {
             continue;
+        }
 
-        Button::ButtonState        curState   = Button::ButtonState(i);
-        Button::StateCharArray&    chars      = button->GetCharacters(curState).Characters;
+        Button::ButtonState curState = (Button::ButtonState)i;
+        Button::StateCharArray& chars =
+            button->GetCharacters(curState).Characters;
         Ptr<Render::TreeContainer> pContainer = button->GetStateRenderContainer(curState);
         if (chars.GetSize() == 0)
         {
@@ -94,60 +119,59 @@ void AvmButton::RecreateCharacters(ButtonRecord::MouseState mouseState)
             for (UPInt j = 0, n = pdef->GetRecordsCount(); j < n; ++j)
             {
                 const ButtonRecord& rec = pdef->GetRecordAt(j);
-                if (i != Button::Hit ? !MatchMouseState(rec, mouseState) : !rec.IsHitTest())
-                    continue;
 
-                // A character of another state made from the record is moved to this one.
-                Button::CharToRec chr;
-                chr.Record = 0;
-                if (i != Button::Hit)
+                if ((i != Button::Hit && MatchMouseState(rec, mouseState)) ||
+                    (i == Button::Hit && rec.IsHitTest()))
                 {
-                    for (unsigned s = 0; s < Button::StatesCount; ++s)
+                    const Render::Matrix2F& mat = rec.ButtonMatrix;
+                    const Render::Cxform&   cx  = rec.ButtonCxform;
+
+                    // A character of another state made from the record is moved to this one.
+                    Button::CharToRec chr;
+                    if (i != Button::Hit)
+                        chr = FindCharacterAndRemoveInline(rec);
+                    if (chr.Char)
                     {
-                        if (s == Button::Hit)
-                            continue;
-                        Button::StateCharArray& other = button->GetCharacters(Button::ButtonState(s)).Characters;
-                        UPInt k = 0, nother = other.GetSize();
-                        for (; k < nother; ++k)
-                        {
-                            if (other[k].Record == &rec)
-                                break;
-                        }
-                        if (k < nother)
-                        {
-                            chr = other[k];
-                            other.RemoveAt(k);
-                            break;
-                        }
+                        chars.PushBack(chr);
+                        AddChild(pContainer, chr.Char->GetRenderNode());
+
+                        if (rec.pFilters)
+                            chr.Char->SetFilters(rec.pFilters);
+
+                        chr.Char->SetMatrix(mat);
+                        chr.Char->SetCxform(cx);
+                        chr.Char->SetBlendMode(rec.BlendMode);
                     }
-                }
-                if (chr.Char)
-                {
-                    chars.PushBack(chr);
-                    PlaceRecordCharacter(pContainer, chr.Char, rec);
-                }
-                else
-                {
-                    CharacterCreateInfo ccinfo = button->pDefImpl->GetCharacterCreateInfo(rec.CharacterId);
-                    if (!ccinfo.pCharDef)
-                        continue;
-                    Ptr<DisplayObjectBase> ch = *pDispObj->GetASMovieRoot()->pASSupport->CreateCharacterInstance(
-                        pDispObj->GetMovieImpl(), ccinfo, button, rec.CharacterId);
-                    Button::CharToRec newChr;
-                    newChr.Char   = ch;
-                    newChr.Record = &rec;
-                    chars.PushBack(newChr);
-                    PlaceRecordCharacter(pContainer, ch, rec);
-
-                    InteractiveObject* pscriptCh = ch->IsInteractiveObject() ? static_cast<InteractiveObject*>(
-                                                                                    ch.GetPtr())
-                                                                              : 0;
-                    if (pscriptCh)
+                    else
                     {
-                        ConstructCharacter(pscriptCh, rec);
-                        pscriptCh->AddToPlayList();
-                        pscriptCh->ModifyOptimizedPlayList();
-                        ch->OnEventLoad();
+                        CharacterCreateInfo ccinfo = GetButton()->pDefImpl->GetCharacterCreateInfo(rec.CharacterId);
+
+                        if (ccinfo.pCharDef)
+                        {
+                            Ptr<DisplayObjectBase> ch = *GetAS2Root()->pASSupport->CreateCharacterInstance
+                                (pDispObj->GetMovieImpl(), ccinfo, GetButton(), rec.CharacterId);
+                            chars.PushBack(Button::CharToRec(ch, &rec));
+
+                            AddChild(pContainer, ch->GetRenderNode());
+
+                            if (rec.pFilters)
+                                ch->SetFilters(rec.pFilters);
+
+                            ch->SetMatrix(mat);
+                            ch->SetCxform(cx);
+                            ch->SetBlendMode(rec.BlendMode);
+
+                            InteractiveObject* pscriptCh   = CharToInteractiveObject(ch);
+                            if (pscriptCh)
+                            {
+                                ConstructCharacter(pscriptCh, rec);
+
+                                pscriptCh->AddToPlayList();
+                                pscriptCh->ModifyOptimizedPlayList();
+
+                                ch->OnEventLoad();
+                            }
+                        }
                     }
                 }
             }
@@ -158,7 +182,9 @@ void AvmButton::RecreateCharacters(ButtonRecord::MouseState mouseState)
     for (unsigned i = 0; i < Button::StatesCount; ++i)
     {
         if (i != unsigned(bs) && i != Button::Hit)
-            button->UnloadCharactersForState(Button::ButtonState(i));
+        {
+            button->UnloadCharactersForState((Button::ButtonState)i);
+        }
     }
 }
 
