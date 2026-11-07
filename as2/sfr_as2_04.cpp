@@ -85,6 +85,7 @@
 #include "../include/kernel/sf_stringhash.h"
 #include "../include/render/render_twips.h"
 #include "../include/gfx/as2/as2_hashaccess.h"
+#include "../include/gfx/text_stylesheet.h" // Text::StyleManager complete: StyleSheetObject's implicit destructor calls ~StyleManager
 
 // The object stack's PushBack stays out of line (0x142971a50).
 namespace Scaleform {

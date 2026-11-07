@@ -21,6 +21,7 @@
 #include "../include/render/text_docview.h"
 #include "../include/render/render_twips.h"
 #include "../include/render/text_filterdesc.h"
+#include "../include/gfx/text_stylesheet.h" // Text::StyleManager complete: StyleSheetObject's implicit destructor calls ~StyleManager
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 

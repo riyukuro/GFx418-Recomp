@@ -786,15 +786,16 @@ struct ParagraphFormatMember
     }
 };
 
-// The style sheet's Text::StyleManager, whose layout this header does not give. Its destructor is the
-// out-of-line ~StyleManager (exe 0x142609070), so the units that use StyleSheetObject's implicit destructor
-// do not need the class complete.
-void StyleManager_Destruct(Text::StyleManager* p); // exe 0x142609070 (~StyleManager)
-struct StyleManagerMember
+// The style sheet's Text::StyleManager, whose layout this header does not give. The member's destructor calls the
+// out-of-line ~StyleManager (exe 0x142609070) by name. It is a class template, so that body is only instantiated in
+// units that use StyleSheetObject's implicit destructor, and those units see the class complete.
+template<class SM = Text::StyleManager>
+struct StyleManagerMemberT
 {
     void* Data[6];
-    ~StyleManagerMember() { StyleManager_Destruct((Text::StyleManager*)Data); }
+    ~StyleManagerMemberT() { reinterpret_cast<SM*>(Data)->SM::~SM(); }
 };
+typedef StyleManagerMemberT<> StyleManagerMember;
 
 // 0x98 bytes. The destructor is implicit (exe 0x14292d230, the deleting one, stores no vftables).
 class StyleSheetObject : public Object

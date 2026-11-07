@@ -15,6 +15,7 @@
 #include "../include/gfx/gfx_movieimplstates.h"
 #include "../include/gfx/gfx_movieslots.h"
 #include "../include/gfx/gfx_player.h"
+#include "../include/gfx/text_stylesheet.h" // Text::StyleManager complete: StyleSheetObject's implicit destructor calls ~StyleManager
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 

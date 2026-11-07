@@ -97,6 +97,7 @@
 #include "../include/kernel/sf_std.h"
 #include "../include/render/text_core.h"
 #include "../include/gfx/text_editorkit.h"
+#include "../include/gfx/text_stylesheet.h" // Text::StyleManager complete: StyleSheetObject's implicit destructor calls ~StyleManager
 namespace Scaleform { namespace GFx { class ASSoundIntf; }
 // 0x1425dcaf0, a bare ret: the exe folds the empty body the callers below call out of line into this instance.
 // Declared as a specialization, so cl calls it by name instead of inlining the header's empty body.

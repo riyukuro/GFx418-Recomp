@@ -18,6 +18,7 @@
 // TextField::GetCSSData, out of line (exe 0x1425b7e60; sfr_gfx_03e).
 Scaleform::UPInt FUN_1425b7e60(Scaleform::UPInt textField);
 #include "../include/render/text_filterdesc.h"
+#include "../include/gfx/text_stylesheet.h" // Text::StyleManager complete: StyleSheetObject's implicit destructor calls ~StyleManager
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 

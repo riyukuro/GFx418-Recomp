@@ -235,6 +235,7 @@
 #include "../include/gfx/gfx_movieslots.h"
 #include "../include/kernel/sf_msgformat.h"
 #include "../include/gfx/as2/as2_hashaccess.h"
+#include "../include/gfx/text_stylesheet.h" // Text::StyleManager complete: StyleSheetObject's implicit destructor calls ~StyleManager
 
 // MsgFormat::FormatD1<int> is an out-of-line call in the exe (exe 0x1423e8500, defined in sfr_as3_01c).
 template<> void Scaleform::MsgFormat::FormatD1<int>(const int& v);

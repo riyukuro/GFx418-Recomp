@@ -14,6 +14,7 @@
 #include "../include/gfx/as2/as2_avmtextfield.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/gfx/as2/as2_genericdisplayobj.h"
+#include "../include/gfx/text_stylesheet.h" // Text::StyleManager complete: StyleSheetObject's implicit destructor calls ~StyleManager
 
 // The text field's style data (exe 0x1425b7e60).
 Scaleform::UPInt FUN_1425b7e60(Scaleform::UPInt textField);
