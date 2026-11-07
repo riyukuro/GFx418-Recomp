@@ -1448,7 +1448,7 @@ namespace AS3 {
 
 // A new instance of the exported class symbolName named instanceName at depth (the top when negative or past it)
 // of the container, with the initArgs members set; its constructor runs right away.
-// MS2-FUNCTIONAL: 14 bytes short of the exe (1538 vs 1552); register allocation and slot layout differ
+// MS2-FUNCTIONAL: 3 bytes short of the exe (1549 vs 1552); register allocation and slot layout differ (exe keeps pmc in r12, symbolName in r14)
 // @0x1424ede80
 bool AS3ValueObjectInterface::AttachMovie(void* pdata, GFx::Value* pmc, const char* symbolName, const char* instanceName,
                                      SInt32 depth, const MemberValueSet* initArgs)
@@ -1461,15 +1461,15 @@ bool AS3ValueObjectInterface::AttachMovie(void* pdata, GFx::Value* pmc, const ch
     DisplayObject* pcont = static_cast<Instances::fl_display::DisplayObject*>(static_cast<Object*>(pdata))->pDispObj;
     Value result;
     VM*   vm = root->pAVM;
-    // VM::Construct 0x1424f0750 as the exe has it returns whether a constructor frame was queued (+0x78 grew)
-    const UPInt frames = vm->Unk070[1];
-    vm->Construct(symbolName, result, 0, NULL, false);
-    const bool needExecute = !vm->HandleException && vm->Unk070[1] > frames;
+    const bool needExecute = vm->Construct(symbolName, result, 0, NULL, false);   // VM::CreateObject, inlined
+    bool ok = false;
     if (!vm->HandleException)
     {
-        if (needExecute)
-            vm->ExecuteCode(1);
-        if (!vm->HandleException)
+        if (needExecute) vm->ExecuteCode(1);
+        ok = !vm->HandleException;
+    }
+    if (ok)
+    {
         {
             if (!Sfr17d_IsDisplayObject(result))
                 return false;
@@ -1483,11 +1483,11 @@ bool AS3ValueObjectInterface::AttachMovie(void* pdata, GFx::Value* pmc, const ch
                 for (unsigned i = 0; i < args->Size; ++i)
                 {
                     const Sfr17dMemberValue& mv = args->Data[i];
-                    const Multiname mn(vm->GetPublicNamespace(),
-                                       Value(ASString(root->GetStringManager418()->CreateStringNode(mv.Key.ToCStr(),
+                    const Multiname mn(root->pAVM->GetPublicNamespace(),
+                                       Value(ASString(root->BuiltinsMgr.GetStringManager()->CreateStringNode(mv.Key.ToCStr(),
                                                                                                     mv.Key.GetSize())),
                                              Value::InlineStr),
-                                       Multiname::InlineCtorTag());
+                                       Multiname::InlineAssignTag());
                     Value v;
                     root->GFxValue2ASValue(mv.mValue, &v);
                     pnew->SetProperty(mn, v);
