@@ -8321,7 +8321,7 @@ void MovieRoot::ProcessLoadQueueEntry(GFx::LoadQueueEntry* pentry, LoadStates* p
             Ptr<Sprite>         pnewSprite = *static_cast<Sprite*>(pASSupport->CreateCharacterInstance(
                 pMovieImpl, ccinfo, NULL, ResourceId(0), CharacterDef::Sprite));
             pnewSprite->SetLoadedSeparately(true);
-            pnewSprite->Flags |= DisplayObject::Mask_TimelineObject;
+            pnewSprite->GFx::DisplayObject::Flags |= GFx::DisplayObject::Mask_TimelineObject;   // the DisplayObject flags (+0x88), not Sprite::Flags
             pnewSprite->OnEventLoad();
             pnewSprite->AddToPlayList();
             AvmSprite* avmSpr = static_cast<AvmSprite*>(ToAvmDisplayObj(pnewSprite));
