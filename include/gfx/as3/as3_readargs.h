@@ -320,7 +320,16 @@ static_assert(sizeof(ReadValueMnObject) == 0x90, "TR::ReadValueMnObject size");
 class ReadArgs
 {
 public:
+    // MS2_AS3_READARGS_NOALIAS: the exe's SCU compiled the ctor and dtor in the caller's TU, so cl saw they keep no
+    // pointer to the object; noalias tells cl the same (a popped member Value's flags stay in a register across the
+    // weak-ref Free). Opt-in per unit.
+#ifdef MS2_AS3_READARGS_NOALIAS
+    __declspec(noalias)
+#endif
     ReadArgs(VM& vm, State& s, UInt32 argCount);  // 0x1424d9640
+#ifdef MS2_AS3_READARGS_NOALIAS
+    __declspec(noalias)
+#endif
     ~ReadArgs();                                  // 0x1424dea90
 
 protected:

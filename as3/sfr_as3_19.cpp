@@ -18,6 +18,7 @@
 #define SF_AS3_AVMBUTTON_MODEL
 #define SF_AS3_SHAPEOBJECT_MODEL   // ShapeObject / AvmBitmap from the SDK MI layout (as3_avm.h)
 #define MS2_AS3_ASSIGN_NOALIAS
+#define MS2_AS3_READARGS_NOALIAS   // ReadArgs ctor keeps no pointer to the object (as3_readargs.h)
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp weak-ref bodies inline (as3_value.h)
 // The exe's exec_esc_xattr (0x142538700) did not see XML::EscapeElementValue's body (as3_obj_fl.h).
 #define SFR_AS3_ESCAPE_NO_INLINE
@@ -2996,9 +2997,8 @@ void Sfr31ExecPushUndefined(VM* vm)
 namespace Scaleform { namespace GFx { namespace AS3 {
 using namespace TR;
 
-// MS2-FUNCTIONAL 0x142537710: the exe keeps the popped object's Flags in ebx across the weak-ref Free and stores them back;
-// ours clears them in memory (register order only). The exe compiled TR::ReadArgs::ReadArgs and ~ReadArgs (0x1424d9640,
-// 0x1424dea90; ours in sfr_as3_15) in this TU. A probe with same-TU noinline stand-in bodies for the two matched exactly.
+// The exe compiled TR::ReadArgs::ReadArgs and ~ReadArgs (0x1424d9640, 0x1424dea90; ours in sfr_as3_15) in this TU, so
+// it keeps the popped object's Flags in ebx across the weak-ref Free; MS2_AS3_READARGS_NOALIAS gives the same shape.
 // @0x142537710
 void Sfr31TraceCallPop(State* st, UInt32 argc)
 {
