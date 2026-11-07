@@ -70,7 +70,7 @@ inline __declspec(noinline) U FUN_14261fc40(void*, const unsigned char* key) { r
 void FUN_142624020(U*, void*, U);               // Array<0x18-byte record>::Resize
 void FUN_142623f80(U*, void*, U);               // Array<8-byte>::Reserve
 void FUN_14261ee70(U**, void*, NodeRef*, U);
-__declspec(noinline) void FUN_142623820(char*, unsigned, U, const char*, int, int, char);
+__declspec(noinline) void FUN_142623820(char*, unsigned, UInt32, const char*, int, int, char);
 void FUN_142623050(char*, int, int, U);
 __declspec(noinline) void FUN_1426237c0(char*);
 
@@ -155,7 +155,7 @@ public:
 }
 
 // Counts a named marker: bumps an existing entry or adds {name, 1}.
-// MS2-FUNCTIONAL: the exe holds the found iterator in rax/rdx (rcx/rax here); same blocks
+// MS2-FUNCTIONAL: one-instruction scheduling (the exe masks name2.pData before the Ref.Key store); same blocks
 // @0x1426204e0
 void AMP::ViewStats::AddMarker(const char* name)
 {
@@ -878,7 +878,7 @@ static __forceinline void RawPushCallstack(char* self, UInt32 swdHandle, UInt32 
 }
 
 // Opens a named scope: interns the name (assigning the next id) and pushes it.
-// MS2-FUNCTIONAL 0x142622d00: same length (844); scheduling only (r13 save order, the hash mask movabs, and r8d vs r8 for the RegisterScriptFunction id in the else path).
+// MS2-FUNCTIONAL 0x142622d00: same length (844); scheduling only (the exe loads the hash mask movabs before the Ref value store).
 // @0x142622d00
 void FUN_142622d00(char* self, const char* name, unsigned id, U arg)
 {
@@ -1142,7 +1142,7 @@ void FUN_1426237c0(char* self) { RawPublishTopScope(self); }
 
 // Sets (or refreshes) the cached description record for a key; with `useCurrent` stamps it with the current scope.
 // @0x142623820
-void FUN_142623820(char* self, unsigned hi, U lo, const char* text, int a, int b, char useCurrent)
+void FUN_142623820(char* self, unsigned hi, UInt32 lo, const char* text, int a, int b, char useCurrent)
 {
     U key = ((U)hi << 32) + (lo & 0xffffffffULL);
     struct Iterator
@@ -1197,7 +1197,7 @@ void FUN_142623820(char* self, unsigned hi, U lo, const char* text, int a, int b
 
 // Interns a string with ';' replaced by '\\' under the key (a, b).
 // @0x142623a00
-void FUN_142623a00(char* self, unsigned hi, U lo, const char* text)
+void FUN_142623a00(char* self, unsigned hi, UInt32 lo, const char* text)
 {
     U key = ((U)hi << 32) + (lo & 0xffffffffULL);
     U it[2];
