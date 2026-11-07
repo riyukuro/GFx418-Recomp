@@ -16,7 +16,7 @@ int FUN_142519a00(Scaleform::GFx::AS3::VM* vm, Scaleform::UPInt index, void* fra
 void FUN_1424efe30(Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3::Value* result);
 void FUN_14241de40(Scaleform::GFx::AS3::ValueStack* stack, unsigned n);   // ValueStack::PopBack: pops (and releases) the top n values
 bool FUN_1425146d0(Scaleform::GFx::AS3::VM* vm, const Scaleform::GFx::AS3::Value* v, const void* traits);
-Scaleform::UPInt FUN_14250a550(Scaleform::UPInt vm);   // the VM's fallback object (global)
+Scaleform::GFx::AS3::Object* FUN_14250a550(Scaleform::GFx::AS3::VM& vm);   // the VM's fallback object (global); defined in sfr_as3_18
 void FUN_1424d9530(void* ra, Scaleform::GFx::AS3::VM* vm, Scaleform::UInt32 argc);   // ReadArgs::ReadArgs
 void FUN_1424de9e0(void* ra);                                                        // ReadArgs::~ReadArgs
 
@@ -428,7 +428,7 @@ Sfr33ExecExit Sfr33ExecFrame(VM& vm, CallFrame& cf, const UPInt* pc, UPInt sizeA
             break;
         case 0x64:  // getglobalscope
             ++sp;
-            new (sp) Value(reinterpret_cast<Object*>(FUN_14250a550(vmAddr)));
+            new (sp) Value(::FUN_14250a550(*reinterpret_cast<VM*>(vmAddr)));
             pc = ip + 1;
             break;
         case 0x65:  // getscopeobject
