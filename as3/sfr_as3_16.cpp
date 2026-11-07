@@ -295,9 +295,10 @@ extern "C" void FUN_1424de650(void* self)
 }
 
 namespace Scaleform { namespace GFx { namespace AS3 { void Sfr31ShutdownRegistered(UPInt self); }}} // sfr_as3_19
-extern "C" void FUN_1424dfbf0(void* self);
-void FUN_1424dc8e0(void* self);
-void FUN_1424de240(long long* state);
+// ~VM calls the stack and guard teardowns out of line.
+extern "C" __declspec(noinline) void FUN_1424dfbf0(void* self);
+__declspec(noinline) void FUN_1424dc8e0(void* self);
+__declspec(noinline) void FUN_1424de240(long long* state);
 namespace Scaleform { namespace GFx { namespace AS3 {
 void* DeleteAs3_1424e3890(void* self, unsigned flags);
 }}}
@@ -577,7 +578,7 @@ Scaleform::UPInt Scaleform::GFx::AS3::Value::HashFunctor::operator()(const Scale
 // ValueRegisterFile teardown: free the reserved pages, release the register values, then free the current page.
 // The UInt16 index counts down (--i wraps to 0xffff), so the loop ends after register 0: only that one is released.
 // @0x1424dfaf0
-extern "C" void FUN_1424dfaf0(void* self)
+extern "C" __declspec(noinline) void FUN_1424dfaf0(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
     while (*reinterpret_cast<void**>(bytes + 0x18))
@@ -688,6 +689,9 @@ VMRegisterFileWords::~VMRegisterFileWords() { FUN_1424dfaf0(W); }
 VMGCGuard::~VMGCGuard() { FUN_1424de240(reinterpret_cast<long long*>(&pGC)); }
 
 // MS2-FUNCTIONAL 0x1424df380: marks the VM as destroying and shuts down registered ABCs before member teardown.
+// The exe's ClassTraitsSet (+0x1c8) is the SDK HashDH with ~MultinameHash() { Clear(); } (Clear 0x1424ef660 and the
+// DH table dtor 0x1424dcfc0 out of line); as3_mnhash.h has HashLH and no dtor, so ours inlines it. GlobalObjects is
+// ArrayLH<GlobalObject*> in the exe (see below).
 // @0x1424df380
 VM::~VM()
 {
