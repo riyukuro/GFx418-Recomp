@@ -5939,28 +5939,28 @@ void Sfr31ExecCallSuperArgsB(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc) 
 struct Sfr31VTNamesView { UPInt Pad[4]; Scaleform::Sfr19NamesData Names; };
 __declspec(noinline) void Sfr31StoreSlotName(UPInt vt, UInt32 idx, int kind, const UPInt* name)
 {
-#define Names (reinterpret_cast<Sfr31VTNamesView*>(vt)->Names)
-    const ASString& nm = *reinterpret_cast<const ASString*>(name);
-    if (idx >= Names.Size)
-        Names.Resize(idx + 1);
+#define Names (reinterpret_cast<ArrayCC<ASString, StatMV_VM_VTable_Mem>&>(reinterpret_cast<Sfr31VTNamesView*>(vt)->Names))
+    const ASString& nm = *reinterpret_cast<const ASString*>(name); const AbsoluteIndex ind(idx);
+    if (ind.Get() >= Names.GetSize())
+        Names.Resize(ind.Get() + 1);
     switch (kind)
     {
     case 0xb:
-        Names.Data[idx] = nm;
+        Names[ind.Get()] = nm;
         break;
     case 0xc:
     {
         String s = String("get ") + String(nm.ToCStr(), nm.GetSize());
-        ASString& d = Names.Data[idx];
+        ASString& d = Names[ind.Get()];
         d.AssignNode(d.GetManager()->CreateStringNode(s.ToCStr(), s.GetSize()));
         break;
     }
     case 0xd:
     {
-        if (idx + 1 >= Names.Size)
+        if (idx + 1 >= Names.GetSize())
             Names.Resize(idx + 1 + 1);
         String s = String("set ") + String(nm.ToCStr(), nm.GetSize());
-        ASString& d = Names.Data[idx + 1];
+        ASString& d = Names[idx + 1];
         d.AssignNode(d.GetManager()->CreateStringNode(s.ToCStr(), s.GetSize()));
         break;
     }
