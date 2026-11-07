@@ -207,12 +207,13 @@ static void ConstructVideoHashFromPair(Scaleform::UPInt* destination, const void
 {
     void* const* pair = static_cast<void* const*>(source);
     *reinterpret_cast<unsigned*>(destination) = *static_cast<const unsigned*>(pair[0]);
-    unsigned char* object = *static_cast<unsigned char**>(pair[1]);
+    const Scaleform::UPInt* objectSlot = static_cast<const Scaleform::UPInt*>(pair[1]);
+    unsigned char* object = reinterpret_cast<unsigned char*>(*objectSlot);
     if (object) {
         unsigned* count = reinterpret_cast<unsigned*>(object + 0x18);
         *count = (*count + 1) & 0x8fffffff;
     }
-    destination[1] = *static_cast<Scaleform::UPInt*>(pair[1]);
+    destination[1] = *objectSlot;
 }
 
 static void CopyVideoHashValue(Scaleform::UPInt* destination, const void* source)
@@ -2100,7 +2101,8 @@ void FUN_14000b6e0(Scaleform::UPInt* tableRef, void* owner, const unsigned* keyV
     InsertVideoHashEntry(tableRef, owner, keyValue, hash, ConstructVideoHashFromValue, CopyVideoHashValue);
 }
 
-// MS2-FUNCTIONAL: inserts a 32-bit key and retained object from the table's pair record.
+// MS2-FUNCTIONAL: inserts a 32-bit key and retained object from the table's pair record. Same length (528) as the
+// exe; left is 0x14000b6e0's VC9 register permutation (mask kept in r12 vs r11, rbp/rsi roles swapped).
 // @0x14000b9e0
 __declspec(noinline) void FUN_14000b9e0(Scaleform::UPInt* tableRef, void* owner, void** pair, Scaleform::UPInt hash)
 {
@@ -3701,20 +3703,25 @@ void VideoProviderNetStream::SendNotification(const char* note, bool error)
         stack.PopPage();
 }
 
+// Sets one named member: the caller builds the Value, the key string and default flags are built here.
+static __forceinline void SetCuePointMember(Object* pobj, Environment* penv, const char* name, const Value& v)
+{
+    pobj->SetMemberRaw(penv->GetSC(), penv->GetSC()->pContext->GetStringManager()->CreateConstString(name), v);
+}
+
 // A cue point as a script object: name, time in seconds, type and its parameters.
-// MS2-FUNCTIONAL: exe keeps pobj in its r9 home slot (rsp+0xc8, ours rsp+0x30), stores the default PropFlags temp after the value string is built (ours before), keeps the PropFlags ctor result in rbx for r9 (ours lea r9), and swaps the type-ternary temp slot. The "time" and "parameters" values are passed by implicit conversion (Number, Object*): vc9 then builds the Value before the key string, as the exe does. 1412 vs 1413 bytes
+// MS2-FUNCTIONAL: same length (1413) as the exe. Left: the params loop holds the Params data pointer and name node in rbx (ours rax/rdi) and the value node in rdi (ours rbx), and stores the string Value type before reading the name (ours after). The members "name", "type" and "parameters" go through SetCuePointMember, which builds the key string, flags and Value after the caller-built value, as the exe does.
 // @0x140008bb0
 static Object* ConvertCuePoint(const VideoPlayer::CuePoint& cp, Environment* penv)
 {
     Object* pobj = SF_HEAP_NEW(penv->GetHeap()) Object(penv);
-    pobj->SetMemberRaw(penv->GetSC(), penv->GetSC()->pContext->GetStringManager()->CreateConstString("name"),
-                       Value(penv->GetSC()->pContext->GetStringManager()->CreateString(cp.Name.ToCStr())));
+    SetCuePointMember(pobj, penv, "name", Value(penv->GetSC()->pContext->GetStringManager()->CreateString(cp.Name.ToCStr())));
     pobj->SetMemberRaw(penv->GetSC(), penv->GetSC()->pContext->GetStringManager()->CreateConstString("time"),
                        (Number)(cp.Time / 1000.0f));
-    pobj->SetMemberRaw(penv->GetSC(), penv->GetSC()->pContext->GetStringManager()->CreateConstString("type"),
-                       Value(cp.Type == VideoPlayer::NavigationCuePoint
-                                 ? penv->GetSC()->pContext->GetStringManager()->CreateConstString("navigation")
-                                 : penv->GetSC()->pContext->GetStringManager()->CreateConstString("event")));
+    SetCuePointMember(pobj, penv, "type",
+                      Value(cp.Type == VideoPlayer::NavigationCuePoint
+                                ? penv->GetSC()->pContext->GetStringManager()->CreateConstString("navigation")
+                                : penv->GetSC()->pContext->GetStringManager()->CreateConstString("event")));
     if (cp.Params.GetSize() > 0)
     {
         Ptr<Object> pparams = *SF_HEAP_NEW(penv->GetHeap()) Object(penv);
@@ -3725,7 +3732,7 @@ static Object* ConvertCuePoint(const VideoPlayer::CuePoint& cp, Environment* pen
             pparams->SetMemberRaw(penv->GetSC(), penv->GetSC()->pContext->GetStringManager()->CreateString(cp.Params[i].Name.ToCStr()),
                                   Value(penv->GetSC()->pContext->GetStringManager()->CreateString(cp.Params[i].Value.ToCStr())));
         }
-        pobj->SetMemberRaw(penv->GetSC(), penv->GetSC()->pContext->GetStringManager()->CreateConstString("parameters"), pparams.GetPtr());
+        SetCuePointMember(pobj, penv, "parameters", Value(pparams.GetPtr()));
     }
     return pobj;
 }
