@@ -55,15 +55,15 @@ inline ContextImpl::Entry* Video02CreateEntry(void* context, void* data)
 namespace Scaleform { namespace GFx { namespace AS2 {
 struct Video02GCAccess : RefCountBaseGC<323> { using RefCountBaseGC<323>::ReleaseInternal; };
 }}}
-
+namespace Scaleform { namespace GFx { namespace AS2 { template<> Prototype<VideoObject>::Prototype(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); }}}   // exe 0x14000e1e0 (sfr_video_01)
 namespace Scaleform { namespace GFx { namespace AS2 {
 // Unit-local classes of sfr_video_01, declared here for their native callbacks.
 // VideoProto: see its vftable model at the end of this file.
 class VideoProto : public Prototype<VideoObject>
 {
 public:
-    VideoProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
-        : Prototype<VideoObject>(psc, pprototype, constructor) {}
+    VideoProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor);   // exe 0x14000eb50
+    //
     // (implicit destructor: the ??_G 0x14000ec40 inlines it; FUN_14000ebe0 is the out-of-line ~Prototype<VideoObject>)
     static void AttachVideo(const FnCall& fn);   // exe 0x14000d400
 };
@@ -75,7 +75,7 @@ public:
     virtual Object* CreateNewObject(Environment* penv) const;   // exe 0x14000e0c0 (sfr_video_01)
     static void GlobalCtor(const FnCall& fn);   // exe 0x14000e100
 };
-Object* FUN_14000e1e0(Object* pthis, ASStringContext* psc, Object* prototype, const FunctionRef& constructor);   // sfr_video_01
+//
 }}}
 namespace Scaleform { namespace GFx { namespace AS3 {
 void Sfr33PathEndRun(UByte* self);                            // sfr_as3_17
@@ -130,9 +130,9 @@ namespace Scaleform { namespace GFx { namespace AS2 { class NetConnectionCtorFun
     virtual Object* CreateNewObject(Environment* penv) const; }; }}}   // exe 0x140011d50 (vftables 0x1431b6740 / +0x20 0x1431b67d0)
 //
 //
-extern void* PTR_LAB_1431b5e70;
-extern void* PTR_LAB_1431b5e18;
-extern void* PTR_FUN_1431b5e20;
+//
+//
+//
 //
 //
 //
@@ -2158,20 +2158,20 @@ Scaleform::GFx::AS2::NetConnection::NetConnection(
 //
 
 // @0x14000eb50
-Scaleform::GFx::AS2::Object* FUN_14000eb50(
-    Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context,
-    Scaleform::GFx::AS2::Object* prototype, const void* constructor)
+Scaleform::GFx::AS2::VideoProto::VideoProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<VideoObject>(psc, pprototype, constructor)
 {
-    Scaleform::GFx::AS2::FUN_14000e1e0(object, context, prototype,
-        *static_cast<const Scaleform::GFx::AS2::FunctionRef*>(constructor));
-    *reinterpret_cast<void**>(object) = &PTR_FUN_1431b5e20;
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b5e70;
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x70) = &PTR_LAB_1431b5e18;
-    const Scaleform::GFx::AS2::PropFlags flags(1);
-    reinterpret_cast<Video02PrototypeAccess*>(reinterpret_cast<char*>(object) + 0x70)->InitFunctionMembers(
-        object, context, Video02VideoFunctions, flags);
-    return object;
+    InitFunctionMembers(this, psc, Video02VideoFunctions, PropFlags(1));
 }
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 // The members of GASPrototypeBase behind its vptr, as its inlined ctor builds them.
 struct Video02PrototypeFields
@@ -2398,14 +2398,14 @@ Scaleform::GFx::AS2::FunctionRef* FUN_14000ed60(
     Scaleform::GFx::AS2::Object* prototype = static_cast<Scaleform::GFx::AS2::Object*>(context->pHeap->Alloc(0xb0));
     if (prototype)
     {
-        Scaleform::GFx::AS2::FUN_14000e1e0(prototype, &stringContext,
+        ::new (prototype) Scaleform::GFx::AS2::VideoProto(&stringContext,
             context->GetPrototype(Scaleform::GFx::AS2::ASBuiltin_Object), *result);
-        *reinterpret_cast<void**>(prototype) = &PTR_FUN_1431b5e20;
-        *reinterpret_cast<void**>(reinterpret_cast<char*>(prototype) + 0x20) = &PTR_LAB_1431b5e70;
-        *reinterpret_cast<void**>(reinterpret_cast<char*>(prototype) + 0x70) = &PTR_LAB_1431b5e18;
-        const Scaleform::GFx::AS2::PropFlags flags(1);
-        reinterpret_cast<Video02PrototypeAccess*>(reinterpret_cast<char*>(prototype) + 0x70)->InitFunctionMembers(
-            prototype, &stringContext, Video02VideoFunctions, flags);
+        //
+        //
+        //
+        //
+        //
+        //
         unsigned* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
         *count = (*count + 1) & 0x8fffffff;
     }
@@ -3814,10 +3814,10 @@ Ptr<Render::TreeNode> Video02Character::CreateRenderNode(Render::ContextImpl::Co
 //
 //
 //
-// FUN_14000eb50 stores VideoProto's vftables through these names (the hook DLL binds them by their symbols rows).
-#pragma comment(linker, "/alternatename:?PTR_FUN_1431b5e20@@3PEAXEA=??_7VideoProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
-#pragma comment(linker, "/alternatename:?PTR_LAB_1431b5e70@@3PEAXEA=??_7VideoProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
-#pragma comment(linker, "/alternatename:?PTR_LAB_1431b5e18@@3PEAXEA=??_7VideoProto@AS2@GFx@Scaleform@@6B@")
+//
+//
+//
+//
 //
 //
 //

@@ -45,7 +45,7 @@ extern ExeDecl<void*>::type DAT_1431b4ce0;
 namespace Scaleform { namespace GFx { namespace AS2 {
 template<> Prototype<NetStream>::Prototype(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor);   // exe 0x140009e20
 }}}
-//
+namespace Scaleform { namespace GFx { namespace AS2 { template<> Prototype<VideoObject>::Prototype(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); }}}   // exe 0x14000e1e0
 // NetStreamProto's ctor below (no exe row) emits the three ??_7NetStreamProto tables; the hand-inlined ctors
 // FUN_14000ae30 / FUN_14000cf20 store them through the DAT_ names, so bind those names to the tables here. The hook
 // DLL binds the DAT_ names to the exe by their symbols rows (a second /alternatename would conflict).
@@ -4110,20 +4110,20 @@ VideoObject::VideoObject(Environment* penv)
 
 // The Prototype<VideoObject> ctor: the inlined VideoObject part, then GASPrototypeBase() at +0x70 and Init.
 // @0x14000e1e0
-Object* FUN_14000e1e0(Object* object, ASStringContext* context, Object* prototype,
-                      const FunctionRef& constructor)
+template<> Prototype<VideoObject>::Prototype(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : VideoObject(psc, pprototype)
 {
-    // (C3) the real header-inline ctor, so cl stores the ??_7Prototype<VideoObject> vftables itself
-    static_cast<Prototype<VideoObject>*>(object)->Prototype<VideoObject>::Prototype(context, prototype, constructor, Prototype<VideoObject>::InlineCtorTag());
-    return object;
-//    static_cast<VideoObject*>(object)->VideoObject::VideoObject(context, prototype);
-//    unsigned char* base = bytes + 0x70;
-//    reinterpret_cast<FunctionRef*>(base + 0x08)->FunctionRef::FunctionRef();
-//    reinterpret_cast<FunctionRef*>(base + 0x20)->FunctionRef::FunctionRef();
-//    *reinterpret_cast<void**>(base + 0x38) = 0;
-//    *reinterpret_cast<void***>(bytes) = &VideoProtoGCVtable;  (+0x20, base: the other two)
-//    reinterpret_cast<NetStreamPrototypeInitAccess*>(base)->Init(object, context, constructor);
+    Init(this, psc, constructor);
 }
+//
+//
+//
+//
+//
+//
+//
+//
+//
 static __forceinline void Video01VideoPrototypeDtor(Object* object) { static_cast<Prototype<VideoObject>*>(object)->Prototype<VideoObject>::~Prototype(); }   // FUN_14000d680
 
 // No exe row. FUN_14000e1e0 and NetStreamProtoConstruct inline the Prototype<VideoObject> and Prototype<NetStream>
