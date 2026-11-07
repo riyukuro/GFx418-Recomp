@@ -932,6 +932,12 @@ SF_FORCEINLINE Value::Value(Object* v, InlineObjType)
 }
 
 void Sfr27MultinameFromQName(Multiname* mn, const Value* qname);   // sfr_as3_19
+
+// Value(Class*) (0x1424dc0e0) as the exe inlines it into CreateEmptyMovieClip: Value(Object*) with the class kind.
+struct Sfr17dValueInline
+{
+    static SF_FORCEINLINE void SetClassKind(Value& v) { v.SetKind(Value::kClass); }
+};
 }}} // namespace Scaleform::GFx::AS3
 
 // Value::operator=(const ASString&), out of line in the exe (defined in sfr_as3_19).
@@ -1317,9 +1323,15 @@ namespace AS3 {
 
 } // namespace AS3
 
+// FUN_14252ecb0 on an Error temporary, as the exe passes the Error ctor's result.
+static SF_FORCEINLINE void Sfr17dThrow(AS3::VM* vm, const AS3::VM::Error& e, const AS3::ClassInfo& ci)
+{
+    ::FUN_14252ecb0(vm, &e, &ci);
+}
+
 // A new empty Sprite named instanceName at depth (the top when negative) of the container; its constructor runs
 // right away.
-// MS2-FUNCTIONAL: the exe inlines the Value and Error temporaries
+// MS2-FUNCTIONAL: Value::~Value is inlined in full (the exe knows the class kind and calls ReleaseInternal)
 // @0x1424f33d0
 bool AS3ValueObjectInterface::CreateEmptyMovieClip(void* pdata, GFx::Value* pmc, const char* instanceName, SInt32 depth)
 {
@@ -1335,20 +1347,27 @@ bool AS3ValueObjectInterface::CreateEmptyMovieClip(void* pdata, GFx::Value* pmc,
     const UPInt callStackSize = vm->Unk070[1];
     bool needExecute;
     Class* cls = vm->GetClass(className);
-    if (!cls)
+    if (cls)
     {
-        if (!vm->HandleException)
+        Value _class(cls, Value::InlineObj);
+        Sfr17dValueInline::SetClassKind(_class);
+        if (_class.IsNullOrUndefined())
         {
-            const VM::Error e(VM::ErrorID(1065) /* eUndefinedVarError */, *vm, className.ToCStr());
-            FUN_14252ecb0(vm, &e, &fl::ReferenceErrorCI);
+            Sfr17dThrow(vm, VM::Error(VM::ErrorID(1009) /* eConvertNullToObjectError */, *vm), fl::TypeErrorCI);
+            needExecute = false;
         }
-        needExecute = false;
+        else
+        {
+            _class.GetObject()->Construct(result, 0, NULL, false);
+            needExecute = vm->HandleException ? false : vm->Unk070[1] > callStackSize;
+        }
     }
     else
     {
-        Value _class(cls);
-        cls->Construct(result, 0, NULL, false);
-        needExecute = callStackSize < vm->Unk070[1];
+        if (!vm->HandleException)
+            Sfr17dThrow(vm, VM::Error(VM::ErrorID(1065) /* eUndefinedVarError */, *vm, className.ToCStr()),
+                        fl::ReferenceErrorCI);
+        needExecute = false;
     }
     if (vm->HandleException)
         return false;
