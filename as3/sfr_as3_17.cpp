@@ -2638,8 +2638,9 @@ static void Sfr33TracerValueSet(Scaleform::GFx::AS3::Value& v, unsigned flags, v
 // constructor yet whose script object holds it in a slot, as the slot read of that object; the state's op stack
 // (+0x38) gets the class (not_null: flagged not null) or its traits-typed value. False when mn names no class.
 // MS2-FUNCTIONAL 0x1424f8910: written on raw offsets (tracer +0x20 state, class traits +0xc0/+0x80/+0x68/+0xd0);
-// the exe keeps one Value slot for both branches (ours two, a 0x20 larger frame) and tail-merges the ~Multiname
-// returns. The Values are dtor-less slots released through the out-of-line ReleaseInternal, as in the exe.
+// the exe tests bit 4 of +0x68 as movzx/shr/test (ours folds it into test byte,0x10), stores the third
+// Value's flags and bonus before the AddRef, and keeps mn in rdi, the class in rbx and self in rsi.
+// The Values are dtor-less slots released through the out-of-line ReleaseInternal, as in the exe.
 static __forceinline void Sfr33ValueReleaseInternal(Scaleform::GFx::AS3::Value& v);
 // A Value slot with no destructor: the tracer releases it through the out-of-line ReleaseInternal.
 struct Sfr33RawValue
@@ -2654,7 +2655,6 @@ bool FUN_1424f8910(void* tr, void* state, Scaleform::GFx::AS3::Multiname mn, boo
     using namespace Scaleform;
     using namespace Scaleform::GFx::AS3;
     UByte* const self = static_cast<UByte*>(tr);
-    ArrayDH<Value>& opstack = *reinterpret_cast<ArrayDH<Value>*>(static_cast<UByte*>(state) + 0x38);
     VM* vm = *reinterpret_cast<VM**>(*reinterpret_cast<UByte**>(*reinterpret_cast<UByte**>(self + 0x20) + 0x28) + 0x20);
     UByte* ctr = reinterpret_cast<UByte*>(Sfr33ResolveMnClassTraits(vm, mn));
     if (!ctr)
@@ -2663,10 +2663,10 @@ bool FUN_1424f8910(void* tr, void* state, Scaleform::GFx::AS3::Multiname mn, boo
     if (!itr)
         return false;
     void* cls = *reinterpret_cast<void**>(itr + 0x80);
+    Sfr33RawValue vb;
+    Value& v = vb.v;
     if (cls)
     {
-        Sfr33RawValue vb;
-        Value& v = vb.v;
         Sfr33TracerValueSet(v, 0xd, cls, true);
         if (FUN_1424f86d0(self, v, pop))
         {
@@ -2674,7 +2674,7 @@ bool FUN_1424f8910(void* tr, void* state, Scaleform::GFx::AS3::Multiname mn, boo
             fl = 0xd;
             if (not_null)
                 fl = 0x40d;
-            opstack.PushBack(v);
+            reinterpret_cast<ArrayDH<Value>*>(static_cast<UByte*>(state) + 0x38)->PushBack(v);
             Sfr33ValueReleaseInternal(v);
             return true;
         }
@@ -2689,10 +2689,10 @@ bool FUN_1424f8910(void* tr, void* state, Scaleform::GFx::AS3::Multiname mn, boo
     if (!FindFixedSlot(*vm, **reinterpret_cast<const Traits* const*>(script + 0x20), mn, index,
                        reinterpret_cast<Object*>(script)))
         return false;
-    Sfr33RawValue vb;
-    Value& v = vb.v;
-    Sfr33TracerValueSet(v, not_null ? 0x449 : 0x49, ctr, false);
-    opstack.PushBack(v);
+    Sfr33TracerValueSet(v, 0x49, ctr, false);
+    if (not_null)
+        *reinterpret_cast<unsigned*>(&v) = 0x449;
+    reinterpret_cast<ArrayDH<Value>*>(static_cast<UByte*>(state) + 0x38)->PushBack(v);
     Sfr33TracerValueSet(v, 0xc, script, true);
     FUN_1424f86d0(self, v, false);
     Sfr33ValueReleaseInternal(v);
