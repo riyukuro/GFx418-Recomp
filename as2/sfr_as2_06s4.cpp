@@ -19,9 +19,22 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
+// Value::SetAsCharacter (0x14297fba0) with SetAsCharacterHandle, inlined in moveFocus.
+static SF_FORCEINLINE void MfSetValueAsCharacter(Value* pv, InteractiveObject* pchar)
+{
+    CharacterHandle* phandle = pchar ? pchar->GetCharacterHandle() : 0;
+    if (pv->T.Type != Value::CHARACTER || pv->V.pCharHandle != phandle)
+    {
+        pv->DropRefs();
+        pv->T.Type        = Value::CHARACTER;
+        pv->V.pCharHandle = phandle;
+        if (pv->V.pCharHandle)
+            pv->V.pCharHandle->AddRef();
+    }
+}
+
 // Selection.moveFocus(keyName [, startFrom [, includeFocusEnabled [, controllerIdx]]]): moves the focus as the
 // key would from startFrom (or the controller's focused character) and returns the newly focused character.
-// MS2-FUNCTIONAL: register allocation and stack layout differ.
 // @0x1429689e0
 void SelectionCtorFunction::MoveFocus(const FnCall& fn)
 {
@@ -38,50 +51,46 @@ void SelectionCtorFunction::MoveFocus(const FnCall& fn)
     if (fn.NArgs >= 2 && !fn.Arg(1).IsUndefined() && !fn.Arg(1).IsNull())
         startCh = fn.Arg(1).ToCharacter(fn.Env);
     else
-        startCh = Ptr<InteractiveObject>(pmovie->FocusGroups[pmovie->FocusGroupIndexes[controllerIdx]].LastFocused);
+        startCh = pmovie->GetFocusedCharacter(controllerIdx).GetPtr();
 
-    bool includeFocusEnabled = false;
-    if (fn.NArgs >= 3)
-        includeFocusEnabled = fn.Arg(2).ToBool(fn.Env);
+    bool includeFocusEnabled = (fn.NArgs >= 3) ? fn.Arg(2).ToBool(fn.Env) : false;
 
-    ASString    keyStr = fn.Arg(0).ToString(fn.Env);
-    const char* pkey   = keyStr.ToCStr();
-    UInt32      keycode;
-    bool        shift = false;
-    if (strcmp(pkey, "up") == 0)
+    ASString     directionStr = fn.Arg(0).ToString(fn.Env);
+    short        keycode;
+    KeyModifiers kmods;
+    if (directionStr == "up")
         keycode = Key::Up;
-    else if (strcmp(pkey, "down") == 0)
+    else if (directionStr == "down")
         keycode = Key::Down;
-    else if (strcmp(pkey, "left") == 0)
+    else if (directionStr == "left")
         keycode = Key::Left;
-    else if (strcmp(pkey, "right") == 0)
+    else if (directionStr == "right")
         keycode = Key::Right;
-    else if (strcmp(pkey, "tab") == 0)
+    else if (directionStr == "tab")
         keycode = Key::Tab;
-    else if (strcmp(pkey, "shifttab") == 0)
+    else if (directionStr == "shifttab")
     {
         keycode = Key::Tab;
-        shift   = true;
+        kmods.SetShiftPressed(true);
     }
     else
     {
         if (fn.Env->GetTarget()->GetLog())
-            fn.Env->GetTarget()->GetLog()->LogWarning("moveFocus - invalid string id for key: '%s'", pkey);
+            fn.Env->GetTarget()->GetLog()->LogWarning("moveFocus - invalid string id for key: '%s'",
+                                                       directionStr.ToCStr());
         return;
     }
-
+    ProcessFocusKeyInfo             focusInfo;
     InputEventsQueueEntry::KeyEntry ke;
-    ke.Code          = keycode;
-    ke.KeysState     = shift;
     ke.KeyboardIndex = (UInt8)controllerIdx;
-
-    ProcessFocusKeyInfo focusInfo;
+    ke.Code          = keycode;
+    ke.KeysState     = kmods.States;
     pmovie->InitFocusKeyInfo(&focusInfo, ke, includeFocusEnabled);
     focusInfo.CurFocused  = startCh;
     focusInfo.ManualFocus = true;
     pmovie->ProcessFocusKey(Event::KeyDown, ke, &focusInfo);
     pmovie->FinalizeProcessFocusKey(&focusInfo);
-    fn.Result->SetAsCharacter(focusInfo.CurFocused);
+    MfSetValueAsCharacter(fn.Result, focusInfo.CurFocused);
 }
 
 }}} // namespace Scaleform::GFx::AS2
