@@ -1502,6 +1502,22 @@ __forceinline MathProto::MathProto(ASStringContext* psc, Object* pprototype, con
 {
 }
 
+__forceinline MouseObject::MouseObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
+    : Object(psc, ObjectInlineCtorTag())
+{
+    if (!pProto)
+        Object::SetMemberRaw(
+            psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
+            Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+    pProto = pprototype;
+}
+
+__forceinline MouseProto::MouseProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+    : Prototype<MouseObject>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
 __forceinline MovieClipLoader::MovieClipLoader(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
     : Object(psc, ObjectInlineCtorTag())
 {
@@ -2276,7 +2292,7 @@ FunctionRef MathCtorFunction::Register(GlobalContext* pgc)
     return ctor;
 }
 
-// MS2-FUNCTIONAL the exe inlines the MouseProto ctor (sfr_as2_03)
+// MS2-FUNCTIONAL MouseProto is inlined as in the exe; the MovieRoot arg is loaded through r8 where the exe uses rcx (3 lines)
 // @0x142978a90
 FunctionRef MouseCtorFunction::Register(GlobalContext* pgc)
 {
@@ -2284,9 +2300,9 @@ FunctionRef MouseCtorFunction::Register(GlobalContext* pgc)
     ASStringContext sc(pgc, 8);
     FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap)
                              MouseCtorFunction(&sc, static_cast<MovieRoot*>(pgc->pMovieRoot->pASMovieRoot)));
-    Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) MouseProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor);
+    Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) MouseProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor, ObjectInlineCtorTag());
     SetBuiltinPrototype(pgc, ASBuiltin_Mouse, proto);
-    pgc->pGlobal->SetMemberRaw(&sc, sc.GetBuiltin(ASBuiltin_Mouse), Value(ctor));
+    pgc->pGlobal->SetMemberRaw(&sc, ((MovieRoot*)pgc->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin_Mouse), Value(ctor));
     return ctor;
 }
 

@@ -173,6 +173,7 @@ public:
     {
         Set__proto__(psc, pprototype);
     }
+    MouseObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
 
 protected:
     void commonInit(Environment* penv); // exe 0x142995040
@@ -184,6 +185,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143213410
 
     MouseProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291eb90
+    MouseProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 };
 class Selection : public Object
 {
