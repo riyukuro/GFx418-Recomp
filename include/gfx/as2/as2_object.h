@@ -73,15 +73,16 @@ void ASUserData_SetLastObjectValue(ASUserData* puserData, void* pobjIfc, void* p
 
 namespace AS2 {
 
-// The findIndexAlt of the member table (exe COMDAT 0x142917340, called where cl inlines it): the slot of key,
-// negative when absent.
-SPInt MemberHash_FindIndex(const ASStringHash_GC<Member>* phash, const ASString& key);
+// The findIndexAlt of the member table (exe COMDAT 0x142917340, called out of line where cl inlines the
+// caller): the slot of key, negative when absent. HashSetBase keeps findIndexAlt private, so this goes through
+// as2_hashaccess.h; a unit that calls it expands MS2_AS2_HASH_FINDINDEX(Member).
+inline SPInt HashFindIndex(const ASStringHash_GC<Member>* phash, const ASString& key);
 
 // Hash::Get of the member table: the member of key copied out.
 inline const ASStringHash_GC<Member>::NodeType* MemberHash_GetAlt(const ASStringHash_GC<Member>* phash,
                                                                    const ASString&                 key)
 {
-    SPInt index = MemberHash_FindIndex(phash, key);
+    SPInt index = HashFindIndex(phash, key);
     if (index >= 0)
         return &phash->NodeAt(index);
     return 0;

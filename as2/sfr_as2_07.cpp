@@ -150,14 +150,14 @@ void WatchpointHash_RemoveCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, 
 // RemoveCaseCheck of the registered class table (exe 0x14297cd20).
 void         ClassHash_RemoveCaseCheck(ASStringHash<FunctionRef>* phash, const ASString& key, bool caseSensitive);
 
-// The member table's findIndexAlt ignoring case (exe COMDAT 0x142917040).
-SPInt MemberHash_FindIndexNoCase(const ASStringHash_GC<Member>* phash, const ASStringNoCaseKey& key);
+// The member table's findIndexAlt (exact / ignoring case), COMDATs the exe calls out of line.
+MS2_AS2_HASH_FINDINDEX(Member)
 typedef ASStringHash_GC<Member>::SetType MemberSet;
 
 // Find of the member table.
 inline MemberSet::Iterator MemberHash_Find(ASStringHash_GC<Member>* phash, const ASString& key)
 {
-    SPInt index = MemberHash_FindIndex(phash, key);
+    SPInt index = HashFindIndex(phash, key);
     if (index >= 0)
         return MemberSet::Iterator(reinterpret_cast<MemberSet*>(phash), index);
     return MemberSet::Iterator(0, 0);
@@ -166,7 +166,7 @@ inline MemberSet::Iterator MemberHash_Find(ASStringHash_GC<Member>* phash, const
 // sharing one iterator slot (a flat FindNoCase gives each lookup its own slot and tail).
 inline MemberSet::Iterator MemberHash_FindAlt(ASStringHash_GC<Member>* phash, const ASStringNoCaseKey& key)
 {
-    SPInt index = MemberHash_FindIndexNoCase(phash, key);
+    SPInt index = HashFindIndex(phash, key);
     if (index >= 0)
         return MemberSet::Iterator(reinterpret_cast<MemberSet*>(phash), index);
     return MemberSet::Iterator(0, 0);
@@ -944,8 +944,8 @@ bool Object::SetMemberRaw(ASStringContext* psc, const ASString& name, const Valu
         }
         else if (name == psc->GetBuiltin(ASBuiltin_onEnterFrame))
             psc->InvalidateOptAdvanceList();
-        SPInt index = MemberHash_FindIndex(&Members, name);
-        it = MemberSet::Iterator(index < 0 ? 0 : reinterpret_cast<MemberSet*>(&Members), index < 0 ? 0 : index);
+        SPInt index = HashFindIndex(&Members, name);
+        it = MemberSet::Iterator(index >= 0 ? reinterpret_cast<MemberSet*>(&Members) : 0, index < 0 ? 0 : index);
     }
     else
     {
@@ -968,7 +968,7 @@ bool Object::SetMemberRaw(ASStringContext* psc, const ASString& name, const Valu
         else if (name == psc->GetBuiltin(ASBuiltin_onEnterFrame))
             psc->InvalidateOptAdvanceList();
         ASStringNoCaseKey ikey(name);
-        it = MemberSet::Iterator(reinterpret_cast<MemberSet*>(&Members), MemberHash_FindIndexNoCase(&Members, ikey));
+        it = MemberSet::Iterator(reinterpret_cast<MemberSet*>(&Members), HashFindIndex(&Members, ikey));
         if (it.GetIndex() < 0)
             it = MemberSet::Iterator(0, 0);
     }

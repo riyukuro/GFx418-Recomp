@@ -1649,7 +1649,7 @@ inline MemberSet::Iterator MemberHash_FindCaseInsensitive(ASStringHash_GC<Member
 }
 static SF_FORCEINLINE MemberSet::Iterator MemberHash_FindOut(ASStringHash_GC<Member>* phash, const ASString& key)
 {
-    SPInt index = MemberHash_FindIndex(phash, key);
+    SPInt index = HashFindIndex(phash, key);
     if (index >= 0)
         return MemberSet::Iterator(reinterpret_cast<MemberSet*>(phash), index);
     return MemberSet::Iterator(0, 0);
@@ -2541,7 +2541,7 @@ bool Object::GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val
                 return true;
             }
 
-            SPInt index = MemberHash_FindIndex(&current->Members, name);
+            SPInt index = HashFindIndex(&current->Members, name);
             if (index >= 0)
             {
                 MemberSet::Iterator it(reinterpret_cast<MemberSet*>(&current->Members), index);

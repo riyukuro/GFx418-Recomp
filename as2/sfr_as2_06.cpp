@@ -222,6 +222,7 @@
 #include "../include/gfx/gfx_stream.h"
 #include "../include/gfx/text_stylesheet.h"
 #include "../include/render/text_core.h"
+#include "../include/gfx/as2/as2_hashaccess.h"
 
 // Stores *value under key in the hash at owner+0x10 and releases the passed reference (a folded hash set; the
 // prototype table of GlobalContext here). Defined in sfr_video_01.
@@ -237,6 +238,9 @@ class FunctionHandler;
 template <> inline void LogBase<AS2::Environment>::LogError(const char* pfmt, ...) const;
 
 namespace AS2 {
+
+// The member table's findIndexAlt (exact / ignoring case), COMDATs the exe calls out of line.
+MS2_AS2_HASH_FINDINDEX(Member)
 
 // Function object around a host FunctionHandler (GFx::Value::CreateFunction). Only what this unit needs.
 class UserDefinedFunctionObject : public FunctionObject
