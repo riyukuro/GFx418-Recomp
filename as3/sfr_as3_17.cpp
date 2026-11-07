@@ -4621,16 +4621,16 @@ void XMLSupportImpl::DescribeType(VM& vm, SPtr<Instances::fl::XML>& result, cons
     typedef Instances::fl::XMLElement XMLElement;
     StringManager& sm = vm.GetStringManager();
     const Instances::Namespace& pns = vm.GetPublicNamespace();
+    const Traits& tr = vm.GetValueTraits(value);
     const ASString strTrue = sm.GetBuiltin(AS3Builtin_true);
     const ASString strFalse = sm.GetBuiltin(AS3Builtin_false);
     const ASString strType = sm.CreateConstString("type");
-    const Traits& tr = vm.GetValueTraits(value);
     const Value::KindType kind = value.GetKind();
     const bool isClass = kind == Value::kClass;
     const Traits* parent = isClass ? static_cast<const Traits*>(&vm.GetClassTraitsClassClass()) : tr.GetParent();
     InstanceTraits::fl::XML& itr = static_cast<InstanceTraits::fl::XML&>(*GetITraitsXML());
-    SPtr<XMLElement> xml = itr.MakeInstanceElement(itr, pns, strType, NULL);
-    result = xml.GetPtr();
+    Pickable<XMLElement> xml = itr.MakeInstanceElement(itr, pns, strType, NULL);
+    result = xml;
 
     const bool isObjKind = kind >= Value::kObject && kind <= Value::kThunkFunction;
     if (kind == Value::kUndefined || (isObjKind && value.GetObject() == NULL))
@@ -4639,184 +4639,185 @@ void XMLSupportImpl::DescribeType(VM& vm, SPtr<Instances::fl::XML>& result, cons
         xml->AddAttr(pns, sm.CreateConstString("isDynamic"), strFalse);
         xml->AddAttr(pns, sm.CreateConstString("isFinal"), strTrue);
         xml->AddAttr(pns, sm.CreateConstString("isStatic"), strFalse);
-        return;
     }
-
-    xml->AddAttr(pns, sm.CreateConstString("name"), tr.GetName());
-    if (parent)
-        xml->AddAttr(pns, sm.CreateConstString("base"), parent->GetName());
-    xml->AddAttr(pns, sm.CreateConstString("isDynamic"), isClass || tr.IsDynamic() ? strTrue : strFalse);
-    xml->AddAttr(pns, sm.CreateConstString("isFinal"), isClass || tr.IsFinal() ? strTrue : strFalse);
-    xml->AddAttr(pns, sm.CreateConstString("isStatic"), isClass || tr.IsClassTraits() ? strTrue : strFalse);
-
-    if (parent)
+    else
     {
-        const ASString strExtends = sm.CreateConstString("extendsClass");
+        xml->AddAttr(pns, sm.CreateConstString("name"), tr.GetName());
+        if (parent)
+            xml->AddAttr(pns, sm.CreateConstString("base"), parent->GetName());
+        xml->AddAttr(pns, sm.CreateConstString("isDynamic"), isClass || tr.IsDynamic() ? strTrue : strFalse);
+        xml->AddAttr(pns, sm.CreateConstString("isFinal"), isClass || tr.IsFinal() ? strTrue : strFalse);
+        xml->AddAttr(pns, sm.CreateConstString("isStatic"), isClass || tr.IsClassTraits() ? strTrue : strFalse);
+
+        if (parent)
+        {
+            const ASString strExtends = sm.CreateConstString("extendsClass");
+            for (const Traits* t = parent; t; t = t->GetParent())
+            {
+                SPtr<XMLElement> el = itr.MakeInstanceElement(itr, pns, strExtends, NULL);
+                if (!xml->AppendChild(Value(el.GetPtr())))
+                    return;
+                el->AddAttr(pns, strType, t->GetName());
+            }
+        }
+
         for (const Traits* t = parent; t; t = t->GetParent())
         {
-            SPtr<XMLElement> el = itr.MakeInstanceElement(itr, pns, strExtends, NULL);
-            if (!xml->AppendChild(Value(el.GetPtr())))
+            if (!t->IsInstanceTraits())
+                continue;
+            const ASString strImplements = sm.CreateConstString("implementsInterface");
+            HashSetDH<ASString> seen(vm.GetMemoryHeap());
+            ASString name = sm.CreateEmptyString();
+            if (!t->IsAbcObject())
+            {
+                const InstanceTraits::CTraits& ct = static_cast<const InstanceTraits::CTraits&>(*t);
+                for (UPInt i = 0; i < ct.ImplementsInterfaces.GetSize(); ++i)
+                {
+                    if (!ct.ImplementsInterfaces[i].Name.Convert2String(name) || seen.Get(name))
+                        continue;
+                    seen.Add(name);
+                    SPtr<XMLElement> el = itr.MakeInstanceElement(itr, pns, strImplements, NULL);
+                    if (!xml->AppendChild(Value(el.GetPtr())))
+                        return;
+                    el->AddAttr(pns, strType, name);
+                }
+            }
+            else
+            {
+                const InstanceTraits::UserDefined& ut = static_cast<const InstanceTraits::UserDefined&>(*t);
+                const ArrayLH_POD<int, StatMV_VM_AbcFile_Mem>& ifs = ut.GetClassInfo().inst_info.implemented_interfaces.info;
+                VMAbcFile& file = ut.GetFile();
+                for (UPInt i = 0; i < ifs.GetSize(); ++i)
+                {
+                    const Multiname mn(file, file.GetAbcFile().Const_Pool.GetMultiname(ifs[i]));
+                    if (!mn.Name.Convert2String(name) || seen.Get(name))
+                        continue;
+                    seen.Add(name);
+                    SPtr<XMLElement> el = itr.MakeInstanceElement(itr, pns, strImplements, NULL);
+                    if (!xml->AppendChild(Value(el.GetPtr())))
+                        return;
+                    el->AddAttr(pns, strType, name);
+                }
+            }
+        }
+
+        const ASString strAccess = sm.CreateConstString("access");
+        const ASString strAccessor = sm.CreateConstString("accessor");
+        const ASString strMethod = sm.CreateConstString("method");
+        const ASString strName = sm.CreateConstString("name");
+        const ASString strDeclaredBy = sm.CreateConstString("declaredBy");
+        const ASString strConstant = sm.CreateConstString("constant");
+        const ASString strVariable = sm.CreateConstString("variable");
+        const ASString strReturnType = sm.CreateConstString("returnType");
+        const ASString strParameter = sm.CreateConstString("parameter");
+        const ASString strIndex = sm.CreateConstString("index");
+        const ASString strOptional = sm.CreateConstString("optional");
+        const ASString strUri = sm.CreateConstString("uri");
+
+        SPtr<XMLElement> cur = xml.GetPtr();
+        if (isClass)
+        {
+            SPtr<XMLElement> factory = itr.MakeInstanceElement(itr, pns, sm.CreateConstString("factory"), NULL);
+            if (!xml->AppendChild(Value(factory.GetPtr())))
                 return;
-            el->AddAttr(pns, strType, t->GetName());
+            factory->AddAttr(pns, strType, tr.GetName());
+            cur = factory;
         }
-    }
 
-    for (const Traits* t = parent; t; t = t->GetParent())
-    {
-        if (!t->IsInstanceTraits())
-            continue;
-        const ASString strImplements = sm.CreateConstString("implementsInterface");
-        HashSetDH<ASString> seen(vm.GetMemoryHeap());
-        ASString name = sm.CreateEmptyString();
-        if (!t->IsAbcObject())
+        // value index -> the slot that describes it
+        HashDH<SInt32, UPInt> slots(vm.GetMemoryHeap());
+        const UPInt slotNum = tr.GetSlotInfoNum();
+        for (UPInt i = 0; i < slotNum; ++i)
         {
-            const InstanceTraits::CTraits& ct = static_cast<const InstanceTraits::CTraits&>(*t);
-            for (UPInt i = 0; i < ct.ImplementsInterfaces.GetSize(); ++i)
+            const SlotInfo& si = tr.GetSlotInfo(AbsoluteIndex(i));
+            const SInt32 key = si.ValueInd;
+            if (UPInt* found = slots.Get(key))
             {
-                if (!ct.ImplementsInterfaces[i].Name.Convert2String(name) || seen.Get(name))
-                    continue;
-                seen.Add(name);
-                SPtr<XMLElement> el = itr.MakeInstanceElement(itr, pns, strImplements, NULL);
-                if (!xml->AppendChild(Value(el.GetPtr())))
-                    return;
-                el->AddAttr(pns, strType, name);
+                const ClassTraits::Traits* prev = Sfr33SlotDataType(&tr.GetSlotInfo(AbsoluteIndex(*found)), &vm);
+                const ClassTraits::Traits* next = Sfr33SlotDataType(&si, &vm);
+                if (prev == next || (prev && next && FUN_1425149a0(*prev, *next)))
+                    *found = i;
             }
+            else
+                slots.Add(key, i);
         }
-        else
+
+        for (HashDH<SInt32, UPInt>::ConstIterator it = slots.Begin(); !it.IsEnd(); ++it)
         {
-            const InstanceTraits::UserDefined& ut = static_cast<const InstanceTraits::UserDefined&>(*t);
-            const ArrayLH_POD<int, StatMV_VM_AbcFile_Mem>& ifs = ut.GetClassInfo().inst_info.implemented_interfaces.info;
-            VMAbcFile& file = ut.GetFile();
-            for (UPInt i = 0; i < ifs.GetSize(); ++i)
+            const UPInt ind = it->Second;
+            const SlotInfo& si = tr.GetSlotInfo(AbsoluteIndex(ind));
+            const ASString slotName(tr.GetSlotNameNode(AbsoluteIndex(ind)));
+            const SInt32 bt = si.BindType;
+            const ASString& uri = si.pNs->GetUri();
+            if (bt < SlotInfo::BT_Code)
             {
-                const Multiname mn(file, file.GetAbcFile().Const_Pool.GetMultiname(ifs[i]));
-                if (!mn.Name.Convert2String(name) || seen.Get(name))
-                    continue;
-                seen.Add(name);
-                SPtr<XMLElement> el = itr.MakeInstanceElement(itr, pns, strImplements, NULL);
-                if (!xml->AppendChild(Value(el.GetPtr())))
+                const bool isConst = si.ReadOnly || (si.TI && si.TI->GetType() == Abc::TraitInfo::tConst);
+                SPtr<XMLElement> el = itr.MakeInstanceElement(itr, pns, isConst ? strConstant : strVariable, NULL);
+                if (!cur->AppendChild(Value(el.GetPtr())))
                     return;
-                el->AddAttr(pns, strType, name);
+                el->AddAttr(pns, strName, slotName);
+                if (const ClassTraits::Traits* dt = Sfr33SlotDataType(&si, &vm))
+                    el->AddAttr(pns, strType, dt->GetName());
+                if (uri.GetSize() != 0)
+                    el->AddAttr(pns, strUri, uri);
+                continue;
             }
-        }
-    }
 
-    const ASString strAccess = sm.CreateConstString("access");
-    const ASString strAccessor = sm.CreateConstString("accessor");
-    const ASString strMethod = sm.CreateConstString("method");
-    const ASString strName = sm.CreateConstString("name");
-    const ASString strDeclaredBy = sm.CreateConstString("declaredBy");
-    const ASString strConstant = sm.CreateConstString("constant");
-    const ASString strVariable = sm.CreateConstString("variable");
-    const ASString strReturnType = sm.CreateConstString("returnType");
-    const ASString strParameter = sm.CreateConstString("parameter");
-    const ASString strIndex = sm.CreateConstString("index");
-    const ASString strOptional = sm.CreateConstString("optional");
-    const ASString strUri = sm.CreateConstString("uri");
-
-    SPtr<XMLElement> cur = xml;
-    if (isClass)
-    {
-        SPtr<XMLElement> factory = itr.MakeInstanceElement(itr, pns, sm.CreateConstString("factory"), NULL);
-        if (!xml->AppendChild(Value(factory.GetPtr())))
-            return;
-        factory->AddAttr(pns, strType, tr.GetName());
-        cur = factory;
-    }
-
-    // value index -> the slot that describes it
-    HashDH<SInt32, UPInt> slots(vm.GetMemoryHeap());
-    const UPInt slotNum = tr.GetSlotInfoNum();
-    for (UPInt i = 0; i < slotNum; ++i)
-    {
-        const SlotInfo& si = tr.GetSlotInfo(AbsoluteIndex(i));
-        const SInt32 key = si.ValueInd;
-        if (UPInt* found = slots.Get(key))
-        {
-            const ClassTraits::Traits* prev = Sfr33SlotDataType(&tr.GetSlotInfo(AbsoluteIndex(*found)), &vm);
-            const ClassTraits::Traits* next = Sfr33SlotDataType(&si, &vm);
-            if (prev == next || (prev && next && FUN_1425149a0(*prev, *next)))
-                *found = i;
-        }
-        else
-            slots.Add(key, i);
-    }
-
-    for (HashDH<SInt32, UPInt>::ConstIterator it = slots.Begin(); !it.IsEnd(); ++it)
-    {
-        const UPInt ind = it->Second;
-        const SlotInfo& si = tr.GetSlotInfo(AbsoluteIndex(ind));
-        const ASString slotName(tr.GetSlotNameNode(AbsoluteIndex(ind)));
-        const SInt32 bt = si.BindType;
-        const ASString& uri = si.pNs->GetUri();
-        if (bt < SlotInfo::BT_Code)
-        {
-            const bool isConst = si.ReadOnly || (si.TI && si.TI->GetType() == Abc::TraitInfo::tConst);
-            SPtr<XMLElement> el = itr.MakeInstanceElement(itr, pns, isConst ? strConstant : strVariable, NULL);
+            SPtr<XMLElement> el = itr.MakeInstanceElement(itr, pns, bt == SlotInfo::BT_Code ? strMethod : strAccessor, NULL);
             if (!cur->AppendChild(Value(el.GetPtr())))
                 return;
             el->AddAttr(pns, strName, slotName);
-            if (const ClassTraits::Traits* dt = Sfr33SlotDataType(&si, &vm))
-                el->AddAttr(pns, strType, dt->GetName());
+            if (bt != SlotInfo::BT_Code)
+            {
+                const char* access = bt == SlotInfo::BT_Get ? "readonly" : bt == SlotInfo::BT_Set ? "writeonly" : "readwrite";
+                el->AddAttr(pns, strAccess, sm.CreateConstString(access));
+            }
             if (uri.GetSize() != 0)
                 el->AddAttr(pns, strUri, uri);
-            continue;
-        }
 
-        SPtr<XMLElement> el = itr.MakeInstanceElement(itr, pns, bt == SlotInfo::BT_Code ? strMethod : strAccessor, NULL);
-        if (!cur->AppendChild(Value(el.GetPtr())))
-            return;
-        el->AddAttr(pns, strName, slotName);
-        if (bt != SlotInfo::BT_Code)
-        {
-            const char* access = bt == SlotInfo::BT_Get ? "readonly" : bt == SlotInfo::BT_Set ? "writeonly" : "readwrite";
-            el->AddAttr(pns, strAccess, sm.CreateConstString(access));
-        }
-        if (uri.GetSize() != 0)
-            el->AddAttr(pns, strUri, uri);
-
-        const Value v = tr.GetVT().GetValue(AbsoluteIndex(si.ValueInd));
-        const InstanceTraits::Traits* vt =
-            reinterpret_cast<const InstanceTraits::Traits*>(::FUN_14250a060(reinterpret_cast<UPInt>(&vm), const_cast<Value*>(&v)));
-        const InstanceTraits::Traits& objIT = vm.GetClassTraitsClassClass().GetInstanceTraits();
-        ASString typeName = sm.CreateConstString("*");
-        for (const InstanceTraits::Traits* p = vt; p != &objIT; p = static_cast<const InstanceTraits::Traits*>(p->GetParent()))
-        {
-            if (p == NULL)
+            const Value v = tr.GetVT().GetValue(AbsoluteIndex(si.ValueInd));
+            const InstanceTraits::Traits* vt =
+                reinterpret_cast<const InstanceTraits::Traits*>(::FUN_14250a060(reinterpret_cast<UPInt>(&vm), const_cast<Value*>(&v)));
+            const InstanceTraits::Traits& objIT = vm.GetClassTraitsClassClass().GetInstanceTraits();
+            ASString typeName = sm.CreateConstString("*");
+            for (const InstanceTraits::Traits* p = vt; p != &objIT; p = static_cast<const InstanceTraits::Traits*>(p->GetParent()))
             {
-                typeName = vt->GetName();
-                break;
+                if (p == NULL)
+                {
+                    typeName = vt->GetName();
+                    break;
+                }
+                if (p->SupportsInterface(objIT))
+                    break;
             }
-            if (p->SupportsInterface(objIT))
-                break;
-        }
-        el->AddAttr(pns, bt == SlotInfo::BT_Code ? strReturnType : strType, typeName);
+            el->AddAttr(pns, bt == SlotInfo::BT_Code ? strReturnType : strType, typeName);
 
-        if (v.GetKind() != Value::kVTableInd)
-            continue;
-        const Value& entry = v.GetTraits().GetVT().VTMethods[v.GetVTableInd()];
-        const Traits& declTr = entry.GetTraits();
-        el->AddAttr(pns, strDeclaredBy, declTr.GetName());
-        if (si.CppBinding)
-            continue;
-        VMAbcFile& file = *declTr.GetFilePtr();
-        const Abc::File& abc = file.GetAbcFile();
-        const Abc::MethodInfo& mi = *abc.Methods.Info[entry.GetMethodInd()];
-        const UPInt n = mi.ParamTypes.GetSize();
-        const UPInt firstOpt = n - mi.OptionalParams.GetSize();
-        for (UPInt i = 0; i < n; ++i)
-        {
-            LongFormatter f(static_cast<UInt64>(i));
-            SPtr<XMLElement> param = itr.MakeInstanceElement(itr, pns, strParameter, NULL);
-            if (!el->AppendChild(Value(param.GetPtr())))
-                return;
-            f.Convert();
-            param->AddAttr(pns, strIndex, sm.CreateString(f.ToCStr(), f.GetSize()));
-            const Multiname pmn(file, abc.Const_Pool.GetMultiname(mi.ParamTypes[i]));
-            ASString ptype = sm.CreateEmptyString();
-            pmn.Name.Convert2String(ptype);
-            param->AddAttr(pns, strType, ptype);
-            param->AddAttr(pns, strOptional, i < firstOpt ? strFalse : strTrue);
+            if (v.GetKind() != Value::kVTableInd)
+                continue;
+            const Value& entry = v.GetTraits().GetVT().VTMethods[v.GetVTableInd()];
+            const Traits& declTr = entry.GetTraits();
+            el->AddAttr(pns, strDeclaredBy, declTr.GetName());
+            if (si.CppBinding)
+                continue;
+            VMAbcFile& file = *declTr.GetFilePtr();
+            const Abc::File& abc = file.GetAbcFile();
+            const Abc::MethodInfo& mi = *abc.Methods.Info[entry.GetMethodInd()];
+            const UPInt n = mi.ParamTypes.GetSize();
+            const UPInt firstOpt = n - mi.OptionalParams.GetSize();
+            for (UPInt i = 0; i < n; ++i)
+            {
+                LongFormatter f(static_cast<UInt64>(i));
+                SPtr<XMLElement> param = itr.MakeInstanceElement(itr, pns, strParameter, NULL);
+                if (!el->AppendChild(Value(param.GetPtr())))
+                    return;
+                f.Convert();
+                param->AddAttr(pns, strIndex, sm.CreateString(f.ToCStr(), f.GetSize()));
+                const Multiname pmn(file, abc.Const_Pool.GetMultiname(mi.ParamTypes[i]));
+                ASString ptype = sm.CreateEmptyString();
+                pmn.Name.Convert2String(ptype);
+                param->AddAttr(pns, strType, ptype);
+                param->AddAttr(pns, strOptional, i < firstOpt ? strFalse : strTrue);
+            }
         }
     }
 }
