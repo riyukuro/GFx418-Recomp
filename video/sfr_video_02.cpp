@@ -493,42 +493,6 @@ namespace Scaleform { namespace GFx { namespace Video {
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-// AvmVideoCharacter::OnUnloading: detach this clip from the frame advance list.
-// @0x14000e5e0
-__declspec(noinline) bool AvmVideoCharacter_OnUnloading(AvmCharacter* pavm)
-{
-    pavm->pDispObj->RemoveFromPlayList();
-    return true;
-}
-
-// The two interface adjustors are separate executable entries in this video glue range.
-// @0x14000e510
-__declspec(noinline) void* FUN_14000e510(void* p)
-{
-    return p ? static_cast<void*>(static_cast<unsigned char*>(p) + 0x30) : 0;
-}
-
-// @0x14000e520
-__declspec(noinline) uintptr_t FUN_14000e520(uintptr_t value)
-{
-    return value;
-}
-
-// @0x14000e530
-__declspec(noinline) uintptr_t FUN_14000e530(void*) { return 0; }
-
-// @0x14000e540
-__declspec(noinline) uintptr_t FUN_14000e540(void*) { return 0; }
-
-// @0x14000e550
-__declspec(noinline) uintptr_t FUN_14000e550(void*) { return 0; }
-
-// @0x14000e560
-__declspec(noinline) uintptr_t FUN_14000e560(void*) { return 0; }
-
-// @0x14000e580
-__declspec(noinline) bool FUN_14000e580(void*) { return false; }
-
 // Forwards to slot 4 of the adjusted interface, with the context from slot 31 (+0xf8) of the base object.
 // @0x14000e470
 void FUN_14000e470(void** adjustedThis, void*, void* arg3, void* arg4)
@@ -540,148 +504,8 @@ void FUN_14000e470(void** adjustedThis, void*, void* arg3, void* arg4)
     dispatchTable[4](adjustedThis, reinterpret_cast<GetContextFn*>(*base)[0xf8 / 8](base), arg3, arg4);
 }
 
-// @0x14000e5d0
-__declspec(noinline) void FUN_14000e5d0(void* object) { static_cast<Scaleform::GFx::AS2::AvmCharacter*>(object)->Scaleform::GFx::AS2::AvmCharacter::OnEventUnload(); }
-
-// @0x14000e590
-__declspec(noinline) void FUN_14000e590(void** object)
-{
-    Scaleform::GFx::EventId payload(1);
-    typedef void (*ApplyFn)(void*, const Scaleform::GFx::EventId*);
-    reinterpret_cast<ApplyFn>(*reinterpret_cast<void**>(static_cast<char*>(*object) + 0x40))(
-        object, &payload);
-}
-
-// pDispObj->GetAbsolutePath would dispatch back here via GetAvmObjImpl() (thunk 0x14000e750) and recurse.
-// @0x14000e570
-__declspec(noinline) const char* FUN_14000e570(AvmCharacter* pavm, String* path)
-{
-    return pavm->AvmCharacter::GetAbsolutePath(path);
-}
-
-// @0x14000e630
-__declspec(noinline) void FUN_14000e630(AvmCharacter* pavm, const InteractiveObject* oldCharacter)
-{
-    pavm->AvmCharacter::CloneInternalData(oldCharacter);
-}
-
-// display object's InteractiveObject::CopyPhysicalProperties ends in GetAvmIntObj()->CopyPhysicalProperties,
-// i.e. this slot, so forwarding through pDispObj recursed.
-// @0x14000e640
-__declspec(noinline) void FUN_14000e640(AvmCharacter* pavm, const InteractiveObject* oldCharacter)
-{
-    pavm->AvmCharacter::CopyPhysicalProperties(oldCharacter);
-}
-
-// AvmCharacter::OnFocus (0x14296bd60) directly, not through the vtable.
-// @0x14000e650
-__declspec(noinline) void FUN_14000e650(AvmCharacter* pavm, InteractiveObject::FocusEventType event,
-                   InteractiveObject* oldOrNewFocus, unsigned controller, FocusMovedType moved)
-{
-    pavm->AvmCharacter::OnFocus(event, oldOrNewFocus, controller, moved);
-}
-
-// @0x14000e600
-__declspec(noinline) bool FUN_14000e600(void*) { return false; }
-
-// @0x14000e610
-__declspec(noinline) uintptr_t FUN_14000e610(void*) { return 0; }
-
-// @0x14000e620
-__declspec(noinline) bool FUN_14000e620(void*) { return false; }
-
-// The one-instruction slots of the AvmVideoCharacter vtable 0x1431b5cb0 (slot index in brackets).
-// [18]
-// @0x14000e670
-__declspec(noinline) void FUN_14000e670(void*) {}
-// [19]
-// @0x14000e680
-__declspec(noinline) bool FUN_14000e680(void*) { return false; }
-// [20]
-// @0x14000e690
-__declspec(noinline) bool FUN_14000e690(void*) { return true; }
-// [21]
-// @0x14000e6a0
-__declspec(noinline) bool FUN_14000e6a0(void*) { return true; }
-// [22] the AvmCharacter tab rule
-// @0x14000e6b0
-__declspec(noinline) bool FUN_14000e6b0(const AvmCharacter* pavm) { return pavm->AvmCharacter::IsTabable(); }
-// [25], [26]: the cached script object (sfr_video_01)
+// The cached script object (sfr_video_01).
 VideoObject* FUN_14000e020(AvmCharacter* character);
-// @0x14000e890
-VideoObject* FUN_14000e890(AvmCharacter* character) { return FUN_14000e020(character); }
-// @0x14000e880
-VideoObject* FUN_14000e880(AvmCharacter* character) { return FUN_14000e020(character); }
-
-// 0x1431b5c00 [2]: a constant kind.
-// @0x14000e500
-int FUN_14000e500(void*) { return 5; }
-
-// The +0x08 (0x1431b5c00 [0]) and +0x30 (0x1431b5b40) slots that only move `this` back to the object are cl's
-// adjustor thunks of the AvmVideoCharacter model at the end of this file.
-
-// The four AS2 Video-character traits live on the secondary AvmVideoCharacter base (+0x08).
-// This preserves the exe's field offsets and sends all other names through the script object.
-// Standard members first (slot 0x118 on the AvmCharacter), then the Video properties, then the script object
-// (FUN_14000e020, called twice like the exe).
-// @0x14000e8f0
-bool FUN_14000e8f0(void* pvbase, Environment* penv, const ASString& name, const Value& value,
-                   const PropFlags& flags)
-{
-    char* fields = static_cast<char*>(pvbase);
-    // pavm (this-8) is recomputed at each use, as in the exe (no register holds it)
-    // the exe tries the standard members (_x, _alpha, ...) first: slot 0x118 on this-8 (0x14000e93d)
-    if ((UByte(name.GetHashFlags() >> 29) & 1)
-        && reinterpret_cast<AvmCharacter*>(fields - 8)->SetStandardMember(
-               reinterpret_cast<AvmCharacter*>(fields - 8)->GetStandardMemberConstant(name), value, false))
-        goto done;
-    if (!strcmp(name.ToCStr(), "deblocking"))
-    {
-        *reinterpret_cast<int*>(fields + 0x38) = static_cast<int>(value.ToNumber(penv));
-    done:
-        return true;
-    }
-    if (!strcmp(name.ToCStr(), "smoothing"))
-    {
-        *reinterpret_cast<bool*>(fields + 0x3c) = value.ToBool(penv);
-        return true;
-    }
-    if (FUN_14000e020(reinterpret_cast<AvmCharacter*>(fields - 8)))
-        return reinterpret_cast<Object*>(FUN_14000e020(reinterpret_cast<AvmCharacter*>(fields - 8)))
-            ->SetMember(penv, name, value, flags);
-    return false;
-}
-
-// Standard members first (slot 0x120 on the AvmCharacter), then width, height, deblocking and smoothing, then the script object.
-// @0x14000e9f0
-bool FUN_14000e9f0(void* pvbase, Environment* penv, const ASString& name, Value* pvalue)
-{
-    char* fields = static_cast<char*>(pvbase);
-    // the exe tries the standard members first: slot 0x120 on this-8 (0x14000ea3d)
-    if (((UInt8)(name.GetHashFlags() >> 29) & 1)
-        && reinterpret_cast<AvmCharacter*>(fields - 8)->GetStandardMember(reinterpret_cast<AvmCharacter*>(fields - 8)->GetStandardMemberConstant(name), pvalue, false))
-        return true;
-    const char* key = name.ToCStr();
-    if (!strcmp(key, "width"))
-    {
-        pvalue->SetNumber(*reinterpret_cast<int*>(fields + 0x30));
-        return true;
-    }
-    if (!strcmp(key, "height"))
-    {
-        pvalue->SetNumber(*reinterpret_cast<int*>(fields + 0x34));
-        return true;
-    }
-    if (!strcmp(key, "deblocking"))
-        pvalue->SetNumber(*reinterpret_cast<int*>(fields + 0x38));
-    else if (!strcmp(key, "smoothing"))
-        pvalue->SetBool(*reinterpret_cast<bool*>(fields + 0x3c));
-    else if (FUN_14000e020(reinterpret_cast<AvmCharacter*>(fields - 8)))
-        return reinterpret_cast<Object*>(FUN_14000e020(reinterpret_cast<AvmCharacter*>(fields - 8)))->GetMember(penv, name, pvalue);
-    else
-        return false;
-    return true;
-}
 
 #pragma function(memcpy)   // the exe's state copy-assigns call memcpy out of line and return dst themselves
 // @0x14000fc90
@@ -3775,6 +3599,148 @@ public:
 void Video02EmitAvmVideoVftables(void* p, const AvmVideoCharacter* pvideo)
 {
     ::new (p) AvmVideoCharacter(*pvideo);
+}
+
+// AvmVideoCharacter's overriders at their exe VAs.
+// @0x14000e510
+AvmVideoCharacterBase* AvmVideoCharacter::ToAvmVideoCharacterBase() { return this; }
+// @0x14000e520
+AvmInteractiveObjBase* AvmVideoCharacter::ToAvmInteractiveObjBase() { return static_cast<AvmCharacter*>(this); }
+// @0x14000e530
+AvmSpriteBase* AvmVideoCharacter::ToAvmSpriteBase() { return NULL; }
+// @0x14000e540
+AvmButtonBase* AvmVideoCharacter::ToAvmButttonBase() { return NULL; }
+// @0x14000e550
+AvmTextFieldBase* AvmVideoCharacter::ToAvmTextFieldBase() { return NULL; }
+// @0x14000e560
+AvmDisplayObjContainerBase* AvmVideoCharacter::ToAvmDispContainerBase() { return NULL; }
+// pDispObj->GetAbsolutePath would dispatch back here via GetAvmObjImpl() (thunk 0x14000e750) and recurse.
+// @0x14000e570
+const char* AvmVideoCharacter::GetAbsolutePath(String* ppath) const { return AvmCharacter::GetAbsolutePath(ppath); }
+// @0x14000e580
+bool AvmVideoCharacter::OnEvent(const EventId&) { return false; }
+// Sends Event_Load (id 1) through the object's own vtable slot 8.
+// @0x14000e590
+void AvmVideoCharacter::OnEventLoad()
+{
+    void** object = reinterpret_cast<void**>(this);
+    Scaleform::GFx::EventId payload(1);
+    typedef void (*ApplyFn)(void*, const Scaleform::GFx::EventId*);
+    reinterpret_cast<ApplyFn>(*reinterpret_cast<void**>(static_cast<char*>(*object) + 0x40))(
+        object, &payload);
+}
+// @0x14000e5d0
+void AvmVideoCharacter::OnEventUnload() { AvmCharacter::OnEventUnload(); }
+// Detaches this clip from the frame advance list.
+// @0x14000e5e0
+bool AvmVideoCharacter::OnUnloading(bool)
+{
+    pDispObj->RemoveFromPlayList();
+    return true;
+}
+// @0x14000e600
+bool AvmVideoCharacter::HasEventHandler(const EventId&) const { return false; }
+// @0x14000e610
+unsigned AvmVideoCharacter::GetCursorType() const { return 0; }
+// @0x14000e620
+bool AvmVideoCharacter::ActsAsButton() const { return false; }
+// @0x14000e630
+void AvmVideoCharacter::CloneInternalData(const InteractiveObject* src) { AvmCharacter::CloneInternalData(src); }
+// The display object's InteractiveObject::CopyPhysicalProperties ends in GetAvmIntObj()->CopyPhysicalProperties,
+// which is this slot, so forwarding through pDispObj recursed.
+// @0x14000e640
+void AvmVideoCharacter::CopyPhysicalProperties(const InteractiveObject* poldChar)
+{
+    AvmCharacter::CopyPhysicalProperties(poldChar);
+}
+// AvmCharacter::OnFocus (0x14296bd60) directly, not through the vtable.
+// @0x14000e650
+void AvmVideoCharacter::OnFocus(InteractiveObject::FocusEventType event, InteractiveObject* oldOrNewFocusCh,
+                                unsigned controllerIdx, FocusMovedType fmt)
+{
+    AvmCharacter::OnFocus(event, oldOrNewFocusCh, controllerIdx, fmt);
+}
+// @0x14000e670
+void AvmVideoCharacter::OnGettingKeyboardFocus(unsigned, FocusMovedType) {}
+// @0x14000e680
+bool AvmVideoCharacter::OnKeyEvent(const EventId&, int*) { return false; }
+// @0x14000e690
+bool AvmVideoCharacter::OnLosingKeyboardFocus(InteractiveObject*, unsigned, FocusMovedType) { return true; }
+// @0x14000e6a0
+bool AvmVideoCharacter::IsFocusEnabled(FocusMovedType) const { return true; }
+// the AvmCharacter tab rule
+// @0x14000e6b0
+bool AvmVideoCharacter::IsTabable() const { return AvmCharacter::IsTabable(); }
+// @0x14000e880
+Object* AvmVideoCharacter::GetASObject() { return reinterpret_cast<Object*>(FUN_14000e020(this)); }
+// @0x14000e890
+Object* AvmVideoCharacter::GetASObject() const
+{
+    return reinterpret_cast<Object*>(FUN_14000e020(const_cast<AvmVideoCharacter*>(this)));
+}
+// 0x1431b5c00 [2]: a constant kind.
+// @0x14000e500
+ObjectInterface::ObjectType AvmVideoCharacter::GetObjectType() const { return static_cast<ObjectType>(5); }
+
+// SetMember and GetMember override ObjectInterface (+0x08), so cl enters them with that subobject in rcx.
+// Standard members first (slot 0x118 on the AvmCharacter), then the Video properties, then the script object
+// (FUN_14000e020, called twice like the exe).
+// @0x14000e8f0
+bool AvmVideoCharacter::SetMember(Environment* penv, const ASString& name, const Value& value, const PropFlags& flags)
+{
+    char* fields = reinterpret_cast<char*>(this) + 8;   // the ObjectInterface subobject cl entered with
+    // pavm (this-8) is recomputed at each use, as in the exe (no register holds it)
+    // the exe tries the standard members (_x, _alpha, ...) first: slot 0x118 on this-8 (0x14000e93d)
+    if ((UByte(name.GetHashFlags() >> 29) & 1)
+        && reinterpret_cast<AvmCharacter*>(fields - 8)->SetStandardMember(
+               reinterpret_cast<AvmCharacter*>(fields - 8)->GetStandardMemberConstant(name), value, false))
+        goto done;
+    if (!strcmp(name.ToCStr(), "deblocking"))
+    {
+        *reinterpret_cast<int*>(fields + 0x38) = static_cast<int>(value.ToNumber(penv));
+    done:
+        return true;
+    }
+    if (!strcmp(name.ToCStr(), "smoothing"))
+    {
+        *reinterpret_cast<bool*>(fields + 0x3c) = value.ToBool(penv);
+        return true;
+    }
+    if (FUN_14000e020(reinterpret_cast<AvmCharacter*>(fields - 8)))
+        return reinterpret_cast<Object*>(FUN_14000e020(reinterpret_cast<AvmCharacter*>(fields - 8)))
+            ->SetMember(penv, name, value, flags);
+    return false;
+}
+
+// Standard members first (slot 0x120 on the AvmCharacter), then width, height, deblocking and smoothing, then the script object.
+// @0x14000e9f0
+bool AvmVideoCharacter::GetMember(Environment* penv, const ASString& name, Value* pvalue)
+{
+    char* fields = reinterpret_cast<char*>(this) + 8;   // the ObjectInterface subobject cl entered with
+    // the exe tries the standard members first: slot 0x120 on this-8 (0x14000ea3d)
+    if (((UInt8)(name.GetHashFlags() >> 29) & 1)
+        && reinterpret_cast<AvmCharacter*>(fields - 8)->GetStandardMember(reinterpret_cast<AvmCharacter*>(fields - 8)->GetStandardMemberConstant(name), pvalue, false))
+        return true;
+    const char* key = name.ToCStr();
+    if (!strcmp(key, "width"))
+    {
+        pvalue->SetNumber(*reinterpret_cast<int*>(fields + 0x30));
+        return true;
+    }
+    if (!strcmp(key, "height"))
+    {
+        pvalue->SetNumber(*reinterpret_cast<int*>(fields + 0x34));
+        return true;
+    }
+    if (!strcmp(key, "deblocking"))
+        pvalue->SetNumber(*reinterpret_cast<int*>(fields + 0x38));
+    else if (!strcmp(key, "smoothing"))
+        pvalue->SetBool(*reinterpret_cast<bool*>(fields + 0x3c));
+    else if (FUN_14000e020(reinterpret_cast<AvmCharacter*>(fields - 8)))
+        return reinterpret_cast<Object*>(FUN_14000e020(reinterpret_cast<AvmCharacter*>(fields - 8)))->GetMember(penv, name, pvalue);
+    else
+        return false;
+    return true;
 }
 
 // VideoObject's prototype (vftables 0x1431b5e20 / +0x20 0x1431b5e70 / +0x70 0x1431b5e18, stored by FUN_14000eb50):
