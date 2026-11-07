@@ -1400,25 +1400,25 @@ void Sfr27ExecCallVoid(VM* vm, UInt32 argc)
 }
 
 // callmethod: receiver and argc arguments popped; the method comes from the receiver's method table.
-// MS2-FUNCTIONAL 0x142533980: same method-table lookup and two ExecuteInternalUnsafe calls; the exe inlines the Value Release/AddRef paths where ours calls the out-of-line ReleaseInternal/ReleaseWeakRef (frame and size differ; same helper calls).
+// MS2-FUNCTIONAL 0x142533980: regalloc only: the exe saves rbx in the rdx home slot (ours the r9 home) and pops the object via r9 (ours r8).
 // @0x142533980
 void Sfr27ExecCallMethod(VM* vm, UInt32 methodIndex, UInt32 argc)
 {
-    RA args(vm, argc);
-    Value receiver;
-    receiver.Pick(args.Stk());
-    ExecRequireObject(*vm, receiver);
+    Sfr27ReadArgsObject args(*vm, argc);   // VM::exec_callmethod
+    //
+    //
+    //
     if (vm->IsException())
         return;
-    const UPInt traits = reinterpret_cast<UPInt>(&vm->GetValueTraits(receiver));
+    const UPInt traits = reinterpret_cast<UPInt>(&vm->GetValueTraits(args.ArgObject));
     const UPInt vt = FUN_14250fa80(traits);
+    const Value& m = *reinterpret_cast<Value*>(*reinterpret_cast<UPInt*>(vt + 8) + methodIndex * 0x20ULL);
     Value func;
-    vm->ExecuteInternalUnsafe(*reinterpret_cast<Value*>(*reinterpret_cast<UPInt*>(vt + 8) + methodIndex * 0x20ULL),
-                              receiver, func, 0, NULL, false);
+    vm->ExecuteInternalUnsafe(m, args.ArgObject, func, 0, NULL, false);
     if (!vm->IsException())
     {
-        Value result(Value::GetUndefined());
-        vm->ExecuteInternalUnsafe(func, receiver, result, argc, args.Argv(), true);
+        Sfr27Execute(vm, func, args.ArgObject, argc, args.GetCallArgs());
+        //
     }
 }
 
