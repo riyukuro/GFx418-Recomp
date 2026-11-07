@@ -144,10 +144,13 @@ struct GlyphParamHash
 
     UPInt operator()(const GlyphParamHash& k) const
     {
-        const GlyphParam* p = k.Param;
-        UPInt             f = (UPInt)p->pFont;
-        return (f >> 6) ^ f ^ (UPInt)p->GlyphIndex ^ (UPInt)p->FontSize ^
-               (UPInt)p->Flags ^ (UPInt)p->BlurX ^ ((UPInt)p->BlurY << 1) ^ (UPInt)p->BlurStrength;
+        return (((UPInt)k.Param->pFont) >> 6) ^ (UPInt)k.Param->pFont ^
+                 (UPInt)k.Param->GlyphIndex ^
+                 (UPInt)k.Param->FontSize ^
+                 (UPInt)k.Param->Flags ^
+                 (UPInt)k.Param->BlurX ^
+                ((UPInt)k.Param->BlurY << 1) ^
+                 (UPInt)k.Param->BlurStrength;
     }
     bool operator==(const GlyphParamHash& k) const
     {
