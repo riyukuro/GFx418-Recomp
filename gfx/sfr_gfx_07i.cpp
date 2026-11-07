@@ -426,39 +426,62 @@ void FUN_1426214b0(char* self, AMP::MovieProfile* movieProfile)
     }
 }
 
-// Copies the running per-name values (scaled to microseconds) into the snapshot.
+// ViewStats::CollectAmpSourceLineStats: copies each non-zero per-line time (in microseconds) into movieProfile->SourceLineStats, plus the file's name the first time its id is seen.
+// The ViewStats maps are reached through macros so that self+0xd0/0xd8 are recomputed at each use, as in the exe.
 // @0x142621820
-void FUN_142621820(char* self, char* snap)
+void FUN_142621820(char* self, AMP::MovieProfile* movieProfile)
 {
-    EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    U* table = RawField<U*>(self, 0xd0);
-    if (table)
+    // ViewStats::FileLinePair and SourceLineStatMap (HashLH<FileLinePair, UInt64>).
+    struct FileLinePair
     {
-        for (U i = 0; i <= table[1]; i++)
-        {
-            char* e = RawEntry(table, i, 0x28);
-            if (*(SPInt*)e == -2 || !RawField<U>(e, 0x20))
-                continue;
-            U key = RawField<U>(e, 0x10);
-            unsigned extra = RawField<unsigned>(e, 0x18);
-            U scaled = (RawField<U>(e, 0x20) * 1000000) / Timer::GetRawFrequency();
-            char* rec = RawArrayPush<FUN_142623d00>((U*)(RawField<char*>(snap, 0x68) + 0x10), 0x18);
-            *(U*)rec = key;
-            *(unsigned*)(rec + 8) = extra;
-            RawField<U>(rec, 0x10) = scaled;
+        UInt64 FileId;
+        UInt32 LineNumber;
+        bool operator==(const FileLinePair& rhs) const { return (FileId == rhs.FileId && LineNumber == rhs.LineNumber); }
+    };
+    typedef HashLH<FileLinePair, UInt64> SourceLineStatMap;
+    typedef AMP::MovieSourceLineStats MovieSourceLineStats;
+    RawLocker locker(self + 0xe0);
+#define sourceLineTimingsMap (*reinterpret_cast<SourceLineStatMap*>(self + 0xd0))
+#define sourceLineInfoMap (*reinterpret_cast<AMP::SourceFileDescMap*>(self + 0xd8))
 
-            U* names = RawField<U*>(self, 0xd8);
-            SPInt found = RawFindKey8(names, key, 0x20);
-            if (found >= 0)
+    // Copy over all the non-zero timings
+    SourceLineStatMap::Iterator sourceTimeIter;
+    for (sourceTimeIter = sourceLineTimingsMap.Begin(); sourceTimeIter != sourceLineTimingsMap.End(); ++sourceTimeIter)
+    {
+        if (sourceTimeIter->Second > 0)
+        {
+            MovieSourceLineStats::SourceStats sourceStats;
+            sourceStats.FileId = sourceTimeIter->First.FileId;
+            sourceStats.LineNumber = sourceTimeIter->First.LineNumber;
+            sourceStats.TotalTime = sourceTimeIter->Second * 1000000 / Timer::GetRawFrequency(); // microseconds
+            U* array = reinterpret_cast<U*>(&movieProfile->SourceLineStats->SourceLineTimings);
+            UPInt oldSize = array[1];
+            UPInt newSize = oldSize + 1;
+            if (newSize < oldSize)
             {
-                char* snapNames = RawField<char*>(snap, 0x68);
-                if (RawFindKey8(RawField<U*>(snapNames, 0x28), key, 0x20) < 0)
-                    FUN_142624300(RawFieldPtr<U*>(snapNames, 0x28), &key, (const String*)(RawEntry(names, found, 0x20) + 0x18));
+                if (newSize < (array[2] >> 1))
+                    FUN_142623d00(array, array, newSize);
+            }
+            else if (newSize >= array[2])
+                FUN_142623d00(array, array, newSize + (newSize >> 2));
+            array[1] = newSize;
+            new ((MovieSourceLineStats::SourceStats*)array[0] + newSize - 1) MovieSourceLineStats::SourceStats(sourceStats);
+
+            // Send the file name along with the file Id
+            AMP::SourceFileDescMap::Iterator fileNameIter = sourceLineInfoMap.Find(sourceStats.FileId);
+            if (fileNameIter != sourceLineInfoMap.End())
+            {
+                AMP::SourceFileDescMap& descMap = movieProfile->SourceLineStats->SourceFileInfo;
+                if (descMap.Find(sourceStats.FileId) == descMap.End())
+                {
+                    FUN_142624300(reinterpret_cast<U**>(&descMap), &sourceStats.FileId, &fileNameIter->Second);
+                }
             }
         }
     }
-    LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
+#undef sourceLineTimingsMap
+#undef sourceLineInfoMap
 
 // ViewStats::CollectMarkers(snap): each marker becomes a value-initialised MarkerInfo {name, count} pushed onto
 // snap->Markers (the PushBack and its ResizeNoConstruct inlined). Its vftable (folded with the RefCountBase<MarkerInfo,
