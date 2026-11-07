@@ -53,21 +53,21 @@ DrawingContext* AcquirePathCopy(AvmSprite* psprite, bool newShapeFlag)
 }
 
 // @0x1429316c0
-// MS2-FUNCTIONAL: the inline method FnCall::Arg out of line (the exe returns null for an argument beyond the stack)
+// The inline method FnCall::Arg out of line (the exe returns null for an argument beyond the stack)
 Value* ArgCopy(const FnCall* pfn, int n)
 {
     return &pfn->Arg(n);
 }
 
 // @0x1429333d0
-// MS2-FUNCTIONAL: the inline method AvmSprite::CharacterGetTarget out of line
+// The inline method AvmSprite::CharacterGetTarget out of line
 InteractiveObject* CharacterGetTargetCopy(const FnCall* pfn)
 {
     return AvmSprite::CharacterGetTarget(*pfn);
 }
 
 // @0x142933d50
-// MS2-FUNCTIONAL: the inline method FnCall::CheckThisPtr out of line
+// The inline method FnCall::CheckThisPtr out of line
 bool CheckThisPtrCopy(const FnCall* pfn, unsigned type)
 {
     return pfn->CheckThisPtr(type);
