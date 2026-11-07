@@ -4712,69 +4712,85 @@ void Sfr31ExecIsTypeNamed(UPInt vmAddr, UPInt file, UInt32 idx)
         top->SetBool(FUN_1425146d0(reinterpret_cast<VM*>(vmAddr), top, reinterpret_cast<const void*>(tr)));
 }
 // ---- batch 33
+enum Sfr31Kind8 : UInt8 {};
+// The instanceof test proper: whether the class (or, for a function, its prototype) is on the value's traits chain.
+static __forceinline bool Sfr31InstanceOfChain(UPInt vmAddr, Value* v, const Value& cls, UInt32 flags)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    UPInt chain = FUN_142507f60(vmAddr, v);
+    const UPInt target = reinterpret_cast<UPInt>(&vm.GetValueTraits(cls));
+    if (static_cast<Sfr31Kind8>(flags & 0x1f) == static_cast<Sfr31Kind8>(0xd))
+    {
+        for (; chain != 0; chain = Sfr31Rd(chain, 0x88))
+            if (chain == target)
+                return true;
+        return false;
+    }
+    typedef void (*Fn)(UPInt);
+    UPInt proto = Sfr31Rd(target, 0x80);
+    if (proto == 0)
+    {
+        (*reinterpret_cast<Fn*>(Sfr31Rd(target, 0) + 0x68))(target);
+        proto = Sfr31Rd(target, 0x80);
+    }
+    for (; chain != 0; chain = Sfr31Rd(chain, 0x88))
+    {
+        UPInt c = Sfr31Rd(chain, 0x80);
+        if (c == 0)
+        {
+            (*reinterpret_cast<Fn*>(Sfr31Rd(chain, 0) + 0x68))(chain);
+            c = Sfr31Rd(chain, 0x80);
+        }
+        if (reinterpret_cast<UPInt>(&reinterpret_cast<Class*>(c)->GetPrototype()) == proto)
+            return true;
+    }
+    return false;
+}
+
 // instanceof: pops the class operand and replaces the top value with whether the class (or its prototype) is on the value's traits chain.
-// MS2-FUNCTIONAL 0x14253b990: raw-offset model; codegen differs from the exe
+// MS2-FUNCTIONAL 0x14253b990: 432 B vs the exe's 415. Same blocks and calls; the exe keeps the popped value's Flags in esi
+// and its weak pointer in rbx across the calls and saves all six callee-saved registers in the prolog, while ours
+// shrink-wraps rbx/rsi past the type-error path and keeps the Flags in r15.
 // @0x14253b990
 void Sfr31ExecInstanceOf(UPInt vmAddr)
 {
     VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    struct RawPair { void* a; void* b; };
+    struct RawVal { UInt32 w0; void* w1; RawPair v; };
     Value* below;
-    Sfr31RawTraitsVal cls;
+    RawVal cls;
+    UInt32 flags;
+    void* weak;
     {
         const UPInt top = Sfr31Rd(vmAddr, 0x50);
-        for (int i = 0; i < 8; ++i)
-            reinterpret_cast<UInt32*>(&cls)[i] = reinterpret_cast<const UInt32*>(top)[i];
+        const RawVal& src = *reinterpret_cast<const RawVal*>(top);
+        cls.w0 = src.w0;
+        cls.w1 = src.w1;
+        cls.v = src.v;
+        flags = cls.w0;
+        weak = cls.w1;
         below = reinterpret_cast<Value*>(top - 0x20);
         Sfr31Wr(vmAddr, 0x50, top - 0x20);
     }
-    const UInt32 ck = cls.w0 & 0x1f;
-    if (ck - 0xd > 1)
+    if ((flags & 0x1f) - 0xd > 1)
         vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x410), vm));
     else
     {
         const UInt32 bk = *reinterpret_cast<const UInt32*>(below) & 0x1f;
-        bool r = false;
-        if (bk != 0 && (bk - 0xc > 3 || Sfr31Rd(reinterpret_cast<UPInt>(below), 0x10) != 0))
-        {
-            UPInt chain = FUN_142507f60(vmAddr, below);
-            const UPInt target = reinterpret_cast<UPInt>(&vm.GetValueTraits(*reinterpret_cast<const Value*>(&cls)));
-            if (ck == 0xd)
-            {
-                for (; chain != 0; chain = Sfr31Rd(chain, 0x88))
-                    if (chain == target)
-                    {
-                        r = true;
-                        break;
-                    }
-            }
-            else
-            {
-                typedef void (*Fn)(UPInt);
-                UPInt proto = Sfr31Rd(target, 0x80);
-                if (proto == 0)
-                {
-                    (*reinterpret_cast<Fn*>(Sfr31Rd(target, 0) + 0x68))(target);
-                    proto = Sfr31Rd(target, 0x80);
-                }
-                for (; chain != 0; chain = Sfr31Rd(chain, 0x88))
-                {
-                    UPInt c = Sfr31Rd(chain, 0x80);
-                    if (c == 0)
-                    {
-                        (*reinterpret_cast<Fn*>(Sfr31Rd(chain, 0) + 0x68))(chain);
-                        c = Sfr31Rd(chain, 0x80);
-                    }
-                    if (reinterpret_cast<UPInt>(&reinterpret_cast<Class*>(c)->GetPrototype()) == proto)
-                    {
-                        r = true;
-                        break;
-                    }
-                }
-            }
-        }
-        below->SetBool(r);
+        below->SetBool(bk != 0 && (bk - 0xc > 3 || Sfr31Rd(reinterpret_cast<UPInt>(below), 0x10) != 0) &&
+                       Sfr31InstanceOfChain(vmAddr, below, *reinterpret_cast<const Value*>(&cls), flags));
     }
-    reinterpret_cast<Value*>(&cls)->~Value();
+    if (static_cast<Sfr31Kind8>(flags & 0x1f) > static_cast<Sfr31Kind8>(9))
+    {
+        if ((static_cast<UInt8>(flags >> 9) & 1) != 0)
+        {
+            int* rc = static_cast<int*>(weak);
+            if (--*rc == 0)
+                Memory::pGlobalHeap->Free(rc);
+        }
+        else
+            FUN_142521f00(&cls);
+    }
 }
 // ---- batch 34
 // astype-style op: replaces the top value with null when it is an instance of the named class; names resolved at compile time are rejected.
