@@ -9643,24 +9643,43 @@ static void Sfr31AvmStickyAssign(Sfr31AvmStickyVarNode* n, const Sfr31AvmStickyV
 static const void* const Sfr31AvmStickyTable[2] = { reinterpret_cast<const void*>(&Sfr31AvmStickyDelete),
                                                     reinterpret_cast<const void*>(&Sfr31AvmStickyAssign) };
 
+// SF_Std.h SFstrrchr
+static SF_FORCEINLINE const char* Sfr31Strrchr(const char* str, char c)
+{
+    UPInt len = strlen(str);
+    for (UPInt i = len; i > 0; i--)
+        if (str[i] == c)
+            return str + i;
+    return 0;   // the exe build has no str[0] test
+}
+
+// MovieRoot::ExtractPathAndName, inlined into SetVariable in the exe
+static SF_FORCEINLINE bool Sfr31ExtractPathAndName(UPInt root, const char* fullPath, ASString* ppath, ASString* pname)
+{
+    int colonIndex = -1;
+    const char* p;
+    if ((p = Sfr31Strrchr(fullPath, '.')) != 0)
+        colonIndex = int(p - fullPath);
+    else
+        return false;
+    *pname = reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348))->CreateString(fullPath + colonIndex + 1);
+    *ppath = reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348))->CreateString(fullPath, colonIndex);
+    return true;
+}
+
 // MovieRoot::SetVariable: sets the member after the last '.' of the path on the object the rest of the path resolves to
 // ("root" when there is no dot). setType 1 keeps the value for a target that does not exist yet, 2 keeps it permanently.
-// MS2-FUNCTIONAL 0x14252a700: the multiname now uses the InlineAssignTag SDK ctor; the exe inlines ExtractPathAndName with builtin-empty path/name ASStrings and the sticky node is a local class standing in for the exe one
+// MS2-FUNCTIONAL 0x14252a700: frame slots differ (the exe keeps the Value/Multiname temporaries and rdi/r12 home slots elsewhere) and the sticky-node Value copy lays out its kind dispatch in another order; the sticky node is a local class standing in for the exe one
 // @0x14252a700
 char Sfr31MovieRootSetVariable(UPInt root, const char* path, const void* gfxValue, int setType)
 {
-    ASStringManager* const mgr = reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348));
-    const UPInt len = strlen(path);
-    const char* dot = NULL;
-    for (UPInt i = len; i != 0; --i)
-        if (path[i] == '.')
-        {
-            dot = path + i;
-            break;
-        }
-    ASString member(mgr->CreateStringNode(dot != NULL ? dot + 1 : path));
-    ASString target(dot != NULL ? mgr->CreateStringNode(path, static_cast<UPInt>(dot - path)) : mgr->CreateStringNode("root"));
-
+    ASString target(reinterpret_cast<ASStringNode*>(Sfr31Rd(root, 0x160)));   // builtin empty string
+    ASString member(reinterpret_cast<ASStringNode*>(Sfr31Rd(root, 0x160)));
+    if (!Sfr31ExtractPathAndName(root, path, &target, &member))
+    {
+        member = reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348))->CreateString(path);
+        target = reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348))->CreateString("root");
+    }
     Value targetVal;
     if (!FUN_142506000(root, &targetVal, *reinterpret_cast<const UPInt*>(Sfr31Rd(reinterpret_cast<UPInt>(&target), 0))))
         return 0;
