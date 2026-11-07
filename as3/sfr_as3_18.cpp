@@ -7365,7 +7365,10 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // ObjectInterface::GetMember: the public property name of the AS3 object; for a display object container without
 // such a property, its child of that name. undefined (and false) when neither is there; an exception of the
 // property lookup is output (of the child lookup, dropped).
-// MS2-FUNCTIONAL: the exe inlines AvmDisplayObjContainer::GetAS3ChildByName
+// The Multiname ctor and the string Value are the inline copies (InlineCtorTag, Value::InlineStr), and the
+// failure paths are inside if (!GetProperty), as in the SDK.
+// MS2-FUNCTIONAL: the exe inlines AvmDisplayObjContainer::GetAS3ChildByName and saves all registers in the
+// prolog; the name Value's QName-call reload (LTCG)
 // @0x14250b4a0
 bool AS3ValueObjectInterface::GetMember(void* pdata, const char* name, GFx::Value* pval, bool isdobj) const
 {
@@ -7375,39 +7378,41 @@ bool AS3ValueObjectInterface::GetMember(void* pdata, const char* name, GFx::Valu
     MovieRoot* root = Sfr34_RootOf(pMovieRoot);
     VM*        vm   = root->pAVM;
     Object*    obj  = static_cast<Object*>(pdata);
-    Value      asval;
+    const Multiname mn(vm->GetPublicNamespace(), Value(ASString(root->BuiltinsMgr.GetStringManager()->CreateStringNode(name)), Value::InlineStr),
+                       Multiname::InlineCtorTag());
+    Value asval;
+    if (!obj->GetProperty(mn, asval))
     {
-        const Multiname mn(vm->GetPublicNamespace(), Value(ASString(root->BuiltinsMgr.GetStringManager()->CreateStringNode(name))));
-        if (obj->GetProperty(mn, asval))
+        const Traits& tr = obj->GetTraits();
+        if ((unsigned)(tr.GetTraitsType() - Traits_DisplayObjectContainer) <
+                (unsigned)(Traits_DisplayObject_End - Traits_DisplayObjectContainer) &&
+            tr.IsInstanceTraits())
         {
-            root->ASValue2GFxValue(asval, pval);
-            return true;
-        }
-    }
-    const Traits& tr = obj->GetTraits();
-    if ((unsigned)(tr.GetTraitsType() - Traits_DisplayObjectContainer) <
-            (unsigned)(Traits_DisplayObject_End - Traits_DisplayObjectContainer) &&
-        tr.IsInstanceTraits())
-    {
-        DisplayObject*          dobj  = Sfr34_DispObjOf(pdata);
-        AvmDisplayObjContainer* pcurr = Sfr34_ToAvmContainer(dobj->IsDisplayObjContainer() ? dobj : NULL);
-        const ASString propName(root->BuiltinsMgr.GetStringManager()->CreateStringNode(name));
-        SPtr<Instances::fl_display::DisplayObject> pchild = pcurr->GetAS3ChildByName(propName);
-        if (pchild)
-        {
-            asval = Value(pchild);
-            root->ASValue2GFxValue(asval, pval);
-            return true;
+            DisplayObject*          dobj  = Sfr34_DispObjOf(pdata);
+            AvmDisplayObjContainer* pcurr = Sfr34_ToAvmContainer(dobj->IsDisplayObjContainer() ? dobj : NULL);
+            const ASString propName(root->BuiltinsMgr.GetStringManager()->CreateStringNode(name));
+            SPtr<Instances::fl_display::DisplayObject> pchild = pcurr->GetAS3ChildByName(propName);
+            if (pchild)
+            {
+                asval = Value(pchild);
+                root->ASValue2GFxValue(asval, pval);
+                return true;
+            }
+            else
+            {
+                if (vm->IsException())
+                    vm->HandleException = false;
+                pval->SetUndefined();
+                return false;
+            }
         }
         if (vm->IsException())
-            vm->HandleException = false;
+            vm->OutputAndIgnoreException();
         pval->SetUndefined();
         return false;
     }
-    if (vm->IsException())
-        vm->OutputAndIgnoreException();
-    pval->SetUndefined();
-    return false;
+    root->ASValue2GFxValue(asval, pval);
+    return true;
 }
 
 namespace AS3 {
@@ -7682,7 +7687,9 @@ static SF_FORCEINLINE SPtr<Instances::fl_display::DisplayObject> Sfr34_GetAS3Chi
 
 // ObjectInterface::HasMember: whether the AS3 object has a property of that public name or, as a display object
 // container, a child of that name (an exception of the child lookup is dropped).
-// MS2-FUNCTIONAL: the exe inlines the Multiname(Namespace&, const Value&) constructor and Value(ASString)
+// The Multiname ctor and the string Value are the inline copies (InlineCtorTag, Value::InlineStr), as in the exe.
+// MS2-FUNCTIONAL: the exe keeps the name Value's flags and bonus in registers across the QName call (LTCG), so it
+// threads the string AddRef arm of the name copy; register allocation
 // @0x142510e70
 bool AS3ValueObjectInterface::HasMember(void* pdata, const char* name, bool isdobj) const
 {
@@ -7692,7 +7699,8 @@ bool AS3ValueObjectInterface::HasMember(void* pdata, const char* name, bool isdo
     MovieRoot* root = Sfr34_RootOf(pMovieRoot);
     VM*        vm   = root->pAVM;
     Object*    obj  = static_cast<Object*>(pdata);
-    const Multiname mn(root->pAVM->GetPublicNamespace(), Value(ASString(root->BuiltinsMgr.GetStringManager()->CreateStringNode(name))));
+    const Multiname mn(root->pAVM->GetPublicNamespace(), Value(ASString(root->BuiltinsMgr.GetStringManager()->CreateStringNode(name)), Value::InlineStr),
+                       Multiname::InlineCtorTag());
     PropRef prop;
     obj->FindProperty(prop, mn, 0);
     if (!Sfr34_PropFound(prop))
@@ -7723,7 +7731,9 @@ namespace AS3 {
 // ObjectInterface::Invoke: the method of that public name of the AS3 object called on it with the host's
 // arguments; the result (when asked for) converted for the host. An exception of the lookup or the call is output;
 // false then, and when there is no such property.
-// MS2-FUNCTIONAL: PropRef::GetSlotValueUnsafe written out (the exe inlines it)
+// PropRef::GetSlotValueUnsafe written out (the exe inlines it); the Multiname ctor and the string Value are the
+// inline copies (InlineCtorTag, Value::InlineStr).
+// MS2-FUNCTIONAL: the name Value's QName-call reload (LTCG), register allocation
 // @0x142512870
 bool AS3ValueObjectInterface::Invoke(void* pdata, GFx::Value* presult, const char* name, const GFx::Value* pargs,
                                UPInt nargs, bool isdobj)
@@ -7733,7 +7743,8 @@ bool AS3ValueObjectInterface::Invoke(void* pdata, GFx::Value* presult, const cha
     SF_UNUSED(isdobj);
     MovieRoot* root = Sfr34_RootOf(pMovieRoot);
     VM*        vm   = root->pAVM;
-    const Multiname mn(vm->GetPublicNamespace(), Value(ASString(root->GetStringManager418()->CreateStringNode(name))));
+    const Multiname mn(vm->GetPublicNamespace(), Value(ASString(root->GetStringManager418()->CreateStringNode(name)), Value::InlineStr),
+                       Multiname::InlineCtorTag());
     PropRef prop;
     static_cast<Object*>(pdata)->FindProperty(prop, mn, 0);
     const UPInt bits = reinterpret_cast<UPInt>(prop.pValue);
