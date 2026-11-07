@@ -3372,26 +3372,78 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // of the loader (the scripts of the last one run). The XML hooks start disabled and the E4X support replaces them
 // once the base classes exist. The exe inlines the Prototype, ValueStack and ValueRegisterFile constructors; ours
 // calls them, and builds the stacks in place over the VM's opaque members.
+// Value(const SPtr<OT>&) for the global object (SDK: GlobalObjectValue(GlobalObject)): Flags(kUndefined), then
+// AssignUnsafe(Object*), which the exe inlines (the kind is set over the undefined flags, the VU copied whole)
+template <>
+SF_FORCEINLINE Value::Value(const SPtr<Instances::fl::GlobalObjectCPP>& v) : Flags(kUndefined)
+{
+    Object* o = reinterpret_cast<Object*>(v.GetPtr());
+    SetKind(kObject);
+    value = o;
+    if (o)
+        o->AddRef();
+}
+
+// the default frame of the call stack: CallFrame(MemoryHeap*) (SDK 4.2), which the exe inlines field by field;
+// a view of CallFrame's layout with the SDK constructor's initializers (Name and Invoker default-constructed)
+struct MS2_VMDefCallFrame
+{
+    bool DiscardResult, ACopy, RegisteredFunction;
+    UPInt ScopeStackBaseInd;
+    const void* CP;
+    void* pRegisterFile;
+    MemoryHeap* pHeap;
+    void* pFile;
+    SInt32 MBIIndex;
+    const void* pSavedScope;
+    const void* OriginationTraits;
+    void* pScopeStack;
+    void* PrevInitialStackPos;
+    void* DefXMLNamespace;
+    void* PrevFirstStackPos;
+    UInt16 PrevReservedNum;
+    void* Name;
+    UInt32 CurrFileInd, CurrLineNumber;
+    UInt64 StartTicks;
+    UInt32 InvokerFlags;
+    void* InvokerBonus;
+    UInt64 InvokerValue0, InvokerValue1;
+    SF_FORCEINLINE MS2_VMDefCallFrame(MemoryHeap* heap)
+        : DiscardResult(false), ACopy(false), RegisteredFunction(false), ScopeStackBaseInd(0), CP(0), pRegisterFile(NULL),
+          pHeap(heap), pFile(NULL), MBIIndex(0), pSavedScope(NULL), OriginationTraits(NULL), pScopeStack(NULL),
+          PrevInitialStackPos(NULL), DefXMLNamespace(NULL), PrevFirstStackPos(NULL), PrevReservedNum(0), Name(NULL),
+          CurrFileInd(0), CurrLineNumber(0), StartTicks(0), InvokerFlags(0), InvokerBonus(NULL)
+    {
+    }
+    SF_FORCEINLINE ~MS2_VMDefCallFrame() { reinterpret_cast<CallFrame*>(this)->~CallFrame(); }
+};
+static_assert(sizeof(MS2_VMDefCallFrame) == 0xa8, "CallFrame layout");
+// ArrayPagedCC's constructor: the default value is a const& to the caller's temporary
+template <class U, class C>
+static SF_FORCEINLINE void MS2_VMCallStackDefault(U& Unk070, C& CallStack, const MS2_VMDefCallFrame& defval)
+{
+    for (unsigned i = 1; i < 5; ++i)
+        Unk070[i] = 0;
+    new (CallStack) CallFrame(reinterpret_cast<const CallFrame&>(defval));
+}
+
 // the VM's paged call stack, set up ahead of ScopeStack
 template <class U, class C>
 static SF_FORCEINLINE void MS2_VMCallStack(U& Unk070, C& CallStack, MemoryHeap* heap)
 {
     // the paged call stack: no pages yet, and a default frame on the VM's heap
-    UInt64 def[0xa8 / 8];
-    memset(def, 0, sizeof(def));
-    reinterpret_cast<CallFrame*>(def)->pHeap = heap;
-    for (unsigned i = 1; i < 5; ++i)
-        Unk070[i] = 0;
-    new (CallStack) CallFrame(*reinterpret_cast<CallFrame*>(def));
-    reinterpret_cast<CallFrame*>(def)->~CallFrame();
+    MS2_VMCallStackDefault(Unk070, CallStack, MS2_VMDefCallFrame(heap));
 }
 
 // The members are built in declaration order, in the initializer list: the exe stores each namespace and traits
 // pointer straight into its member, with no default construction and no release of an old value before the store.
 // The paged stacks are set up first, in ScopeStack's initializer (OpStack, the call stack, then the register file).
-// MS2-FUNCTIONAL: the exe fills the default CallFrame field by field (an inlined constructor; ours zeroes it with
-// memset) and keeps it 16 bytes higher in a larger frame; the rest follows the same call sequence, with small
-// register and store-order differences in the Function/Activation/GlobalObject allocations and the loader loop.
+// The default CallFrame is a CallFrame(MemoryHeap*) temporary passed by const& to the copy constructor (the exe's
+// unaligned movdqu fills), and GlobalObjectValue takes the SPtr through an inlined Value(SPtr) (AssignUnsafe).
+// NoFunctionTraits->pConstructor is assigned AddRef-first, as the exe does.
+// MS2-FUNCTIONAL: scheduling only: cl stores the four Unk070 zeroes before the default frame is built (the exe
+// after, just before the copy-constructor call), and the loader loop keeps the file count in rbp, not r14 (the
+// exe also copies the file pointer to rbp for the inner SPtr's release test).
 // Each allocation through MS2_VMNEW runs its constructor only on a non-null block, as a new-expression does.
 #define MS2_VMNEW(T, size, init) [this] { void* pmem = MS2_VMAlloc(MHeap, size); return static_cast<T*>(init); }()
 #define MS2_VMCT(C) MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) C(*this))
@@ -3430,20 +3482,29 @@ VM::VM(FlashUI& ui, FileLoader& loader, StringManager& string_manager, ASRefCoun
           pmem ? ::new (pmem) InstanceTraits::fl::GlobalObject(*this) : 0))),
       GlobalObject(Pickable<Instances::fl::GlobalObjectCPP>(MS2_VMNEW(Instances::fl::GlobalObjectCPP, 0xd8,
           pmem ? ::new (pmem) Instances::fl::GlobalObjectCPP(*this, *TraitaGlobalObject) : 0))),
-      GlobalObjectValue(reinterpret_cast<Object*>(GlobalObject.GetPtr()))
+      GlobalObjectValue(GlobalObject)
 {
     XMLSupport_ = Pickable<XMLSupport>(SF_HEAP_NEW(MHeap) XMLSupportImpl(*this));
 
     // functions without traits of their own are constructed by the class Function
     {
-        Class& ctor = TraitsFunction->GetInstanceTraits().GetConstructor();
-        NoFunctionTraits->pConstructor = &ctor;
+        Class* c = &TraitsFunction->GetInstanceTraits().GetConstructor();
+        if (c)
+            c->AddRef();
+        Class*& raw = reinterpret_cast<Class*&>(NoFunctionTraits->pConstructor);
+        if (c != raw)
+        {
+            if (raw && !(reinterpret_cast<UPInt>(raw) & 1))
+                raw->Release();
+            raw = c;
+        }
     }
     Initialized = true;
 
     // GlobalObjects.PushBack, without a reference (the global object is held by GlobalObject)
     {
         struct RawArray { Instances::fl::GlobalObject** Data; UPInt Size; UPInt Capacity; };
+        Instances::fl::GlobalObject* go = reinterpret_cast<Instances::fl::GlobalObject*>(GlobalObject.GetPtr());
         RawArray& a = reinterpret_cast<RawArray&>(GlobalObjects);
         const UPInt size = a.Size + 1;
         if (size < a.Size)
@@ -3454,7 +3515,7 @@ VM::VM(FlashUI& ui, FileLoader& loader, StringManager& string_manager, ASRefCoun
         else if (size >= a.Capacity)
             reinterpret_cast<Sfr34NsArray*>(&a)->Reserve(&a, size + (size >> 2));
         a.Size = size;
-        a.Data[size - 1] = reinterpret_cast<Instances::fl::GlobalObject*>(GlobalObject.GetPtr());
+        a.Data[size - 1] = go;
     }
 
     const UPInt n = Loader.GetSize();
