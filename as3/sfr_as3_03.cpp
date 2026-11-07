@@ -2175,35 +2175,39 @@ namespace Instances { namespace fl
         result = false;
     }
 
-    // MS2-FUNCTIONAL: register allocation and the deleteCount spill differ from the exe
+    // SDK body (AS3_Obj_Array.cpp); the new array's pointer is read once, before Pick
     // @0x142400d30
     void Array::AS3splice(Value& result, unsigned argc, const Value* argv)
     {
         SInt32 startIndex = 0;
-        UInt32 deleteCount;
         if (argc > 0)
-        {
             if (!argv[0].Convert2Int32(startIndex))
                 return;
-            if (startIndex < 0)
-                startIndex += static_cast<SInt32>(SA.GetSize());
-        }
+
         if (startIndex < 0)
-            startIndex = 0;
-        if (argc < 2)
-            deleteCount = static_cast<UInt32>(SA.GetSize()) - startIndex;
-        else if (!argv[1].Convert2UInt32(deleteCount))
-            return;
+            startIndex += static_cast<SInt32>(SA.GetSize());
+
+        startIndex = Alg::Max<SInt32>(0, startIndex);
+
+        UInt32 deleteCount = static_cast<UInt32>(SA.GetSize());
+
+        if (argc > 1)
+        {
+            if (!argv[1].Convert2UInt32(deleteCount))
+                return;
+        }
+        else
+            deleteCount -= startIndex;
 
         InstanceTraits::fl::Array& itr = static_cast<InstanceTraits::fl::Array&>(GetInstanceTraits());
-        Pickable<Array> arr = itr.MakeInstance(itr);
+        Pickable<Array> r = itr.MakeInstance(itr);
+        Array* arr = r.GetPtr();
         result.Pick(arr);
-        SA.CutMultipleAt(startIndex, deleteCount, arr.GetPtr() ? &arr.GetPtr()->SA : NULL);
+        SA.CutMultipleAt(startIndex, deleteCount, arr ? &arr->SA : NULL);
 
         if (argc > 2)
         {
-            if (static_cast<SInt32>(SA.GetSize()) < startIndex)
-                startIndex = static_cast<SInt32>(SA.GetSize());
+            startIndex = Alg::Min<SInt32>(static_cast<SInt32>(SA.GetSize()), startIndex);
             SA.Insert(startIndex, argc - 2, argv + 2);
         }
     }
