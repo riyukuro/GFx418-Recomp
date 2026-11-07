@@ -4911,9 +4911,14 @@ bool FUN_142417560(Instances::fl::XMLList* self, const Multiname& prop_name)
 static inline const AS3::Abc::Multiname& Sfr04TraitTypeName(const AS3::Abc::File& abc, const AS3::Abc::TraitInfo& ti)
 {
     const AS3::Abc::TraitInfo::Type t = ti.GetType();
-    const AS3::Abc::SInd ind = (t == AS3::Abc::TraitInfo::tSlot || t == AS3::Abc::TraitInfo::tConst)
-        ? ti.Ind : abc.AS3_Classes.Info[ti.Ind]->inst_info.name_ind;
-    return abc.Const_Pool.GetMultiname(ind);
+    if (t == AS3::Abc::TraitInfo::tSlot || t == AS3::Abc::TraitInfo::tConst)
+    {
+        const AS3::Abc::SInd ind = ti.Ind;
+        if (ind == 0)
+            return abc.Const_Pool.AnyType;
+        return abc.Const_Pool.GetMultiname(ind);
+    }
+    return abc.Const_Pool.GetMultiname(abc.AS3_Classes.Info[ti.Ind]->inst_info.name_ind);
 }
 
 // GlobalObjectScript: the instance traits of the script's classes run in this script
