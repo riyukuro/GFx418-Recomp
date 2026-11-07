@@ -46,7 +46,7 @@ namespace Scaleform { class Range; } // gfx_textfield.h (WIP header) names Range
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // @0x14292dfe0
-// MS2-FUNCTIONAL: the inline method AvmSprite::AcquirePath out of line
+// The inline method AvmSprite::AcquirePath out of line
 DrawingContext* AcquirePathCopy(AvmSprite* psprite, bool newShapeFlag)
 {
     return psprite->AcquirePath(newShapeFlag);

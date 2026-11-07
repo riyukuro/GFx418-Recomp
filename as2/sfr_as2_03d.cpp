@@ -92,7 +92,7 @@ StyleSheetObject::StyleSheetObject(Environment* penv) : Object(penv)
 }
 
 // @0x142921270
-// MS2-FUNCTIONAL: the style manager is built from a local declaration of Text::StyleManager
+// The style manager is built from a local declaration of Text::StyleManager
 StyleSheetProto::StyleSheetProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
     : Prototype<StyleSheetObject>(psc, pprototype, constructor)
 {

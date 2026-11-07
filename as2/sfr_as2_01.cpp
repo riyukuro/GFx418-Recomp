@@ -941,7 +941,6 @@ public:
 
 // LoadVars.toString(): the members as url-encoded name=value pairs joined by &.
 // @0x1428ec610
-// MS2-FUNCTIONAL same calls; the result string node is built with different operand order (CreateString inline)
 void LoadVarsProto::ToString(const FnCall& fn)
 {
     MS2_AS2_CHECK_THIS(fn, LoadVars);
@@ -1620,7 +1619,6 @@ void TextFieldProto::GetIMECompositionStringStyle(const FnCall& fn)
 // ---- Global escape functions ----
 
 // @0x1428f7ed0
-// MS2-FUNCTIONAL same calls; the exe loads the string manager before the result string's data/size (operand scheduling)
 void GAS_GlobalEscape(const FnCall& fn)
 {
     fn.Result->SetUndefined();
@@ -1634,7 +1632,6 @@ void GAS_GlobalEscape(const FnCall& fn)
 }
 
 // @0x1428f8020
-// MS2-FUNCTIONAL same calls; the exe loads the string manager before the result string's data/size (operand scheduling)
 void GAS_GlobalUnescape(const FnCall& fn)
 {
     fn.Result->SetUndefined();
@@ -1648,7 +1645,6 @@ void GAS_GlobalUnescape(const FnCall& fn)
 }
 
 // @0x1428f8170
-// MS2-FUNCTIONAL same calls; the exe loads the string manager before the result string's data/size (operand scheduling)
 void GAS_GlobalEscapeSpecialHTML(const FnCall& fn)
 {
     fn.Result->SetUndefined();
@@ -1662,7 +1658,6 @@ void GAS_GlobalEscapeSpecialHTML(const FnCall& fn)
 }
 
 // @0x1428f83d0
-// MS2-FUNCTIONAL same calls; the exe loads the string manager before the result string's data/size (operand scheduling)
 void GAS_GlobalUnescapeSpecialHTML(const FnCall& fn)
 {
     fn.Result->SetUndefined();
@@ -2577,7 +2572,6 @@ void RectangleProto::SetEmpty(const FnCall& fn)
 
 // "(x=.., y=.., width=.., height=..)" with six significant digits.
 // @0x1428f1780
-// MS2-FUNCTIONAL fn and the -1 length swap rsi/rdi and the string manager is loaded before str (register allocation)
 void RectangleProto::ToString(const FnCall& fn)
 {
     MS2_AS2_CHECK_THIS(fn, Rectangle);
