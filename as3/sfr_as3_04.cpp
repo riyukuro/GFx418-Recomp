@@ -5026,9 +5026,8 @@ void FUN_1424187f0(Instances::fl::GlobalObjectScript* self)
 
 // ClassTraits::UserDefined: resolves the super class (initializing it first), makes the instance traits, then the
 // class's static slots
-// MS2-FUNCTIONAL: written from the exe on raw offsets. Same calls (FUN_142417000 inlined); the exe keeps 0 in rbp
-// across the body, shrink-wraps the r15 save into the super-class lookup and gives each return its own epilogue,
-// ours saves r15 in the prolog and shares one tail (571 vs 615 bytes)
+// Written on raw offsets. FUN_142417000 and RegisterSlots (FUN_14241e6b0) are inlined; the instance traits are made
+// with a null-checked placement new so the ctor's returned this is used
 // @0x142418970
 CheckResult ClassTraits::Traits::FUN_142418970()
 {
@@ -5054,19 +5053,11 @@ CheckResult ClassTraits::Traits::FUN_142418970()
         parent_itr = *(InstanceTraits::Traits**)((char*)parent + 0xc0);
     }
     void* mem = self->GetVM().GetMemoryHeap()->Alloc(0xe0);
-    InstanceTraits::Traits* itr = NULL;
-    if (mem)
-        itr = (static_cast<InstanceTraits::UserDefined*>(mem)->UserDefined::UserDefined(**(VMAbcFile**)((char*)self + 0xc8), parent_itr, **reinterpret_cast<const AS3::Abc::ClassInfo**>((char*)self + 0xd0)), static_cast<InstanceTraits::Traits*>(mem));
+    InstanceTraits::Traits* itr = mem ? ::new (mem) InstanceTraits::UserDefined(**(VMAbcFile**)((char*)self + 0xc8), parent_itr, **reinterpret_cast<const AS3::Abc::ClassInfo**>((char*)self + 0xd0)) : NULL;
     self->SetInstanceTraits(Pickable<InstanceTraits::Traits>(itr));
     if (self->GetVM().IsException())
         return false;
-    VMAbcFile* file = *(VMAbcFile**)((char*)self + 0xc8);
-    const char* ci = *(const char**)((char*)self + 0xd0);
-    if (!self->AddSlots(*(const Scaleform::GFx::AS3::Abc::HasTraits*)(ci + 0x48), *file, self->GetFixedMemSize()))
-        return false;
-    if (*(const Scaleform::UInt8*)(*(const char**)((char*)self + 0xd0) + 0x20) & 4)
-        AS3::Sfr21AddInterfaceSlots(self, **(VMAbcFile**)((char*)self + 0xc8), **reinterpret_cast<const AS3::Abc::ClassInfo**>((char*)self + 0xd0));
-    return true;
+    return static_cast<ClassTraits::UserDefined*>(self)->FUN_14241e6b0();
 }
 // ClassTraits::UserDefined::RegisterSlots: the class's static slots (after the Classes::UserDefined object), then the
 // interface slots of an interface class
