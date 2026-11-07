@@ -8594,14 +8594,14 @@ void DCT_FsriTransCore(char *arg1, int arg2)
 // The float-to-short sibling of DCT_FsriTransCore (reached from sfr_cri_07's LAB_140066300/LAB_140066310; no .pdata): for
 // each of the 6 blocks whose bit is set in mask (bit 31 first), the block's first sample is rounded half away from 0
 // into the block's output.
-// MS2-FUNCTIONAL: written from the exe (VS2008 build, our toolset differs).
+// cl 15 unrolls the loop; the sign test of the shifted mask gives the exe's test/jns + add edx,edx chain.
 // @0x140065fc0
 void FUN_140065fc0(char *ctx, int mask)
 {
   float *src = *(float **)((char *)ctx + 0x38);
   short **dst = *(short ***)((char *)ctx + 0x40);
   for (int i = 0; i < 6; i++) {
-    if (((uint)mask << i & 0x80000000u) != 0) {
+    if (mask < 0) {
       float v = src[i * 0x40];
       if (v > 0.0f) {
         *dst[i] = (short)(int)((double)v + 0.5);
@@ -8613,6 +8613,7 @@ void FUN_140065fc0(char *ctx, int mask)
         *dst[i] = 0;
       }
     }
+    mask <<= 1;
   }
 }
 
