@@ -261,7 +261,13 @@ inline Scaleform::UPInt FUN_142507f60(Scaleform::UPInt vm, const void* value) { 
 void FUN_142500260(Scaleform::UPInt vm, unsigned int a, Scaleform::UPInt traits, void* value, unsigned int n, void* args);   // VM: call helper on a value with n arguments
 inline Scaleform::UPInt FUN_1425081f0(Scaleform::UPInt vm) { return reinterpret_cast<Scaleform::UPInt>(&reinterpret_cast<const Scaleform::GFx::AS3::VM*>(vm)->GetClassVector()); }   // VM: class-traits factory
 inline Scaleform::UPInt FUN_142563380(Scaleform::UPInt factory, Scaleform::UPInt traits) { return reinterpret_cast<Scaleform::UPInt>(&reinterpret_cast<Scaleform::GFx::AS3::Classes::fl_vec::Vector*>(factory)->Resolve2Vector(*reinterpret_cast<const Scaleform::GFx::AS3::ClassTraits::Traits*>(traits))); }   // class traits for traits
-inline void FUN_1423f1840(void* slot, Scaleform::UPInt obj) { *static_cast<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>*>(slot) = reinterpret_cast<Scaleform::GFx::AS3::Instances::Namespace*>(obj); }   // assign a refcounted object into a slot
+// SPtr<Namespace>::operator=(Namespace*) stays out of line in the exe (0x1423f1840): call it through a member pointer.
+inline void FUN_1423f1840(void* slot, Scaleform::UPInt obj)
+{
+    typedef Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace> P;
+    P& (P::*const f)(Scaleform::GFx::AS3::Instances::Namespace*) = &P::operator=;
+    (static_cast<P*>(slot)->*f)(reinterpret_cast<Scaleform::GFx::AS3::Instances::Namespace*>(obj));
+}   // assign a refcounted object into a slot
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { struct Sfr33NsAccess19 { static SF_FORCEINLINE void* Make(void* mem, UPInt vm, UPInt factory, int kind, void* uri, const void* prefix) { return ::new (mem) Namespace(*reinterpret_cast<VM*>(vm), reinterpret_cast<NamespaceInstanceFactory*>(factory), static_cast<Abc::NamespaceKind>(kind), *static_cast<const ASString*>(uri), *static_cast<const Value*>(prefix)); } }; } } } }   // Instances::Namespace ctor (0x1423edb60, protected)
 // the class-traits cache's Remove, through the real Hash<MultinameHash<ClassTraits::Traits*>::Key, .., AllocatorDH>::Remove
 // (0x142522350, called out of line; the exe's cache is the DH hash)
@@ -4903,7 +4909,6 @@ void Sfr31TraceArgClassTraits(State* st, UInt32 argc)
 // ---- batch 37
 // Pops the operand stack top: a Namespace value becomes the target's namespace slot; anything else is converted to a string and a
 // non-empty result creates a new Namespace for the slot.
-// MS2-FUNCTIONAL 0x142538560: raw-offset model; codegen differs from the exe
 // @0x142538560
 void Sfr31ExecPushNamespace(UPInt vm, UPInt target)
 {
@@ -4920,12 +4925,12 @@ void Sfr31ExecPushNamespace(UPInt vm, UPInt target)
         {
             // SF_HEAP_AUTO_NEW(tr) Instances::fl::Namespace(...): the ctor's prefix argument is evaluated before the allocation.
             const Value& prefix = Value::GetUndefined();
-            const UPInt tr = Sfr31Rd(Sfr31Rd(vm, 0x200), 0xc0);
             AllocInfo ai(0x148, 0, 0);   // StatMV_VM_Instance_Mem-family id the exe passes
+            const UPInt tr = Sfr31Rd(Sfr31Rd(vm, 0x200), 0xc0);
             void* mem = Memory::pGlobalHeap->AllocAutoHeap(reinterpret_cast<void*>(tr), 0x60, &ai);
-            UPInt ns = 0;
-            if (mem != 0)
-                ns = reinterpret_cast<UPInt>(Instances::Sfr33NsAccess19::Make(mem, Sfr31Rd(tr, 0x78), Sfr31Rd(tr, 0xe8), 0, &str, &prefix));
+            const UPInt ns = mem != 0
+                ? reinterpret_cast<UPInt>(Instances::Sfr33NsAccess19::Make(mem, Sfr31Rd(tr, 0x78), Sfr31Rd(tr, 0xe8), 0, &str, &prefix))
+                : 0;
             const UPInt old = Sfr31Rd(target, 0x58);
             if (ns != old)
             {
@@ -4938,7 +4943,7 @@ void Sfr31ExecPushNamespace(UPInt vm, UPInt target)
             }
         }
     }
-    top->~Value();
+    reinterpret_cast<Value*>(Sfr31Rd(vm, 0x50))->~Value();
     Sfr31Wr(vm, 0x50, Sfr31Rd(vm, 0x50) - 0x20);
 }
 
