@@ -8144,7 +8144,7 @@ bool FUN_1425151a0(const VM& vm, const Traits& tr)
 // the ".gfx" name first; Loader.loadBytes from its bytes), an image protocol URL through the image creator; then
 // open, the movie's sprite (or the image's bitmap) made the Loader's child and constructed, and init/complete
 // (synchronously for protocol images). An error event when nothing could be loaded or the SWF is not AS3.
-// MS2-FUNCTIONAL GetRootFilePath and ImageResource's constructor are inlined in the exe
+// MS2-FUNCTIONAL the exe keeps the `if (pmovieDef)` test at the AddLoadedMovieDef join (ours threads past it), merges the pnewBmpChar release tails differently, and differs in store scheduling/regalloc (regnorm 219)
 // @0x14251e560
 void MovieRoot::ProcessLoadQueueEntry(GFx::LoadQueueEntry* pentry, LoadStates* pls)
 {
