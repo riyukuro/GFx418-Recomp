@@ -60,13 +60,93 @@ inline bool IsRelativePathToken(ASStringContext* psc, const ASString& token)
            psc->GetBuiltin(ASBuiltin__parent).CompareBuiltIn_CaseCheck(token, psc->IsCaseSensitive());
 }
 
+// Value::SetAsCharacter, ToCharacter, ToObjectInterface, GetPropertyValue and Environment::PrimitiveToTempObject: the exe inlines
+// them all here.
+static __forceinline void FvSetAsCharacter(Value& v, InteractiveObject* pchar)
+{
+    CharacterHandle* phandle = pchar ? pchar->GetCharacterHandle() : 0;
+    if (v.T.Type != Value::CHARACTER || v.V.pCharHandle != phandle)
+    {
+        v.DropRefs();
+        v.T.Type        = Value::CHARACTER;
+        v.V.pCharHandle = phandle;
+        if (phandle)
+            phandle->AddRef();
+    }
+}
+
+static __forceinline InteractiveObject* FvToCharacter(const Value& v, const Environment* penv)
+{
+    if (v.GetType() == Value::CHARACTER && penv)
+    {
+        if (v.V.pCharHandle)
+        {
+            DisplayObject* dob = v.V.pCharHandle->ResolveCharacter(penv->GetTarget()->GetMovieImpl());
+            return (dob) ? (dob->IsInteractiveObject() ? static_cast<InteractiveObject*>(dob) : 0) : 0;
+        }
+    }
+    return 0;
+}
+
+static __forceinline ObjectInterface* FvToObjectInterface(const Value& v, const Environment* penv)
+{
+    if (v.GetType() == Value::CHARACTER)
+        return ToAvmCharacter(FvToCharacter(v, penv));
+    return v.ToObject(penv);
+}
+
+static __forceinline bool FvGetPropertyValue(const Value& v, Environment* penv, ObjectInterface* pthis, Value* value)
+{
+    if (v.IsProperty() && penv)
+    {
+        if (v.V.pProperty->GetterMethod.Function)
+        {
+            Value result;
+            v.V.pProperty->GetterMethod.Invoke(FnCall(&result, pthis, penv, 0, 0));
+            *value = result;
+            return true;
+        }
+        else
+        {
+            if (penv->IsVerboseActionErrors())
+                penv->LogScriptError("Getter method is null.");
+        }
+    }
+    return false;
+}
+
+static __forceinline Value FvPrimitiveToTempObject(Environment* penv, const Value& v)
+{
+    ASBuiltinType ctorName;
+
+    switch (v.GetType())
+    {
+    case Value::BOOLEAN:
+        ctorName = ASBuiltin_Boolean;
+        break;
+    case Value::STRING:
+        ctorName = ASBuiltin_String;
+        break;
+    default:
+        if (v.IsNumber())
+            ctorName = ASBuiltin_Number;
+        else
+            return Value();
+    }
+
+    penv->Push(v);
+    Ptr<Object> obj = *penv->OperatorNew(penv->GetBuiltin(ctorName), 1, penv->GetTopIndex());
+    penv->Drop1();
+    return Value(obj);
+}
+
 } // namespace
 
 // Walks the path one name at a time from the target (a leading '/' starts at the root, a leading '.' allows only
 // slashes): characters through their relative targets, anything else through its members (primitives via a
 // temporary object), properties by their getters. Optionally keeps the last character on the path, the owner of
 // the result and the last name. With onlyTargets every step has to be a character.
-// MS2-FUNCTIONAL: the tokenizer and PrimitiveToTempObject are inlined; register allocation differs.
+// MS2-FUNCTIONAL: register allocation and stack layout differ (the exe keeps current's type byte in dil and folds the root-case type test; it saves rbx/rsi/r12 where we save rdi/r13, and its frame is 8 bytes smaller).
 // @0x142945010
 bool Environment::FindVariable(const GetVarParams& params, bool onlyTargets, ASString* pvarName) const
 {
@@ -77,7 +157,7 @@ bool Environment::FindVariable(const GetVarParams& params, bool onlyTargets, ASS
         return true;
     }
 
-    static const char* const onlySlashesDelim = ":/";
+    static const char*       onlySlashesDelim = ":/";
     static const char* const regularDelim     = ":./";
 
     Environment* penv         = const_cast<Environment*>(this);
@@ -94,7 +174,7 @@ bool Environment::FindVariable(const GetVarParams& params, bool onlyTargets, ASS
 
     if (*p == '/')
     {
-        current.SetAsCharacter(Target->GetTopParent());
+        FvSetAsCharacter(current, Target->GetTopParent());
         currentFound = true;
         p++;
         plength--;
@@ -123,24 +203,22 @@ bool Environment::FindVariable(const GetVarParams& params, bool onlyTargets, ASS
                 {
                     // A relative path with nothing resolved yet starts at the innermost with object, if that is a
                     // character, or else at the target.
-                    if (params.pWithStack && params.pWithStack->GetSize() > 0)
-                    {
-                        ObjectInterface* obj =
-                            (*params.pWithStack)[params.pWithStack->GetSize() - 1].GetObjectInterface();
-                        if (obj->IsASCharacter())
-                            current.SetAsCharacter(obj->ToCharacter());
-                    }
-                    if (current.IsUndefined())
-                        current.SetAsCharacter(Target);
+                    ObjectInterface* obj;
+                    if (params.pWithStack && params.pWithStack->GetSize() > 0 &&
+                        (obj = (*params.pWithStack)[params.pWithStack->GetSize() - 1].GetObjectInterface())
+                            ->IsASCharacter())
+                        FvSetAsCharacter(current, obj->ToCharacter());
+                    else if (current.IsUndefined())
+                        FvSetAsCharacter(current, Target);
                     currentFound = true;
                 }
-                InteractiveObject* m = current.ToCharacter(this);
+                InteractiveObject* m = FvToCharacter(current, this);
                 if (m)
                 {
                     m = ToAvmCharacter(m)->GetRelativeTarget(token, firstToken);
                     if (m)
                     {
-                        member.SetAsCharacter(m);
+                        FvSetAsCharacter(member, m);
                         memberFound = true;
                     }
                 }
@@ -152,7 +230,7 @@ bool Environment::FindVariable(const GetVarParams& params, bool onlyTargets, ASS
                 else
                 {
                     if (current.IsNumber() || current.IsBoolean() || current.IsString())
-                        current = penv->PrimitiveToTempObject(current);
+                        current = FvPrimitiveToTempObject(penv, current);
                     if (!current.IsObject() && !current.IsCharacter() && !current.IsFunction())
                     {
                         member.SetUndefined();
@@ -160,7 +238,7 @@ bool Environment::FindVariable(const GetVarParams& params, bool onlyTargets, ASS
                     }
                     else
                     {
-                        ObjectInterface* iobj = current.ToObjectInterface(this);
+                        ObjectInterface* iobj = FvToObjectInterface(current, this);
                         if (iobj)
                         {
                             memberFound = iobj->GetMember(penv, token, &member);
@@ -190,7 +268,7 @@ bool Environment::FindVariable(const GetVarParams& params, bool onlyTargets, ASS
             }
 
             if (member.IsProperty())
-                member.GetPropertyValue(penv, current.ToObjectInterface(this), &current);
+                FvGetPropertyValue(member, penv, FvToObjectInterface(current, this), &current);
             else
                 current = member;
             currentFound = memberFound;
@@ -201,20 +279,20 @@ bool Environment::FindVariable(const GetVarParams& params, bool onlyTargets, ASS
             {
                 delim = parser.SetDelimiters(regularDelim);
                 if (params.ppNewTarget && current.IsCharacter())
-                    *params.ppNewTarget = current.ToCharacter(this);
+                    *params.ppNewTarget = FvToCharacter(current, this);
             }
         }
         else if (sep == '.')
         {
             if (params.ppNewTarget && current.IsCharacter())
-                *params.ppNewTarget = current.ToCharacter(this);
+                *params.ppNewTarget = FvToCharacter(current, this);
         }
         if (sep == '/')
             delim = parser.SetDelimiters(onlySlashesDelim);
         firstToken = false;
     }
     if (params.ppNewTarget && current.IsCharacter())
-        *params.ppNewTarget = current.ToCharacter(this);
+        *params.ppNewTarget = FvToCharacter(current, this);
     // The owner can only be an object, a character or a function.
     if (params.pOwnerValue && !params.pOwnerValue->IsObject() && !params.pOwnerValue->IsCharacter() &&
         !params.pOwnerValue->IsFunction())
@@ -227,3 +305,5 @@ bool Environment::FindVariable(const GetVarParams& params, bool onlyTargets, ASS
 }
 
 }}} // namespace Scaleform::GFx::AS2
+// MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b4de0
+// MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
