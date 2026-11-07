@@ -7876,100 +7876,126 @@ void Sfr31ExecCallPropLex(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
     }
 }
 // ---- batch 73
+// Value's destructor where the exe dropped ReleaseWeakRef's clearing stores as dead (the slot is not read again).
+static SF_FORCEINLINE void Sfr31DropValue(Value& v)
+{
+    if (v.IsRefCounted())
+    {
+        if (v.IsWeakRef())
+            (*reinterpret_cast<WeakProxy**>(reinterpret_cast<char*>(&v) + 8))->Release();
+        else
+            FUN_142521f00(&v);
+    }
+}
 // MovieRoot::SetArray: copies count elements of the given kind (0 int, 1 double, 2 float as number, 3 char* string, 4 wchar_t* string,
 // 5 GFx::Value) into the Array found at the variable path (a new one is created and stored when the variable is no Array).
-// MS2-FUNCTIONAL 0x14252acc0: raw-offset model; codegen differs from the exe
+// MS2-FUNCTIONAL 0x14252acc0: SDK SetVariableArray shape; the exe inlines retVal's ReleaseInternal as a kind jump table and builds the
+// not-found Value by a movups copy; the rest is register allocation
 // @0x14252acc0
-bool Sfr31SetArray(UPInt root, int type, UPInt path, UInt32 start, const void* data, UInt32 count, UInt32 setVarType)
+bool Sfr31SetArray(UPInt root, int type, UPInt path, UInt32 index, const void* pdata, UInt32 count, UInt32 setType)
 {
-    UPInt cur[4] = { 0, 0, 0, 0 };
-    const bool got = FUN_142506000(root, cur, path);
-    UPInt arr = 0;
-    if (got && ((reinterpret_cast<UInt32*>(cur)[0] & 0x1f) - 0xc) < 4 && cur[2] != 0 && Sfr31Rd(Sfr31Rd(cur[2], 0x20), 0x70) == 7 &&
-        ((*reinterpret_cast<UInt8*>(Sfr31Rd(cur[2], 0x20) + 0x68) >> 5) & 1) == 0)
+    MovieRoot& mr = *reinterpret_cast<MovieRoot*>(root);
+    const char* ppathToVar = reinterpret_cast<const char*>(path);
+    SPtr<Instances::fl::Array> parray;
+    Value retVal;
+    if (FUN_142506000(root, &retVal, path) && retVal.IsObject())
     {
-        arr = cur[2];
-        UInt32* rc = reinterpret_cast<UInt32*>(arr + 0x10);
-        *rc = (*rc + 1) & 0x8fbfffff;
+        Object* pobj = retVal.GetObject();
+        if (pobj && pobj->GetTraits().GetTraitsType() == Traits_Array && pobj->GetTraits().IsInstanceTraits())
+            parray = static_cast<Instances::fl::Array*>(pobj);
     }
-    const bool existed = arr != 0;
-    if (!existed)
+    bool found = true;
+    if (!parray)
     {
-        const UPInt tr = Sfr31Rd(Sfr31Rd(Sfr31Rd(root, 0x48), 0x238), 0xc0);
-        FUN_14241a500(tr, &arr, tr);
+        parray = Sfr31MakeArray(Sfr31Rd(root, 0x48));
+        found = false;
     }
-    const UPInt sa = arr + 0x38;
-    if (*reinterpret_cast<UInt32*>(sa) < start + count)
-        FUN_14241fe30(reinterpret_cast<void*>(sa), start + count);
-    for (UInt32 i = 0; i < count; ++i)
+    SparseArray& sa = *reinterpret_cast<SparseArray*>(reinterpret_cast<UPInt>(parray.GetPtr()) + 0x38);
+    if (count + index > unsigned(sa.GetSize()))
+        FUN_14241fe30(&sa, count + index);
+    union VBuf { VBuf() {} ~VBuf() {} Value v; } vb;
+    switch (type)
     {
-        UPInt raw[4] = { 0, 0, 0, 0 };
-        UInt32* kind = reinterpret_cast<UInt32*>(raw);
-        UPInt strNode = 0;
-        switch (type)
+    case 0:
+    {
+        const SInt32* parr = static_cast<const SInt32*>(pdata);
+        for (unsigned i = 0; i < count; ++i)
         {
-        case 0:
-            kind[0] = 2;
-            kind[4] = static_cast<const UInt32*>(data)[i];
-            break;
-        case 1:
-            kind[0] = 4;
-            *reinterpret_cast<double*>(&raw[2]) = static_cast<const double*>(data)[i];
-            break;
-        case 2:
-            kind[0] = 4;
-            *reinterpret_cast<double*>(&raw[2]) = static_cast<double>(static_cast<const float*>(data)[i]);
-            break;
-        case 3:
-        case 4:
-        {
-            ASStringManager* mgr = reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348));
-            ASStringNode* n = (type == 3) ? mgr->CreateStringNode(static_cast<const char* const*>(data)[i])
-                                          : mgr->CreateStringNode(static_cast<const wchar_t* const*>(data)[i], -1);
-            strNode = reinterpret_cast<UPInt>(n);
-            ++*reinterpret_cast<int*>(strNode + 0x18);
-            kind[0] = 10;
-            if (strNode == Sfr31Rd(strNode, 8) + 0x68)
-                kind[0] = 0xc;
-            else
-            {
-                ++*reinterpret_cast<int*>(strNode + 0x18);
-                raw[2] = strNode;
-            }
-            break;
+            Value* v = ::new (static_cast<void*>(&vb.v)) Value(parr[i]);
+            sa.Set(i + index, *v);
+            Sfr31DropValue(*v);
         }
-        case 5:
-            FUN_1425048d0(root, static_cast<const UPInt*>(data) + i * 4, reinterpret_cast<Value*>(raw));
-            break;
-        }
-        FUN_1424213b0(sa, start + i, reinterpret_cast<const Value*>(raw));
-        Sfr31ReleaseRawVal(raw);
-        if (strNode != 0)
-            Sfr31ReleaseStr(strNode);
+        break;
     }
-    bool ok = true;
-    if (!existed)
+    case 2:
     {
-        UPInt nv[4] = { 0xc, 0, arr, 0 };
-        UPInt gv[3] = { 0, 0, 0 };
-        FUN_1424e42c0(root, reinterpret_cast<const Value*>(nv), gv);
-        typedef bool (*SetVar)(UPInt, UPInt, void*, UInt32);
-        ok = reinterpret_cast<SetVar>(Sfr31Rd(Sfr31Rd(root, 0), 0x138))(root, path, gv, setVarType);
-        if ((reinterpret_cast<UInt32*>(gv)[2] >> 6) & 1)
+        const float* parr = static_cast<const float*>(pdata);
+        for (unsigned i = 0; i < count; ++i)
         {
-            typedef void (*Rel)(UPInt, UPInt*, UPInt);
-            reinterpret_cast<Rel>(Sfr31Rd(Sfr31Rd(gv[0], 0), 0x10))(gv[0], gv, gv[2]);
+            Value* v = ::new (static_cast<void*>(&vb.v)) Value(Value::Number(parr[i]));
+            sa.Set(i + index, *v);
+            Sfr31DropValue(*v);
         }
-        Sfr31ReleaseRawVal(nv);
+        break;
     }
-    Sfr31ReleaseRawVal(cur);
-    if (arr != 0 && (arr & 1) == 0 && (*reinterpret_cast<UInt32*>(arr + 0x10) & 0x3fffff) != 0)
+    case 1:
     {
-        --*reinterpret_cast<UInt32*>(arr + 0x10);
-        FUN_1423dfa20(reinterpret_cast<void*>(arr));
+        const Double* parr = static_cast<const Double*>(pdata);
+        for (unsigned i = 0; i < count; ++i)
+        {
+            Value* v = ::new (static_cast<void*>(&vb.v)) Value(Value::Number(parr[i]));
+            sa.Set(i + index, *v);
+            Sfr31DropValue(*v);
+        }
+        break;
     }
-    return ok;
+    case 5:
+    {
+        const GFx::Value* parr = static_cast<const GFx::Value*>(pdata);
+        for (unsigned i = 0; i < count; ++i)
+        {
+            Value* v = ::new (static_cast<void*>(&vb.v)) Value();
+            FUN_1425048d0(root, &parr[i], v);
+            sa.Set(i + index, *v);
+            Sfr31DropValue(*v);
+        }
+        break;
+    }
+    case 3:
+    {
+        const char* const* parr = static_cast<const char* const*>(pdata);
+        for (unsigned i = 0; i < count; ++i)
+        {
+            const ASString str(reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348))->CreateStringNode(parr[i]));
+            Value* v = ::new (static_cast<void*>(&vb.v)) Value(str, Value::InlineStr);
+            sa.Set(i + index, *v);
+            v->~Value();
+        }
+        break;
+    }
+    case 4:
+    {
+        const wchar_t* const* parr = static_cast<const wchar_t* const*>(pdata);
+        for (unsigned i = 0; i < count; ++i)
+        {
+            const ASString str(reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348))->CreateStringNode(parr[i]));
+            Value* v = ::new (static_cast<void*>(&vb.v)) Value(str, Value::InlineStr);
+            sa.Set(i + index, *v);
+            v->~Value();
+        }
+        break;
+    }
+    }
+    if (!found)
+    {
+        Value val(parray, PickValue);
+        GFx::Value gfxval;
+        mr.ASValue2GFxValue(val, &gfxval);
+        return mr.SetVariable(ppathToVar, gfxval, static_cast<MovieRoot::SetVarTypeArg>(setType));
+    }
+    return true;
 }
+
 // ---- batch 74
 // callproperty opcode: the receiver is popped, the property looked up on it (a missing one is an error unless the object is dynamic) and
 // the value found called with the popped arguments, the result pushed.
