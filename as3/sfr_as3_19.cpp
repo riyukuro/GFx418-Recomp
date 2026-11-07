@@ -4940,8 +4940,8 @@ void Sfr31ExecCallWithTraits(UPInt vmAddr, UInt32 a, UInt32 n)
 }
 
 // Tracer op: the first argument's type picks the class traits (null/undefined -> Object) that are pushed.
-// MS2-FUNCTIONAL 0x142532bd0: register order only: the exe loads the GetClassTraits argument before the traits, and keeps
-// the popped object's Flags in ebx across the weak-ref Free.
+// The vector-class resolve is written out (not via the UPInt FUN_ wrappers) so cl moves the class pointer into rcx before
+// the traits into rdx, as the exe does.
 // @0x142532bd0
 void Sfr31TraceArgClassTraits(State* st, UInt32 argc)
 {
@@ -4981,7 +4981,8 @@ void Sfr31TraceArgClassTraits(State* st, UInt32 argc)
         else if (tr == Sfr31Rd(vm, 0x230))
             out = Sfr31Rd(vm, 0x268);
         else
-            out = FUN_142563380(FUN_1425081f0(vm), tr);
+            out = reinterpret_cast<UPInt>(&reinterpret_cast<Classes::fl_vec::Vector&>(const_cast<Class&>(
+                reinterpret_cast<VM*>(vm)->GetClassVector())).Resolve2Vector(*reinterpret_cast<const ClassTraits::Traits*>(tr)));
     }
     Sfr31RawTraitsVal v;
     v.w1 = 0;
