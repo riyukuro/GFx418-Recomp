@@ -1060,7 +1060,12 @@ namespace Instances { namespace fl_geom
     // @0x14248ab10
     void Rectangle::isEmpty(bool& result)
     {
-        result = width <= 0 || height <= 0;
+        if (width <= 0 || height <= 0)
+        {
+            result = true;
+            return;
+        }
+        result = false;
     }
 
     // @0x14248ab30
@@ -1182,31 +1187,41 @@ namespace Instances { namespace fl_geom
     }
 
     // The bounding box of both; an empty side yields a copy of the other.
-    // MS2-FUNCTIONAL: the exe materialises the inlined isEmpty() results as a bool in al (and shares the first two arg arrays); same min/max flow
+    // SDK 4.3 body (one shared res flag; isEmpty() is the SDK's if/return form, which the exe inlines as a bool in al).
     // @0x142490fb0
     void Rectangle::union_(SPtr<Instances::fl_geom::Rectangle>& result, Instances::fl_geom::Rectangle* toUnion)
     {
-        if (toUnion == NULL)
-            return GetVM().ThrowTypeError(VM::Error(VM::eConvertNullToObjectError, GetVM()));
-        bool otherEmpty;
-        toUnion->isEmpty(otherEmpty);
-        if (otherEmpty)
+        if (!toUnion)
         {
-            Value args[] = { Value(x), Value(y), Value(width), Value(height) };
-            return GetVM().ConstructBuiltinObject(result, "flash.geom.Rectangle", 4, args).DoNotCheck();
+            return (GetVM().ThrowTypeError(VM::Error(VM::eConvertNullToObjectError, GetVM())));
         }
-        bool empty;
-        isEmpty(empty);
-        if (empty)
+        bool res;
+        toUnion->isEmpty(res);
+        if (res)
         {
-            Value args[] = { Value(toUnion->x), Value(toUnion->y), Value(toUnion->width), Value(toUnion->height) };
-            return GetVM().ConstructBuiltinObject(result, "flash.geom.Rectangle", 4, args).DoNotCheck();
+            Value args[] = {Value(x), Value(y), Value(width), Value(height)};
+            return(GetVM().ConstructBuiltinObject(result, "flash.geom.Rectangle", 4, args).DoNotCheck());
         }
-        const Value::Number left = Alg::Min(toUnion->x, x);
-        const Value::Number top = Alg::Min(toUnion->y, y);
-        const Value::Number right = Alg::Max(x + width, toUnion->x + toUnion->width);
-        const Value::Number bottom = Alg::Max(y + height, toUnion->y + toUnion->height);
-        Value args[] = { Value(left), Value(top), Value(right - left), Value(bottom - top) };
+
+        isEmpty(res);
+        if (res)
+        {
+            Value args[] = {Value(toUnion->x), Value(toUnion->y), Value(toUnion->width), Value(toUnion->height)};
+            return(GetVM().ConstructBuiltinObject(result, "flash.geom.Rectangle", 4, args).DoNotCheck());
+        }
+
+        Value::Number x1 = x; Value::Number y1 = y; Value::Number right1 = x + width; Value::Number bottom1 = y + height;
+        Value::Number x2 = toUnion->x; Value::Number y2 = toUnion->y;
+        Value::Number right2 = x2 + toUnion->width; Value::Number bottom2 = y2 + toUnion->height;
+
+        Value::Number x3, y3, bottom3, right3;
+
+        x3      = x1 > x2 ? x2 : x1;
+        right3  = right1 > right2 ? right1 : right2;
+        y3      = y1 > y2 ? y2 : y1;
+        bottom3 = bottom1 > bottom2 ? bottom1 : bottom2;
+
+        Value args[] = {Value(x3), Value(y3), Value(right3 - x3), Value(bottom3 - y3)};
         GetVM().ConstructBuiltinObject(result, "flash.geom.Rectangle", 4, args).DoNotCheck();
     }
 
