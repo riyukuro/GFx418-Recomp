@@ -1944,16 +1944,16 @@ CheckResult Object::SetProperty(const Multiname& prop_name, const Value& value)
     return CheckResult(false);
 }
 
-// MS2-FUNCTIONAL 0x142528810: regalloc: exe holds ret in rbx and _this in rdi, uses other home slots and re-reads the traits Flags byte
+// MS2-FUNCTIONAL 0x142528810: regalloc (exe holds ret in rbx, _this in rdi) and a 0x10 larger frame (the SetSlotValue temps)
 // setproperty on any value: special-property objects take it themselves, the rest go through the property lookup.
 static __forceinline CheckResult Sfr31SetPropertyInl(VM& vm, const Value& _this, const Multiname& prop_name, const Value& value)
 {
     if (static_cast<UInt32>(_this.GetKind()) - 0xc <= 3)
     {
         Object* o = reinterpret_cast<Object*>(_this.GetGASRefCountBase());
-        const Traits& tr = o->GetTraits();
-        if ((tr.Flags & 1) != 0 ||
-            (static_cast<UInt32>(tr.TraitsType - 0xd) <= 1 && ((~(static_cast<UInt8>(tr.Flags) >> 5)) & 1) != 0))
+        const Traits& tr = o->GetTraits(); const BuiltinTraitsType tt = tr.GetTraitsType();
+        if (tr.IsArrayLike() || ((tt == Traits_XML || tt == Traits_XMLList) && tr.IsInstanceTraits()))
+            //
             return o->SetProperty(prop_name, value);
     }
     PropRef prop;
@@ -5663,13 +5663,13 @@ ClassTraits::Traits* Sfr31GetClassTraitsByInfo(VM* vm, UPInt info)
 }
 
 // VMAbcFile::GetMultiname(ind): index 0 is the file's any-type multiname.
-static __forceinline UPInt Sfr31MnEntryAt(UPInt link, int ind)
+static inline UPInt Sfr31MnEntryAt(UPInt link, int ind)
 {
-    return ind == 0 ? Sfr31Rd(link, 0x28) + 0xe8 : static_cast<SPInt>(ind) * 0x10 + Sfr31Rd(Sfr31Rd(link, 0x28), 0xb8);
+    return reinterpret_cast<UPInt>(&reinterpret_cast<const Abc::ConstPool*>(Sfr31Rd(link, 0x28) + 0x30)->GetMultiname(ind));
 }
 // ---- batch 43
 // Resolves the class traits named by a multiname entry; the Vector.<T> cases map to the specialised builtin traits.
-// MS2-FUNCTIONAL 0x142524f60: the exe re-tests idx inside the inlined GetMultiname and keeps the name node in rcx for its dtor
+// MS2-FUNCTIONAL 0x142524f60: the exe's GetMultiname re-tests idx as an int (ours tests the SPInt) and loads the name node into rcx for the void compare and shared dtor tail
 // @0x142524f60
 UPInt Sfr31ResolveClassTraits(UPInt vmAddr, UPInt link, UPInt entry)
 {
@@ -5687,7 +5687,7 @@ UPInt Sfr31ResolveClassTraits(UPInt vmAddr, UPInt link, UPInt entry)
         if (r == Sfr31Rd(vmAddr, 0x248))
         {
             const int idx = *reinterpret_cast<const int*>(entry + 0xc);
-            const UPInt r2 = idx == 0 ? Sfr31Rd(vmAddr, 0x1f8) : Sfr31ResolveClassTraits(vmAddr, link, Sfr31MnEntryAt(link, idx));
+            UPInt r2; if (idx == 0) r2 = Sfr31Rd(vmAddr, 0x1f8); else r2 = Sfr31ResolveClassTraits(vmAddr, link, Sfr31MnEntryAt(link, idx));
             if (r2 != 0)
             {
                 if (r2 == Sfr31Rd(vmAddr, 0x220))
