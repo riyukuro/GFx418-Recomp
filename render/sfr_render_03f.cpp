@@ -21,13 +21,6 @@
 
 namespace Scaleform { namespace Render {
 
-// this build tests bounds emptiness with >= and compares rectangles x1, x2, y1, y2
-static inline bool isEmptyBounds(const RectF& r) { return r.x1 >= r.x2 || r.y1 >= r.y2; }
-static inline bool boundsDiffer(const RectF& a, const RectF& b)
-{
-    return a.x1 != b.x1 || a.x2 != b.x2 || a.y1 != b.y1 || a.y2 != b.y2;
-}
-
 // ***** The shape cache nodes
 
 // The cache of a shape with several draw layers: a container of one TreeCacheShapeLayer per layer (the layers
@@ -138,12 +131,12 @@ private:
 // ***** TreeShape::NodeData
 
 // @0x1426340d0
-// MS2-FUNCTIONAL: register allocation and block order around the inlined 3D EncloseTransform differ
+// MS2-FUNCTIONAL: register allocation and block order around the inlined 3D EncloseTransform differ (SDK 4.2 body; 1059 vs 1062 B)
 bool TreeShape::NodeData::PropagateUp(Entry* entry) const
 {
     RectF bounds, parentBounds;
 
-    if (isEmptyBounds(AproxLocalBounds))
+    if (AproxLocalBounds.IsEmpty())
     {
         // the stroke widths are not in the identity bounds
         if (pMeshProvider)
@@ -152,17 +145,17 @@ bool TreeShape::NodeData::PropagateUp(Entry* entry) const
     else
         bounds = AproxLocalBounds;
 
-    if (!isEmptyBounds(bounds))
+    if (!bounds.IsEmpty())
     {
         // the filters grow the local bounds before they go to the parent space
         expandByFilterBounds(&bounds, false);
         if (!Is3D())
-            M2D().EncloseTransform(&parentBounds, bounds);
+            parentBounds = M2D().EncloseTransform(bounds);
         else
             parentBounds = M3D().EncloseTransform(bounds);
     }
 
-    if (boundsDiffer(bounds, AproxLocalBounds) || boundsDiffer(parentBounds, bounds))
+    if ((bounds != AproxLocalBounds) || (parentBounds != bounds))
     {
         TreeShape* shape   = (TreeShape*)entry;
         NodeData*  data    = shape->GetWritableData(Change_AproxBounds);
