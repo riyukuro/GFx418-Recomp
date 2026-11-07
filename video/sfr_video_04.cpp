@@ -38,7 +38,7 @@ AvmCharacter* FUN_14000e2b0(AvmCharacter* character, InteractiveObject* displayO
 FunctionRef FUN_14000cf20(GlobalContext* global);
 } } }
 struct Video04GcAccess : AS2::RefCountBaseGC<323> { using AS2::RefCountBaseGC<323>::ReleaseInternal; };
-InteractiveObject* FUN_140010000(InteractiveObject*, void*, MovieDefImpl*, ASMovieRootBase*, InteractiveObject*, const ResourceId*);   // the video display object constructor
+namespace Scaleform { namespace GFx { class Video02Character { public: Video02Character(void*, MovieDefImpl*, ASMovieRootBase*, InteractiveObject*, const ResourceId&); }; }}   // the video display object (sfr_video_02, an InteractiveObject); ctor 0x140010000
 AS2::FunctionRef* FUN_1400126f0(AS2::FunctionRef* result, AS2::GlobalContext* context);
 AS2::FunctionRef* FUN_14000ed60(AS2::FunctionRef* result, AS2::GlobalContext* context);
 namespace Scaleform { namespace GFx {
@@ -191,7 +191,7 @@ DisplayObjectBase* AS2VideoSupportImpl::CreateASCharacter(MovieImpl* proot, Char
     if (pmem)
     {
         ResourceId localId = rid;
-        pobj = FUN_140010000(reinterpret_cast<InteractiveObject*>(pmem), pcharDef, pbindDefImpl, proot->pASMovieRoot, pparent, &localId);
+        pobj = reinterpret_cast<InteractiveObject*>(::new (pmem) Video02Character(pcharDef, pbindDefImpl, proot->pASMovieRoot, pparent, localId));
     }
     else
         pobj = 0;
@@ -211,7 +211,7 @@ DisplayObjectBase* AS3VideoSupportImpl::CreateASCharacter(MovieImpl* proot, Char
     if (pmem)
     {
         ResourceId localId = rid;
-        pobj = FUN_140010000(reinterpret_cast<InteractiveObject*>(pmem), pcharDef, pbindDefImpl, proot->pASMovieRoot, pparent, &localId);
+        pobj = reinterpret_cast<InteractiveObject*>(::new (pmem) Video02Character(pcharDef, pbindDefImpl, proot->pASMovieRoot, pparent, localId));
     }
     else
         pobj = 0;

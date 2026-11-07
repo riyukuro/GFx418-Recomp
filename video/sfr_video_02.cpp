@@ -139,8 +139,8 @@ extern void* PTR_FUN_1431b64f0;
 extern void* PTR_LAB_1431b6440;
 extern void* PTR_LAB_1431b6430;
 extern void* PTR_FUN_1431b7360;
-extern void* PTR_FUN_1431b6060;
-extern void* PTR_LAB_1431b63f8;
+//
+//
 extern void* PTR_LAB_1431b6690;
 extern void* PTR_LAB_1431b6638;
 extern void* PTR_FUN_1431b6640;
@@ -2313,34 +2313,34 @@ void* FUN_1400140e0(void* object, void* traits)
     return object;
 }
 
-// constructs the InteractiveObject base and initializes the recovered video extent fields
-// @0x140010000
-Scaleform::GFx::InteractiveObject* FUN_140010000(
-    Scaleform::GFx::InteractiveObject* object, void* definition,
-    Scaleform::GFx::MovieDefImpl* binding, Scaleform::GFx::ASMovieRootBase* root,
-    Scaleform::GFx::InteractiveObject* parent, const Scaleform::GFx::ResourceId* resourceId)
-{
-    object->Scaleform::GFx::InteractiveObject::InteractiveObject(
-        binding, root, parent, *resourceId);
-    char* bytes = reinterpret_cast<char*>(object);
-    *reinterpret_cast<void**>(bytes) = &PTR_FUN_1431b6060;
-    *reinterpret_cast<void**>(bytes + 0x18) = &PTR_LAB_1431b63f8;
-    // the bounds start at 0 and are then set from the definition's pixel size, in twips
-    float* bounds = reinterpret_cast<float*>(bytes + 0xe0);
-    bounds[0] = 0; bounds[1] = 0; bounds[2] = 0; bounds[3] = 0;
-    *reinterpret_cast<void**>(bytes + 0xf0) = definition;
-    *reinterpret_cast<void**>(bytes + 0xf8) = 0;
-    *reinterpret_cast<void* volatile*>(bytes + 0x100) = 0;   // volatile: keeps the member read below after this store
-    const unsigned char* dimensions = *reinterpret_cast<const unsigned char* volatile*>(bytes + 0xf0);   // volatile: the exe reads the member back
-    float width = static_cast<float>(*reinterpret_cast<const unsigned*>(dimensions + 0x24));
-    float height = static_cast<float>(*reinterpret_cast<const unsigned*>(dimensions + 0x28));
-    float x2 = width * 20.0f, y2 = height * 20.0f;
-    bounds[0] = 0;
-    bounds[1] = 0;
-    bounds[2] = x2;
-    bounds[3] = y2;
-    return object;
-}
+// (0x140010000 is Video02Character's ctor, defined after its class below)
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 // the Connect prototype's constructor body; the exe inlines it into FUN_1400126f0.
 static __forceinline Scaleform::GFx::AS2::Object* Video02ConnectProtoInit(
@@ -3655,12 +3655,14 @@ void Video02EmitNetConnectionCtorVftables(void* p, ASStringContext* psc)
 }}} // namespace Scaleform::GFx::AS2
 namespace Scaleform { namespace GFx {
 // VideoCharacter's vftables: 0x1431b6060 (115 slots, InteractiveObject's with five overrides) and the LogBase table
-// 0x1431b63f8 at +0x18. FUN_140010000 stores them. Slots 1/55/59/75 are the overriders defined after
+// 0x1431b63f8 at +0x18. Its ctor (0x140010000) stores them. Slots 1/55/59/75 are the overriders defined after
 // the dtor below; the dtor is 0x1400104d0 and cl's ??_G (0x140010530) and ??_E thunk (0x140010180)
 // come with its vftable.
 class Video02Character : public InteractiveObject
 {
 public:
+    Video02Character(void* definition, MovieDefImpl* binding, ASMovieRootBase* root, InteractiveObject* parent,
+                     const ResourceId& resourceId);                                                // 0x140010000
     virtual ~Video02Character();
     virtual Ptr<Render::TreeNode> CreateRenderNode(Render::ContextImpl::Context& context) const;  // 0x140011610
     virtual RectF GetBounds(const Matrix& t) const;                                               // 0x140010200
@@ -3673,6 +3675,28 @@ public:
 };
 static_assert(offsetof(Video02Character, Bounds) == 0xe0, "Video02Character layout");
 static_assert(offsetof(Video02Character, pProvider) == 0x100, "Video02Character layout");
+
+// constructs the InteractiveObject base and initializes the recovered video extent fields
+// @0x140010000
+Video02Character::Video02Character(void* definition, MovieDefImpl* binding, ASMovieRootBase* root,
+                                   InteractiveObject* parent, const ResourceId& resourceId)
+    : InteractiveObject(binding, root, parent, resourceId)
+{
+    char* bytes = reinterpret_cast<char*>(this);
+    // the bounds start at 0 (RectF's ctor) and are then set from the definition's pixel size, in twips
+    float* bounds = reinterpret_cast<float*>(bytes + 0xe0);
+    *reinterpret_cast<void**>(bytes + 0xf0) = definition;
+    *reinterpret_cast<void**>(bytes + 0xf8) = 0;
+    *reinterpret_cast<void* volatile*>(bytes + 0x100) = 0;   // volatile: keeps the member read below after this store
+    const unsigned char* dimensions = *reinterpret_cast<const unsigned char* volatile*>(bytes + 0xf0);   // volatile: the exe reads the member back
+    float width = static_cast<float>(*reinterpret_cast<const unsigned*>(dimensions + 0x24));
+    float height = static_cast<float>(*reinterpret_cast<const unsigned*>(dimensions + 0x28));
+    float x2 = width * 20.0f, y2 = height * 20.0f;
+    bounds[0] = 0;
+    bounds[1] = 0;
+    bounds[2] = x2;
+    bounds[3] = y2;
+}
 
 // @0x1400104d0
 Video02Character::~Video02Character()
@@ -3787,9 +3811,9 @@ Ptr<Render::TreeNode> Video02Character::CreateRenderNode(Render::ContextImpl::Co
 }
 }} // namespace Scaleform::GFx
 #ifndef MS2_HOOK_DLL
-// FUN_140010000 stores Video02Character's vftables through these names.
-#pragma comment(linker, "/alternatename:?PTR_FUN_1431b6060@@3PEAXEA=??_7Video02Character@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@2@@")
-#pragma comment(linker, "/alternatename:?PTR_LAB_1431b63f8@@3PEAXEA=??_7Video02Character@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@12@@")
+//
+//
+//
 // FUN_14000eb50 stores VideoProto's vftables through these names (the hook DLL binds them by their symbols rows).
 #pragma comment(linker, "/alternatename:?PTR_FUN_1431b5e20@@3PEAXEA=??_7VideoProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
 #pragma comment(linker, "/alternatename:?PTR_LAB_1431b5e70@@3PEAXEA=??_7VideoProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
