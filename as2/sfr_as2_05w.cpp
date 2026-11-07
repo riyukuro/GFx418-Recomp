@@ -14,6 +14,9 @@
 #include "../include/gfx/gfx_textfield.h"
 #include "../include/gfx/text_editorkit.h"
 #include "../include/render/text_docview.h"
+
+// TextField::GetCSSData, out of line (exe 0x1425b7e60; sfr_gfx_03e).
+Scaleform::UPInt FUN_1425b7e60(Scaleform::UPInt textField);
 #include "../include/render/text_filterdesc.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
@@ -97,18 +100,14 @@ const float RadToDeg = 57.295784f;
 
 typedef Render::Text::DocView DocView;
 
-// The AS2 style sheet holder: the URL zones of CSSHolderBase, then the StyleSheet object (as sfr_as2_06z).
-struct AS2CSSHolder
+// The AS2 style sheet holder: the URL zones of CSSHolderBase, then the StyleSheet object (as sfr_as2_06z). The
+// style sheet is a raw pointer here, read without the Ptr (the exe tests [holder+0x40] in place).
+struct AS2CSSHolderView
 {
-    void* const*          vfptr;
-    UByte                 BaseData[0x38];
-    Ptr<StyleSheetObject> pASStyleSheet; // +0x40
+    void* const*      vfptr;
+    UByte             BaseData[0x38];
+    StyleSheetObject* pASStyleSheet; // +0x40
 };
-
-AS2CSSHolder* CSSHolderOf(TextField* ptf)
-{
-    return reinterpret_cast<AS2CSSHolder*>(ptf->GetCSSData());
-}
 
 Text::EditorKit* EditorKitOf(TextField* ptf)
 {
@@ -117,25 +116,6 @@ Text::EditorKit* EditorKitOf(TextField* ptf)
 
 inline Double TwipsToPixels(Double v) { return v * 0.05; }
 
-// A constant string of the movie as the value.
-inline void SetConstString(Environment* penv, Value* pval, const char* pstr)
-{
-    pval->SetString(penv->CreateConstString(pstr));
-}
-
-// The vertical alignment as its name; false for an unknown one.
-bool SetVAlignName(Environment* penv, Value* pval, DocView::ViewVAlignment valign)
-{
-    switch (valign)
-    {
-    case DocView::VAlign_None:   SetConstString(penv, pval, "none"); return true;
-    case DocView::VAlign_Top:    SetConstString(penv, pval, "top"); return true;
-    case DocView::VAlign_Bottom: SetConstString(penv, pval, "bottom"); return true;
-    case DocView::VAlign_Center: SetConstString(penv, pval, "center"); return true;
-    }
-    return false;
-}
-
 } // namespace
 
 // The character members first (filters is not readable); a text field property comes from the field and its
@@ -143,28 +123,25 @@ bool SetVAlignName(Environment* penv, Value* pval, DocView::ViewVAlignment valig
 // or until that exists on the prototype (__proto__ itself is answered here); _global is visible from every field.
 // fontScaleFactor, textAutoSize, useRichTextClipboard and alwaysShowSelection set the value and go on to the lookup
 // as in the exe.
-// MS2-FUNCTIONAL: the switch shares its tails (the bool stores, the string releases) differently; the GetCSSData
-// getter is out of line in the exe and the style sheet holder is read through a layout mirror
 // @0x14294c720
 bool AvmTextField::GetMember(Environment* penv, const ASString& name, Value* pval)
 {
     StandardMember member = GetStandardMemberConstant(name);
     TextField*     ptf    = static_cast<TextField*>(pDispObj);
-    DocView*       pdoc   = ptf->GetDocument();
 
     switch ((int)member)
     {
-    case Member_filters:
-        pval->SetUndefined();
-        if (Log* plog = penv->GetLog())
-            plog->LogWarning("Retrieval of the TextField.filters property is not implemented.");
-        return true;
-
-    case Member_text:
-        pval->SetString(ptf->GetText(false));
+    case Member_html:
+        pval->SetBool((ptf->Flags & TextField::Flags_Html) != 0);
         return true;
     case Member_htmlText:
         pval->SetString(ptf->GetText(true));
+        return true;
+    case Member_text:
+        pval->SetString(ptf->GetText(false));
+        return true;
+    case Member_textColor:
+        pval->SetUInt_Call(ptf->GetTextColor32());
         return true;
     case Member_textWidth:
         pval->SetNumber(ptf->GetTextWidth());
@@ -172,40 +149,37 @@ bool AvmTextField::GetMember(Environment* penv, const ASString& name, Value* pva
     case Member_textHeight:
         pval->SetNumber(ptf->GetTextHeight());
         return true;
-    case Member_textColor:
-        pval->SetInt((int)ptf->GetTextColor32());
-        return true;
     case Member_length:
-        pval->SetNumber((Number)pdoc->GetStyledText()->GetLength());
-        return true;
-    case Member_html:
-        pval->SetBool((ptf->Flags & TextField::Flags_Html) != 0);
-        return true;
-    case Member_styleSheet:
-        pval->SetUndefined();
-        if (ptf->GetCSSData() && CSSHolderOf(ptf)->pASStyleSheet)
-            pval->SetAsObject(CSSHolderOf(ptf)->pASStyleSheet);
+        pval->SetNumber((Number)ptf->GetTextLength());
         return true;
     case Member_autoSize:
         if (!(ptf->Flags & TextField::Flags_AutoSize))
-            SetConstString(penv, pval, "none");
+            pval->SetString(penv->CreateConstString("none"));
         else
-            switch (pdoc->GetAlignment())
+        {
+            switch (ptf->GetDocument()->GetAlignment())
             {
-            case DocView::Align_Left:   SetConstString(penv, pval, "left"); break;
-            case DocView::Align_Right:  SetConstString(penv, pval, "right"); break;
-            case DocView::Align_Center: SetConstString(penv, pval, "center"); break;
-            default:                    pval->SetUndefined(); break;
+            case DocView::Align_Left:
+                pval->SetString(penv->CreateConstString("left"));
+                break;
+            case DocView::Align_Right:
+                pval->SetString(penv->CreateConstString("right"));
+                break;
+            case DocView::Align_Center:
+                pval->SetString(penv->CreateConstString("center"));
+                break;
+            default: pval->SetUndefined();
             }
+        }
         return true;
     case Member_wordWrap:
-        pval->SetBool(pdoc->IsWordWrap());
+        pval->SetBool(ptf->GetDocument()->IsWordWrap());
         return true;
     case Member_multiline:
-        pval->SetBool(pdoc->IsMultiline());
+        pval->SetBool(ptf->GetDocument()->IsMultiline());
         return true;
     case Member_border:
-        pval->SetBool((pdoc->GetBorderColor() >> 24) != 0);
+        pval->SetBool(UByte(ptf->GetDocument()->GetBorderColor() >> 24) != 0);
         return true;
     case Member_variable:
         if (VariableName.GetSize() != 0)
@@ -217,55 +191,10 @@ bool AvmTextField::GetMember(Environment* penv, const ASString& name, Value* pva
         pval->SetBool(ptf->IsSelectable());
         return true;
     case Member_embedFonts:
-        pval->SetBool(!pdoc->DoesUseDeviceFont());
-        return true;
-    case Member_antiAliasType:
-        SetConstString(penv, pval, pdoc->IsAAForReadability() ? "advanced" : "normal");
-        return true;
-    case Member_hscroll:
-        pval->SetNumber((Number)(unsigned)(SInt64)TwipsToPixels((Double)pdoc->GetHScrollOffset()));
-        return true;
-    case Member_maxhscroll:
-        pval->SetNumber((Number)(unsigned)(SInt64)TwipsToPixels((Double)pdoc->GetMaxHScroll()));
-        return true;
-    case Member_scroll:
-        pval->SetNumber((Number)(pdoc->GetVScrollOffset() + 1));
-        return true;
-    case Member_maxscroll:
-        pval->SetNumber((Number)(pdoc->GetMaxVScroll() + 1));
-        return true;
-    case Member_bottomScroll:
-        pval->SetNumber((Number)(pdoc->GetBottomVScroll() + 1));
-        return true;
-    case Member_background:
-        pval->SetBool((pdoc->GetBackgroundColor() >> 24) != 0);
-        return true;
-    case Member_backgroundColor:
-        pval->SetNumber((Number)(pdoc->GetBackgroundColor() & 0xFFFFFFu));
-        return true;
-    case Member_borderColor:
-        pval->SetNumber((Number)(pdoc->GetBorderColor() & 0xFFFFFFu));
-        return true;
-    case Member_type:
-        SetConstString(penv, pval, ptf->IsReadOnly() ? "dynamic" : "input");
-        return true;
-    case Member_maxChars:
-    {
-        unsigned maxLength = (unsigned)pdoc->GetMaxLength();
-        if (maxLength == 0)
-            pval->SetNull();
-        else
-            pval->SetNumber((Number)maxLength);
-        return true;
-    }
-    case Member_condenseWhite:
-        pval->SetBool((ptf->Flags & TextField::Flags_CondenseWhite) != 0);
-        return true;
-    case Member_mouseWheelEnabled:
-        pval->SetBool((ptf->Flags & TextField::Flags_MouseWheelEnabled) != 0);
+        pval->SetBool(!ptf->GetDocument()->DoesUseDeviceFont());
         return true;
     case Member_password:
-        pval->SetBool((ptf->Flags & TextField::Flags_Password) != 0);
+        pval->SetBool(ptf->IsPassword());
         return true;
 
     case Member_shadowStyle:
@@ -274,194 +203,359 @@ bool AvmTextField::GetMember(Environment* penv, const ASString& name, Value* pva
         pval->SetString(ptf->GetShadowStyle());
         return true;
     case Member_shadowColor:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetInt((int)pdoc->GetShadowColor());
+        if (penv->CheckExtensions())
+        {
+            pval->SetInt_Call((int)ptf->GetDocument()->GetShadowColor());
+            return true;
+        }
+        break;
+
+    case Member_hscroll:
+        pval->SetNumber((Number)(unsigned)(SInt64)TwipsToPixels((Double)ptf->GetDocument()->GetHScrollOffset()));
         return true;
+    case Member_scroll:
+        pval->SetNumber((Number)(ptf->GetDocument()->GetVScrollOffset() + 1));
+        return true;
+    case Member_maxscroll:
+        pval->SetNumber((Number)(ptf->GetDocument()->GetMaxVScroll() + 1));
+        return true;
+    case Member_maxhscroll:
+        pval->SetNumber((Number)(unsigned)(SInt64)TwipsToPixels((Double)ptf->GetDocument()->GetMaxHScroll()));
+        return true;
+    case Member_background:
+        pval->SetBool(UByte(ptf->GetDocument()->GetBackgroundColor() >> 24) != 0);
+        return true;
+    case Member_backgroundColor:
+        pval->SetNumber(Number(ptf->GetDocument()->GetBackgroundColor() & 0xFFFFFFu));
+        return true;
+    case Member_borderColor:
+        pval->SetNumber(Number(ptf->GetDocument()->GetBorderColor() & 0xFFFFFFu));
+        return true;
+    case Member_bottomScroll:
+        pval->SetNumber((Number)(ptf->GetDocument()->GetBottomVScroll() + 1));
+        return true;
+    case Member_type:
+        pval->SetString(ptf->IsReadOnly() ?
+            penv->CreateConstString("dynamic") : penv->CreateConstString("input"));
+        return true;
+    case Member_maxChars:
+        if (!ptf->HasMaxLength())
+            pval->SetNull();
+        else
+            pval->SetNumber(Number(ptf->GetMaxLength()));
+        return true;
+    case Member_condenseWhite:
+        pval->SetBool((ptf->Flags & TextField::Flags_CondenseWhite) != 0);
+        return true;
+
+    case Member_antiAliasType:
+        pval->SetString(ptf->GetDocument()->IsAAForReadability() ?
+            penv->CreateConstString("advanced") : penv->CreateConstString("normal"));
+        return true;
+    case Member_mouseWheelEnabled:
+        pval->SetBool((ptf->Flags & TextField::Flags_MouseWheelEnabled) != 0);
+        return true;
+    case Member_styleSheet:
+        pval->SetUndefined();
+        // AvmTextField::GetCSSData() three times, each through pDispObj; the exe calls TextField::GetCSSData out of line.
+        if (FUN_1425b7e60(reinterpret_cast<UPInt>(pDispObj)) &&
+            reinterpret_cast<AS2CSSHolderView*>(FUN_1425b7e60(reinterpret_cast<UPInt>(pDispObj)))->pASStyleSheet)
+            pval->SetAsObject(reinterpret_cast<AS2CSSHolderView*>(FUN_1425b7e60(reinterpret_cast<UPInt>(pDispObj)))->pASStyleSheet);
+        return true;
+
     case Member_hitTestDisable:
-        if (!GetASEnvironment()->CheckExtensions())
-            break;
-        pval->SetBool((static_cast<InteractiveObject*>(ptf)->Flags & InteractiveObject::Mask_HitTestDisable) != 0);
-        return true;
+        if (GetASEnvironment()->CheckExtensions())
+        {
+            pval->SetBool((static_cast<InteractiveObject*>(ptf)->Flags & InteractiveObject::Mask_HitTestDisable) != 0);
+            return true;
+        }
+        break;
     case Member_noTranslate:
-        if (!GetASEnvironment()->CheckExtensions())
-            break;
-        pval->SetBool((ptf->Flags & TextField::Flags_NoTranslate) != 0);
-        return true;
+        if (GetASEnvironment()->CheckExtensions())
+        {
+            pval->SetBool((ptf->Flags & TextField::Flags_NoTranslate) != 0);
+            return true;
+        }
+        break;
     case Member_caretIndex:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetNumber((Number)ptf->GetCursorPos());
-        return true;
+        if (penv->CheckExtensions())
+        {
+            pval->SetNumber(Number(ptf->GetCursorPos()));
+            return true;
+        }
+        break;
+    case Member_selectionBeginIndex:
+        if (penv->CheckExtensions())
+        {
+            if (ptf->IsSelectable() && ptf->GetDocument()->GetEditorKit())
+                pval->SetNumber(Number(ptf->GetBeginIndex()));
+            else
+                pval->SetNumber(-1);
+            return true;
+        }
+        break;
+    case Member_selectionEndIndex:
+        if (penv->CheckExtensions())
+        {
+            if (ptf->IsSelectable() && ptf->GetDocument()->GetEditorKit())
+                pval->SetNumber(Number(ptf->GetEndIndex()));
+            else
+                pval->SetNumber(-1);
+            return true;
+        }
+        break;
+    case Member_autoFit:
+        if (penv->CheckExtensions())
+        {
+            pval->SetBool(ptf->GetDocument()->IsAutoFit());
+            return true;
+        }
+        break;
+    case Member_blurX:
+        if (penv->CheckExtensions())
+        {
+            pval->SetNumber(TwipsToPixels(Number(ptf->GetDocument()->GetFilters().BlurX)));
+            return true;
+        }
+        break;
+    case Member_blurY:
+        if (penv->CheckExtensions())
+        {
+            pval->SetNumber(TwipsToPixels(Number(ptf->GetDocument()->GetFilters().BlurY)));
+            return true;
+        }
+        break;
+    case Member_blurStrength:
+        if (penv->CheckExtensions())
+        {
+            pval->SetNumber(Number(ptf->GetDocument()->GetFilters().BlurStrength));
+            return true;
+        }
+        break;
+    case Member_outline:
+        if (penv->CheckExtensions())
+        {
+            pval->SetNumber(Number(ptf->GetDocument()->GetOutline()));
+            return true;
+        }
+        break;
+    case Member_fauxBold:
+        if (penv->CheckExtensions())
+        {
+            pval->SetBool(ptf->GetDocument()->GetFauxBold());
+            return true;
+        }
+        break;
+    case Member_fauxItalic:
+        if (penv->CheckExtensions())
+        {
+            pval->SetBool(ptf->GetDocument()->GetFauxItalic());
+            return true;
+        }
+        break;
+    case Member_shadowAlpha:
+        if (penv->CheckExtensions())
+        {
+            pval->SetNumber(Number((float)ptf->GetDocument()->GetFilters().ShadowAlpha / 255.0f));
+            return true;
+        }
+        break;
+    case Member_shadowAngle:
+        if (penv->CheckExtensions())
+        {
+            pval->SetNumber(Number(ptf->GetDocument()->GetFilters().ShadowAngle * RadToDeg));
+            return true;
+        }
+        break;
+    case Member_shadowBlurX:
+        if (penv->CheckExtensions())
+        {
+            pval->SetNumber(TwipsToPixels(Number(ptf->GetDocument()->GetFilters().ShadowParams.BlurX)));
+            return true;
+        }
+        break;
+    case Member_shadowBlurY:
+        if (penv->CheckExtensions())
+        {
+            pval->SetNumber(TwipsToPixels(Number(ptf->GetDocument()->GetFilters().ShadowParams.BlurY)));
+            return true;
+        }
+        break;
+    case Member_shadowDistance:
+        if (penv->CheckExtensions())
+        {
+            pval->SetNumber(TwipsToPixels(Number(ptf->GetDocument()->GetFilters().ShadowDistance)));
+            return true;
+        }
+        break;
+    case Member_shadowHideObject:
+        if (penv->CheckExtensions())
+        {
+            pval->SetBool((ptf->GetDocument()->GetFilters().ShadowFlags & 0x40) != 0);
+            return true;
+        }
+        break;
+    case Member_shadowKnockOut:
+        if (penv->CheckExtensions())
+        {
+            pval->SetBool((ptf->GetDocument()->GetFilters().ShadowFlags & 0x20) != 0);
+            return true;
+        }
+        break;
+    case Member_shadowQuality:
+        if (penv->CheckExtensions())
+        {
+            pval->SetNumber(Number(unsigned((ptf->GetDocument()->GetFilters().ShadowFlags & 0x80) ? 2 : 1)));
+            return true;
+        }
+        break;
+    case Member_shadowStrength:
+        if (penv->CheckExtensions())
+        {
+            pval->SetNumber(Number(ptf->GetDocument()->GetFilters().ShadowParams.Strength));
+            return true;
+        }
+        break;
+    case Member_restrictMember: // shadowOutline, not implemented
+        break;
     case Member_numLines:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetNumber((Number)pdoc->GetLinesCount());
-        return true;
+        if (penv->CheckExtensions())
+        {
+            pval->SetNumber(Number(ptf->GetDocument()->GetLinesCount()));
+            return true;
+        }
+        break;
     case Member_verticalAutoSize:
-        if (!penv->CheckExtensions())
-            break;
-        if (!SetVAlignName(penv, pval, pdoc->IsAutoSizeY() ? pdoc->GetVAlignment() : DocView::VAlign_None))
-            pval->SetUndefined();
-        return true;
-    case Member_verticalAlign:
-        if (!penv->CheckExtensions())
-            break;
-        if (!SetVAlignName(penv, pval, pdoc->GetVAlignment()))
-            pval->SetUndefined();
-        return true;
+        if (penv->CheckExtensions())
+        {
+            if (!ptf->GetDocument()->IsAutoSizeY())
+                pval->SetString(penv->CreateConstString("none"));
+            else
+            {
+                switch (ptf->GetDocument()->GetVAlignment())
+                {
+                case DocView::VAlign_None:
+                    pval->SetString(penv->CreateConstString("none"));
+                    break;
+                case DocView::VAlign_Top:
+                    pval->SetString(penv->CreateConstString("top"));
+                    break;
+                case DocView::VAlign_Bottom:
+                    pval->SetString(penv->CreateConstString("bottom"));
+                    break;
+                case DocView::VAlign_Center:
+                    pval->SetString(penv->CreateConstString("center"));
+                    break;
+                default: pval->SetUndefined();
+                }
+            }
+            return true;
+        }
+        break;
     case Member_fontScaleFactor:
         if (penv->CheckExtensions())
-            pval->SetNumber((Number)pdoc->GetFontScaleFactor());
+        {
+            pval->SetNumber((Number)ptf->GetDocument()->GetFontScaleFactor());
+        }
+        break;
+    case Member_verticalAlign:
+        if (penv->CheckExtensions())
+        {
+            switch (ptf->GetDocument()->GetVAlignment())
+            {
+            case DocView::VAlign_None:
+                pval->SetString(penv->CreateConstString("none"));
+                break;
+            case DocView::VAlign_Top:
+                pval->SetString(penv->CreateConstString("top"));
+                break;
+            case DocView::VAlign_Bottom:
+                pval->SetString(penv->CreateConstString("bottom"));
+                break;
+            case DocView::VAlign_Center:
+                pval->SetString(penv->CreateConstString("center"));
+                break;
+            default: pval->SetUndefined();
+            }
+            return true;
+        }
         break;
     case Member_textAutoSize:
         if (penv->CheckExtensions())
         {
-            switch (pdoc->GetTextAutoSize())
+            switch (ptf->GetDocument()->GetTextAutoSize())
             {
-            case DocView::TAS_Shrink: SetConstString(penv, pval, "shrink"); break;
-            case DocView::TAS_Fit:    SetConstString(penv, pval, "fit"); break;
-            default:                  SetConstString(penv, pval, "none"); break;
+            case DocView::TAS_Shrink:
+                pval->SetString(penv->CreateConstString("shrink"));
+                break;
+            case DocView::TAS_Fit:
+                pval->SetString(penv->CreateConstString("fit"));
+                break;
+            default:
+                pval->SetString(penv->CreateConstString("none"));
+                break;
             }
         }
         break;
     case Member_useRichTextClipboard:
         if (penv->CheckExtensions())
+        {
             pval->SetBool((ptf->Flags & TextField::Flags_UseRichClipboard) != 0);
+        }
         break;
     case Member_alwaysShowSelection:
         if (penv->CheckExtensions())
+        {
             pval->SetBool((ptf->Flags & TextField::Flags_AlwaysShowSelection) != 0);
+        }
         break;
-    case Member_selectionBeginIndex:
-        if (!penv->CheckExtensions())
-            break;
-        if (ptf->IsSelectable() && pdoc->GetEditorKit())
-            pval->SetNumber((Number)ptf->GetBeginIndex());
-        else
-            pval->SetNumber(-1);
-        return true;
-    case Member_selectionEndIndex:
-        if (!penv->CheckExtensions())
-            break;
-        if (ptf->IsSelectable() && pdoc->GetEditorKit())
-            pval->SetNumber((Number)ptf->GetEndIndex());
-        else
-            pval->SetNumber(-1);
-        return true;
-    case Member_selectionBkgColor:
-        if (!penv->CheckExtensions() || !pdoc->GetEditorKit())
-            break;
-        pval->SetNumber((Number)EditorKitOf(ptf)->GetActiveSelectionBackgroundColor());
-        return true;
     case Member_selectionTextColor:
-        if (!penv->CheckExtensions() || !pdoc->GetEditorKit())
-            break;
-        pval->SetNumber((Number)EditorKitOf(ptf)->GetActiveSelectionTextColor());
-        return true;
-    case Member_inactiveSelectionBkgColor:
-        if (!penv->CheckExtensions() || !pdoc->GetEditorKit())
-            break;
-        pval->SetNumber((Number)EditorKitOf(ptf)->GetInactiveSelectionBackgroundColor());
-        return true;
-    case Member_inactiveSelectionTextColor:
-        if (!penv->CheckExtensions() || !pdoc->GetEditorKit())
-            break;
-        pval->SetNumber((Number)EditorKitOf(ptf)->GetInactiveSelectionTextColor());
-        return true;
-    case Member_noAutoSelection:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetBool((ptf->Flags & TextField::Flags_NoAutoSelection) != 0);
-        return true;
-    case Member_disableIME:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetBool((ptf->Flags & TextField::Flags_IMEDisabled) != 0);
-        return true;
-    case Member_autoFit:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetBool(pdoc->IsAutoFit());
-        return true;
-    case Member_blurX:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetNumber(TwipsToPixels((Double)pdoc->GetFilters().BlurX));
-        return true;
-    case Member_blurY:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetNumber(TwipsToPixels((Double)pdoc->GetFilters().BlurY));
-        return true;
-    case Member_blurStrength:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetNumber((Number)pdoc->GetFilters().BlurStrength);
-        return true;
-    case Member_outline:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetNumber((Number)pdoc->GetOutline());
-        return true;
-    case Member_fauxBold:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetBool(pdoc->GetFauxBold());
-        return true;
-    case Member_fauxItalic:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetBool(pdoc->GetFauxItalic());
-        return true;
-    case Member_shadowAlpha:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetNumber((Number)((float)pdoc->GetFilters().ShadowAlpha / 255.0f));
-        return true;
-    case Member_shadowAngle:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetNumber((Number)(pdoc->GetFilters().ShadowAngle * RadToDeg));
-        return true;
-    case Member_shadowBlurX:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetNumber(TwipsToPixels((Double)pdoc->GetFilters().ShadowParams.BlurX));
-        return true;
-    case Member_shadowBlurY:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetNumber(TwipsToPixels((Double)pdoc->GetFilters().ShadowParams.BlurY));
-        return true;
-    case Member_shadowDistance:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetNumber(TwipsToPixels((Double)pdoc->GetFilters().ShadowDistance));
-        return true;
-    case Member_shadowHideObject:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetBool((pdoc->GetFilters().ShadowFlags & 0x40) != 0);
-        return true;
-    case Member_shadowKnockOut:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetBool((pdoc->GetFilters().ShadowFlags & 0x20) != 0);
-        return true;
-    case Member_shadowQuality:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetNumber((pdoc->GetFilters().ShadowFlags & 0x80) ? 2 : 1);
-        return true;
-    case Member_shadowStrength:
-        if (!penv->CheckExtensions())
-            break;
-        pval->SetNumber((Number)pdoc->GetFilters().ShadowParams.Strength);
-        return true;
-    case Member_restrictMember:
+        if (penv->CheckExtensions() && ptf->GetDocument()->GetEditorKit())
+        {
+            pval->SetNumber(Number(EditorKitOf(ptf)->GetActiveSelectionTextColor()));
+            return true;
+        }
         break;
-
+    case Member_selectionBkgColor:
+        if (penv->CheckExtensions() && ptf->GetDocument()->GetEditorKit())
+        {
+            pval->SetNumber(Number(EditorKitOf(ptf)->GetActiveSelectionBackgroundColor()));
+            return true;
+        }
+        break;
+    case Member_inactiveSelectionTextColor:
+        if (penv->CheckExtensions() && ptf->GetDocument()->GetEditorKit())
+        {
+            pval->SetNumber(Number(EditorKitOf(ptf)->GetInactiveSelectionTextColor()));
+            return true;
+        }
+        break;
+    case Member_inactiveSelectionBkgColor:
+        if (penv->CheckExtensions() && ptf->GetDocument()->GetEditorKit())
+        {
+            pval->SetNumber(Number(EditorKitOf(ptf)->GetInactiveSelectionBackgroundColor()));
+            return true;
+        }
+        break;
+    case Member_noAutoSelection:
+        if (penv->CheckExtensions())
+        {
+            pval->SetBool((ptf->Flags & TextField::Flags_NoAutoSelection) != 0);
+            return true;
+        }
+        break;
+    case Member_disableIME:
+        if (penv->CheckExtensions())
+        {
+            pval->SetBool(ptf->IsIMEDisabledFlag());
+            return true;
+        }
+        break;
+    case Member_filters:
+        pval->SetUndefined();
+        if (Log* plog = penv->GetTarget()->GetLog())
+            plog->LogWarning("Retrieval of the TextField.filters property is not implemented.");
+        return true;
     default:
         if (GetStandardMember(member, pval, false))
             return true;
