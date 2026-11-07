@@ -501,7 +501,8 @@ void SnapRectToPixels(RectF& rect)
 // the pixel area a filter on this node renders into: its view bounds kept inside the cull rectangle (grown by the
 // filter's reach, at most 32 pixels), returned as a matrix over the unit square; false when nothing is left.
 // bounds gets the local bounds in 2D only.
-// MS2-FUNCTIONAL: same code, the exe keeps cullRect and the node data in other saved registers
+// MS2-FUNCTIONAL: same code (view2D built from the 3D view as in the SDK), the exe keeps viewProj and cullRect in
+// saved registers from entry and allocates one more
 // @0x142683f80
 bool TreeCacheNode::calcFilterBounds(RectF* bounds, Matrix2F* boundAreaMatrix, const Matrix3F& viewMatrix,
                                      const Matrix4F& viewProj, RectF* cullRect)
@@ -521,8 +522,7 @@ bool TreeCacheNode::calcFilterBounds(RectF* bounds, Matrix2F* boundAreaMatrix, c
     RectF cullRectTemp, viewClipRect;
     if (!has3d)
     {
-        Matrix2F view2D;
-        memcpy(view2D.M, viewMatrix.M, sizeof(view2D.M));   // its top two rows
+        Matrix2F view2D(viewMatrix);   // its top two rows
         *bounds = data->AproxLocalBounds;
         view2D.EncloseTransform(&viewClipRect, *bounds);
     }
