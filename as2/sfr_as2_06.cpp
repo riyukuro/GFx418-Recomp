@@ -1328,6 +1328,22 @@ static SF_FORCEINLINE FunctionRef RegisterBuiltinClassInline(GlobalContext* pgc,
     return ctor;
 }
 
+// As RegisterBuiltinClassInline, with the target object read only at the final store; the exe does not keep it
+// live across the ctors (passing it in as Object* hoists the load into a saved register).
+struct Sfr06GlobalTarget  { static SF_FORCEINLINE Object* Of(GlobalContext* g) { return g->pGlobal; } };
+struct Sfr06DisplayTarget { static SF_FORCEINLINE Object* Of(GlobalContext* g) { return g->FlashDisplayPackage; } };
+struct Sfr06FiltersTarget { static SF_FORCEINLINE Object* Of(GlobalContext* g) { return g->FlashFiltersPackage; } };
+template<class CtorFunctionType, class ProtoType, class TargetOf>
+static SF_FORCEINLINE FunctionRef RegisterBuiltinClassInlineLate(GlobalContext* pgc, ASBuiltinType type, ASBuiltinType parentType)
+{
+    ASStringContext sc(pgc, 8);
+    FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) CtorFunctionType(&sc, ObjectInlineCtorTag()));
+    Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) ProtoType(&sc, pgc->GetPrototype(parentType), ctor, ObjectInlineCtorTag());
+    SetBuiltinPrototype(pgc, type, proto);
+    TargetOf::Of(pgc)->SetMemberRaw(&sc, ((MovieRoot*)pgc->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(type), Value(ctor));
+    return ctor;
+}
+
 // As RegisterBuiltinClassInline, with the name read through sc (Point keeps that shape in the exe).
 template<class CtorFunctionType, class ProtoType>
 static SF_FORCEINLINE FunctionRef RegisterBuiltinClassInlineSc(GlobalContext* pgc, ASBuiltinType type, ASBuiltinType parentType,
@@ -1584,7 +1600,7 @@ __forceinline MovieClipLoaderProto::MovieClipLoaderProto(ASStringContext* psc, O
 }
 
 __forceinline MovieClipLoaderCtorFunction::MovieClipLoaderCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
-    : CFunctionObject(psc, GlobalCtor, t)
+    : CFunctionObject(psc, GlobalCtor, ObjectGcInlineCtorTag())
 {
 }
 
@@ -1634,7 +1650,7 @@ __forceinline BitmapDataProto::BitmapDataProto(ASStringContext* psc, Object* ppr
 }
 
 __forceinline BitmapDataCtorFunction::BitmapDataCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
-    : CFunctionObject(psc, GlobalCtor, t)
+    : CFunctionObject(psc, GlobalCtor, ObjectGcInlineCtorTag())
 {
     NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
                                   PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
@@ -1644,6 +1660,7 @@ __forceinline BitmapDataCtorFunction::BitmapDataCtorFunction(ASStringContext* ps
 __forceinline ArrayObject::ArrayObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
     : Object(psc, ObjectInlineCtorTag()), LogPtr(0), RecursionCount(0), LengthValueOverriden(false)
 {
+    _ReadWriteBarrier(); // the exe makes the RecursionCount/LengthValueOverriden stores before the pProto test
     if (!pProto)
         static_cast<ObjectInterface*>(this)->SetMemberRaw(
             psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
@@ -1877,12 +1894,12 @@ FunctionRef BooleanCtorFunction::Register(GlobalContext* pgc)
     return ctor;
 }
 
-// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// MS2-FUNCTIONAL register allocation differs: the ctors are inlined down to Object(psc) via the
 // ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x142973080
 FunctionRef AmpMarkerCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClassInline<AmpMarkerCtorFunction, AmpMarkerProto>(pgc, ASBuiltin_Amp, ASBuiltin_Object, pgc->pGlobal);
+    return RegisterBuiltinClassInlineLate<AmpMarkerCtorFunction, AmpMarkerProto, Sfr06GlobalTarget>(pgc, ASBuiltin_Amp, ASBuiltin_Object);
 }
 
 // MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
@@ -1900,19 +1917,19 @@ FunctionRef BevelFilterCtorFunction::Register(GlobalContext* pgc)
     return RegisterFilterClassInline<BevelFilterCtorFunction, BevelFilterProto>(pgc, ASBuiltin_BevelFilter);
 }
 
-// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// MS2-FUNCTIONAL register allocation differs: the ctors are inlined down to Object(psc) via the
 // ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x142974460
 FunctionRef BitmapDataCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClassInline<BitmapDataCtorFunction, BitmapDataProto>(pgc, ASBuiltin_BitmapData, ASBuiltin_Object, pgc->FlashDisplayPackage);
+    return RegisterBuiltinClassInlineLate<BitmapDataCtorFunction, BitmapDataProto, Sfr06DisplayTarget>(pgc, ASBuiltin_BitmapData, ASBuiltin_Object);
 }
 
 // MS2-FUNCTIONAL ctors and proto ctors are inlined as in the exe; register allocation differs (zero kept in rdi/rsi)
 // @0x142974910
 FunctionRef BitmapFilterCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClassInline<BitmapFilterCtorFunction, BitmapFilterProto>(pgc, ASBuiltin_BitmapFilter, ASBuiltin_Object, pgc->FlashFiltersPackage);
+    return RegisterBuiltinClassInlineLate<BitmapFilterCtorFunction, BitmapFilterProto, Sfr06FiltersTarget>(pgc, ASBuiltin_BitmapFilter, ASBuiltin_Object);
 }
 
 // MS2-FUNCTIONAL ctors, proto ctors and the registrar lookup are inlined as in the exe, at the exe size; rsi/rdi are swapped, and the registrar name load uses r8 where the exe uses rbx
@@ -1971,12 +1988,12 @@ FunctionRef GlowFilterCtorFunction::Register(GlobalContext* pgc)
     return RegisterFilterClassInline<GlowFilterCtorFunction, GlowFilterProto>(pgc, ASBuiltin_GlowFilter);
 }
 
-// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// MS2-FUNCTIONAL register allocation differs: the ctors are inlined down to Object(psc) via the
 // ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x142978dd0
 FunctionRef MovieClipLoaderCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClassInline<MovieClipLoaderCtorFunction, MovieClipLoaderProto>(pgc, ASBuiltin_MovieClipLoader, ASBuiltin_Object, pgc->pGlobal);
+    return RegisterBuiltinClassInlineLate<MovieClipLoaderCtorFunction, MovieClipLoaderProto, Sfr06GlobalTarget>(pgc, ASBuiltin_MovieClipLoader, ASBuiltin_Object);
 }
 
 // MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
@@ -1987,28 +2004,28 @@ FunctionRef PointCtorFunction::Register(GlobalContext* pgc)
     return RegisterBuiltinClassInlineSc<PointCtorFunction, PointProto>(pgc, ASBuiltin_Point, ASBuiltin_Object, pgc->FlashGeomPackage);
 }
 
-// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// MS2-FUNCTIONAL register allocation differs: the ctors are inlined down to Object(psc) via the
 // ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x14297a4a0
 FunctionRef SharedObjectCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClassInline<SharedObjectCtorFunction, SharedObjectProto>(pgc, ASBuiltin_SharedObject, ASBuiltin_Object, pgc->pGlobal);
+    return RegisterBuiltinClassInlineLate<SharedObjectCtorFunction, SharedObjectProto, Sfr06GlobalTarget>(pgc, ASBuiltin_SharedObject, ASBuiltin_Object);
 }
 
-// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// MS2-FUNCTIONAL register allocation differs: the ctors are inlined down to Object(psc) via the
 // ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x14297aca0
 FunctionRef StringCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClassInline<StringCtorFunction, StringProto>(pgc, ASBuiltin_String, ASBuiltin_Object, pgc->pGlobal);
+    return RegisterBuiltinClassInlineLate<StringCtorFunction, StringProto, Sfr06GlobalTarget>(pgc, ASBuiltin_String, ASBuiltin_Object);
 }
 
-// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// MS2-FUNCTIONAL register allocation differs: the ctors are inlined down to Object(psc) via the
 // ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x14297bf80
 FunctionRef TextSnapshotCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClassInline<TextSnapshotCtorFunction, TextSnapshotProto>(pgc, ASBuiltin_TextSnapshot, ASBuiltin_Object, pgc->pGlobal);
+    return RegisterBuiltinClassInlineLate<TextSnapshotCtorFunction, TextSnapshotProto, Sfr06GlobalTarget>(pgc, ASBuiltin_TextSnapshot, ASBuiltin_Object);
 }
 
 // MS2-FUNCTIONAL regalloc floor: the ctor is inlined down to Object(psc) via the ObjectGcInlineCtorTag chain and
@@ -2057,28 +2074,27 @@ FunctionRef GASMatrixCtorFunction::Register(GlobalContext* pgc)
     return RegisterBuiltinClassInline<GASMatrixCtorFunction, MatrixProto>(pgc, ASBuiltin_Matrix, ASBuiltin_Object, pgc->FlashGeomPackage);
 }
 
-// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// MS2-FUNCTIONAL register allocation differs: the ctors are inlined down to Object(psc) via the
 // ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x142975f30
 FunctionRef ColorCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClassInline<ColorCtorFunction, ColorProto>(pgc, ASBuiltin_Color, ASBuiltin_Object, pgc->pGlobal);
+    return RegisterBuiltinClassInlineLate<ColorCtorFunction, ColorProto, Sfr06GlobalTarget>(pgc, ASBuiltin_Color, ASBuiltin_Object);
 }
 
-// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// MS2-FUNCTIONAL register allocation differs: the ctors are inlined down to Object(psc) via the
 // ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x142975740
 FunctionRef ButtonCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClassInline<ButtonCtorFunction, ButtonProto>(pgc, ASBuiltin_Button, ASBuiltin_Object, pgc->pGlobal);
+    return RegisterBuiltinClassInlineLate<ButtonCtorFunction, ButtonProto, Sfr06GlobalTarget>(pgc, ASBuiltin_Button, ASBuiltin_Object);
 }
 
-// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
-// ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
+// The ctors are inlined down to Object(psc) via the ObjectInlineCtorTag ctors above, like the exe.
 // @0x142973500
 FunctionRef ArrayCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClassInline<ArrayCtorFunction, ArrayProto>(pgc, ASBuiltin_Array, ASBuiltin_Object, pgc->pGlobal);
+    return RegisterBuiltinClassInlineLate<ArrayCtorFunction, ArrayProto, Sfr06GlobalTarget>(pgc, ASBuiltin_Array, ASBuiltin_Object);
 }
 
 // MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
@@ -2090,20 +2106,20 @@ FunctionRef ExternalInterfaceCtorFunction::Register(GlobalContext* pgc)
                                                                                       pgc->FlashExternalPackage);
 }
 
-// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// MS2-FUNCTIONAL register allocation differs: the ctors are inlined down to Object(psc) via the
 // ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x142979260
 FunctionRef NumberCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClassInline<NumberCtorFunction, NumberProto>(pgc, ASBuiltin_Number, ASBuiltin_Object, pgc->pGlobal);
+    return RegisterBuiltinClassInlineLate<NumberCtorFunction, NumberProto, Sfr06GlobalTarget>(pgc, ASBuiltin_Number, ASBuiltin_Object);
 }
 
-// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// MS2-FUNCTIONAL register allocation differs: the ctors are inlined down to Object(psc) via the
 // ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x142979fe0
 FunctionRef SelectionCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClassInline<SelectionCtorFunction, SelectionProto>(pgc, ASBuiltin_Selection, ASBuiltin_Object, pgc->pGlobal);
+    return RegisterBuiltinClassInlineLate<SelectionCtorFunction, SelectionProto, Sfr06GlobalTarget>(pgc, ASBuiltin_Selection, ASBuiltin_Object);
 }
 
 // MovieImpl keeps one MouseState per mouse (4, 0x50 bytes each) at +0x1260, not recovered in gfx_movieimpl.h
