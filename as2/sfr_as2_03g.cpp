@@ -60,51 +60,57 @@ bool GASGlobalObject::GetMemberRaw(ASStringContext* psc, const ASString& name, V
     return Object::GetMemberRaw(psc, name, val);
 }
 
+// The SDK's inline GlobalContext string helper and Environment::GetMovieImpl (Target->...->pMovieImpl), as the exe inlines them.
+static SF_FORCEINLINE ASString GlobalCreateConstString(GlobalContext* gc, const char* pstr)
+{
+    return static_cast<MovieRoot*>(gc->pMovieRoot->pASMovieRoot)->GetStringManager()->CreateConstString(pstr);
+}
+// ObjectInterface::SetConstMemberRaw as the SDK header inlines it.
+static SF_FORCEINLINE bool GlobalSetConstMemberRaw(ObjectInterface& oi, ASStringContext* psc, const char* name,
+                                                   const Value& val)
+{
+    return oi.SetMemberRaw(psc, psc->CreateConstString(name), val, PropFlags());
+}
+static SF_FORCEINLINE UByte* GlobalEnvMovieImpl(Environment* penv)
+{
+    UByte* p = *reinterpret_cast<UByte**>(reinterpret_cast<UByte*>(penv->Target) + 0x20);
+    return *reinterpret_cast<UByte**>(p + 0x10);
+}
+
 // Assigning gfxExtensions switches the extensions (and the gfxVersion member) on or off; with them on,
 // noInvisibleAdvance and continueAnimation set the movie's flags.
-// MS2-FUNCTIONAL: the movie flags are read by address
 // @0x142985ef0
 bool GASGlobalObject::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
 {
-    MovieRoot* proot = static_cast<MovieRoot*>(penv->StringContext.pContext->pMovieRoot->pASMovieRoot);
-    if (name.GetNode() == proot->GetStringManager()->GetBuiltin(Builtin_gfxExtensions).GetNode())
+    if (name == penv->GetSC()->GetBuiltin(ASBuiltin_gfxExtensions))
     {
-        pContext->GFxExtensions.Value = val.ToBool(penv) ? Bool3W::B3W_True : Bool3W::B3W_False;
-        if (pContext->GFxExtensions.Value == Bool3W::B3W_True)
+        pContext->GFxExtensions = val.ToBool(penv);
+        if (pContext->GFxExtensions.IsTrue())
         {
-            SetMemberRaw(&penv->StringContext, penv->CreateConstString("gfxVersion"),
-                         Value(penv->CreateConstString("4.1.18")), PropFlags(0));
+            GlobalSetConstMemberRaw(*this, penv->GetSC(), "gfxVersion", Value(GlobalCreateConstString(pContext, "4.1.18")));
         }
         else
-            DeleteMember(&penv->StringContext, penv->CreateConstString("gfxVersion"));
-        Value unset(Value::UNSET);
-        return Object::SetMember(penv, name, unset, flags);
+        {
+            DeleteMember(penv->GetSC(), GlobalCreateConstString(pContext, "gfxVersion"));
+        }
+        return Object::SetMember(penv, name, Value(Value::UNSET), flags);
     }
-    if (pContext->GFxExtensions.Value == Bool3W::B3W_True)
+    else if (pContext->GFxExtensions.IsTrue())
     {
-        UByte* pmovie = 0;
-        if (name.GetNode() == proot->GetStringManager()->GetBuiltin(Builtin_noInvisibleAdvance).GetNode())
+        if (name == penv->GetSC()->GetBuiltin(ASBuiltin_noInvisibleAdvance))
         {
-            pmovie = *reinterpret_cast<UByte**>(reinterpret_cast<UByte*>(penv->Target) + 0x20) ;
-            pmovie = *reinterpret_cast<UByte**>(pmovie + 0x10);
-            if (pmovie)
-            {
-                UInt32* pflags = reinterpret_cast<UInt32*>(pmovie + 0x3490);
-                *pflags = val.ToBool(penv) ? (*pflags | 0x800) : (*pflags & ~0x800u);
-            }
+            UByte* proot = GlobalEnvMovieImpl(penv);
+            if (proot)
+                G_SetFlag<0x800>(*reinterpret_cast<UInt32*>(proot + 0x3490), val.ToBool(penv));
         }
-        else if (name.GetNode() == proot->GetStringManager()->GetBuiltin(Builtin_continueAnimation).GetNode())
+        else if (name == penv->GetSC()->GetBuiltin(ASBuiltin_continueAnimation))
         {
-            pmovie = *reinterpret_cast<UByte**>(reinterpret_cast<UByte*>(penv->Target) + 0x20);
-            pmovie = *reinterpret_cast<UByte**>(pmovie + 0x10);
-            if (pmovie)
-            {
-                UInt32* pflags = reinterpret_cast<UInt32*>(pmovie + 0x3490);
-                *pflags = val.ToBool(penv) ? (*pflags | 0x2000) : (*pflags & ~0x2000u);
-            }
+            UByte* proot = GlobalEnvMovieImpl(penv);
+            if (proot)
+                G_SetFlag<0x2000>(*reinterpret_cast<UInt32*>(proot + 0x3490), val.ToBool(penv));
         }
     }
-    return Object::SetMemberRaw(&penv->StringContext, name, val, flags);
+    return Object::SetMemberRaw(penv->GetSC(), name, val, flags);
 }
 
 // @0x14291c160
