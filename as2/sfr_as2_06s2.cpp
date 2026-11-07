@@ -58,8 +58,9 @@ SF_FORCEINLINE bool BeMouseMoved(const MouseState& ms)
 struct BeButtonActionView
 {
     void*                                                     pVTable;    // +0x00
-    int                                                       RefCount;   // +0x08
-    UInt32                                                    Conditions; // +0x10
+    int                                                       RefCount;   // +0x08 (the RefCountImpl base, padded to 0x10)
+    int                                                       Pad0c;      // +0x0c
+    int                                                       Conditions; // +0x10
     ArrayLH<Ptr<ActionBufferData>, StatMD_ASBinaryData_Mem>   Actions;    // +0x18
 };
 
@@ -75,9 +76,10 @@ SF_FORCEINLINE void BeQueueEvent(AvmButton* pbtn, const EventId& event)
     MovieRoot::ActionEntry* pe = pbtn->GetAS2Root()->InsertEmptyAction(ActionPriority::AP_Frame);
     if (pe)
     {
-        EventId evt      = event;
+        alignas(16) EventId evt = event;
+        InteractiveObject*  pch = pbtn->pDispObj;
         pe->Type          = MovieRoot::ActionEntry::Entry_Event;
-        pe->pCharacter    = pbtn->pDispObj;
+        pe->pCharacter    = pch;
         pe->pActionBuffer = 0;
         pe->mEventId.Id              = evt.Id;
         pe->mEventId.WcharCode       = evt.WcharCode;
@@ -114,7 +116,6 @@ bool AvmButton::OnButtonKeyEvent(const EventId& id, int* pkeyMask)
 
 // A mouse transition of the button: the parent clip runs the button actions whose conditions match it (or the key
 // of a keyPress), then the button's own handler of the event is queued. True when either was found.
-// MS2-FUNCTIONAL: register allocation differs.
 // @0x14296c430
 bool AvmButton::OnMouseEvent(const EventId& event)
 {
@@ -141,38 +142,41 @@ bool AvmButton::OnMouseEvent(const EventId& event)
 
         Button*            pbutton = static_cast<Button*>(pDispObj);
         InteractiveObject* pparent = pbutton->GetParent();
-        InteractiveObject* psprite = (pparent && pparent->IsSprite()) ? pparent : 0;
-        if (psprite)
+        if (pparent)
         {
-            ButtonDef* pdef = pbutton->GetButtonDef();
-            for (UPInt i = 0, n = pdef->GetButtonActionsCount(); i < n; ++i)
+            InteractiveObject* pparentSprite = pparent->IsSprite() ? pparent : 0;
+            if (pparentSprite)
             {
-                const BeButtonActionView& ba =
-                    *reinterpret_cast<const BeButtonActionView*>(pdef->GetButtonAction(i));
-                if ((ba.Conditions & c) || (kc > 0 && ((ba.Conditions >> 9) & 0x7f) == (unsigned)kc))
+                ButtonDef* pdef = pbutton->GetButtonDef();
+                for (UPInt i = 0, n = pdef->GetButtonActionsCount(); i < n; i++)
                 {
-                    AvmCharacter* pavmParent = AS2::ToAvmCharacter(psprite);
-                    Environment*  penv       = pavmParent->GetASEnvironment();
-                    const UPInt   nactions   = ba.Actions.GetSize();
-                    for (UPInt j = 0; j < nactions; ++j)
+                    const BeButtonActionView* action =
+                        reinterpret_cast<const BeButtonActionView*>(pdef->GetButtonAction(i));
+                    if ((action->Conditions & c) || (kc > 0 && ((action->Conditions >> 9) & 0x7F) == kc))
                     {
-                        ActionBufferData* pdata = ba.Actions[j];
-                        if (pdata->GetLength() >= 1 && *BeBufferBytes(pdata))
+                        AvmSprite*       avmParentSpr = reinterpret_cast<AvmSprite*>(pparentSprite->GetAvmObjImpl());
+                        ASStringContext* psc          = avmParentSpr->GetASEnvironment()->GetSC();
+                        const UPInt      n            = action->Actions.GetSize();
+                        for (UPInt j = 0; j < n; ++j)
                         {
-                            Ptr<ActionBuffer> pbuff =
-                                *new (penv->GetSC()->GetHeap()) ActionBuffer(penv->GetSC(), pdata);
-                            MovieRoot::ActionEntry* pe =
-                                pavmParent->GetAS2Root()->InsertEmptyAction(ActionPriority::AP_Frame);
-                            if (pe)
+                            if (action->Actions[j]->GetLength() >= 1 && *BeBufferBytes(action->Actions[j]))
                             {
-                                pe->Type          = MovieRoot::ActionEntry::Entry_Buffer;
-                                pe->pCharacter    = pavmParent->GetDispObj();
-                                pe->pActionBuffer = pbuff;
-                                pe->mEventId.Id   = 0;
+                                Ptr<ActionBuffer> pbuff =
+                                    *new (psc->GetHeap()) ActionBuffer(psc, action->Actions[j]);
+                                MovieRoot::ActionEntry* pe =
+                                    avmParentSpr->GetAS2Root()->InsertEmptyAction(ActionPriority::AP_Frame);
+                                if (pe)
+                                {
+                                    InteractiveObject* pch = avmParentSpr->GetDispObj();
+                                    pe->Type          = MovieRoot::ActionEntry::Entry_Buffer;
+                                    pe->pCharacter    = pch;
+                                    pe->pActionBuffer = pbuff;
+                                    pe->mEventId.Id   = 0;
+                                }
                             }
                         }
+                        if (n > 0) handlerFound = true;
                     }
-                    handlerFound = handlerFound || nactions > 0;
                 }
             }
         }
@@ -182,11 +186,12 @@ bool AvmButton::OnMouseEvent(const EventId& event)
     Environment* penv = GetASEnvironment();
     if (penv)
     {
-        ASString methodName(penv->GetBuiltin(EventId_GetFunctionNameBuiltinType(event)));
+        ASStringContext* psc = penv->GetSC();
+        ASString methodName(psc->GetBuiltin(EventId_GetFunctionNameBuiltinType(event)));
         if (methodName.GetSize() > 0)
         {
             Value method;
-            if (GetMemberRaw(penv->GetSC(), methodName, &method))
+            if (GetMemberRaw(psc, methodName, &method))
             {
                 handlerFound = true;
                 BeQueueEvent(this, event);
