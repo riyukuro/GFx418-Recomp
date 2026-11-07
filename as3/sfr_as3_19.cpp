@@ -7627,11 +7627,18 @@ void Sfr31ExecNewFunction(UPInt vmAddr, UPInt frame, UInt32 methodInd)
 }}} // namespace Scaleform::GFx::AS3
 namespace Scaleform { namespace GFx {
 
+// The AvmDisplayObj interface of a display object (its avm sub-object's virtual at +0x28).
+struct Sfr19AvmSub { virtual void V0(); virtual void V1(); virtual void V2(); virtual void V3(); virtual void V4(); virtual UPInt GetAvm(); };
+static __forceinline UPInt Sfr19GetAvmIntf(UPInt dobj)
+{
+    return reinterpret_cast<Sfr19AvmSub*>(dobj + *reinterpret_cast<const UByte*>(dobj + 0x6d) * 4)->GetAvm();
+}
+
 // ---- batch 69
 // AS3ValueObjectInterface::SetMember: sets the named member of an object from a GFx value. "*" is the any-name and a leading "@" makes
 // the name an attribute. A name that is already a child of a display object is refused with a log message.
-// MS2-FUNCTIONAL 0x142527d60: raw-offset model; the PostProcessName rename branches are laid out in another order and
-// the name Value / Multiname sit in other slots
+// MS2-FUNCTIONAL 0x142527d60: raw-offset model; the exe spills gfxValue/name to other frame slots in the prolog, the
+// PostProcessName rename branches are laid out in another order, and the name Value / Multiname sit in other slots
 // @0x142527d60
 bool AS3ValueObjectInterface::SetMember(void* pdata, const char* name, const Value& value, bool)
 {
@@ -7645,27 +7652,26 @@ bool AS3ValueObjectInterface::SetMember(void* pdata, const char* name, const Val
     Multiname mn(*reinterpret_cast<Instances::Namespace*>(Sfr31Rd(reinterpret_cast<UPInt>(&vm), 0x1d0)),
                  AS3::Value(ASString(mgr->CreateStringNode(name)), AS3::Value::InlineStr), Multiname::InlineAssignTag());
     const UPInt otraits = Sfr31Rd(reinterpret_cast<UPInt>(obj), 0x20);
-    if (*reinterpret_cast<const int*>(otraits + 0x70) - 0x17U < 6 && ((~(*reinterpret_cast<const UByte*>(otraits + 0x68) >> 5)) & 1) != 0)
+    if (*reinterpret_cast<const int*>(otraits + 0x70) - 0x17U < 6
+        && (static_cast<UByte>(~static_cast<UByte>(*reinterpret_cast<const UByte*>(otraits + 0x68) >> 5)) & 1) != 0)
     {
-        UPInt dobj = Sfr31Rd(reinterpret_cast<UPInt>(obj), 0x58);
-        if (dobj != 0 && !((*reinterpret_cast<const UInt16*>(dobj + 0x6a) >> 9) & 1))
-            dobj = 0;
-        UPInt owner = 0x18;
-        if (dobj != 0)
-        {
-            const UPInt sub = dobj + *reinterpret_cast<const UByte*>(dobj + 0x6d) * 4;
-            typedef UPInt (*GetAvmFn)(UPInt);
-            const UPInt avm = reinterpret_cast<GetAvmFn>(Sfr31Rd(Sfr31Rd(sub, 0), 0x28))(sub);
-            owner = avm != 0 ? avm - 0x28 : 0x18;
-        }
-        ASString key(mgr->CreateStringNode(name));
+        // the display object is read without a null test, as the exe does
+        const UPInt pd = Sfr31Rd(reinterpret_cast<UPInt>(obj), 0x58);
+        const UPInt dobj = (static_cast<UByte>(static_cast<UInt16>(*reinterpret_cast<const UInt16*>(pd + 0x6a) >> 9)) & 1) ? pd : 0;
+        UPInt owner;
+        UPInt avm;
+        if (dobj != 0 && (avm = Sfr19GetAvmIntf(dobj)) != 0)
+            owner = avm - 0x28;
+        else
+            owner = 0x18;
+        ASString key(reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348))->CreateStringNode(name));
         DisplayList* dl = reinterpret_cast<DisplayList*>(Sfr31Rd(owner, 0) + 0xd8);
         DisplayObject* ch = dl->GetDisplayObjectByName(key, true);
         if (ch != NULL)
         {
             const UPInt sub = reinterpret_cast<UPInt>(ch) + *reinterpret_cast<const UByte*>(reinterpret_cast<UPInt>(ch) + 0x6d) * 4;
-            typedef void (*MakeAvmFn)(UPInt, int);
-            reinterpret_cast<MakeAvmFn>(Sfr31Rd(Sfr31Rd(sub, 0), 0x78))(sub, 1);
+            typedef void (*MakeAvmFn)(UPInt, bool);
+            reinterpret_cast<MakeAvmFn>(Sfr31Rd(Sfr31Rd(sub, 0), 0x78))(sub, true);
             UPInt avmObj = Sfr31Rd(sub, 0x10);
             if (avmObj == 0)
                 avmObj = Sfr31Rd(sub, 8);
