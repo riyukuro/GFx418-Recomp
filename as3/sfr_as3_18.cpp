@@ -4772,16 +4772,17 @@ static inline void Sfr34_OutputTraitsName(FlashUI* ui, const Traits& tr)
 }
 
 // One value: its kind's text form, references with their addresses.
-// MS2-FUNCTIONAL the exe merges the Output call tails of the cases (rbp frame), scheduling
+// MS2-FUNCTIONAL the literal Output tails are merged through "goto out" as in the exe;
+// left: the exe's rbp frame (larger locals area), its hoisted Output vptr in r9, scheduling
 // @0x14251b350
 void FUN_14251b350(const VM* vm, FlashUI* ui, const Value* v)
 {
     const Value& value = *v;
+    const char*  s;
     switch (value.GetKind())
     {
     case Value::kUndefined:
-        ui->Output(FlashUI::Output_Action, "undefined");
-        break;
+        { s = "undefined"; goto out; }
     case Value::kBoolean:
         ui->Output(FlashUI::Output_Action, value.AsBool() ? "true" : "false");
         break;
@@ -4794,32 +4795,27 @@ void FUN_14251b350(const VM* vm, FlashUI* ui, const Value* v)
     case Value::kNumber:
         if (value.IsNaN())
         {
-            ui->Output(FlashUI::Output_Action, "NaN");
-            break;
+            { s = "NaN"; goto out; }
         }
 
         if (value.IsPOSITIVE_ZERO())
         {
-            ui->Output(FlashUI::Output_Action, "+0");
-            break;
+            { s = "+0"; goto out; }
         }
 
         if (value.IsNEGATIVE_ZERO())
         {
-            ui->Output(FlashUI::Output_Action, "-0");
-            break;
+            { s = "-0"; goto out; }
         }
 
         if (value.IsPOSITIVE_INFINITY())
         {
-            ui->Output(FlashUI::Output_Action, "+Infinity");
-            break;
+            { s = "+Infinity"; goto out; }
         }
 
         if (value.IsNEGATIVE_INFINITY())
         {
-            ui->Output(FlashUI::Output_Action, "-Infinity");
-            break;
+            { s = "-Infinity"; goto out; }
         }
 
         {
@@ -4833,11 +4829,11 @@ void FUN_14251b350(const VM* vm, FlashUI* ui, const Value* v)
         {
             ui->Output(FlashUI::Output_Action, "\"");
             ui->Output(FlashUI::Output_Action, value.AsString().ToCStr());
-            ui->Output(FlashUI::Output_Action, "\"");
+            s = "\"";
+            goto out;
         }
         else
-            ui->Output(FlashUI::Output_Action, "null");
-        break;
+            { s = "null"; goto out; }
     case Value::kThunk:
         ui->Output(FlashUI::Output_Action, "thunk@");
         FUN_14251b210(ui, UInt64(&value.AsThunk()), true);
@@ -4867,8 +4863,7 @@ void FUN_14251b350(const VM* vm, FlashUI* ui, const Value* v)
             FUN_14251b210(ui, UInt64(SInt64(value.GetVTableInd())), true);
         }
         else
-            ui->Output(FlashUI::Output_Action, "null");
-        break;
+            { s = "null"; goto out; }
     case Value::kFunction:
         if (value.IsNull())
             ui->Output(FlashUI::Output_Action, "null");
@@ -4921,11 +4916,11 @@ void FUN_14251b350(const VM* vm, FlashUI* ui, const Value* v)
         if (value.GetObject())
         {
             Sfr34_OutputTraitsName(ui, value.GetObject()->GetTraits());
-            ui->Output(FlashUI::Output_Action, "$$");
+            s = "$$";
+            goto out;
         }
         else
-            ui->Output(FlashUI::Output_Action, "null");
-        break;
+            { s = "null"; goto out; }
     case Value::kNamespace:
     {
         const Instances::Namespace& ns = value.AsNamespace();
@@ -4948,8 +4943,7 @@ void FUN_14251b350(const VM* vm, FlashUI* ui, const Value* v)
             FUN_14251b210(ui, UInt64(&value.AsThunk()), true);
         }
         else
-            ui->Output(FlashUI::Output_Action, "null");
-        break;
+            { s = "null"; goto out; }
     case Value::kInstanceTraits:
     {
         InstanceTraits::Traits& itr = value.GetInstanceTraits();
@@ -4972,13 +4966,15 @@ void FUN_14251b350(const VM* vm, FlashUI* ui, const Value* v)
     }
     case Value::kClassTraits:
         Sfr34_OutputTraitsName(ui, value.GetClassTraits());
-        ui->Output(FlashUI::Output_Action, "$$");
-        break;
+        { s = "$$"; goto out; }
     case Value::kMethodInd:
         break;
     default:
         break;
     }
+    return;
+out:
+    ui->Output(FlashUI::Output_Action, s);
 }
 
 } } } // namespace Scaleform::GFx::AS3
