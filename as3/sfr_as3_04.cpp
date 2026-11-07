@@ -4848,30 +4848,30 @@ const void* FUN_142416e70(const char* self)
     return &ti->GetName(*reinterpret_cast<const AS3::Abc::ConstPool*>(abc + 0x30));
 }
 
-// the class traits of a class's super class; an unresolved name throws VerifyError 1001
-// MS2-FUNCTIONAL: written from the exe on raw offsets
+// ClassTraits::UserDefined::GetSuperClassTraits: the class traits of a class's super class; an unresolved name
+// throws VerifyError 1001 (eNotImplementedError, as the SDK does).
+// MS2-FUNCTIONAL: written from the exe on raw offsets. Same length as the exe; only the entry differs: the exe
+// moves the file to rsi before it loads the super-name index into rcx, ours loads the index into rax first.
 // @0x142417000
 ClassTraits::Traits* FUN_142417000(VMAbcFile* self, const char* class_info)
 {
+    ClassTraits::Traits* result = NULL;
     const int ind = *(const int*)(class_info + 0x28);
     if (ind != 0)
     {
         // the abc file (+0x28) and the VM (+0x20) are read at each use
         const char* mn = *(const char* const*)(*(const char* const*)((const char*)self + 0x28) + 0xb8) + (SPInt)ind * 0x10;
-        ClassTraits::Traits* ctr = reinterpret_cast<ClassTraits::Traits*>(AS3::Sfr31ResolveClassTraits(*(const UPInt*)((const char*)self + 0x20), reinterpret_cast<UPInt>(self), reinterpret_cast<UPInt>(mn)));
-        if (!ctr)
+        result = reinterpret_cast<ClassTraits::Traits*>(AS3::Sfr31ResolveClassTraits(*(const UPInt*)((const char*)self + 0x20), reinterpret_cast<UPInt>(self), reinterpret_cast<UPInt>(mn)));
+        if (!result)
         {
-            const unsigned ni = *(const unsigned*)(mn + 8);
-            const Scaleform::GFx::AS3::Abc::StringView& sv =
-                (*(const Scaleform::GFx::AS3::Abc::StringView* const*)(*(const char* const*)((const char*)self + 0x28) + 0x70))[ni];
-            Scaleform::StringDataPtr sd = sv.ToStringDataPtr();
-            String name(sd.ToCStr(), sd.GetSize());
+            const Scaleform::StringDataPtr s =
+                (*(const Scaleform::GFx::AS3::Abc::StringView* const*)(*(const char* const*)((const char*)self + 0x28) + 0x70))[*(const unsigned*)(mn + 8)].ToStringDataPtr();
+            String name(s.ToCStr(), s.GetSize());
             VM* vm = *(VM* const*)((const char*)self + 0x20);
             vm->ThrowVerifyError(VM::Error(VM::ErrorID(0x3e9), *vm, name.ToCStr()));
         }
-        return ctr;
     }
-    return NULL;
+    return result;
 }
 
 // XMLElement::HasProperty, inlined into the list's
