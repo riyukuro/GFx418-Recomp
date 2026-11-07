@@ -270,76 +270,98 @@ void FUN_142620b10(char* self)
     FUN_1426208d0(RawFieldPtr<U>(self, 0x168));
 }
 
-// Copies the per-type statistics into a snapshot and the keys / objects it refers to.
+// ViewStats::CollectAmpFunctionStats (SDK body; no IsFunctionAggregation test in the exe).
+// MS2-FUNCTIONAL: 2356 vs 2397 bytes; same blocks, calls and inlined Find/Set. The exe saves rsi/rdi/r12/r14/r15 with movs
+// after the prolog and restores them before the HashSet dtor and unlock tail (split .pdata chunk); ours pushes them. The
+// rest is regalloc (movieProfile in rsi vs r14). Tried: functionIds declared first, the real Set in the first loop
+// (same code; the exe calls it out of line there and inlines it in the second).
 // @0x142620b50
-void FUN_142620b50(char* self, char* snap)
+void FUN_142620b50(char* self, AMP::MovieProfile* movieProfile)
 {
-    EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    U* table = RawField<U*>(self, 0x10);
-    if (table)
+    // ViewStats::AmpFunctionStats, ParentChildFunctionPair and FunctionStatMap (HashLH<ParentChildFunctionPair, AmpFunctionStats>).
+    struct AmpFunctionStats
     {
-        for (U i = 0; i <= table[1]; i++)
-        {
-            char* e = RawEntry(table, i, 0x30);
-            if (*(SPInt*)e == -2)
-                continue;
-            char* p = e + 0x10;
-            int count = RawField<int>(p, 0x10);
-            U total = RawField<U>(p, 0x18);
-            if (!count && !total)
-                continue;
-            U key = *(U*)(p + 8);
-            char* rec = RawArrayPush<FUN_142623bc0>((U*)(RawField<char*>(snap, 0x60) + 0x10), 0x20);
-            *(U*)rec = key;
-            *(U*)(rec + 8) = *(U*)p;
-            RawField<int>(rec, 0x10) = count;
-            RawField<U>(rec, 0x18) = total;
+        UInt32 TimesCalled;
+        UInt64 TotalTime;    // Microseconds
+    };
+    struct ParentChildFunctionPair
+    {
+        UInt64 CallerId;    // SWF handle and byte offset
+        UInt64 FunctionId;  // SWF handle and byte offset
+        bool operator==(const ParentChildFunctionPair& kRhs) const { return (CallerId == kRhs.CallerId && FunctionId == kRhs.FunctionId); }
+    };
+    typedef HashLH<ParentChildFunctionPair, AmpFunctionStats> FunctionStatMap;
+    typedef AMP::MovieFunctionStats MovieFunctionStats;
+    typedef AMP::FunctionDescMap FunctionDescMap;
+    // The ViewStats members are reached through macros so that self+N is recomputed at each use, as in the exe.
+#define FunctionTimingMap (*reinterpret_cast<FunctionStatMap*>(self + 0x10))
+#define FunctionInfoMap (*reinterpret_cast<FunctionDescMap*>(self + 0x18))
+#define viewFunctionRoots (*reinterpret_cast<ArrayLH<Ptr<AMP::FuncTreeItem> >*>(self + 0x48))
+    RawLocker locker(self + 0xe0);
 
-            U* names = RawField<U*>(self, 0x18);
-            SPInt found = RawFindKey8(names, key, 0x20);
-            if (found >= 0)
+    // Copy over all the non-zero function timings
+    FunctionStatMap::Iterator funcTimeIter;
+    for (funcTimeIter = FunctionTimingMap.Begin(); funcTimeIter != FunctionTimingMap.End(); ++funcTimeIter)
+    {
+        AmpFunctionStats& funcTime = funcTimeIter->Second;
+        if (funcTime.TimesCalled > 0 || funcTime.TotalTime > 0)
+        {
+            MovieFunctionStats::FuncStats funcStats;
+            funcStats.FunctionId = funcTimeIter->First.FunctionId;
+            funcStats.CallerId = funcTimeIter->First.CallerId;
+            funcStats.TimesCalled = funcTime.TimesCalled;
+            funcStats.TotalTime = funcTime.TotalTime; // microseconds
+            U* array = reinterpret_cast<U*>(&movieProfile->FunctionStats->FunctionTimings);
+            UPInt oldSize = array[1];
+            UPInt newSize = oldSize + 1;
+            if (newSize < oldSize)
             {
-                char* snapNames = RawField<char*>(snap, 0x60);
-                if (RawFindKey8(RawField<U*>(snapNames, 0x28), key, 0x20) < 0)
-                    FUN_142624190(RawFieldPtr<U*>(snapNames, 0x28), &key, (void* const*)(RawEntry(names, found, 0x20) + 0x18));
+                if (newSize < (array[2] >> 1))
+                    FUN_142623bc0(array, array, newSize);
+            }
+            else if (newSize >= array[2])
+                FUN_142623bc0(array, array, newSize + (newSize >> 2));
+            array[1] = newSize;
+            new ((MovieFunctionStats::FuncStats*)array[0] + newSize - 1) MovieFunctionStats::FuncStats(funcStats);
+
+            // Send the friendly name along with the function Id
+            UInt64 swfHandleAndOffset = funcTimeIter->First.FunctionId;
+            FunctionDescMap::Iterator funcNameIter = FunctionInfoMap.Find(swfHandleAndOffset);
+            if (funcNameIter != FunctionInfoMap.End())
+            {
+                FunctionDescMap& descMap = movieProfile->FunctionStats->FunctionInfo;
+                if (descMap.Find(swfHandleAndOffset) == descMap.End())
+                {
+                    FUN_142624190(reinterpret_cast<U**>(&descMap), &swfHandleAndOffset, (void* const*)&funcNameIter->Second);
+                }
             }
         }
     }
 
-    U keys = 0;
-    U* objects = RawFieldPtr<U>(self, 0x48);
-    for (U i = 0; i < objects[1]; i++)
+    HashSet<UInt64> functionIds;
+    for (UPInt i = 0; i < viewFunctionRoots.GetSize(); ++i)
     {
-        char* list = RawField<char*>(snap, 0x70);
-        void** src = (void**)(objects[0] + i * 8);
-        U* array = RawFieldPtr<U>(list, 0x18);
-        FUN_1426240f0(array, array, array[1] + 1);
-        void* p = *src;
-        if (p)
-            FUN_14257dc30(p);
-        ((void**)array[0])[array[1] - 1] = *src;
-        reinterpret_cast<AMP::FuncTreeItem*>(((void**)objects[0])[i])->GetAllFunctions(reinterpret_cast<HashSet<UInt64>*>(&keys));
+        U* roots = reinterpret_cast<U*>(&movieProfile->FunctionTreeStats->FunctionRoots);
+        FUN_1426240f0(roots, roots, roots[1] + 1);
+        new ((Ptr<AMP::FuncTreeItem>*)roots[0] + roots[1] - 1) Ptr<AMP::FuncTreeItem>(viewFunctionRoots[i]);
+        viewFunctionRoots[i]->GetAllFunctions(&functionIds);
     }
-    U* keySet = (U*)keys;
-    if (keySet)
+
+    for (HashSet<UInt64>::Iterator it = functionIds.Begin(); it != functionIds.End(); ++it)
     {
-        for (U i = 0; i <= keySet[1]; i++)
+        FunctionDescMap::Iterator funcNameIter = FunctionInfoMap.Find(*it);
+        if (funcNameIter != FunctionInfoMap.End())
         {
-            char* e = RawEntry(keySet, i, 0x18);
-            if (*(SPInt*)e == -2)
-                continue;
-            U* key = RawFieldPtr<U>(e, 0x10);
-            U* names = RawField<U*>(self, 0x18);
-            SPInt found = RawFindKey8(names, *key, 0x20);
-            if (found < 0)
-                continue;
-            char* snapObj = RawField<char*>(snap, 0x70);
-            if (RawFindKey8(RawField<U*>(snapObj, 0x30), *key, 0x20) < 0)
-                FUN_142624190(RawFieldPtr<U*>(snapObj, 0x30), key, (void* const*)(RawEntry(names, found, 0x20) + 0x18));
+            FunctionDescMap& descMap = movieProfile->FunctionTreeStats->FunctionInfo;
+            if (descMap.Find(*it) == descMap.End())
+            {
+                descMap.Set(*it, funcNameIter->Second);
+            }
         }
-        RawClearPlainSet(&keys, 0x18);
     }
-    LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
+#undef FunctionTimingMap
+#undef FunctionInfoMap
+#undef viewFunctionRoots
 }
 
 // ViewStats::BufferInstructionTimes: one counted array of per-offset times.
