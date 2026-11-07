@@ -1196,7 +1196,8 @@ bool AvmDisplayObj::CreateASInstanceNoCtor(bool)
     return result;
 }
 
-// MS2-FUNCTIONAL 0x1424f2010: written from the exe's control flow (the exe inlines AvmDisplayObj::CreateASInstance)
+// MS2-FUNCTIONAL 0x1424f2010: SDK nested ifs, written from the exe's control flow (the exe inlines AvmDisplayObj::CreateASInstance).
+// Regalloc differs, the exe calls CreateASInstanceNoCtor without the bool, and its SPtr dtor skips a marked pointer (no store back)
 // @0x1424f2010
 unsigned AvmBitmap::CreateASInstance(bool execute)
 {
@@ -1204,29 +1205,33 @@ unsigned AvmBitmap::CreateASInstance(bool execute)
     unsigned rv = 1;
     if (!AvmDisplayObj::GetAS3Obj())
         rv = (!pAS3RawPtr && !pAS3CollectiblePtr && CreateASInstanceNoCtor(execute)) ? CallCtor(execute) : 0;
-    Instances::fl_display::Bitmap* as3bmp = static_cast<Instances::fl_display::Bitmap*>(AvmDisplayObj::GetAS3Obj());
-    if (!as3bmp || as3bmp->pBitmapData || !GetResourceMovieDef())
-        return rv;
-    // the bitmap data is the image's size
-    Value params[2] = { Value(Value::Number(0)), Value(Value::Number(0)) };
-    if (pImage && pImage->GetImage())
+    if (AvmDisplayObj::GetAS3Obj())
     {
-        const Render::ImageSize sz = pImage->GetImage()->GetSize();
-        params[0].Assign(Value(UInt32(sz.Width)));
-        params[1].Assign(Value(UInt32(sz.Height)));
-    }
-    String name;
-    SPtr<Instances::fl_display::BitmapData> pbmpData;
-    const String* pname = GetResourceMovieDef()->GetNameOfExportedResource(ResourceId(Id));
-    if (!pname)
-        return rv;
-    name = *pname;
-    VM& vm = *static_cast<MovieRoot*>(pASRoot)->pAVM;
-    if (vm.ConstructBuiltinObject(pbmpData, name.ToCStr(), 2, params))
-    {
-        Instances::fl_display::BindLibraryBitmap(pbmpData.GetPtr(), pImage.GetPtr(), GetResourceMovieDef());
-        Value r;
-        as3bmp->bitmapDataSet(r, pbmpData);
+        Instances::fl_display::Bitmap* as3bmp = static_cast<Instances::fl_display::Bitmap*>(AvmDisplayObj::GetAS3Obj());
+        if (!as3bmp->pBitmapData && pDispObj->GetResourceMovieDef())
+        {
+            // the bitmap data is the image's size
+            Value params[2] = { Value(Value::Number(0)), Value(Value::Number(0)) };
+            if (pImage && pImage->GetImage())
+            {
+                const Render::ImageSize sz = pImage->GetImage()->GetSize();
+                params[0].Assign(Value(UInt32(sz.Width)));
+                params[1].Assign(Value(UInt32(sz.Height)));
+            }
+            String name;
+            const String* pname = pDispObj->GetResourceMovieDef()->GetNameOfExportedResource(ResourceId(pDispObj->Id));
+            if (!pname)
+                return rv;
+            SPtr<Instances::fl_display::BitmapData> pbmpData;
+            name = *pname;
+            VM& vm = *static_cast<MovieRoot*>(pDispObj->pASRoot)->pAVM;
+            if (vm.ConstructBuiltinObject(pbmpData, name.ToCStr(), 2, params))
+            {
+                Instances::fl_display::BindLibraryBitmap(pbmpData.GetPtr(), pImage.GetPtr(), pDispObj->GetResourceMovieDef());
+                Value r;
+                as3bmp->bitmapDataSet(r, pbmpData);
+            }
+        }
     }
     return rv;
 }
