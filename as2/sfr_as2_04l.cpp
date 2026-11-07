@@ -184,3 +184,9 @@ Sprite* MovieRoot::CreateSprite(TimelineDef* ptimelineDef, MovieDefImpl* pdefImp
 }}} // namespace Scaleform::GFx::AS2
 
 // MS2-PIN: ??_7MovieDefRootNode@GFx@Scaleform@@6B@ 0x14317c9e0
+
+// AS2::FUN_1425dcaf0 is the exe's folded empty body (named ConstructorMov<ASSoundIntf*>::Construct); bound by
+// alternatename so the call stays out of line, as in the exe (see sfr_as3_16z).
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:?FUN_1425dcaf0@AS2@GFx@Scaleform@@YAXPEAX@Z=?Construct@?$ConstructorMov@PEAVASSoundIntf@GFx@Scaleform@@@Scaleform@@SAXPEAX@Z")
+#endif
