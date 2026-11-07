@@ -39,15 +39,15 @@ static __forceinline U RawKey8HashAt(const void* p)
 // @0x142742830
 void FUN_142742830(U** self, const U* key)
 {
-    U* table = *self;
-    if (!table)
+    if (!*self)
         return;
     U hash = RawKey8HashAt(key);
-    U home = hash & table[1];
-    char* e = RawEntry(table, home, 0x30);
-    if (*(SPInt*)e == -2 || *(U*)(e + 8) != home)
+    U* table = *self;
+    U index = hash & table[1];
+    char* e = RawEntry(table, index, 0x30);
+    if (*(SPInt*)e == -2 || *(U*)(e + 8) != index)
         return;
-    U index = home;
+    U home = index;
     U prev = (U)-1;
     while (RawField<U>(e, 8) != home || RawField<U>(e, 0x10) != *key)
     {
