@@ -3033,6 +3033,13 @@ void VideoProviderNetStream::SetAudioTarget(Sprite* ptarget)
     *reinterpret_cast<CharacterHandle**>(&pAudioTarget) = phandle;
 }
 
+// NetStream.attachAudio: hands the target sprite to the stream's video provider (AS2VideoSupportImpl::AttachAudio forwards here).
+// @0x140006ba0
+void FUN_140006ba0(NetStream* pnetStream, Sprite* pchar)
+{
+    pnetStream->GetVideoProvider()->SetAudioTarget(pchar);
+}
+
 // The clock of a swfSync video: the target clip's frames played since the video started, at the movie's frame rate.
 class SwfVideoSyncObject : public VideoPlayer::SyncObject
 {

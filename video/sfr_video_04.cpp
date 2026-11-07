@@ -56,10 +56,10 @@ public:
 } } }
 ExeDecl<void*(void*, InteractiveObject*)>::type FUN_14001af70;     // the AS3 AVM video character constructor
 #define FUN_14001af70_ctor FUN_14001af70
-ExeDecl<void(void*, void*, void*)>::type FUN_140001270;           // AS2VideoSupport::AttachAudio
-#ifndef MS2_HOOK_DLL   // the hook DLL's ms2sym.obj already maps this name to the exe address (alternatename conflict)
-#pragma comment(linker, "/alternatename:?FUN_140001270@@YAXPEAX00@Z=?AttachAudio@AS2VideoSupportImpl@@UEAAXPEAVObject@AS2@GFx@Scaleform@@PEAVSprite@45@@Z")   // sfr36: full-exe link
-#endif
+namespace Scaleform { namespace GFx { namespace AS2 {
+class NetStream;
+void FUN_140006ba0(NetStream* pnetStream, Sprite* pchar);         // sfr_video_01: NetStream's provider->SetAudioTarget
+} } }
 extern ExeDecl<void*>::type DAT_1431b7b50;                             // AS3 ClassInfo (data_rdata_sf_video)
 extern ExeDecl<void*>::type DAT_1431b7160;                             // AS3 ClassInfo (data_rdata_sf_video)
 // The module's null-terminated AS3 class info table the VM registers (exe .data 0x143a462f0: { &DAT_1431b7b50,
@@ -229,10 +229,10 @@ void AS3VideoSupportImpl::RegisterASClasses(AS3::VM* pvm)
     AS3::FUN_1425210d0(*pvm, (const AS3::ClassInfo**)DAT_143a462f0);
 }
 
-// MS2-FUNCTIONAL: AttachAudio is the exe's 0x140001270 (forwards to the video object).
+// forwards to the NetStream's video provider (exe 0x140006ba0).
 void AS2VideoSupportImpl::AttachAudio(AS2::Object* pnetStream, Sprite* pchar)
 {
-    FUN_140001270(this, pnetStream, pchar);
+    AS2::FUN_140006ba0(reinterpret_cast<AS2::NetStream*>(pnetStream), pchar);
 }
 
 // ---- GC pointer and ASString hash helpers ----
