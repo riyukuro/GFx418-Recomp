@@ -2742,7 +2742,7 @@ template <> __declspec(noinline) inline Matrix2x4<float>& Matrix2x4<float>::Prep
 // Graphics: reads the gradient arguments of beginGradientFill / lineGradientStyle (type, colors, alphas,
 // ratios, matrix, spreadMethod, interpolationMethod, focalPointRatio) into the complex fill. Unlike later
 // players this build requires all three arrays and uses an unscaled identity as the default matrix.
-// MS2-FUNCTIONAL: register allocation and scheduling differ (the exe shrink-wraps the prologue past the argc check)
+// MS2-FUNCTIONAL: float register allocation differs (the exe keeps 1.0f in xmm9 and 0 in xmm8 through the inlined GetInverse)
 // @0x142441010
 void FUN_142441010(Scaleform::GFx::AS3::Instances::fl_display::Graphics* pthis, unsigned argc,
                    const Scaleform::GFx::AS3::Value* argv, Scaleform::Render::ComplexFill* pfill)
@@ -2819,14 +2819,19 @@ void FUN_142441010(Scaleform::GFx::AS3::Instances::fl_display::Graphics* pthis, 
     {
         UInt32 color;
         colors->At(i).Convert2UInt32(color);
-        Value::Number a, r;
+        unsigned rgba = unsigned(color | 0xFF000000);
+        Value::Number a;
         alphas->At(i).Convert2Number(a);
-        ratios->At(i).Convert2Number(r);
         unsigned alpha = Alg::Min<unsigned>((unsigned)(a * 255.0), 255);
-        float ratio = Alg::Max(0.0f, Alg::Min((float)r, 255.0f));
-        Render::GradientRecord& record = pfill->pGradient->At((unsigned)i);
+        rgba &= 0xFFFFFF;
+        rgba |= alpha << 24;
+        Value::Number r;
+        ratios->At(i).Convert2Number(r);
+        float ratio = (float)r;
+        ratio = Alg::Max(0.0f, Alg::Min(ratio, 255.0f));
+        Render::GradientRecord& record = pfill->pGradient->At(static_cast<unsigned>(i));
         record.Ratio = (UByte)ratio;
-        record.ColorV.Raw = (color & 0xFFFFFF) | (alpha << 24);
+        record.ColorV = rgba;
     }
 
     FUN_142440d90(pthis, true);
@@ -2838,11 +2843,16 @@ void FUN_142441010(Scaleform::GFx::AS3::Instances::fl_display::Graphics* pthis, 
     matF.Tx() = (float)Render::PixelsToTwips(matrix.Tx());
     matF.Ty() = (float)Render::PixelsToTwips(matrix.Ty());
     pfill->ImageMatrix.SetIdentity();
-    pfill->ImageMatrix.AppendScaling(1.0f / 32768.0f);
     if (gradType == Render::GradientLinear)
+    {
+        pfill->ImageMatrix.AppendScaling(1.0f / 32768.0f);
         pfill->ImageMatrix.AppendTranslation(0.5f, 0.0f);
+    }
     else
+    {
+        pfill->ImageMatrix.AppendScaling(1.0f / 32768.0f);
         pfill->ImageMatrix.AppendTranslation(0.5f, 0.5f);
+    }
     pfill->ImageMatrix.Prepend(matF.GetInverse());
 }
 
