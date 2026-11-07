@@ -5257,8 +5257,8 @@ ASString FUN_14250fc60(ASString name, const VTable& vt, UInt32 ind, bool closure
 }
 
 // "*" is the any name; "@x" an attribute name x (unless the name is already an attribute's), "@*" any attribute.
-// The three renames share one assignment, as in the exe.
-// MS2-FUNCTIONAL the exe keeps the temporary's node in rbx across Value::operator= (its SCU sees that body); ours reloads it
+// The two empty-name renames share one block after the substring one, and the temporary's node stays in a
+// local across Value::operator= (released through it), as in the exe.
 // @0x14251cef0
 __declspec(noinline) void Multiname::PostProcessName(bool isAttr)
 {
@@ -5267,20 +5267,26 @@ __declspec(noinline) void Multiname::PostProcessName(bool isAttr)
     ASString n = Name.AsString();
     if (n.GetSize() == 0)
         return;
+    ASStringManager* const mgr = n.GetManager();
     ASStringNode* node;
-    if (n[0] == '*')
-        node = n.GetManager()->GetEmptyStringNode();
-    else if (n[0] == '@' && !isAttr)
+    if (n[0] != '*')
     {
+        if (n[0] != '@' || isAttr)
+            return;
         Kind = static_cast<Abc::MultinameKind>(Kind | 8);
-        if (n.GetSize() == 2 && n[1] == '*')
-            node = n.GetManager()->GetEmptyStringNode();
-        else
+        if (n.GetSize() != 2 || n[1] != '*')
+        {
             node = n.SubstringNode(1, n.GetSize());
+            node->AddRef();
+            goto assign;
+        }
     }
-    else
-        return;
-    FUN_1424e0d40(Name, ASString(node));
+    node = mgr->GetEmptyStringNode();
+    node->AddRef();
+assign:
+    ASStringNode* const tmp = node;
+    FUN_1424e0d40(Name, reinterpret_cast<const ASString&>(tmp));
+    node->Release();
 }
 
 // VM::LoadFile: the ABC file in the VM, its classes' traits made and its scripts registered (run when
