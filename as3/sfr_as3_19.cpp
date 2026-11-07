@@ -5192,34 +5192,32 @@ void Sfr31TraceTraitsOfSecond(State* st, UInt32 argc)
     s.OpStack().PushBack(Value(itr, notNull ? Value::NotNull : Value::NullOrNot));
 }
 
+// Value(Object*) inline, as sfr_as3_17 defines it.
+SF_FORCEINLINE Value::Value(Object* v, InlineObjType)
+    : Flags(kObject)
+    , value(v)
+{
+    if (v)
+        v->AddRef();
+}
+
 // findproperty-style resolve: pushes the property's value, or the VM's fallback object when it does not resolve.
-// MS2-FUNCTIONAL 0x1425389b0: raw-offset model; codegen differs from the exe
+// MS2-FUNCTIONAL 0x1425389b0: 528 B, same length as the exe; the exe encodes shr al,1 with an imm8 and clears the weak ref with one movdqu (ours two mov qword)
 // @0x1425389b0
 void Sfr31ExecFindPropOrGlobal(UPInt vmAddr, UPInt file, UInt32 idx)
 {
-    const UPInt cvm = Sfr31Rd(file, 0x20);
-    Sfr31ExecMnCtx ctx = {cvm, cvm + 0x48, file};
-    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
-    FUN_1425201f0(&ctx, &mn);
-    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
-    {
-        UPInt pr[6] = {0, 0, 0, 0, 0, 0};
-        FUN_142502570(vmAddr, pr, &mn);
-        Value& res = *reinterpret_cast<Value*>(&pr[2]);
-        const UPInt f = pr[0];
-        if ((*reinterpret_cast<const UInt32*>(&res) & 0x1f) == 0 || f == 1 || ((f & 2) != 0 && (f & ~static_cast<UPInt>(2)) == 0))
-        {
-            const UPInt g = FUN_14250a550(vmAddr);
-            UPInt raw[4] = { 0xc, 0, g, 0 };
-            if (g != 0)
-                *reinterpret_cast<UInt32*>(g + 0x10) = (*reinterpret_cast<UInt32*>(g + 0x10) + 1u) & 0x8fbfffffu;
-            ExecPushCopy(reinterpret_cast<VM*>(vmAddr), *reinterpret_cast<Value*>(raw));
-            FUN_142521f00(raw);
-        }
-        else
-            ExecPushCopy(reinterpret_cast<VM*>(vmAddr), res);
-        res.~Value();
-    }
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    Sfr31ExecReadMn rd(file, idx);
+    Sfr31MnBox& mn = rd.mn;
+    if (vm.IsException())
+        return;
+    Sfr31TracePropRef pr;
+    FUN_142502570(vmAddr, &pr, &mn.Get());
+    const UPInt f = pr.f;
+    if ((*reinterpret_cast<const UInt32*>(&pr.v) & 0x1f) == 0 || f == 1 || ((static_cast<UInt8>(f >> 1) & 1) != 0 && (f & ~static_cast<UPInt>(2)) == 0))
+        ExecPushCopy(&vm, Value(FUN_14250a550(vm), Value::InlineObj));
+    else
+        ExecPushCopy(&vm, pr.v);
 }
 
 // Verifies that the top of the operand stack is usable as the scope object named by the multiname (name check, class lookup, type check).
