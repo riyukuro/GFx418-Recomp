@@ -973,25 +973,24 @@ namespace Classes { namespace fl_gfx
         if (startFromMovie)
             startCh = static_cast<GFx::InteractiveObject*>(startFromMovie->pDispObj.GetPtr());
         else
-            startCh = proot->GetFocusedCharacter(controllerIdx);
+            startCh = proot->GetFocusedCharacter(controllerIdx).GetPtr();
 
-        const char* keystr = keyToSimulate.ToCStr();
-        UInt32 keycode;
-        bool shift = false;
-        if (!strcmp(keystr, "up"))
+        short keycode;
+        KeyModifiers kmods;
+        if (keyToSimulate == "up")
             keycode = Key::Up;
-        else if (!strcmp(keystr, "down"))
+        else if (keyToSimulate == "down")
             keycode = Key::Down;
-        else if (!strcmp(keystr, "left"))
+        else if (keyToSimulate == "left")
             keycode = Key::Left;
-        else if (!strcmp(keystr, "right"))
+        else if (keyToSimulate == "right")
             keycode = Key::Right;
-        else if (!strcmp(keystr, "tab"))
+        else if (keyToSimulate == "tab")
             keycode = Key::Tab;
-        else if (!strcmp(keystr, "shifttab"))
+        else if (keyToSimulate == "shifttab")
         {
             keycode = Key::Tab;
-            shift = true;
+            kmods.SetShiftPressed(true);
         }
         else
         {
@@ -1000,11 +999,11 @@ namespace Classes { namespace fl_gfx
             return;
         }
 
-        InputEventsQueueEntry::KeyEntry ke;
-        ke.Code = keycode;
-        ke.KeysState = shift ? 1 : 0;
-        ke.KeyboardIndex = (UInt8)controllerIdx;
         MS2_FocusKeyInfo info;
+        InputEventsQueueEntry::KeyEntry ke;
+        ke.KeyboardIndex = (UInt8)controllerIdx;
+        ke.Code = keycode;
+        ke.KeysState = kmods.States;
         proot->InitFocusKeyInfo(MS2_FOCUSINFO(&info), ke, includeFocusEnabledChars, NULL);
         info.CurFocused = startCh;
         info.ManualFocus() = true;
