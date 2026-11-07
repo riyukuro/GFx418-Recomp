@@ -52,6 +52,11 @@ extern ExeDecl<void*>::type DAT_1431b5478;
 #pragma comment(linker, "/alternatename:?DAT_1431b5478@@3PEAXEA=??_7NetStreamProto@AS2@GFx@Scaleform@@6B@")
 #pragma comment(linker, "/alternatename:?DAT_1431b5480@@3PEAXEA=??_7NetStreamProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
 #pragma comment(linker, "/alternatename:?DAT_1431b54d0@@3PEAXEA=??_7NetStreamProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
+// Same for the three ??_7AvmVideoCharacter tables, which sfr_video_02's AvmVideoCharacter model emits and
+// the ctor FUN_14000e2b0 stores.
+#pragma comment(linker, "/alternatename:?DAT_1431b5cb0@@3PEAXEA=??_7AvmVideoCharacter@AS2@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@")
+#pragma comment(linker, "/alternatename:?DAT_1431b5c00@@3PEAXEA=??_7AvmVideoCharacter@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
+#pragma comment(linker, "/alternatename:?DAT_1431b5b40@@3PEAXEA=??_7AvmVideoCharacter@AS2@GFx@Scaleform@@6B@")
 #endif
 extern ExeDecl<void*>::type DAT_1431b53c0;
 #define NetStreamPrototypeVtable DAT_1431b53c0
