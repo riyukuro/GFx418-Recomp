@@ -378,31 +378,42 @@ static SF_INLINE void ReleaseGCRef(Object*& p)
 // @0x142521f00
 void Value::ReleaseInternal()
 {
-    switch (GetKind())
+    const Value::KindType kind = GetKind();
+    switch (kind)
     {
     case kString:
         value.VS._1.VStr->Release();
         break;
     case kNamespace:
-        ReleaseGCRef(value.VS._1.VObj);
-        break;
-    case kObject:
-        ReleaseGCRef(value.VS._1.VObj);
+        {
+            Instances::Namespace* ns = value.VS._1.VNs;
+            if ((UPInt)ns & 1)
+                value.VS._1.VNs = (Instances::Namespace*)((UPInt)ns - 1);
+            else if (ns)
+                ns->Release();
+        }
         break;
     case kClass:
-        ReleaseGCRef(value.VS._1.VObj);
-        break;
     case kFunction:
-        ReleaseGCRef(value.VS._1.VObj);
-        break;
     case kThunkFunction:
-        ReleaseGCRef(value.VS._1.VObj);
+    case kObject:
+        {
+            Object* obj = value.VS._1.VObj;
+            if ((UPInt)obj & 1)
+                value.VS._1.VObj = (Object*)((UPInt)obj - 1);
+            else if (obj)
+                obj->Release();
+        }
         break;
     case kThunkClosure:
-        ReleaseGCRef(value.VS._2.VObj);
-        break;
     case kVTableIndClosure:
-        ReleaseGCRef(value.VS._2.VObj);
+        {
+            Object* obj = value.VS._2.VObj;
+            if ((UPInt)obj & 1)
+                value.VS._2.VObj = (Object*)((UPInt)obj - 1);
+            else if (obj)
+                obj->Release();
+        }
         break;
     default:
         break;
@@ -4191,9 +4202,7 @@ bool FUN_142513210(Scaleform::GFx::AS3::MovieRoot* self, const char* pmethodName
 // MovieRoot::Invoke with host values: the invoke alias of pmethodName, else the function at that AS3 path, is
 // called with pargs as AS3 values and its result goes to presult. False when there is none or the call throws
 // (the exception is printed and dropped).
-// MS2-FUNCTIONAL a slot of the exe's MovieRoot vftable, defined as a free function; left: cl sets up an rbp frame
-// (the exe addresses off rsp), so the pargArray spill and the Values sit in other slots, the Value dtors' weak-ref
-// bit test reads memory where the exe tests the loaded word, register allocation
+// A slot of the exe's MovieRoot vftable, defined as a free function.
 // @0x142513240
 bool FUN_142513240(Scaleform::GFx::AS3::MovieRoot* self, const char* pmethodName, Scaleform::GFx::Value* presult,
                    const Scaleform::GFx::Value* pargs, unsigned numArgs)
@@ -7898,8 +7907,8 @@ namespace AS3 {
 
 // ObjectInterface::InvokeClosure: a closure of the AS3 object (a VTable index closure when bit 1 of pdata is set,
 // with dataAux its index, else a thunk closure of the thunk dataAux) called on it with the host's arguments.
-// MS2-FUNCTIONAL: the exe schedules asfn's init stores before asresult's, and its inlined Value dtor (the in-TU
-// ReleaseInternal) merges the two closure cases' tail, testing the weak-ref bit on the loaded pointer
+// The SDK body; its Value dtors inline the in-TU ReleaseInternal, written as the SDK (merged case labels, the
+// pointer loaded into a local before the weak-ref bit test).
 // @0x142513920
 bool AS3ValueObjectInterface::InvokeClosure(void* pdata, UPInt dataAux, GFx::Value* presult, const GFx::Value* pargs,
                                       UPInt nargs)
@@ -7908,8 +7917,8 @@ bool AS3ValueObjectInterface::InvokeClosure(void* pdata, UPInt dataAux, GFx::Val
     using AS3::Value;
     MovieRoot* root = Sfr34_RootOf(pMovieRoot);
     VM*        vm   = root->pAVM;
-    Value      asresult;
     Value      asfn;
+    Value      asresult;
     int        closureType = (reinterpret_cast<UPInt>(pdata) & 2) ? 1 : 0;
     Object*    pobj = reinterpret_cast<Object*>(reinterpret_cast<UPInt>(pdata) & ~UPInt(2));
     if (closureType)
