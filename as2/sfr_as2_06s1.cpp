@@ -394,64 +394,71 @@ static DisasmInstInfo DisasmInstTable[] =
     { 0x00, "<end>",            ArgNone },
 };
 
-// MS2-FUNCTIONAL: register allocation and block order differ.
 // @0x1429674a0
-void Disasm::LogDisasm(const unsigned char* pinstructionData)
+void Disasm::LogDisasm(const unsigned char* InstructionData)
 {
-    const int       actionId = pinstructionData[0];
-    DisasmInstInfo* pinfo    = 0;
+    int             actionId = InstructionData[0];
+    DisasmInstInfo* info     = 0;
+
     for (int i = 0;; i++)
     {
         if (DisasmInstTable[i].ActionId == actionId)
-            pinfo = &DisasmInstTable[i];
+        {
+            info = &DisasmInstTable[i];
+        }
         if (DisasmInstTable[i].ActionId == 0)
+        {
             break;
+        }
     }
 
     DisasmArgFormat fmt = ArgHex;
-    if (!pinfo)
+    if (info == 0)
+    {
         LogF("<unknown>[0x%02X]", actionId);
+    }
     else
     {
-        LogF("%-15s", pinfo->pName);
-        fmt = pinfo->ArgFormat;
+        LogF("%-15s", info->pName);
+        fmt = info->ArgFormat;
     }
 
     if (actionId & 0x80)
     {
-        const unsigned char* pdata  = pinstructionData + 3;
-        int                  length = pinstructionData[1] | (pinstructionData[2] << 8);
+        int length = InstructionData[1] | (InstructionData[2] << 8);
 
         if (fmt == ArgHex)
         {
             for (int i = 0; i < length; i++)
-                LogF(" 0x%02X", pdata[i]);
+            {
+                LogF(" 0x%02X", InstructionData[3 + i]);
+            }
+            LogF("\n");
         }
         else if (fmt == ArgString)
         {
             LogF(" \"");
             for (int i = 0; i < length; i++)
-                LogF("%c", pdata[i]);
+            {
+                LogF("%c", InstructionData[3 + i]);
+            }
             LogF("\"\n");
-            return;
         }
         else if (fmt == ArgU8)
         {
-            LogF(" %d\n", pdata[0]);
-            return;
+            int val = InstructionData[3];
+            LogF(" %d\n", val);
         }
         else if (fmt == ArgU16)
         {
-            LogF(" %d\n", pdata[0] | (pdata[1] << 8));
-            return;
+            int val = InstructionData[3] | (InstructionData[4] << 8);
+            LogF(" %d\n", val);
         }
         else if (fmt == ArgS16)
         {
-            int val = pdata[0] | (pdata[1] << 8);
-            if (val & 0x8000)
-                val |= 0xFFFF8000;
+            int val = InstructionData[3] | (InstructionData[4] << 8);
+            if (val & 0x8000) val |= ~0x7FFF;
             LogF(" %d\n", val);
-            return;
         }
         else if (fmt == ArgPushData)
         {
@@ -459,15 +466,15 @@ void Disasm::LogDisasm(const unsigned char* pinstructionData)
             int i = 0;
             while (i < length)
             {
-                int type = pdata[i];
+                int type = InstructionData[3 + i];
                 i++;
                 LogF("\t\t");
                 if (type == 0)
                 {
                     LogF("\"");
-                    while (pdata[i] != 0)
+                    while (InstructionData[3 + i])
                     {
-                        LogF("%c", pdata[i]);
+                        LogF("%c", InstructionData[3 + i]);
                         i++;
                     }
                     i++;
@@ -475,122 +482,180 @@ void Disasm::LogDisasm(const unsigned char* pinstructionData)
                 }
                 else if (type == 1)
                 {
-                    float f;
-                    memcpy(&f, pdata + i, sizeof(f));
+                    union
+                    {
+                        float  F;
+                        UInt32 I;
+                    } u;
+                    memcpy(&u.I, InstructionData + 3 + i, 4);
                     i += 4;
-                    LogF("(float) %f\n", f);
+                    LogF("(float) %f\n", u.F);
                 }
                 else if (type == 2)
+                {
                     LogF("NULL\n");
+                }
                 else if (type == 3)
+                {
                     LogF("undef\n");
+                }
                 else if (type == 4)
                 {
-                    int reg = pdata[i];
+                    int reg = InstructionData[3 + i];
                     i++;
                     LogF("reg[%d]\n", reg);
                 }
                 else if (type == 5)
                 {
-                    int b = pdata[i];
+                    int boolVal = InstructionData[3 + i];
                     i++;
-                    LogF("bool(%d)\n", b);
+                    LogF("bool(%d)\n", boolVal);
                 }
                 else if (type == 6)
                 {
                     // The two 32-bit halves are stored high word first.
-                    union { double D; UInt32 I[2]; } u;
-                    memcpy(&u.I[1], pdata + i, 4);
-                    memcpy(&u.I[0], pdata + i + 4, 4);
+                    union
+                    {
+                        double D;
+                        UInt64 I;
+                        struct
+                        {
+                            UInt32 Lo;
+                            UInt32 Hi;
+                        } Sub;
+                    } u;
+                    memcpy(&u.Sub.Hi, InstructionData + 3 + i, 4);
+                    memcpy(&u.Sub.Lo, InstructionData + 3 + i + 4, 4);
                     i += 8;
                     LogF("(double) %f\n", u.D);
                 }
                 else if (type == 7)
                 {
-                    int val = pdata[i] | (pdata[i + 1] << 8) | (pdata[i + 2] << 16) | (pdata[i + 3] << 24);
+                    SInt32 val = InstructionData[3 + i] | (InstructionData[3 + i + 1] << 8) |
+                                 (InstructionData[3 + i + 2] << 16) | (InstructionData[3 + i + 3] << 24);
                     i += 4;
                     LogF("(int) %d\n", val);
                 }
                 else if (type == 8)
                 {
-                    int id = pdata[i];
+                    int id = InstructionData[3 + i];
                     i++;
                     LogF("DictLookup[%d]\n", id);
                 }
                 else if (type == 9)
                 {
-                    int id = pdata[i] | (pdata[i + 1] << 8);
+                    int id = InstructionData[3 + i] | (InstructionData[3 + i + 1] << 8);
                     i += 2;
                     LogF("DictLookupLg[%d]\n", id);
                 }
             }
-            return;
         }
         else if (fmt == ArgDeclDict)
         {
-            int count = pdata[0] | (pdata[1] << 8);
+            int i     = 0;
+            int count = InstructionData[3 + i] | (InstructionData[3 + i + 1] << 8);
+            i += 2;
+
             LogF(" [%d]\n", count);
-            int i = 2;
+
             for (int ct = 0; ct < count; ct++)
             {
                 LogF("\t\t");
                 LogF("\"");
-                while (pdata[i] != 0)
+                while (InstructionData[3 + i])
                 {
                     if (i >= length)
                     {
                         LogF("<disasm error -- length exceeded>\n");
                         break;
                     }
-                    LogF("%c", pdata[i]);
+                    LogF("%c", InstructionData[3 + i]);
                     i++;
                 }
                 LogF("\"\n");
                 i++;
             }
-            return;
         }
         else if (fmt == ArgFunction2)
         {
-            const char* pname   = (const char*)pdata;
-            int         i       = (int)strlen(pname);
-            int         nargs   = pdata[i + 1] | (pdata[i + 2] << 8);
-            int         nregs   = pdata[i + 3];
-            UInt16      flags   = (UInt16)(pdata[i + 4] | (pdata[i + 5] << 8));
-            LogF("\n\t\tname = '%s', ArgCount = %d, RegCount = %d\n", pname, nargs, nregs);
-            LogF("\t\t        pg = %d\n\t\t        pp = %d\n\t\t        pr = %d\n"
-                 "\t\tss = %d, ps = %d\n\t\tsa = %d, pa = %d\n\t\tst = %d, pt = %d\n",
-                 (flags >> 8) & 1, (flags >> 7) & 1, (flags >> 6) & 1, (flags >> 5) & 1, (flags >> 4) & 1,
-                 (flags >> 3) & 1, (flags >> 2) & 1, (flags >> 1) & 1, flags & 1);
-            i += 6;
-            for (int argi = 0; argi < nargs; argi++)
+            int         i            = 0;
+            const char* functionName = (const char*)&InstructionData[3 + i];
+            i += (int)strlen(functionName) + 1;
+
+            int argCount = InstructionData[3 + i] | (InstructionData[3 + i + 1] << 8);
+            i += 2;
+
+            int regCount = InstructionData[3 + i];
+            i++;
+
+            LogF("\n\t\tname = '%s', ArgCount = %d, RegCount = %d\n", functionName, argCount, regCount);
+
+            UInt16 flags = (InstructionData[3 + i]) | (InstructionData[3 + i + 1] << 8);
+            i += 2;
+
+            bool preloadGlobal = (flags & 0x100) != 0;
+            bool preloadParent = (flags & 0x80) != 0;
+            bool preloadRoot   = (flags & 0x40) != 0;
+            bool suppressSuper = (flags & 0x20) != 0;
+            bool preloadSuper  = (flags & 0x10) != 0;
+            bool suppressArgs  = (flags & 0x08) != 0;
+            bool preloadArgs   = (flags & 0x04) != 0;
+            bool suppressThis  = (flags & 0x02) != 0;
+            bool preloadThis   = (flags & 0x01) != 0;
+
+            LogF("\t\t        pg = %d\n"
+                 "\t\t        pp = %d\n"
+                 "\t\t        pr = %d\n"
+                 "\t\tss = %d, ps = %d\n"
+                 "\t\tsa = %d, pa = %d\n"
+                 "\t\tst = %d, pt = %d\n",
+                 int(preloadGlobal), int(preloadParent), int(preloadRoot), int(suppressSuper), int(preloadSuper),
+                 int(suppressArgs), int(preloadArgs), int(suppressThis), int(preloadThis));
+
+            for (int argi = 0; argi < argCount; argi++)
             {
-                int         reg      = pdata[i];
-                const char* pargName = (const char*)pdata + i + 1;
-                i += 1 + (int)strlen(pargName) + 1;
-                LogF("\t\targ[%d] - reg[%d] - '%s'\n", argi, reg, pargName);
+                int argRegister = InstructionData[3 + i];
+                i++;
+                const char* argName = (const char*)&InstructionData[3 + i];
+                i += (int)strlen(argName) + 1;
+
+                LogF("\t\targ[%d] - reg[%d] - '%s'\n", argi, argRegister, argName);
             }
-            LogF("\t\tfunction length = %d\n", pdata[i] | (pdata[i + 1] << 8));
-            return;
+
+            int functionLength = InstructionData[3 + i] | (InstructionData[3 + i + 1] << 8);
+            i += 2;
+
+            LogF("\t\tfunction length = %d\n", functionLength);
         }
         else if (fmt == ArgFunction)
         {
-            const char* pname = (const char*)pdata;
-            int         i     = (int)strlen(pname);
-            int         nargs = pdata[i + 1] | (pdata[i + 2] << 8);
-            i += 3;
-            LogF("\n\t\tname = '%s', ArgCount = %d\n", pname, nargs);
-            for (int argi = 0; argi < nargs; argi++)
+            int         i            = 0;
+            const char* functionName = (const char*)&InstructionData[3 + i];
+            i += (int)strlen(functionName) + 1;
+
+            int argCount = InstructionData[3 + i] | (InstructionData[3 + i + 1] << 8);
+            i += 2;
+
+            LogF("\n\t\tname = '%s', ArgCount = %d\n", functionName, argCount);
+
+            for (int argi = 0; argi < argCount; argi++)
             {
-                const char* pargName = (const char*)pdata + i;
-                i += (int)strlen(pargName) + 1;
-                LogF("\t\targ[%d] - '%s'\n", argi, pargName);
+                const char* argName = (const char*)&InstructionData[3 + i];
+                i += (int)strlen(argName) + 1;
+
+                LogF("\t\targ[%d] - '%s'\n", argi, argName);
             }
-            LogF("\t\tfunction length = %d\n", pdata[i] | (pdata[i + 1] << 8));
-            return;
+
+            int functionLength = InstructionData[3 + i] | (InstructionData[3 + i + 1] << 8);
+            i += 2;
+
+            LogF("\t\tfunction length = %d\n", functionLength);
         }
     }
-    LogF("\n");
+    else
+    {
+        LogF("\n");
+    }
 }
 
 // `new TextField()` makes nothing (text fields come from createTextField only).
