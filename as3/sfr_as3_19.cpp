@@ -3693,35 +3693,44 @@ static SF_FORCEINLINE void Sfr31PushByte(UPInt* a, UInt8 b)
     d->Data[d->Size - 1] = b;
 }
 
+// ArrayData::PushBack(const T&): the pushed value is materialized before the Reserve call.
+static SF_FORCEINLINE void Sfr31PushByteRef(UPInt* a, const UInt8& b)
+{
+    typedef ArrayDataBase<UByte, AllocatorGH<UByte, 2>, ArrayDefaultPolicy> BytesData;
+    BytesData* const d = reinterpret_cast<BytesData*>(a);
+    d->ResizeNoConstruct(d, d->Size + 1);
+    d->Data[d->Size - 1] = b;
+}
+
 // Variable-length integer writer: the low two bits of the first byte give the byte count - 1.
-// MS2-FUNCTIONAL 0x142531bf0: raw-offset model; codegen differs from the exe
+// MS2-FUNCTIONAL 0x142531bf0: SDK WriteUInt30 shape; two byte stores swap base/index operand order ([rax+rbx-1] vs [rbx+rax-1])
 // @0x142531bf0
 UPInt Sfr31WriteVarint(UPInt** arr, UInt32 v)
 {
-    UPInt* a = *arr;
-    const UInt8 b0 = static_cast<UInt8>(v << 2);
-    if (v < 0x40)
+    // PathDataEncoder<ContainerType>::WriteUInt30; *arr is the encoder's Data pointer
+    const UInt8 b0 = UInt8(v << 2);
+    if (v <= 0x3f)
     {
-        Sfr31PushByte(a, b0);
+        Sfr31PushByteRef(*arr, b0);
         return 1;
     }
-    if (v < 0x4000)
+    if (v <= 0x3fff)
     {
-        Sfr31PushByte(a, b0 | 1);
-        Sfr31PushByte(*arr, static_cast<UInt8>(v >> 6));
+        Sfr31PushByteRef(*arr, b0 | 1);
+        Sfr31PushByteRef(*arr, UInt8 (v >> 6));
         return 2;
     }
-    if (v < 0x400000)
+    if (v <= 0x3fffff)
     {
-        Sfr31PushByte(a, b0 | 2);
-        Sfr31PushByte(*arr, static_cast<UInt8>(v >> 6));
-        Sfr31PushByte(*arr, static_cast<UInt8>(v >> 14));
+        Sfr31PushByteRef(*arr, b0 | 2);
+        Sfr31PushByteRef(*arr, UInt8 (v >> 6));
+        Sfr31PushByteRef(*arr, UInt8 (v >> 14));
         return 3;
     }
-    Sfr31PushByte(a, b0 | 3);
-    Sfr31PushByte(*arr, static_cast<UInt8>(v >> 6));
-    Sfr31PushByte(*arr, static_cast<UInt8>(v >> 14));
-    Sfr31PushByte(*arr, static_cast<UInt8>(v >> 22));
+    Sfr31PushByteRef(*arr, b0 | 3);
+    Sfr31PushByteRef(*arr, UInt8 (v >> 6));
+    Sfr31PushByteRef(*arr, UInt8 (v >> 14));
+    Sfr31PushByteRef(*arr, UInt8 (v >> 22));
     return 4;
 }
 
