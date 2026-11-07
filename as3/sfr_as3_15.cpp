@@ -1206,39 +1206,62 @@ namespace Classes { namespace fl_gfx
             result->readingWindowFontSize = st.GetReadingWindowFontSize();
     }
 
-    // MS2-FUNCTIONAL: the exe sets up an rbp frame for the style struct; same stores, flags and call
     // @0x1424cb980
     void IMEEx::setIMECandidateListStyle(const Value& result, Instances::fl_gfx::IMECandidateListStyle* pstyle)
     {
         SF_UNUSED(result);
         GFx::IMECandidateListStyle st;
-        MovieImpl* movie = static_cast<ASVM&>(GetVM()).GetMovieImpl();
-        if (!movie)
-            return;
-        if (pstyle->textColor != -1)
-            st.SetTextColor(pstyle->textColor);
-        // the exe sets the selected text color twice
-        if (pstyle->selectedTextColor != -1)
-            st.SetSelectedTextColor(pstyle->selectedTextColor);
-        if (pstyle->selectedTextColor != -1)
-            st.SetSelectedTextColor(pstyle->selectedTextColor);
-        if (pstyle->fontSize != -1)
-            st.SetFontSize(pstyle->fontSize);
-        if (pstyle->backgroundColor != -1)
-            st.SetBackgroundColor(pstyle->backgroundColor);
-        if (pstyle->selectedBackgroundColor != -1)
-            st.SetSelectedBackgroundColor(pstyle->selectedBackgroundColor);
-        if (pstyle->indexBackgroundColor != -1)
-            st.SetIndexBackgroundColor(pstyle->indexBackgroundColor);
-        if (pstyle->selectedIndexBackgroundColor != -1)
-            st.SetSelectedIndexBackgroundColor(pstyle->selectedIndexBackgroundColor);
-        if (pstyle->readingWindowTextColor != -1)
-            st.SetReadingWindowTextColor(pstyle->readingWindowTextColor);
-        if (pstyle->readingWindowBackgroundColor != -1)
-            st.SetReadingWindowBackgroundColor(pstyle->readingWindowBackgroundColor);
-        if (pstyle->readingWindowFontSize != -1)
-            st.SetReadingWindowFontSize(pstyle->readingWindowFontSize);
-        movie->SetIMECandidateListStyle(st);
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        MovieImpl* movie = asvm.GetMovieImpl();
+        if (movie)
+        {
+            int c;
+            if ((c = pstyle->textColor) != -1)
+            {
+                st.SetTextColor(c);
+            }
+            if ((c = pstyle->selectedTextColor) != -1)
+            {
+                st.SetSelectedTextColor(c);
+            }
+            if ((c = pstyle->selectedTextColor) != -1)
+            {
+                st.SetSelectedTextColor(c);
+            }
+            if ((c = pstyle->fontSize) != -1)
+            {
+                st.SetFontSize(c);
+            }
+            if ((c = pstyle->backgroundColor) != -1)
+            {
+                st.SetBackgroundColor(c);
+            }
+            if ((c = pstyle->selectedBackgroundColor) != -1)
+            {
+                st.SetSelectedBackgroundColor(c);
+            }
+            if ((c = pstyle->indexBackgroundColor) != -1)
+            {
+                st.SetIndexBackgroundColor(c);
+            }
+            if ((c = pstyle->selectedIndexBackgroundColor) != -1)
+            {
+                st.SetSelectedIndexBackgroundColor(c);
+            }
+            if ((c = pstyle->readingWindowTextColor) != -1)
+            {
+                st.SetReadingWindowTextColor(c);
+            }
+            if ((c = pstyle->readingWindowBackgroundColor) != -1)
+            {
+                st.SetReadingWindowBackgroundColor(c);
+            }
+            if ((c = pstyle->readingWindowFontSize) != -1)
+            {
+                st.SetReadingWindowFontSize(c);
+            }
+            movie->SetIMECandidateListStyle(st);
+        }
     }
 }}
 

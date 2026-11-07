@@ -1,6 +1,7 @@
 // Recovered Scaleform 4.1.18 GFx: the IME candidate list style MovieImpl keeps for the IME manager (0x2c bytes, by
-// value). Each value has a set bit in Flags; colors are 0xRRGGBB and the getters drop the alpha byte. Layout and bits
-// from the AS3 IMEEx get/setIMECandidateListStyle natives (0x1424cab90 / 0x1424cb980).
+// value). Each value has a set bit in Flags, which the setters set before the value, as in the SDK. Colors are
+// 0xRRGGBB and the getters drop the alpha byte. Layout and bits from the AS3 IMEEx get/setIMECandidateListStyle
+// natives (0x1424cab90 / 0x1424cb980).
 #ifndef MS2_SF_GFX_IMECANDIDATELISTSTYLE_H
 #define MS2_SF_GFX_IMECANDIDATELISTSTYLE_H
 
@@ -27,16 +28,16 @@ public:
 
     IMECandidateListStyle() : Flags(0) {}
 
-    void SetTextColor(UInt32 c)                     { TextColor = c; Flags |= Flag_TextColor; }
-    void SetBackgroundColor(UInt32 c)               { BackgroundColor = c; Flags |= Flag_BackgroundColor; }
-    void SetIndexBackgroundColor(UInt32 c)          { IndexBackgroundColor = c; Flags |= Flag_IndexBackgroundColor; }
-    void SetSelectedTextColor(UInt32 c)             { SelectedTextColor = c; Flags |= Flag_SelectedTextColor; }
-    void SetSelectedBackgroundColor(UInt32 c)       { SelectedBackgroundColor = c; Flags |= Flag_SelectedBackgroundColor; }
-    void SetSelectedIndexBackgroundColor(UInt32 c)  { SelectedIndexBackgroundColor = c; Flags |= Flag_SelectedIndexBackgroundColor; }
-    void SetFontSize(UInt32 sz)                     { FontSize = sz; Flags |= Flag_FontSize; }
-    void SetReadingWindowTextColor(UInt32 c)        { ReadingWindowTextColor = c; Flags |= Flag_ReadingWindowTextColor; }
-    void SetReadingWindowBackgroundColor(UInt32 c)  { ReadingWindowBackgroundColor = c; Flags |= Flag_ReadingWindowBackgroundColor; }
-    void SetReadingWindowFontSize(UInt32 sz)        { ReadingWindowFontSize = sz; Flags |= Flag_ReadingWindowFontSize; }
+    void SetTextColor(UInt32 c)                     { Flags |= Flag_TextColor; TextColor = c; }
+    void SetBackgroundColor(UInt32 c)               { Flags |= Flag_BackgroundColor; BackgroundColor = c; }
+    void SetIndexBackgroundColor(UInt32 c)          { Flags |= Flag_IndexBackgroundColor; IndexBackgroundColor = c; }
+    void SetSelectedTextColor(UInt32 c)             { Flags |= Flag_SelectedTextColor; SelectedTextColor = c; }
+    void SetSelectedBackgroundColor(UInt32 c)       { Flags |= Flag_SelectedBackgroundColor; SelectedBackgroundColor = c; }
+    void SetSelectedIndexBackgroundColor(UInt32 c)  { Flags |= Flag_SelectedIndexBackgroundColor; SelectedIndexBackgroundColor = c; }
+    void SetFontSize(UInt32 sz)                     { Flags |= Flag_FontSize; FontSize = sz; }
+    void SetReadingWindowTextColor(UInt32 c)        { Flags |= Flag_ReadingWindowTextColor; ReadingWindowTextColor = c; }
+    void SetReadingWindowBackgroundColor(UInt32 c)  { Flags |= Flag_ReadingWindowBackgroundColor; ReadingWindowBackgroundColor = c; }
+    void SetReadingWindowFontSize(UInt32 sz)        { Flags |= Flag_ReadingWindowFontSize; ReadingWindowFontSize = sz; }
 
     bool HasTextColor() const                       { return (Flags & Flag_TextColor) != 0; }
     bool HasBackgroundColor() const                 { return (Flags & Flag_BackgroundColor) != 0; }
