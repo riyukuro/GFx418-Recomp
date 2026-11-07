@@ -49,6 +49,19 @@ extern "C" char DAT_1431bee68[];
 extern "C" char DAT_1431b80b8[];   // SoundRenderer::AuxStreamer
 
 // An empty ArrayPOD (data, size, policy).
+// FixedSizeHash<UPInt>: SDBM over the key's bytes, last to first. This is the SDK body (SF_Hash.h SDBM_Hash); the
+// shift form and the size countdown decide which key bytes cl forwards from the register.
+static __forceinline UPInt SdbmHash01g(const void* data_in, UPInt size, UPInt seed = 5381)
+{
+    const UByte* data = (const UByte*) data_in;
+    UPInt        h = seed;
+    while (size > 0)
+    {
+        size--;
+        h = (h << 16) + (h << 6) - h + (UPInt)data[size];
+    }
+    return h;
+}
 struct RawArrayPOD
 {
     U Data, Size, Policy;
@@ -97,15 +110,6 @@ static inline void RawUnlinkNode(void* self)
         RawField<char*>(self, 0x18) = 0;
         RawField<char*>(self, 0x20) = 0;
     }
-}
-
-// FixedSizeHash<UPInt>: SDBM over the key's bytes, last to first.
-static inline U RawHashWord(const unsigned char* key)
-{
-    U h = 5381;
-    for (int i = 7; i >= 0; --i)
-        h = h * 65599 + key[i];
-    return h;
 }
 
 // The sound objects' outermost base (0x10 bytes).
@@ -174,7 +178,9 @@ void* FUN_142743fa0(void* self, unsigned flags)
 // The renderer takes on a sound: under its lock (+0x80) the sound joins the list kept for its FMOD sound's key
 // (+0x40 of the sound data, in the set at +0xa8); with updates on (+0xf1) and no update thread yet (+0x18) one is
 // started, and turned off if it fails to. Then the update event (+0x20) is pulsed.
-// MS2-FUNCTIONAL raw-offset model; the exe keeps the key in rsi and the sound data in r14
+// MS2-FUNCTIONAL raw-offset model. The key is read once into k (rsi, as in the exe) and copied into the find key and
+// the add key. What is left: the exe zeroes the empty array's Data/Size with one xmm store and has a 0x90 frame
+// (ours 0x80), so the locals sit at other offsets and the chain-walk registers differ.
 // @0x142744070
 __declspec(safebuffers) void FUN_142744070(char* self, void* psound)
 {
@@ -184,15 +190,16 @@ __declspec(safebuffers) void FUN_142744070(char* self, void* psound)
     if (!data || !RawField<U>(data, 0x40))
         return;
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0x80));
-    U key = RawField<U>(data, 0x40);
+    U k = RawField<U>(data, 0x40);
+    U key = k;
     U* list = (U*)FindAudioRequestEntry(RawFieldPtr<void*>(self, 0xa8), (const unsigned char*)&key);
     if (!list)
     {
-        U nkey = key;
-        RawArrayPOD empty = { 0, 0, 0 };
+        U nkey = k;
+        RawArrayPOD empty = {};
         NodeRef ref = { &nkey, (void* const*)&empty };
-        const U hash = RawHashWord((const unsigned char*)&nkey);
         U* table = RawField<U*>(self, 0xa8);
+        const U hash = SdbmHash01g(&nkey, sizeof(nkey));
         bool set = false;
         if (table)
         {
