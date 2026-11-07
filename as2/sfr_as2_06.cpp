@@ -1234,6 +1234,30 @@ static SF_FORCEINLINE FunctionRef RegisterBuiltinClass(GlobalContext* pgc, ASBui
     return ctor;
 }
 
+// Object(psc) + Set__proto__ inlined (prototype instances); the exe calls Object::SetMemberRaw directly.
+#define SFR06_INLINE_PROTO_OBJECT(T)                                                                                     \
+    __forceinline T::T(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag) : Object(psc, ObjectInlineCtorTag()) \
+    {                                                                                                                    \
+        if (!pProto)                                                                                                     \
+            Object::SetMemberRaw(                                                                                        \
+                psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__), \
+                Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));         \
+        pProto = pprototype;                                                                                             \
+    }
+
+SFR06_INLINE_PROTO_OBJECT(DateObject)
+__forceinline DateProto::DateProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+    : Prototype<DateObject>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+__forceinline DateCtorFunction::DateCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
+    : CFunctionObject(psc, GlobalCtor, t)
+{
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
 // The filter classes derive from BitmapFilter: it is registered first unless the registry knows the name.
 static SF_FORCEINLINE void RegisterBitmapFilterBase(GlobalContext* pgc)
 {
@@ -1306,11 +1330,19 @@ FunctionRef ColorMatrixFilterCtorFunction::Register(GlobalContext* pgc)
     return RegisterBuiltinClass<ColorMatrixFilterCtorFunction, ColorMatrixFilterProto>(pgc, ASBuiltin_ColorMatrixFilter, ASBuiltin_BitmapFilter, pgc->FlashFiltersPackage);
 }
 
-// MS2-FUNCTIONAL the exe inlines the DateCtorFunction and DateProto ctors (sfr_as2_03)
+// The exe inlines the DateCtorFunction and DateProto ctors down to Object(psc).
+// MS2-FUNCTIONAL: register allocation floor (1175 vs 1165 bytes), the same as StyleSheetCtorFunction::Register
+// (sfr_as2_06s9): the exe keeps zero in rdi and the ObjectInterface vptr in rdx across the inlined CtorFunction
+// Object(psc), so its byte/word zero stores use dil/di; it also stores the DateObject vptrs before the pProto test.
 // @0x142976be0
 FunctionRef DateCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClass<DateCtorFunction, DateProto>(pgc, ASBuiltin_Date, ASBuiltin_Object, pgc->pGlobal);
+    ASStringContext sc(pgc, 8);
+    FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) DateCtorFunction(&sc, ObjectInlineCtorTag()));
+    Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) DateProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor, ObjectInlineCtorTag());
+    SetBuiltinPrototype(pgc, ASBuiltin_Date, proto);
+    pgc->pGlobal->SetMemberRaw(&sc, ((MovieRoot*)pgc->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin_Date), Value(ctor));
+    return ctor;
 }
 
 // MS2-FUNCTIONAL the exe inlines the DropShadowFilterCtorFunction and DropShadowFilterProto ctors and GetBuiltinClassRegistrar (sfr_as2_03)
@@ -3391,3 +3423,14 @@ void ClassHash_RemoveCaseCheck(ASStringHash<FunctionRef>* phash, const ASString&
 // MS2-PIN: ??_7?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@AS2@GFx@Scaleform@@6B@ 0x1432154b8
 // MS2-PIN: ??_7Object@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432154d0
 // MS2-PIN: ??_7Object@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215518
+// MS2-PIN: ??_7GASPrototypeBase@AS2@GFx@Scaleform@@6B@ 0x1431b5028
+// MS2-PIN: ??_7DateObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321c1d8
+// MS2-PIN: ??_7DateObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321c220
+// MS2-PIN: ??_7?$Prototype@VDateObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321c2c8
+// MS2-PIN: ??_7?$Prototype@VDateObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321c310
+// MS2-PIN: ??_7?$Prototype@VDateObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321c3b8
+// MS2-PIN: ??_7DateProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321c3c0
+// MS2-PIN: ??_7DateProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321c408
+// MS2-PIN: ??_7DateProto@AS2@GFx@Scaleform@@6B@ 0x14321c4b0
+// MS2-PIN: ??_7DateCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321c4b8
+// MS2-PIN: ??_7DateCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321c540

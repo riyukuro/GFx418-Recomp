@@ -17,6 +17,7 @@ public:
     DateObject(Environment* penv, SInt64 val); // exe 0x14291b5a0
     // The prototype instance leaves the time fields unset.
     DateObject(ASStringContext* psc, Object* pprototype) : Object(psc) { Set__proto__(psc, pprototype); }
+    DateObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual const char* GetTextValue(Environment* penv = 0) const; // exe 0x1429566c0
     virtual ObjectType  GetObjectType() const;                     // exe 0x142954220: Object_Date
@@ -46,6 +47,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143213ae0
 
     DateProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291b650
+    DateProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     static void DateGetTimezoneOffset(const FnCall& fn);
     static void DateGetMonth(const FnCall& fn);
@@ -120,6 +122,7 @@ class DateCtorFunction : public CFunctionObject
 {
 public:
     DateCtorFunction(ASStringContext* psc); // exe 0x14291b470
+    DateCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936c40
 
