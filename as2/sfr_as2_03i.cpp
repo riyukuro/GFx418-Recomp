@@ -20,7 +20,6 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-// MS2-FUNCTIONAL scheduling of the Value/PropFlags temporaries around the unrolled member sets
 // @0x1429226d0
 TextFormatObject::TextFormatObject(Environment* penv) : Object(penv)
 {
@@ -109,16 +108,20 @@ TextFormatObject::TextFormatObject(Environment* penv) : Object(penv)
         Value nul(Value::NULLTYPE);
         pobj->SetMemberRaw(psc, psc->CreateConstString("url"), nul, flags);
     }
+    if (penv->GetVersion() >= 8)
     {
-        PropFlags flags(2);
-        Value nul(Value::NULLTYPE);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("kerning"), nul, flags);
+        {
+            PropFlags flags(2);
+            Value nul(Value::NULLTYPE);
+            pobj->SetMemberRaw(psc, psc->CreateConstString("kerning"), nul, flags);
+        }
+        {
+            PropFlags flags(2);
+            Value nul(Value::NULLTYPE);
+            pobj->SetMemberRaw(psc, psc->CreateConstString("letterSpacing"), nul, flags);
+        }
     }
-    {
-        PropFlags flags(2);
-        Value nul(Value::NULLTYPE);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("letterSpacing"), nul, flags);
-    }
+    if (penv->CheckExtensions())
     {
         PropFlags flags(2);
         Value nul(Value::NULLTYPE);
