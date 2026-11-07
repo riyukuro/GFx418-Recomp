@@ -7402,7 +7402,10 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // object's value array, a Value, an object, a primitive, a string, a constant C string), a method (as a closure of
 // obj), or the result of the getter. False (with a TypeError or ReferenceError raised for a non-callable getter or a
 // write-only property) when the slot has no value.
-// MS2-FUNCTIONAL free function (not declared in the shared SlotInfo class); the slot is read over its address
+// The constant C string case reads ValueInd itself, as the SDK's GetSlotConstChar(obj, ValueInd) does.
+// MS2-FUNCTIONAL free function (not declared in the shared SlotInfo class); the slot is read over its address.
+// The exe's result is a CheckResult sret, so it stores *r = true ahead of the value stores (our char* r may alias
+// value, so ours stores it last); the other differences are register numbering (value/obj/vind)
 // @0x14250e770
 char* FUN_14250e770(const Scaleform::GFx::AS3::SlotInfo* psi, char* r, Scaleform::GFx::AS3::Value* pvalue,
                     Scaleform::GFx::AS3::Object* obj)
@@ -7412,7 +7415,8 @@ char* FUN_14250e770(const Scaleform::GFx::AS3::SlotInfo* psi, char* r, Scaleform
     const SlotInfo& si    = *psi;
     Value&          value = *pvalue;
     const AbsoluteIndex vind(si.ValueInd);
-    switch (si.BindType)
+    const SlotInfo::BindingType bt = static_cast<SlotInfo::BindingType>(si.BindType);
+    switch (bt)
     {
     case SlotInfo::BT_ValueArray:
         value.AssignUnsafe(reinterpret_cast<const Value*>(*reinterpret_cast<const UPInt*>(reinterpret_cast<UPInt>(obj) + 0xa8))[UInt32(vind.Get())]);
@@ -7446,7 +7450,7 @@ char* FUN_14250e770(const Scaleform::GFx::AS3::SlotInfo* psi, char* r, Scaleform
         break;
     case 10:   // a constant C string (4.1.18 numbers this binding before BT_Code)
         ValueAssignCopies::AssignUnsafeStrInline18(value, obj->GetVM().GetStringManager().CreateConstString(
-            *reinterpret_cast<const char* const*>(reinterpret_cast<UPInt>(obj) + UInt32(vind.Get()))));
+            *reinterpret_cast<const char* const*>(reinterpret_cast<UPInt>(obj) + UInt32(si.ValueInd))));
         break;
     case SlotInfo::BT_Code:
         FUN_14250ba10(&obj->GetTraits().GetVT(), value, vind, obj);
