@@ -34,12 +34,12 @@ extern ExeDecl<void*>::type DAT_1431b4be0;
 #define VideoSoundStreamVtable DAT_1431b4be0
 extern ExeDecl<void*>::type DAT_1431b4ce0;
 #define VideoSoundChannelSystemVtable DAT_1431b4ce0
-extern ExeDecl<void*>::type DAT_1431b5cb0;
-#define AvmVideoCharacterVtable DAT_1431b5cb0
-extern ExeDecl<void*>::type DAT_1431b5c00;
-#define AvmVideoCharacterInterfaceVtable DAT_1431b5c00
-extern ExeDecl<void*>::type DAT_1431b5b40;
-#define AvmVideoCharacterBaseVtable DAT_1431b5b40
+// The AS2 AvmVideoCharacter vftables (0x1431b5cb0 / 0x1431b5c00 / 0x1431b5b40) come from its ctor (0x14000e2b0).
+//
+//
+//
+//
+//
 // The NetStreamProto vftables (0x1431b5480 / 0x1431b54d0 / 0x1431b5478) come from its ctor below (0x14000ae30),
 // which calls the out-of-line Prototype<NetStream> ctor (0x140009e20).
 namespace Scaleform { namespace GFx { namespace AS2 {
@@ -53,11 +53,11 @@ template<> Prototype<NetStream>::Prototype(ASStringContext* psc, Object* pprotot
 //
 //
 //
-// Same for the three ??_7AvmVideoCharacter tables, which sfr_video_02's AvmVideoCharacter model emits and
-// the ctor FUN_14000e2b0 stores.
-#pragma comment(linker, "/alternatename:?DAT_1431b5cb0@@3PEAXEA=??_7AvmVideoCharacter@AS2@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@")
-#pragma comment(linker, "/alternatename:?DAT_1431b5c00@@3PEAXEA=??_7AvmVideoCharacter@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
-#pragma comment(linker, "/alternatename:?DAT_1431b5b40@@3PEAXEA=??_7AvmVideoCharacter@AS2@GFx@Scaleform@@6B@")
+//
+//
+//
+//
+//
 #endif
 extern ExeDecl<void*>::type DAT_1431b53c0;
 #define NetStreamPrototypeVtable DAT_1431b53c0
@@ -4154,28 +4154,23 @@ VideoObject* FUN_14000e020(AvmCharacter* character)
     return *slot;
 }
 
-// the video character's own fields at +0x38, set up after the AvmCharacter base
-namespace {
-struct AvmVideoCharacterFields
-{
-    Scaleform::UInt32 A, B, C;
-    bool Flag;
-    AvmVideoCharacterFields() { C = 0; B = 0; A = 0; Flag = true; }
-};
-} // namespace
+// (the video character's own fields at +0x38 are the AvmVideoCharacterFields base of the header)
+//
+//
+//
+//
+//
+//
+//
+//
 
 // Initializes the AVM video-character bases and retains its lazily created VideoObject state. The exe does
-// not check that object for NULL, and stores the +0x48 field after the vtables (hence the volatile store).
+// not check that object for NULL.
 // @0x14000e2b0
-AvmCharacter* FUN_14000e2b0(AvmCharacter* character, InteractiveObject* displayObject)
+AvmVideoCharacter::AvmVideoCharacter(InteractiveObject* displayObject) : AvmCharacter(displayObject)
 {
-    character->AvmCharacter::AvmCharacter(displayObject);
+    AvmCharacter* character = this;
     unsigned char* bytes = reinterpret_cast<unsigned char*>(character);
-    reinterpret_cast<AvmVideoCharacterFields*>(bytes + 0x38)->AvmVideoCharacterFields::AvmVideoCharacterFields();
-    *reinterpret_cast<void***>(bytes) = &AvmVideoCharacterVtable;
-    *reinterpret_cast<void***>(bytes + 8) = &AvmVideoCharacterInterfaceVtable;
-    *reinterpret_cast<void***>(bytes + 0x30) = &AvmVideoCharacterBaseVtable;
-    *reinterpret_cast<void* volatile*>(bytes + 0x48) = 0;
     VideoObject* video = FUN_14000e020(character);
     void* held = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(video) + 0x30);
     if (held) {
@@ -4184,8 +4179,13 @@ AvmCharacter* FUN_14000e2b0(AvmCharacter* character, InteractiveObject* displayO
     }
     ReleaseAs2GCObject(*reinterpret_cast<void**>(bytes + 0x18));
     *reinterpret_cast<void**>(bytes + 0x18) = held;
-    return character;
 }
+//
+//
+//
+//
+//
+//
 
 // (the exe's temporary strong pointers add and release two references, net zero).
 // @0x14000daa0
@@ -4449,3 +4449,7 @@ const char* ObjectInterface::GetTextValue(Environment*) const { return 0; }
 // MS2-PIN: ?GetTextValue@ObjectInterface@AS2@GFx@Scaleform@@UEBAPEBDPEAVEnvironment@234@@Z 0x14000e370
 // MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
 // MS2-PIN: ??_7VideoSound@Video@GFx@Scaleform@@6B@ 0x1431b4b80
+// MS2-PIN: ??_7AvmInteractiveObjBase@GFx@Scaleform@@6B@ 0x14317bfe8
+// MS2-PIN: ??_7AvmVideoCharacter@AS2@GFx@Scaleform@@6B@ 0x1431b5b40
+// MS2-PIN: ??_7AvmVideoCharacter@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b5c00
+// MS2-PIN: ??_7AvmVideoCharacter@AS2@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x1431b5cb0

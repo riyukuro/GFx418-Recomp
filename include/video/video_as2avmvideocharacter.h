@@ -1,6 +1,6 @@
 // Recovered Scaleform GFx 4.1.18 Video: the AS2 video character (the AvmCharacter of a Video clip).
 // sfr_video_02 defines its overriders and emits the vftables (Video02EmitAvmVideoVftables). sfr_video_01 defines
-// GetStandardMemberBitMask (0x14000d320) and stores the vftables by hand in its ctor.
+// GetStandardMemberBitMask (0x14000d320) and the ctor (0x14000e2b0).
 // Shared header of the src/ms2/scaleform units: append, do not reorder.
 #ifndef MS2_SF_VIDEO_AS2AVMVIDEOCHARACTER_H
 #define MS2_SF_VIDEO_AS2AVMVIDEOCHARACTER_H
@@ -13,12 +13,20 @@ class __declspec(novtable) AvmVideoCharacterBase : public AvmInteractiveObjBase
 {
 };
 namespace AS2 {
-class AvmVideoCharacter : public AvmCharacter, public AvmVideoCharacterBase
+// the video character's own fields at +0x38: a base, since the exe sets them before the vftable stores
+struct AvmVideoCharacterFields
+{
+    UInt32 FieldA, FieldB, Deblocking;   // +0x38
+    bool   Smoothing;                    // +0x44
+    AvmVideoCharacterFields() { Deblocking = 0; FieldB = 0; FieldA = 0; Smoothing = true; }
+};
+class AvmVideoCharacter : public AvmCharacter, public AvmVideoCharacterBase, public AvmVideoCharacterFields
 {
 public:
     // (implicit destructor, inlined into the deleting destructor 0x14000e8a0; 0x14000e840 is its out-of-line copy)
     // the AS2 part lives inside its display object's allocation: the deleting destructor frees nothing
     void operator delete(void*) {}
+    AvmVideoCharacter(InteractiveObject* pdispObj);   // 0x14000e2b0 (sfr_video_01)
 
     virtual AvmInteractiveObjBase*      ToAvmInteractiveObjBase();      // 0x14000e520
     virtual AvmSpriteBase*              ToAvmSpriteBase();              // 0x14000e530
@@ -55,8 +63,7 @@ public:
                            const PropFlags& flags = PropFlags());       // 0x14000e8f0
     virtual bool GetMember(Environment* penv, const ASString& name, Value* val);   // 0x14000e9f0
 
-    UInt32           FieldA, FieldB, Deblocking;    // +0x38
-    bool             Smoothing;                     // +0x44
+    // (FieldA, FieldB, Deblocking, Smoothing at +0x38: the AvmVideoCharacterFields base)
     Ptr<VideoObject> pVideoObject;                  // +0x48, created by FUN_14000e020
 };
 }}} // namespace Scaleform::GFx::AS2

@@ -34,7 +34,7 @@ using namespace Scaleform::GFx::Video;
 namespace Scaleform { namespace GFx { namespace AS2 {
 class AvmCharacter; class FunctionRef; class StringManager;
 class GlobalContext { public: StringManager* GetStringManager() const; };
-AvmCharacter* FUN_14000e2b0(AvmCharacter* character, InteractiveObject* displayObject);
+class AvmVideoCharacter { public: AvmVideoCharacter(InteractiveObject* pdispObj); };   // ctor-only view (sfr_video_01, 0x14000e2b0)
 FunctionRef FUN_14000cf20(GlobalContext* global);
 } } }
 struct Video04GcAccess : AS2::RefCountBaseGC<323> { using AS2::RefCountBaseGC<323>::ReleaseInternal; };
@@ -195,8 +195,8 @@ DisplayObjectBase* AS2VideoSupportImpl::CreateASCharacter(MovieImpl* proot, Char
     }
     else
         pobj = 0;
-    if (pmem + 0x110 != 0)
-        AS2::FUN_14000e2b0(reinterpret_cast<AS2::AvmCharacter*>(pmem + 0x110), pobj);
+    ::new (pmem + 0x110) AS2::AvmVideoCharacter(pobj);
+//
     return (DisplayObjectBase*)pobj;
 }
 
