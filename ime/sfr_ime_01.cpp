@@ -222,12 +222,14 @@ unsigned long long* FUN_1423cabb0(unsigned long long*, unsigned long long);
 
 // The class (base IMEManagerBase, the members the slot functions read) is in gfx_imemanagerwin32.h.
 
-// MS2-FUNCTIONAL: constructor frame differs.
+// The members are set in the body, after the String members are built, in the exe's store order.
 // @0x1423c8a50
 GFxIMEManagerWin32::GFxIMEManagerWin32(::HWND__* window)
-    : hwnd(window), p70(0), p78(0)
 {
+    hwnd = window;
+    p78 = 0;
     pLog = 0;
+    p70 = 0;
 }
 
 // @0x1423c8ac0
