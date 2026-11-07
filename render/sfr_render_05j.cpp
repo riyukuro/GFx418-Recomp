@@ -646,10 +646,23 @@ MaskEffectState TreeCacheNode::calcMaskBounds(RectF* bounds, Matrix2F* boundArea
     return MES_Combinable;
 }
 
+// the exe calls these two out of line in the 3D view cull only (the mask and filter blocks inline them); the
+// wrapper calls GetViewProj itself, which keeps the exe's argument order
+__pragma(inline_depth(0))
+static __forceinline void OutOfLineGetMatrix3D(const TransformArgs& t, TransformFlags flags, Matrix3F* m)
+{
+    t.GetMatrix3D(flags, m);
+}
+static __forceinline RectF OutOfLineTransformBounds3D(const TransformArgs& t, const Viewport& vp,
+                                                      const Matrix3F& viewMatrix, const RectF& inputBounds, bool orient)
+{
+    return TransformBounds3D(t.GetViewProj(), vp, viewMatrix, inputBounds, orient);
+}
+__pragma(inline_depth(254))
+
 // Mask bounds narrow cullRect (and update the mask effect), the filter effect follows the node's matrix and color
 // transform, and the node is culled when transparent or outside cullRect; a culled node clears TF_NeedCull for
 // its children. 4.1.18 has no 3D culling exception: a 3D node outside the view stays culled.
-// MS2-FUNCTIONAL: same code, the exe calls GetMatrix3D and TransformBounds3D out of line in the 3D view cull
 // @0x142685210
 TransformFlags TreeCacheNode::updateCulling(const TreeNode::NodeData* data, const TransformArgs& t, RectF* cullRect,
                                             TransformFlags flags)
@@ -670,7 +683,8 @@ TransformFlags TreeCacheNode::updateCulling(const TreeNode::NodeData* data, cons
             MaskEffectState mes;
             if (maskEffect)
             {
-                mes = calcMaskBounds(&bounds, &maskAreaMatrix, m3, t.GetViewProj(), maskEffect->MES, flags);
+                MaskEffectState oldMES = maskEffect->MES;
+                mes = calcMaskBounds(&bounds, &maskAreaMatrix, m3, t.GetViewProj(), oldMES, flags);
                 if (maskEffect->UpdateMatrix(mes, maskAreaMatrix))
                 {
                     UpdateFlags |= Change_State_MaskNode;
@@ -721,18 +735,16 @@ TransformFlags TreeCacheNode::updateCulling(const TreeNode::NodeData* data, cons
         if (flags & TF_ParentFilter)
         {
             TreeCacheNode* p = this;
-            unsigned       marked;
-            for (;;)
+            while (p)
             {
-                unsigned updateFlags = p->UpdateFlags;
-                marked               = updateFlags & Change_State_Filter;
-                TreeCacheNode* parent = p->GetParent();
-                if (marked || !parent || parent->GetNodeData()->HasFilter())
+                if (p->UpdateFlags & Change_State_Filter)
                     break;
-                p->UpdateFlags = updateFlags | Change_State_Filter;
-                p              = parent;
+                if (!p->GetParent() || p->GetParent()->GetNodeData()->HasFilter())
+                    break;
+                p->UpdateFlags |= Change_State_Filter;
+                p = p->GetParent();
             }
-            if (!marked)
+            if (p && !(p->UpdateFlags & Change_State_Filter))
             {
                 if (p->GetParent())
                     p->GetParent()->UpdateFlags |= Change_State_Filter | Update_Pattern;
@@ -759,9 +771,9 @@ TransformFlags TreeCacheNode::updateCulling(const TreeNode::NodeData* data, cons
             else
             {
                 Matrix3F m3d(Matrix3F::NoInit);
-                t.GetMatrix3D(flags, &m3d);
-                RectF viewportBounds =
-                    TransformBounds3D(t.GetViewProj(), pRoot->GetNodeData()->VP, m3d, data->AproxLocalBounds, true);
+                OutOfLineGetMatrix3D(t, flags, &m3d);
+                RectF viewportBounds = OutOfLineTransformBounds3D(t, pRoot->GetNodeData()->VP, m3d,
+                                                                  data->AproxLocalBounds, true);
                 if (!cullRect->Intersects(viewportBounds))
                     culled = true;
             }
