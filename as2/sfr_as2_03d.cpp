@@ -7,6 +7,7 @@
 
 namespace Scaleform { class Range; } // gfx_textfield.h (WIP header) names Range before declaring it
 #define MS2_AS2_TEXTSNAPSHOT_CTOR_INLINE // MovieClip.getTextSnapshot inlines the TextSnapshotObject ctor
+#define MS2_AS2_OWN_STYLEMANAGER // defines Text::StyleManager below (as2_builtinobjects.h)
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"

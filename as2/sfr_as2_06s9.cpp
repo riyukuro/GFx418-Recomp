@@ -7,6 +7,7 @@
 // MS2-RANGE: 0x14297a960-0x14297ac97 .text$mn
 // MS2-RANGE: 0x14297b190-0x14297bf75 .text$mn
 
+#define MS2_AS2_OWN_STYLEMANAGER // defines Text::StyleManager below (as2_builtinobjects.h)
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_objectproto.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"

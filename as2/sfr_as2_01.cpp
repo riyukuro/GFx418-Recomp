@@ -68,6 +68,7 @@
 
 #include <math.h>
 
+#define MS2_AS2_OWN_STYLEMANAGER // as3_obj_text.h gives Text::StyleManager (as2_builtinobjects.h)
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/gfx_imageresource.h"
 #include "../include/gfx/gfx_moviedef.h"

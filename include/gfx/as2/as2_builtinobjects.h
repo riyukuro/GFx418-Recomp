@@ -14,6 +14,11 @@
 #include "../../kernel/sf_stringhash.h"
 #include "../gfx_sharedobject.h"
 #include "../../render/text_core.h"   // ~ParagraphFormat, called by ParagraphFormatMember
+// Text::StyleManager complete: StyleManagerMember's dtor calls ~StyleManager. Units that see the class complete through
+// another header (sfr_as2_01: as3_obj_text.h) or define it themselves (sfr_as2_03d, 06s9) define MS2_AS2_OWN_STYLEMANAGER.
+#ifndef MS2_AS2_OWN_STYLEMANAGER
+#include "../text_stylesheet.h"
+#endif
 
 namespace Scaleform { namespace Render { namespace Text { class TextFormat; class ParagraphFormat; } } }
 void FUN_1424aa0f0(void* p); // Render::Text::TextFormat's out-of-line destructor (exe 0x1424aa0f0; defined in sfr_as3_12)
@@ -787,8 +792,8 @@ struct ParagraphFormatMember
 };
 
 // The style sheet's Text::StyleManager, whose layout this header does not give. The member's destructor calls the
-// out-of-line ~StyleManager (exe 0x142609070) by name. It is a class template, so that body is only instantiated in
-// units that use StyleSheetObject's implicit destructor, and those units see the class complete.
+// out-of-line ~StyleManager (exe 0x142609070) by name. cl defines StyleSheetObject's implicit virtual destructor in
+// every includer, so this header includes text_stylesheet.h for the complete class.
 template<class SM = Text::StyleManager>
 struct StyleManagerMemberT
 {
