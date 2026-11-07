@@ -7853,16 +7853,6 @@ namespace AS3 {
 static inline void FUN_142504630(ASRefCountCollector* gc, void* stats) { ::Scaleform::GFx::AS3::Sfr33CollectorQueue(reinterpret_cast<UByte*>(gc), static_cast<RefCountImpl*>(stats)); }          // ASRefCountCollector::ForceCollect
 static inline void FUN_1425274b0(DisplayObjectBase* bitmap, Resource* pimage) { ::Scaleform::GFx::AS3::Sfr31SetResource(reinterpret_cast<Scaleform::UPInt>(bitmap), pimage); }   // AvmBitmap::SetImage
 
-// The new character's AS3 object, made (with the loader's info) and constructed when it has none yet.
-static inline void Sfr34_LoadedCtor(AvmDisplayObj* avm, Instances::fl_display::Loader* loader)
-{
-    if (!avm->GetAS3Obj() && avm->CreateASInstanceNoCtor(true))
-    {
-        avm->GetAS3Obj()->SetLoaderInfo(*loader);
-        avm->CallCtor(true);
-    }
-}
-
 // The SDK's `if (!avm->HasAS3Obj()) { if (avm->CreateASInstanceNoCtor()) {...} }`, inline as in the exe.
 // Ptr<RefCountImpl>'s converting ctor from the entry's Ptr<NotifyLoadInitC>, inline as in the exe.
 static SF_FORCEINLINE Pickable<RefCountImpl> Sfr18InitCRef(Ptr<NotifyLoadInitC>& src)
@@ -8304,7 +8294,7 @@ void MovieRoot::ProcessLoadQueueEntry(GFx::LoadQueueEntry* pentry, LoadStates* p
                     FUN_1425274b0(pnewBmpChar, pres);
             }
             Sfr34_ToAvmContainer(pparent)->AddChild(pnewBmpChar);
-            Sfr34_LoadedCtor(ToAvmDisplayObj(pnewBmpChar), entry.mLoader);
+            Sfr18LoadedCtor(ToAvmDisplayObj(pnewBmpChar), entry.mLoader);
             pnewChar = pnewBmpChar;
         }
         else if (pmovieDef)
@@ -8323,7 +8313,7 @@ void MovieRoot::ProcessLoadQueueEntry(GFx::LoadQueueEntry* pentry, LoadStates* p
             AvmSprite* avmSpr = static_cast<AvmSprite*>(ToAvmDisplayObj(pnewSprite));
             avmSpr->ExecuteInitActionFrameTags(0);
             pnewSprite->SetFOV(55.0);
-            Sfr34_LoadedCtor(avmSpr, entry.mLoader);
+            Sfr18LoadedCtor(avmSpr, entry.mLoader);
             Sfr34_ToAvmContainer(pparent)->AddChild(pnewSprite);
             ResolveStickyVariables(pnewSprite);
             pnewSprite->ModifyOptimizedPlayListLocal<Sprite>();
