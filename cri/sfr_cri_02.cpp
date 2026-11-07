@@ -885,14 +885,12 @@ VideoPlayerImpl::~VideoPlayerImpl()
         pDecoder->Release();
 }
 
-// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002c730
 VideoPlayer::Status VideoPlayerImpl::GetStatus()
 {
     return Stat;
 }
 
-// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002c740
 bool VideoPlayerImpl::IsTextureReady()
 {
@@ -948,7 +946,6 @@ void VideoPlayerImpl::Open(const char* url)
     OpenTicks = Scaleform::Timer::GetTicks();
 }
 
-// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002ca30
 void VideoPlayerImpl::GetVideoInfo(VideoInfo* info)
 {
@@ -1076,7 +1073,6 @@ bool VideoPlayer::LoadVideoInfo(const char* url, VideoInfo* pinfo, FileOpenerBas
 // The reader's file: a Scaleform File held as a thread-safe reference.
 static inline File* ReaderFile(RefCountImpl* pfile) { return (File*)pfile; }
 
-// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002d230
 CriSint64 VideoReader::Seek(CriSint64 size, SeekOrigin offset)
 {
@@ -1317,7 +1313,6 @@ void* FUN_14002dec0(VideoReader* reader, CriUint32 flags)
     return reader;
 }
 
-// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002da70
 void VideoReader::Open(CriChar8* fname)
 {
@@ -2375,12 +2370,12 @@ void FUN_14002e010(CriMvRequestPoolView* pool)
 // MS2-PIN: ??0VideoPlayerImpl@Video@GFx@Scaleform@@QEAA@PEAVMemoryHeap@3@@Z 0x14002c810
 // ---- full-exe unresolved: leaves without .pdata that data_cri's tables reference as ?FUN_<va>@@YAXXZ ----
 
-// MS2-FUNCTIONAL: empty interface slot.
+// Empty interface slot.
 // @0x14002b0d0
 void FUN_14002b0d0(void*) {}
 
 struct cri02_flaghost { void* vtbl; void* _08[6]; CriUint8 flag; };
-// MS2-FUNCTIONAL: sets the flag byte +0x38.
+// Sets the flag byte +0x38.
 // @0x14002b0e0
 void FUN_14002b0e0(cri02_flaghost* self, CriUint8 v) { self->flag = v; }
 
