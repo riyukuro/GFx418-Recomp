@@ -41,11 +41,14 @@
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
 #include "ms2/scaleform/include/gfx/as3/as3_tracer.h"
 #include "ms2/scaleform/include/gfx/gfx_rendertree.h"
+#include "ms2/scaleform/include/kernel/sf_msgformat.h"
 #include "ms2/scaleform/include/kernel/sf_simd.h"
 #include "ms2/scaleform/include/gfx/gfx_valueinfo.h"
 #include <cmath>
 
 namespace Scaleform {
+// Out of line in the exe (0x1423e85f0): AS3ValueObjectInterface::SetMember calls it rather than inlining it.
+template <> SF_NOINLINE void MsgFormat::FormatD1<const char*>(const char* const& v);
 // Out of line in sfr_as3_15 (0x1424dc7a0): VTable::Names' storage, released by AutoPtr<VTable>::Reset.
 template <> ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, GFx::AS3::StatMV_VM_VTable_Mem>, ArrayDefaultPolicy>::~ArrayDataBase();
 // Out of line in sfr_as3_15 (0x1424dc730): the weak display-object lists the depth hash's AutoPtr values own.
@@ -7510,7 +7513,8 @@ namespace Scaleform { namespace GFx {
 // ---- batch 69
 // AS3ValueObjectInterface::SetMember: sets the named member of an object from a GFx value. "*" is the any-name and a leading "@" makes
 // the name an attribute. A name that is already a child of a display object is refused with a log message.
-// MS2-FUNCTIONAL 0x142527d60: raw-offset model; the abort message is composed with String instead of MsgFormat
+// MS2-FUNCTIONAL 0x142527d60: raw-offset model; the PostProcessName rename branches are laid out in another order and
+// the name Value / Multiname sit in other slots
 // @0x142527d60
 bool AS3ValueObjectInterface::SetMember(void* pdata, const char* name, const Value& value, bool)
 {
@@ -7521,36 +7525,8 @@ bool AS3ValueObjectInterface::SetMember(void* pdata, const char* name, const Val
     const UPInt root = Sfr31Rd(Sfr31Rd(self, 8), 0x18);
     VM& vm = *reinterpret_cast<VM*>(Sfr31Rd(root, 0x48));
     ASStringManager* mgr = reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348));
-    ASString nameStr(mgr->CreateStringNode(name));
-    AS3::Value nm;
-    if (nameStr.GetNode() == reinterpret_cast<ASStringNode*>(reinterpret_cast<UPInt>(mgr) + 0x68))
-        nm.SetNull();
-    else
-        nm.Assign(nameStr);
-    Multiname mn(*reinterpret_cast<Instances::Namespace*>(Sfr31Rd(reinterpret_cast<UPInt>(&vm), 0x1d0)), nm);
-    if (mn.Name.GetKind() == AS3::Value::kString)
-    {
-        ASStringNode* node = reinterpret_cast<ASStringNode*>(mn.Name.GetGASRefCountBase());
-        node->AddRef();
-        if (node->Size != 0)
-        {
-            ASStringNode* any = reinterpret_cast<ASStringNode*>(reinterpret_cast<UPInt>(node->pManager) + 0x40);
-            if (node->pData[0] == '*')
-                mn.Name.Assign(any);
-            else if (node->pData[0] == '@')
-            {
-                *reinterpret_cast<UInt32*>(&mn) = 8;
-                if (node->Size == 2 && node->pData[1] == '*')
-                    mn.Name.Assign(any);
-                else
-                {
-                    ASStringNode* sub = node->pManager->CreateStringNode(node->pData + 1, node->Size - 1);
-                    mn.Name.Assign(sub);
-                }
-            }
-        }
-        node->Release();
-    }
+    Multiname mn(*reinterpret_cast<Instances::Namespace*>(Sfr31Rd(reinterpret_cast<UPInt>(&vm), 0x1d0)),
+                 AS3::Value(ASString(mgr->CreateStringNode(name)), AS3::Value::InlineStr), Multiname::InlineAssignTag());
     const UPInt otraits = Sfr31Rd(reinterpret_cast<UPInt>(obj), 0x20);
     if (*reinterpret_cast<const int*>(otraits + 0x70) - 0x17U < 6 && ((~(*reinterpret_cast<const UByte*>(otraits + 0x68) >> 5)) & 1) != 0)
     {
@@ -7580,9 +7556,8 @@ bool AS3ValueObjectInterface::SetMember(void* pdata, const char* name, const Val
                 avmObj -= 1;
             if (avmObj != 0)
             {
-                String msg("Property '");
-                msg += name;
-                msg += "' already exists as a DisplayObject. SetMember aborted.";
+                String msg;
+                Scaleform::Format(msg, "Property '{0}' already exists as a DisplayObject. SetMember aborted.", name);
                 typedef void (*LogFn)(UPInt, int, const char*);
                 reinterpret_cast<LogFn>(Sfr31Rd(Sfr31Rd(root + 0x28, 0), 8))(root + 0x28, 1, msg.ToCStr());
                 return false;
