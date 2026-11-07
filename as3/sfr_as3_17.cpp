@@ -1580,17 +1580,20 @@ ClassTraits::Traits* Sfr33LookupHash1c8(VM* self, const ASString& name, const In
 
 // MultinameHash<ClassTraits::Traits*>::Get(const Multiname&): the first namespace of a namespace set
 // with an entry, else the entry under the multiname's single namespace.
-// MS2-FUNCTIONAL 0x142505aa0: the exe keeps the name node in rbx across the call (ours reloads it from the slot) and saves rdi/r13 in another order in the loop; same results
+// MS2-FUNCTIONAL 0x142505aa0: register allocation only, in the inlined MultinameHash lookup of the namespace-set loop (the exe re-reads the key namespace at the compare); the single-namespace branch is a separate node copy so its release uses the saved register, as in the exe
 // @0x142505aa0
 ClassTraits::Traits** Sfr33ClassTraitsCacheGet(TClassTraitsCache* self, const Multiname& mn)
 {
-    ClassTraits::Traits** p = NULL;
     if ((static_cast<UInt32>(mn.Kind) & 3) != Abc::MNF_NS_Multi)
     {
-        ASString name = mn.Name.AsString();
-        p = FUN_142414ac0(self, name, static_cast<const Instances::Namespace&>(*mn.Obj));
+        ASStringNode* const node = mn.Name.GetStringNode();
+        ASStringNode* tmp = node;
+        node->AddRef();
+        ClassTraits::Traits** const r = FUN_142414ac0(self, *reinterpret_cast<const ASString*>(&tmp), static_cast<const Instances::Namespace&>(*mn.Obj));
+        node->Release();
+        return r;
     }
-    else
+    ClassTraits::Traits** p = NULL;
     {
         const NamespaceSet& nss = static_cast<const NamespaceSet&>(*mn.Obj);
         const ArrayLH<SPtr<Instances::Namespace> >& nsa = nss.GetNamespaces();
