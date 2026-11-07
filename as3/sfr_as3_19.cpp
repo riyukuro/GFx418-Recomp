@@ -6855,69 +6855,38 @@ void Sfr31ExecCallStatic(UPInt vmAddr, UPInt file, SInt32 idx, UInt32 argc)
 // ---- batch 65
 // getlex-style opcode on a compile-time name: resolves the multiname (no runtime parts) against the scope stack and pushes the property's
 // value; a non-compile-time name is a TypeError and an unresolved one a ReferenceError.
-// MS2-FUNCTIONAL 0x142539650: raw-offset model; codegen differs from the exe
+static __forceinline CheckResult Sfr19GetSlotValueUnsafe(const PropRef& prop, VM& vm, Value& value, SlotInfo::ValTarget vt);
+// getlex opcode (SDK exec_getlex): finds the scope object holding the compile-time multiname and pushes the property value.
 // @0x142539650
 void Sfr31ExecGetLexStatic(UPInt vmAddr, UPInt file, UInt32 idx)
 {
-    const UPInt cvm = Sfr31Rd(file, 0x20);
-    const UPInt cfile = Sfr31Rd(file, 0x28);
-    const UPInt entry = reinterpret_cast<UPInt>(&Sfr31MnEntry(file, idx));
+    VM& cvm = *reinterpret_cast<VM*>(Sfr31Rd(file, 0x20));
+    const UPInt entry = reinterpret_cast<UPInt>(&Sfr31MnEntryW(file, idx));
     const UInt32 flags = *reinterpret_cast<const UInt32*>(entry);
-    const UPInt nameSlot = Sfr31Rd(cfile, 0x70) + static_cast<UPInt>(*reinterpret_cast<const UInt32*>(entry + 8)) * 8;
-    if ((flags & 3) == 1 || ((flags >> 2) & 1) != 0)
+    if ((flags & 3) == 1 || (static_cast<UInt8>(flags >> 2) & 1) != 0)
     {
-        UPInt sv[2];
-        FUN_142545310(nameSlot, sv);
-        String name(reinterpret_cast<const char*>(sv[0]), sv[1]);
-        alignas(8) char eb[sizeof(VM::Error)];
-        FUN_1424d7690(eb, 0x436, reinterpret_cast<void*>(cvm), name.ToCStr(), "compile time");
-        reinterpret_cast<VM*>(cvm)->ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
-        reinterpret_cast<VM::Error*>(eb)->~Error();
+        const StringDataPtr sv = Sfr31MnNameView(file, entry).ToStringDataPtr();
+        String name(sv.ToCStr(), sv.GetSize());
+        cvm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x436), cvm, name.ToCStr(), "compile time"));
     }
-    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) != 0)
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    if (vm.IsException())
         return;
-    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
-    UPInt pr[6] = {0, 0, 0, 0, 0, 0};
-    FUN_142502570(vmAddr, pr, &mn);
-    Value& res = *reinterpret_cast<Value*>(&pr[2]);
-    const UPInt f = pr[0];
-    if ((*reinterpret_cast<const UInt32*>(&res) & 0x1f) == 0 || f == 1 || ((f & 2) != 0 && (f & ~static_cast<UPInt>(2)) == 0))
+    Sfr31MnBox mn(*reinterpret_cast<VMAbcFile*>(file), *reinterpret_cast<const Abc::Multiname*>(entry));
+    PropRef prop;
+    FUN_142502570(vmAddr, &prop, &mn.Get());
+    if (Sfr19PropFound(prop))
     {
-        UPInt sv[2];
-        FUN_142545310(nameSlot, sv);
-        alignas(8) char eb[sizeof(VM::Error)];
-        FUN_1424d7690(eb, 0x42d, reinterpret_cast<void*>(vmAddr), reinterpret_cast<const char*>(sv[0]), "any object on the scope stack");
-        reinterpret_cast<VM*>(vmAddr)->ThrowReferenceError(*reinterpret_cast<VM::Error*>(eb));
-        reinterpret_cast<VM::Error*>(eb)->~Error();
+        Value value;
+        if (!Sfr19GetSlotValueUnsafe(prop, vm, value, SlotInfo::valGet))
+            return;
+        ValueStack::Of(vm).PushBack(value);
     }
     else
     {
-        Value e;
-        const UPInt kind = f & 3;
-        if (kind == 0)
-        {
-            UInt8 ret[16];
-            const unsigned char* ok = FUN_14250e2d0(f, ret, reinterpret_cast<void*>(vmAddr), &e, &res, 0, 0);
-            if (*ok != 0)
-                ExecPushCopy(reinterpret_cast<VM*>(vmAddr), e);
-        }
-        else
-        {
-            if (kind == 1)
-                e.Assign(*reinterpret_cast<const Value*>(f & ~static_cast<UPInt>(1)));
-            else if (kind == 2)
-            {
-                const UPInt g = f & ~static_cast<UPInt>(2);
-                UPInt raw[4] = { 0xc, 0, g, 0 };
-                if (g != 0)
-                    *reinterpret_cast<UInt32*>(g + 0x10) = (*reinterpret_cast<UInt32*>(g + 0x10) + 1u) & 0x8fbfffffu;
-                e.Assign(*reinterpret_cast<const Value*>(raw));
-                FUN_142521f00(raw);
-            }
-            ExecPushCopy(reinterpret_cast<VM*>(vmAddr), e);
-        }
+        StringDataPtr sv = Sfr31MnNameView(file, entry).ToStringDataPtr();
+        return vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x42d), vm, sv.ToCStr(), "any object on the scope stack"));
     }
-    res.~Value();
 }
 // ---- batch 66
 // hasnext2 opcode: registers objReg/idxReg hold the object and the enumeration index; advances the index (walking the prototype chain
