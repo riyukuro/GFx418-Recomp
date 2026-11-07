@@ -4958,17 +4958,18 @@ void Sfr33FindGOProperty(PropRef& result, VM& vm, const ArrayLH<Instances::fl::G
 // Tracer State::FindProp: the fixed slot mn names, looked up statically through the traced scope stack (State +0x58,
 // innermost first; stype 0), then the function's saved scopes (stype 1), then the class or global object that
 // defines it (stype 2); scope_index is the stack index tried last. A run-time name or a with scope stops the search.
-// MS2-FUNCTIONAL 0x142501e80: SDK State::FindProp body over raw tracer state offsets; regalloc and block layout (the exe spills result and mn to their home slots and keeps the VM in r12, ours holds result in r12; 1129 vs 1246 bytes)
+// MS2-FUNCTIONAL 0x142501e80: SDK State::FindProp body over raw tracer state offsets; regalloc only, same length (1246): the exe keeps the VM in r12, the scope count in r13 and result in r15, ours rotates them; the exe tests kinds 8 and 9 with sub/je/cmp/je, ours with one range check
 // The tracer's VM (Tracer::GetVM: CF -> file -> VM), as State::GetVM re-reads it.
 static SF_FORCEINLINE VM& Sfr17TrGetVM(UPInt tracer)
 {
     return **reinterpret_cast<VM**>(*reinterpret_cast<const UPInt*>(*reinterpret_cast<const UPInt*>(tracer + 0x20) + 0x28) + 0x20);
 }
 // Tracer::GetValueTraits(v, false) (0x14250ff00) as the exe inlines it here.
-static SF_FORCEINLINE const Traits* Sfr17TrGetValueTraits(UPInt tracer, const Value& v)
+// The exe reads v's flags word once, before the call, for both the kind and the with test that follows.
+static SF_FORCEINLINE const Traits* Sfr17TrGetValueTraits(UPInt tracer, const Value& v, UInt32 vflags)
 {
     const Traits* result = NULL;
-    switch (v.GetKind())
+    switch (vflags & 0x1f)
     {
     case 0:
         result = *reinterpret_cast<Traits* const*>(reinterpret_cast<const UByte*>(&Sfr17TrGetVM(tracer)) + 0x278);
@@ -5003,9 +5004,10 @@ void FUN_142501e80(void* state, void* propRef, void* multiname, void* stypeOut, 
     {
         scope_index = i - 1;
         const Value& v = reinterpret_cast<const Value*>(st[0xb])[scope_index];
-        const Traits* tr = Sfr17TrGetValueTraits(st[0], v);
+        const UInt32 vflags = *reinterpret_cast<const UInt32*>(&v);
+        const Traits* tr = Sfr17TrGetValueTraits(st[0], v, vflags);
 
-        if (v.GetWith())
+        if ((vflags >> 8) & 1)
             return;
 
         if (tr && !tr->IsGlobal())
@@ -5064,10 +5066,12 @@ void FUN_142501e80(void* state, void* propRef, void* multiname, void* stypeOut, 
             const SlotInfo* si = FindFixedSlot(vm, obj->GetTraits(), mn, slot_index, obj);
             if (si)
             {
-                Sfr33ThisPropRef t(si, slot_index, obj);
-                result.pSI = t.pSI;
-                result.SlotIndex = t.SlotIndex;
-                result.This.Assign(t.This.Get());
+                {
+                    Sfr33ThisPropRef t(si, slot_index, obj);
+                    result.pSI = t.pSI;
+                    result.SlotIndex = t.SlotIndex;
+                    result.This.Assign(t.This.Get());
+                }
                 stype = 2;
                 return;
             }
