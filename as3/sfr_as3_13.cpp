@@ -3011,7 +3011,7 @@ namespace Instances { namespace fl_text
         result = parr;
     }
 
-    // MS2-FUNCTIONAL: the loop's end test (iterator != End()) keeps a materialized bool the exe folds away.
+    // MS2-FUNCTIONAL: 1 byte, the it->First.Type compare is cmp [rax+rsi+0x18] (table+offset) where the exe has [rsi+rax+0x18] (operand order only).
     // @0x1424b4710
     SF_NOINLINE void StyleSheet::styleNamesGet(SPtr<Instances::fl::Array>& result)
     {
@@ -3025,9 +3025,7 @@ namespace Instances { namespace fl_text
             if (it->First.Type == GFx::Text::StyleManager::CSS_Class)
                 temp.AppendChar('.');
             temp += it->First.Value;
-            ASString name = sm.CreateString(temp);
-            Value v(name);
-            parr->SA.PushBack(v);
+            parr->SA.PushBack(sm.CreateString(temp));
         }
         result = parr;
     }
