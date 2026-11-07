@@ -570,7 +570,8 @@ static const float MaskClipAreasThresholds[] = { 23500.0f, 23500.0f, 17000.0f, 3
 // how the mask of this node applies: culled when it misses the content, else clipped to their overlap (a large
 // uncovered area, no filter above) or combined over their union. bounds gets the mask bounds, boundAreaMatrix the
 // area to clear as a matrix over the unit square.
-// MS2-FUNCTIONAL: same code, the exe allocates the bounds registers and stack slots differently
+// MS2-FUNCTIONAL: same code (4.2 SDK shape: view2D built from the 3D view, contentBounds declared first), the exe
+// allocates the bounds registers and stack slots differently
 // @0x142684500
 MaskEffectState TreeCacheNode::calcMaskBounds(RectF* bounds, Matrix2F* boundAreaMatrix, const Matrix3F& viewMatrix,
                                               const Matrix4F& viewProj, MaskEffectState oldState, unsigned flags)
@@ -590,12 +591,11 @@ MaskEffectState TreeCacheNode::calcMaskBounds(RectF* bounds, Matrix2F* boundArea
 
     if (!has3d)
     {
-        Matrix2F view2D;
-        memcpy(view2D.M, viewMatrix.M, sizeof(view2D.M));   // its top two rows
+        Matrix2F view2D(viewMatrix);   // its top two rows
 
         // the mask in our space
         Matrix2F m(maskData->M2D());
-        *bounds = EnclosedBounds(m, maskData->AproxLocalBounds);
+        *bounds = m.EncloseTransform(maskData->AproxLocalBounds);
 
         RectF intersect, boundsUnion;
         if (!bounds->IntersectRect(&intersect, data->AproxLocalBounds))
@@ -603,7 +603,7 @@ MaskEffectState TreeCacheNode::calcMaskBounds(RectF* bounds, Matrix2F* boundArea
         bounds->UnionRect(&boundsUnion, data->AproxLocalBounds);
         SnapRectToPixels(boundsUnion);
 
-        RectF viewUnionBounds = EnclosedBounds(view2D, boundsUnion);
+        RectF viewUnionBounds = view2D.EncloseTransform(boundsUnion);
         float fraction        = (intersect.Width() * intersect.Height()) / (boundsUnion.Width() * boundsUnion.Height());
         float viewArea        = viewUnionBounds.Width() * viewUnionBounds.Height();
         MaskEffectState newState;
@@ -628,12 +628,13 @@ MaskEffectState TreeCacheNode::calcMaskBounds(RectF* bounds, Matrix2F* boundArea
     }
 
     // 3D: both in viewport pixels, the view and projection from the root
+    RectF    contentBounds;
     Matrix4F maskViewProj;
     Matrix3F maskView;
     GetMask()->CalcViewMatrix(&maskView, &maskViewProj);
     const Viewport& vp            = pRoot->GetNodeData()->VP;
     *bounds                       = TransformBounds3D(maskViewProj, vp, maskView, maskData->AproxLocalBounds);
-    RectF           contentBounds = TransformBounds3D(viewProj, vp, viewMatrix, data->AproxLocalBounds);
+    contentBounds                 = TransformBounds3D(viewProj, vp, viewMatrix, data->AproxLocalBounds);
 
     RectF intersect;
     if (!bounds->IntersectRect(&intersect, contentBounds))
