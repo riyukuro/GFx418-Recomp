@@ -149,8 +149,6 @@ static inline void RawRefCountCoreDtor(void* p) { static_cast<Scaleform::RefCoun
 static inline void RawRefCountNTSCoreDtor(void* p) { static_cast<Scaleform::RefCountNTSImplCore*>(p)->Scaleform::RefCountNTSImplCore::~RefCountNTSImplCore(); }
 extern "C" const void* DAT_143138530[];
 extern "C" const void* DAT_14313a210[];
-extern "C" const void* DAT_14313b920[];
-extern "C" const void* DAT_14313b968[];
 extern "C" const void* DAT_14313a228[];
 extern "C" const void* DAT_14313a1d8[];
 extern "C" const void* DAT_14313b9c8[];
@@ -180,8 +178,6 @@ extern "C" const unsigned char DAT_14313b400[];
 extern "C" const unsigned char DAT_1431c4878[];
 extern "C" const unsigned char DAT_1431c51b8[];
 extern "C" void* DAT_14313b520[];
-extern "C" void* DAT_14313b5a0[];
-extern "C" void* DAT_14313b5c0[];
 extern "C" const unsigned long long DAT_1431c4d60;
 extern "C" const unsigned long long DAT_14313b8c0;
 extern "C" const unsigned long long DAT_1431c4e08;
@@ -251,6 +247,33 @@ GFxIMEManagerWin32::~GFxIMEManagerWin32()
 // MS2-FUNCTIONAL ??_GGFxIMEManagerWin32@IME@GFx@Scaleform@@UEAAPEAXI@Z: frees through Memory::Free as the exe does.
 
 namespace Scaleform { namespace GFx { namespace IME {
+// The TSF sink classes (moved up: the manager ctor/dtor below build the one embedded at +0x1a0).
+struct __declspec(novtable) Ime01CompartmentEventSink {
+    virtual HRESULT QueryInterface(const unsigned long long* iid, void** output) = 0;
+    virtual int AddRef() = 0;
+    virtual int Release() = 0;
+    virtual unsigned long long OnChange(const unsigned long long* guid) = 0;
+};
+struct __declspec(novtable) Ime01ProfileActivationSink {
+    virtual HRESULT QueryInterface(const unsigned long long* iid, void** output) = 0;
+    virtual int AddRef() = 0;
+    virtual int Release() = 0;
+    virtual unsigned long long OnActivated(int profileType, unsigned short language, long long* clsid,
+        long long* catid, long long* guidProfile, unsigned long long hkl) = 0;
+};
+class Ime01TsfSink : public Ime01CompartmentEventSink, public Ime01ProfileActivationSink {
+public:
+    HRESULT QueryInterface(const unsigned long long* iid, void** output) override;   // 0x1423d72a0
+    int AddRef() override;                                                         // 0x1423d5ae0
+    int Release() override;                                                        // 0x1423d7350
+    unsigned long long OnChange(const unsigned long long* guid) override;          // 0x1423d70d0
+    unsigned long long OnActivated(int profileType, unsigned short language, long long* clsid,
+        long long* catid, long long* guidProfile, unsigned long long hkl) override;  // 0x1423d6c10
+    Ime01TsfSink() : refCount(1) {}    // the manager ctor/dtor build and tear down the one embedded at its +0x1a0
+    ~Ime01TsfSink() {}
+    unsigned cookie;
+    int refCount;
+};
 
 // @0x1423d2f00
 void FUN_1423d2f00(void* self)
@@ -637,8 +660,7 @@ void* FUN_1423d56b0(void* self, unsigned flags)
 {
     auto* bytes = static_cast<unsigned char*>(self);
     *reinterpret_cast<void***>(bytes) = DAT_14313b520;
-    *reinterpret_cast<void***>(bytes + 0x1a0) = DAT_14313b5a0;
-    *reinterpret_cast<void***>(bytes + 0x1a8) = DAT_14313b5c0;
+    reinterpret_cast<Ime01TsfSink*>(bytes + 0x1a0)->~Ime01TsfSink();
     FUN_1423d5fd0(self);
     FUN_1423c8bb0(static_cast<unsigned long long*>(self));
     if (flags & 1) {
@@ -887,30 +909,6 @@ struct ImeSinkOwner : ImeSinkOwnerHead, ImeSinkFirst, ImeSinkSecond {};
 
 // The two TSF sink classes (see Ime01EmitTsfSinkVftables / Ime01EmitTsfUiSinkVftables at the end of the file).
 // Their overriders are the bodies below, tagged with the exe VAs.
-struct __declspec(novtable) Ime01CompartmentEventSink {
-    virtual HRESULT QueryInterface(const unsigned long long* iid, void** output) = 0;
-    virtual int AddRef() = 0;
-    virtual int Release() = 0;
-    virtual unsigned long long OnChange(const unsigned long long* guid) = 0;
-};
-struct __declspec(novtable) Ime01ProfileActivationSink {
-    virtual HRESULT QueryInterface(const unsigned long long* iid, void** output) = 0;
-    virtual int AddRef() = 0;
-    virtual int Release() = 0;
-    virtual unsigned long long OnActivated(int profileType, unsigned short language, long long* clsid,
-        long long* catid, long long* guidProfile, unsigned long long hkl) = 0;
-};
-class Ime01TsfSink : public Ime01CompartmentEventSink, public Ime01ProfileActivationSink {
-public:
-    HRESULT QueryInterface(const unsigned long long* iid, void** output) override;   // 0x1423d72a0
-    int AddRef() override;                                                         // 0x1423d5ae0
-    int Release() override;                                                        // 0x1423d7350
-    unsigned long long OnChange(const unsigned long long* guid) override;          // 0x1423d70d0
-    unsigned long long OnActivated(int profileType, unsigned short language, long long* clsid,
-        long long* catid, long long* guidProfile, unsigned long long hkl) override;  // 0x1423d6c10
-    unsigned cookie;
-    int refCount;
-};
 struct __declspec(novtable) Ime01ThreadMgrEventSink {
     virtual HRESULT QueryInterface(const unsigned long long* iid, void** output) = 0;
     virtual int AddRef() = 0;
@@ -943,6 +941,20 @@ public:
     unsigned long long BeginUIElement(unsigned long long elementId, unsigned* show) override;   // 0x1423da440
     unsigned long long UpdateUIElement(unsigned elementId) override;                       // 0x1423db0c0
     unsigned long long EndUIElement(int elementId) override;                               // 0x1423da730
+    Ime01TsfUiSink(unsigned long long ownerArg, unsigned long long userDataArg);              // 0x1423da250
+    ~Ime01TsfUiSink() {}   // stores both vptrs; called by DeletingDestructor
+    unsigned long long owner;          // +0x10
+    unsigned long long elementId;      // +0x18
+    unsigned elementIndex;             // +0x20
+    unsigned pad24;
+    unsigned long long field28;        // +0x28
+    unsigned long long field30;
+    unsigned field38;
+    int refCount;                      // +0x3c
+    unsigned long long field40;        // +0x40
+    unsigned long long field48[5];
+    unsigned long long userData;       // +0x70
+    unsigned char tail78[0x110 - 0x78];
 };
 // The QueryInterface of the sink embedded at +0x1a0 of its owner: IUnknown (DAT_1431c4828) and the interface at
 // DAT_14313b400 answer with the owner's +0x1a8 view, DAT_1431c5018 with the +0x1a0 view.
@@ -1214,18 +1226,15 @@ void* FUN_1423d1b90(unsigned long long* object, unsigned flags)
 }
 
 // @0x1423da250
-__declspec(noinline) void* FUN_1423da250(unsigned long long* object, unsigned long long arg2, unsigned long long arg3)
+__declspec(noinline) Ime01TsfUiSink::Ime01TsfUiSink(unsigned long long ownerArg, unsigned long long userDataArg)
 {
-    object[2] = arg2;
-    object[0] = reinterpret_cast<unsigned long long>(DAT_14313b920);
-    object[1] = reinterpret_cast<unsigned long long>(DAT_14313b968);
-    object[5] = 0;
-    object[8] = 0;
-    object[0xe] = arg3;
-    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(object) + 0x3c) = 1;
-    object[3] = ~0ULL;
-    *reinterpret_cast<unsigned*>(object + 4) = ~0U;
-    return object;
+    owner = ownerArg;
+    field28 = 0;
+    field40 = 0;
+    userData = userDataArg;
+    refCount = 1;
+    elementId = ~0ULL;
+    elementIndex = ~0U;
 }
 
 // restores both vptrs, then the allocation flag and 0x110 sized-delete branch.
@@ -1233,9 +1242,7 @@ __declspec(noinline) void* FUN_1423da250(unsigned long long* object, unsigned lo
 void* Ime01TsfUiSink::DeletingDestructor(unsigned flags)
 {
     void* object = this;
-    auto* words = static_cast<unsigned long long*>(object);
-    words[0] = reinterpret_cast<unsigned long long>(DAT_14313b920);
-    words[1] = reinterpret_cast<unsigned long long>(DAT_14313b968);
+    this->~Ime01TsfUiSink();
     if (flags & 1) {
         if (!(flags & 4)) Memory::Free(object);
         else FUN_14015b310(object, 0x110);
@@ -3225,7 +3232,8 @@ namespace Scaleform { namespace GFx { namespace IME {
 // The source shape follows the exe: FUN_1423cabb0 stays a call, the manager is re-read from +0x1d0 at every use,
 // and the provider, language and callback references are released at the exe's points. data_rdata_sf_a now
 // defines DAT_14313b410 as one 16-byte GUID, so the GUID is passed straight from .rdata like the exe does
-// (466 bytes, the exe's size). One diff remains (12 lines): /O2 store scheduling. The exe puts the
+// (466 bytes, the exe's size). One diff remains (22 lines; 12 before the embedded sink at +0x1a0 was built by its
+// inline ctor instead of raw vftable-image stores, which also gives up the r12 zero register): /O2 store scheduling. The exe puts the
 // provider-home zero store ([rsp+0x88]) and the +0x1c0 zero store right after the vftable store; cl sinks
 // both below the other vftable stores, next to the String ctor call. Declaring provider earlier moves its
 // store above the FUN_1423cabb0 call (7 lines). Every reorder of the eight setup stores gives the same 12 lines.
@@ -3237,14 +3245,12 @@ namespace Scaleform { namespace GFx { namespace IME {
 unsigned long long* FUN_1423d54d0(unsigned long long* self, unsigned long long owner)
 {
     FUN_1423cabb0(self, owner);
-    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0x1b4) = 1;
+    reinterpret_cast<Ime01TsfSink*>(self + 0x34)->Ime01TsfSink::Ime01TsfSink();
     void* provider = nullptr;
     self[0] = reinterpret_cast<unsigned long long>(DAT_14313b520);
     void** managerSlot = reinterpret_cast<void**>(self + 0x3a);
     *managerSlot = nullptr;
-    self[0x34] = reinterpret_cast<unsigned long long>(DAT_14313b5a0);
     self[0x38] = 0;
-    self[0x35] = reinterpret_cast<unsigned long long>(DAT_14313b5c0);
     *reinterpret_cast<Scaleform::String*>(self + 0xe) = "";
 
     // The exe creates the thread manager straight into +0x1d0 (0x1423d5505) and keeps that reference:
@@ -4054,7 +4060,7 @@ void* FUN_1423cdbb0(unsigned long long* words, void* owner, void* userData)
     *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(words) + 0x64) = 0;
     *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(words) + 0xdc) = 1;
     void* child2 = Scaleform::Memory::Alloc(0x110);
-    child2 = child2 ? FUN_1423da250(static_cast<unsigned long long*>(child2), reinterpret_cast<unsigned long long>(words),
+    child2 = child2 ? ::new (child2) Ime01TsfUiSink(reinterpret_cast<unsigned long long>(words),
         reinterpret_cast<unsigned long long>(userData)) : nullptr;
     words[0x19] = reinterpret_cast<unsigned long long>(child2);
     FUN_1423daae0(child2);
@@ -7020,7 +7026,7 @@ void Ime01EmitAvmMovieClipVftables(void* p, const AS3::AvmMovieClip* pclip)
 // vftables 0x14313b5a0 / 0x14313b5c0 are cl's, and the second one's QueryInterface/AddRef/Release are cl's adjustor
 // thunks 0x1423d7344 / 0x1423d5aec / 0x1423d735c. The overriders are defined earlier in the file (class definition
 // before FUN_1423d72a0), each at its exe VA; Ime01EmitTsfSinkVftables copy-constructs one so cl emits the vftables and thunks here. The
-// manager's ctor FUN_1423d54d0 and dtor FUN_1423d56b0 store DAT_14313b5a0/5c0, bound to the tables below.
+// manager's ctor FUN_1423d54d0 and dtor FUN_1423d56b0 build/tear down the sink embedded at +0x1a0 with its inline ctor/dtor.
 namespace Scaleform { namespace GFx { namespace IME {
 void Ime01EmitTsfSinkVftables(void* p, const Ime01TsfSink* psink)
 {
@@ -7032,7 +7038,7 @@ void Ime01EmitTsfSinkVftables(void* p, const Ime01TsfSink* psink)
 // callbacks, then the deleting destructor 0x1423da2c0) and a UI-element sink at +8 (0x14313b968: cl's this-8
 // thunks 0x1423dae98 / 0x1423da42c / 0x1423daed8, then Begin/Update/EndUIElement). The overriders are defined earlier
 // in the file at their exe VAs. The destructor slot is a plain virtual, DeletingDestructor, so the hand-written
-// ??_G body (0x1423da2c0, exact) stays the definition. Ime01EmitTsfUiSinkVftables copy-constructs one
+// ??_G body (0x1423da2c0, exact) stays the definition; it calls the inline ~Ime01TsfUiSink for the two vptr stores. Ime01EmitTsfUiSinkVftables copy-constructs one
 // so cl emits the vftables and thunks here.
 namespace Scaleform { namespace GFx { namespace IME {
 void Ime01EmitTsfUiSinkVftables(void* p, const Ime01TsfUiSink* psink)
@@ -7040,12 +7046,6 @@ void Ime01EmitTsfUiSinkVftables(void* p, const Ime01TsfUiSink* psink)
     ::new (p) Ime01TsfUiSink(*psink);
 }
 }}}
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:DAT_14313b920=??_7Ime01TsfUiSink@IME@GFx@Scaleform@@6BIme01ThreadMgrEventSink@123@@")
-#pragma comment(linker, "/alternatename:DAT_14313b968=??_7Ime01TsfUiSink@IME@GFx@Scaleform@@6BIme01UIElementSink@123@@")
-#pragma comment(linker, "/alternatename:DAT_14313b5a0=??_7Ime01TsfSink@IME@GFx@Scaleform@@6BIme01CompartmentEventSink@123@@")
-#pragma comment(linker, "/alternatename:DAT_14313b5c0=??_7Ime01TsfSink@IME@GFx@Scaleform@@6BIme01ProfileActivationSink@123@@")
-#endif
 // MS2-PIN: ??_7MemoryContextImpl@AS3@GFx@Scaleform@@6B@ 0x14313c0a8
 // MS2-PIN: ??_7HeapLimit@MemoryContextImpl@AS3@GFx@Scaleform@@6B@ 0x14313c090
 // MS2-PIN: ??_7MemoryContext@GFx@Scaleform@@6B@ 0x14313ba60
