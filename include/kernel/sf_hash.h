@@ -801,11 +801,13 @@ public:
     bool Get(const C& key, U* pvalue) const
     {
         const HashNodeT* p = mHash.GetAlt(key);
-        if (p == 0)
-            return false;
-        if (pvalue)
-            *pvalue = p->Second;
-        return true;
+        if (p)
+        {
+            if (pvalue)
+                *pvalue = p->Second;
+            return true;
+        }
+        return false;
     }
     template<class K>
     bool GetAlt(const K& key, U* pvalue) const

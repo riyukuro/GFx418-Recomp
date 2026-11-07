@@ -775,7 +775,7 @@ void SparseArray::RemoveMultipleAt(UPInt pos, UPInt count)
         Length = pos;
 }
 
-// MS2-FUNCTIONAL: same structure; register allocation and the inlined hash Get/Set/Remove layout differ
+// MS2-FUNCTIONAL: register allocation only (the exe swaps r14/r15: the zero/index register and &ValueH)
 // @0x142420800
 void SparseArray::Reverse()
 {
@@ -3195,48 +3195,57 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
 
     // The node a list assignment works on. A one-item list is its item; an empty list with a target gets a new
     // element of the target name appended to the (resolved) target node; an untargeted or "*" list has none.
-    // MS2-FUNCTIONAL: the exe inlines the Error and the List push; register allocation differs
+    // the SDK 4.3 body
     // @0x142420570
     CheckResult XMLList::ResolveValue(XML*& r)
     {
         r = NULL;
-        VM& vm = GetVM();
         const UPInt size = List.GetSize();
-        if (size != 0)
+        VM& vm = GetVM();
+
+        if (size > 0)
         {
             if (size == 1)
+                r = List[0].GetPtr();
+            else
             {
-                r = List[0];
-                return true;
+                vm.ThrowTypeError(VM::Error(VM::eXMLAssigmentOneItemLists, vm));
+                return false;
             }
-            vm.ThrowTypeError(VM::Error(VM::eXMLAssigmentOneItemLists, vm));
-            return false;
         }
-        else
+        else if (TargetObject.GetPtr() && TargetProperty && strcmp(TargetProperty->pData, "*") != 0)
         {
-            if (!TargetObject || !TargetProperty || strcmp(TargetProperty->pData, "*") == 0)
-                return true;
-
-            XML* base = NULL;
             const Traits& tr = TargetObject->GetTraits();
-            if (tr.GetTraitsType() == Traits_XML && tr.IsInstanceTraits())
+            const BuiltinTraitsType tt = tr.GetTraitsType();
+            XML* base = NULL;
+
+            if (tt == Traits_XML && tr.IsInstanceTraits())
                 base = static_cast<XML*>(TargetObject.GetPtr());
-            else if (tr.GetTraitsType() == Traits_XMLList && tr.IsInstanceTraits())
+            else if (tt == Traits_XMLList && tr.IsInstanceTraits())
             {
-                if (!static_cast<XMLList*>(TargetObject.GetPtr())->ResolveValue(base))
+                XMLList* target = static_cast<XMLList*>(TargetObject.GetPtr());
+                if (!target->ResolveValue(base))
                     return false;
             }
             else
                 return false;
-            if (base == NULL)
-                return true;
 
-            InstanceTraits::fl::XML& itr = static_cast<InstanceTraits::fl::XML&>(*vm.GetXMLSupport().GetITraitsXML());
-            SPtr<XML> target(Pickable<XML>(itr.MakeInstanceElement(itr, *TargetNamespace, ASString(TargetProperty), base)));
-            base->AppendChild(target);
-            List.PushBack(target);
-            r = target;
+            if (base)
+            {
+                InstanceTraits::fl::XML& xml_itr = static_cast<InstanceTraits::fl::XML&>(*vm.GetXMLSupport().GetITraitsXML());
+                SPtr<XML> el(xml_itr.MakeInstanceElement(
+                    xml_itr,
+                    *TargetNamespace,
+                    ASString(TargetProperty),
+                    base
+                    ));
+                base->AppendChild(el);
+
+                List.PushBack(el);
+                r = el.GetPtr();
+            }
         }
+
         return true;
     }
 
