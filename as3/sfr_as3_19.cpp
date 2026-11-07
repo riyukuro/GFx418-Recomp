@@ -1896,42 +1896,51 @@ static inline bool PropRefNotFound(const PropRef& p)
 }
 
 // Object.SetProperty: a fixed slot, an existing dynamic value, or a new dynamic property.
-// MS2-FUNCTIONAL 0x142528a50: same lookup and branches; the exe inlines the Value temporaries differently (frame differs).
+// LTCG knows the lookup only reads the this-Value, so the exe releases it without a kind test (dtor-less holder).
+union Sfr31SelfValueHolder { Value v; Sfr31SelfValueHolder(Object* o) : v(o, Value::InlineObj) {} ~Sfr31SelfValueHolder() {} };
+// MS2-FUNCTIONAL 0x142528a50: regalloc: same code shape; exe numbers the zero/traits register r15 and vm r13 (ours r12/r15)
 // @0x142528a50
 CheckResult Object::SetProperty(const Multiname& prop_name, const Value& value)
 {
     VM& vm = GetVM();
     PropRef prop;
     {
-        Value self(this);
-        FUN_142501b00(&prop, &vm, &self, &prop_name, 1);
+        Sfr31SelfValueHolder self(this);
+        FUN_142501b00(&prop, &vm, &self.v, &prop_name, 1);
+        FUN_142521f00(&self.v);
     }
-    if (PropRefNotFound(prop))
+    const UPInt pv = reinterpret_cast<UPInt>(prop.pValue);
+    if (prop.This.GetKind() != Value::kUndefined && pv != 1 &&
+        !((static_cast<UInt8>(pv >> 1) & 1) != 0 && (pv & ~static_cast<UPInt>(2)) == 0))
     {
-        if (!pTraits->IsDynamic() || !prop_name.ContainsNamespace(vm.GetPublicNamespace()))
+        bool result = true;
+        switch (pv & 3)
         {
-            vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x420), vm, prop_name.Name,
-                                             GetTraits().GetName().ToCStr()));
-            return CheckResult(false);
+        case 0:
+        {
+            char r;
+            result = *reinterpret_cast<const CheckResult*>(Sfr27SlotSetValueThis(prop.pSI, &r, &vm, &value, &prop.This, NULL));
         }
+            break;
+        case 1:
+            reinterpret_cast<Value*>(pv & ~static_cast<UPInt>(1))->Assign(value);
+            break;
+        case 2:
+            result = false;
+            break;
+        default:
+            break;
+        }
+        return CheckResult(result);
+    }
+    Traits& tr = GetTraits();
+    if (tr.IsDynamic() && prop_name.ContainsNamespace(vm.GetPublicNamespace()))
+    {
         AddDynamicSlotValuePair(prop_name.Name, value);
         return CheckResult(true);
     }
-    switch (reinterpret_cast<UPInt>(prop.pValue) & 3)
-    {
-    case 0:
-    {
-        CheckResult ok(false);
-        Sfr27SlotSetValueThis(prop.pSI, reinterpret_cast<char*>(&ok), &vm, &value, &prop.This, NULL);
-        return ok;
-    }
-    case 1:
-        reinterpret_cast<Value*>(reinterpret_cast<UPInt>(prop.pValue) & ~static_cast<UPInt>(1))->Assign(value);
-        return CheckResult(true);
-    case 2:
-        return CheckResult(false);
-    }
-    return CheckResult(true);
+    vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x420), vm, prop_name.Name, tr.GetName().ToCStr()));
+    return CheckResult(false);
 }
 
 // MS2-FUNCTIONAL 0x142528810: regalloc: exe holds ret in rbx and _this in rdi, uses other home slots and re-reads the traits Flags byte
