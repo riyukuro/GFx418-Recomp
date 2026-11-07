@@ -32,41 +32,77 @@ public:
 // AvmSprite::FindClassAndInitializeClassInstance (gap of sfr_as2_05)
 void FUN_142943480(const FnCall& fn);
 
-// Queues a C function of the character with params.
-static inline void SetCFunctionAction(MovieRoot::ActionEntry* pe, InteractiveObject* pch, CFunctionPtr pfunc,
-                                      const Array<Value>& params)
+// ActionBufferData::IsNull of the SDK: no actions (pBuffer and BufferLen are protected, read through a view).
+struct AvmActionBufferDataView
 {
-    pe->Type          = MovieRoot::ActionEntry::Entry_CFunction;
-    pe->pCharacter    = pch;
-    pe->pActionBuffer = 0;
-    pe->CFunction     = pfunc;
-    pe->FunctionParams = params;
+    UByte    Base[0x10];
+    UByte*   pBuffer;   // +0x10
+    unsigned BufferLen; // +0x18
+};
+static SF_FORCEINLINE bool ActionDataIsNull(const ActionBufferData* pdata)
+{
+    const AvmActionBufferDataView* p = reinterpret_cast<const AvmActionBufferDataView*>(pdata);
+    return p->BufferLen < 1 || p->pBuffer[0] == 0;
 }
 
-// Queues a clip event of the character.
-static inline void SetEventAction(MovieRoot::ActionEntry* pe, InteractiveObject* pch, UInt32 id)
+// ActionQueueType::StartNewSession of the SDK: Field_a0 is CurrentSessionId, the low half of Field_a8 LastSessionId.
+static SF_FORCEINLINE unsigned StartNewSession(MovieRoot::ActionQueueType& queue, unsigned* pprevSessionId)
+{
+    if (pprevSessionId)
+        *pprevSessionId = queue.Field_a0;
+    queue.Field_a0 = ++*reinterpret_cast<unsigned*>(&queue.Field_a8);
+    return queue.Field_a0;
+}
+
+// ActionEntry::SetAction of the SDK (header inlines there): an event, a function or a C function of the character.
+static SF_FORCEINLINE void SetAction(MovieRoot::ActionEntry* pe, InteractiveObject* pcharacter, const EventId id)
 {
     pe->Type          = MovieRoot::ActionEntry::Entry_Event;
-    pe->pCharacter    = pch;
+    pe->pCharacter    = pcharacter;
     pe->pActionBuffer = 0;
-    pe->mEventId      = EventId(id);
+    pe->mEventId      = id;
 }
 
-// MS2-FUNCTIONAL: the queued entries are filled member by member and the session counter is reached by address.
+static SF_FORCEINLINE void SetAction(MovieRoot::ActionEntry* pe, InteractiveObject* pcharacter,
+                                     const FunctionRef& function, const Array<Value>* params = 0)
+{
+    pe->Type          = MovieRoot::ActionEntry::Entry_Function;
+    pe->pCharacter    = pcharacter;
+    pe->pActionBuffer = 0;
+    pe->Function      = function;
+    if (params)
+        pe->FunctionParams = *params;
+}
+
+static SF_FORCEINLINE void SetAction(MovieRoot::ActionEntry* pe, InteractiveObject* pcharacter,
+                                     const CFunctionPtr function, const Array<Value>* params = 0)
+{
+    pe->Type          = MovieRoot::ActionEntry::Entry_CFunction;
+    pe->pCharacter    = pcharacter;
+    pe->pActionBuffer = 0;
+    pe->CFunction     = function;
+    if (params)
+        pe->FunctionParams = *params;
+}
+
+// MS2-FUNCTIONAL: SDK order now, 1918 bytes against the exe's 1944. The exe keeps `this` in r14 after the loop, gives
+// hasConstructEvent/initSourceUsed home slots, and rebuilds the zero for each entry store; ours keeps a zero in r15 and
+// spills `this`, and the AddRef in Value(FunctionRef) goes through memory (inc [rax+0x18]) instead of ecx.
 // @0x14296ab10
-unsigned AvmSprite::OnAddingDisplayObject(const CharacterCreateInfo& ccinfo, InteractiveObject* pch,
+unsigned AvmSprite::OnAddingDisplayObject(const CharacterCreateInfo& ccinfo, InteractiveObject* pscriptCh,
                                           const ArrayLH<SwfEvent*, StatMD_Tags_Mem>* peventHandlers,
                                           const void* pinitSource, bool placeObject)
 {
-    Sprite*    pspriteCh   = pch->IsSprite() ? static_cast<Sprite*>(pch) : 0;
-    bool       needsOnLoad = true;
-    MovieRoot* proot       = GetAS2Root();
+    Sprite* pspriteCh = pscriptCh->IsSprite() ? static_cast<Sprite*>(pscriptCh) : 0;
 
-    if (peventHandlers)
+    bool       hasConstructEvent = true; // onConstruct always fires: there is no telling whether it exists
+    MovieRoot* asroot            = GetAS2Root();
+    if (pscriptCh && peventHandlers)
     {
-        for (UPInt i = 0, n = peventHandlers->GetSize(); i < n; ++i)
+        for (UPInt i = 0, n = peventHandlers->GetSize(); i < n; i++)
         {
-            reinterpret_cast<const AvmSwfEvent*>((*peventHandlers)[i])->AttachTo(pch);
+            reinterpret_cast<const AvmSwfEvent*>((*peventHandlers)[i])->AttachTo(pscriptCh);
+            // A button handler puts the sprite in button mode.
             if (pspriteCh && reinterpret_cast<const AvmSwfEvent*>((*peventHandlers)[i])->Event.IsButtonEvent())
             {
                 MovieClipObject* pmc = static_cast<AvmSprite*>(static_cast<AvmCharacter*>(
@@ -74,103 +110,121 @@ unsigned AvmSprite::OnAddingDisplayObject(const CharacterCreateInfo& ccinfo, Int
                 if (pmc)
                     pmc->HasButtonHandlers = true;
             }
-            // An onClipEvent(initialize) of a placed object runs before its frame actions.
-            const AvmSwfEvent* pev = reinterpret_cast<const AvmSwfEvent*>((*peventHandlers)[i]);
-            if (placeObject && pev->Event.Id == EventId::Event_Initialize && pev->pActionOpData &&
-                pev->pActionOpData->GetBufferPtr())
+
+            if (placeObject)
             {
-                MovieRoot::ActionEntry* pe = proot->InsertEmptyAction(ActionPriority::AP_Initialize);
-                if (pe)
-                    SetEventAction(pe, pch, EventId::Event_Initialize);
+                if (reinterpret_cast<const AvmSwfEvent*>((*peventHandlers)[i])->Event.Id == EventId::Event_Initialize)
+                {
+                    ActionBufferData* pactionOpData =
+                        reinterpret_cast<const AvmSwfEvent*>((*peventHandlers)[i])->pActionOpData;
+                    if (pactionOpData && !ActionDataIsNull(pactionOpData))
+                    {
+                        MovieRoot::ActionEntry* pe = asroot->InsertEmptyAction(ActionPriority::AP_Initialize);
+                        if (pe)
+                            SetAction(pe, pscriptCh, EventId(EventId::Event_Initialize));
+                    }
+                }
             }
         }
     }
 
-    GlobalContext*  pcontext    = GetGC();
-    FunctionRef     ctorFunc;
-    const String*   psymbolName = pch->GetResourceMovieDef()->GetNameOfExportedResource(ccinfo.pCharDef->GetId());
-    MovieRoot::ActionQueueType& queue = proot->GetActionQueue();
-    unsigned        prevSession = queue.Field_a0;
-    unsigned        sessionId   = ++*reinterpret_cast<unsigned*>(&queue.Field_a8);
-    queue.Field_a0              = sessionId;
-    bool            constructed = false;
-
-    if (psymbolName)
+    // The class registered for the export name.
+    unsigned sessionId = 0;
+    if (pscriptCh)
     {
-        ASString symbolName = GetASEnvironment()->GetSC()->CreateString(psymbolName->ToCStr(),
-                                                                         psymbolName->GetSize());
-        const FunctionRef* pctor =
-            pcontext->RegisteredClasses.GetCaseCheck(symbolName, GetASEnvironment()->IsCaseSensitive());
-        if (pctor)
-        {
-            ctorFunc = *pctor;
-            // The instance gets the class prototype first, then onClipEvent(construct), the initObject members and
-            // the constructor call.
-            {
-                Array<Value> params;
-                params.PushBack(Value(ctorFunc));
-                MovieRoot::ActionEntry* pe = proot->InsertEmptyAction(ActionPriority::AP_Initialize);
-                if (pe)
-                    SetCFunctionAction(pe, pch, AvmSprite::InitializeClassInstance, params);
-                pe = proot->InsertEmptyAction(ActionPriority::AP_Construct);
-                if (pe)
-                    SetEventAction(pe, pch, EventId::Event_Construct);
-                needsOnLoad = false;
+        GlobalContext* gctxt = GetGC();
 
-                if (GetDispObj()->GetVersion() >= 6 && pinitSource)
+        FunctionRef   ctorFunc;
+        const String* psymbolName =
+            pscriptCh->GetResourceMovieDef()->GetNameOfExportedResource(ccinfo.pCharDef->GetId());
+
+        MovieRoot::ActionQueueType& queue = asroot->GetActionQueue();
+        unsigned oldSessionId;
+        sessionId = StartNewSession(queue, &oldSessionId);
+
+        bool initSourceUsed = false;
+
+        if (psymbolName)
+        {
+            ASString symbolName = GetASEnvironment()->CreateString(*psymbolName);
+
+            const FunctionRef* pctor =
+                gctxt->RegisteredClasses.GetCaseCheck(symbolName, GetASEnvironment()->IsCaseSensitive());
+            if (pctor)
+            {
+                ctorFunc = *pctor;
+                // First the initializer of the instance: it gives pscriptCh the class prototype.
+                MovieRoot::ActionEntry* pe = asroot->InsertEmptyAction(ActionPriority::AP_Initialize);
+                Array<Value> params;
+                params.PushBack(ctorFunc);
+                if (pe)
+                    SetAction(pe, pscriptCh, AvmSprite::InitializeClassInstance, &params);
+
+                // Then the construct event.
+                {
+                    MovieRoot::ActionEntry* pe = asroot->InsertEmptyAction(ActionPriority::AP_Construct);
+                    if (pe)
+                        SetAction(pe, pscriptCh, EventId(EventId::Event_Construct));
+                    hasConstructEvent = false;
+                }
+
+                // The init properties (SWF 6+).
+                if (GetDispObj()->GetVersion() >= 6 && pinitSource && pscriptCh)
                 {
                     params.Resize(0);
-                    Value initObj;
-                    initObj.SetAsObjectInterface((ObjectInterface*)pinitSource);
-                    params.PushBack(initObj);
-                    pe = proot->InsertEmptyAction(ActionPriority::AP_Construct);
+                    Value v;
+                    v.SetAsObjectInterface(const_cast<ObjectInterface*>(
+                        reinterpret_cast<const ObjectInterface*>(pinitSource)));
+                    params.PushBack(v);
+                    MovieRoot::ActionEntry* pe = asroot->InsertEmptyAction(ActionPriority::AP_Construct);
                     if (pe)
-                        SetCFunctionAction(pe, pch, AvmSprite::InitObjectMembers, params);
+                        SetAction(pe, pscriptCh, AvmSprite::InitObjectMembers, &params);
                 }
-                constructed = true;
-                pe = proot->InsertEmptyAction(ActionPriority::AP_Construct);
+                initSourceUsed = true;
+
+                // Then the constructor call.
+                pe = asroot->InsertEmptyAction(ActionPriority::AP_Construct);
                 if (pe)
-                {
-                    pe->Type          = MovieRoot::ActionEntry::Entry_Function;
-                    pe->pCharacter    = pch;
-                    pe->pActionBuffer = 0;
-                    pe->Function      = ctorFunc;
-                }
+                    SetAction(pe, pscriptCh, ctorFunc);
+            }
+            else if (placeObject)
+            {
+                // The class may be registered later (an #initclip of a later frame): look it up when the action runs.
+                Array<Value> params;
+                params.PushBack(Value(symbolName));
+                MovieRoot::ActionEntry* pe = asroot->InsertEmptyAction(ActionPriority::AP_Construct);
+                if (pe)
+                    SetAction(pe, pscriptCh, FUN_142943480, &params);
+                hasConstructEvent = false;
             }
         }
-        else if (placeObject)
+        if (placeObject)
         {
-            // The class may be registered later (an #initclip of a later frame): look it up when the action runs.
-            Array<Value> params;
-            params.PushBack(Value(symbolName));
-            MovieRoot::ActionEntry* pe = proot->InsertEmptyAction(ActionPriority::AP_Construct);
-            if (pe)
-                SetCFunctionAction(pe, pch, FUN_142943480, params);
-            needsOnLoad = false;
+            if (hasConstructEvent)
+            {
+                // No class registered: only onClipEvent(construct).
+                MovieRoot::ActionEntry* pe = asroot->InsertEmptyAction(ActionPriority::AP_Construct);
+                if (pe)
+                    SetAction(pe, pscriptCh, EventId(EventId::Event_Construct));
+            }
         }
-    }
-
-    if (placeObject)
-    {
-        if (needsOnLoad)
+        else if (!initSourceUsed)
         {
-            MovieRoot::ActionEntry* pe = proot->InsertEmptyAction(ActionPriority::AP_Construct);
-            if (pe)
-                SetEventAction(pe, pch, EventId::Event_Construct);
+            // attachMovie or duplicateMovieClip with no registered class: the init properties (SWF 6+).
+            if (GetDispObj()->GetVersion() >= 6 && pinitSource && pscriptCh)
+            {
+                Array<Value> params;
+                Value        v;
+                v.SetAsObjectInterface(const_cast<ObjectInterface*>(
+                    reinterpret_cast<const ObjectInterface*>(pinitSource)));
+                params.PushBack(v);
+                MovieRoot::ActionEntry* pe = asroot->InsertEmptyAction(ActionPriority::AP_Construct);
+                if (pe)
+                    SetAction(pe, pscriptCh, AvmSprite::InitObjectMembers, &params);
+            }
         }
+        queue.Field_a0 = oldSessionId;
     }
-    else if (!constructed && GetDispObj()->GetVersion() >= 6 && pinitSource)
-    {
-        Value initObj;
-        initObj.SetAsObjectInterface((ObjectInterface*)pinitSource);
-        Array<Value> params;
-        params.PushBack(initObj);
-        MovieRoot::ActionEntry* pe = proot->InsertEmptyAction(ActionPriority::AP_Construct);
-        if (pe)
-            SetCFunctionAction(pe, pch, AvmSprite::InitObjectMembers, params);
-    }
-
-    queue.Field_a0 = prevSession;
     return sessionId;
 }
 
