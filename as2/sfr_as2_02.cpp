@@ -3279,14 +3279,13 @@ void AvmTextField::SetNewTextFormat(const FnCall& fn)
     }
 }
 
-void TextFormat_Destruct(Render::Text::TextFormat* p);           // exe 0x1424aa0f0 (~TextFormat)
 void ParagraphFormat_Destruct(Render::Text::ParagraphFormat* p); // exe 0x142606690 (~ParagraphFormat)
 // The formats of the Text library: this TU calls their destructors out of line.
 struct TextFormatLocal02
 {
     union { Render::Text::TextFormat F; };
     SF_FORCEINLINE TextFormatLocal02(MemoryHeap* pheap) : F(pheap) {}
-    SF_FORCEINLINE ~TextFormatLocal02() { TextFormat_Destruct(&F); }
+    SF_FORCEINLINE ~TextFormatLocal02() { ::FUN_1424aa0f0(&F); }
 };
 struct ParagraphFormatLocal02
 {

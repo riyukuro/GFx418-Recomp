@@ -15,6 +15,7 @@
 #include "../gfx_sharedobject.h"
 
 namespace Scaleform { namespace Render { namespace Text { class TextFormat; class ParagraphFormat; } } }
+void FUN_1424aa0f0(void* p); // Render::Text::TextFormat's out-of-line destructor (exe 0x1424aa0f0; defined in sfr_as3_12)
 namespace Scaleform { namespace Render { namespace Text { struct HighlightInfo; } } }   // (appended, sfr24)
 // The IME styles live in GFx::Text in 4.1.18 (exe mangling).
 namespace Scaleform { namespace GFx { namespace Text { struct IMEStyle; } } }
@@ -737,16 +738,15 @@ public:
     ArrayObject* pArray; // +0x70
 };
 
-// The out-of-line destructors the exe calls (text_core.h's ~TextFormat is an empty inline; ~ParagraphFormat is
-// FreeTabStops, folded with it).
-void TextFormat_Destruct(Render::Text::TextFormat* p);           // exe 0x1424aa0f0 (~TextFormat)
+// The out-of-line destructors the exe calls (text_core.h's ~TextFormat is an empty inline, so ~TextFormat is
+// the global FUN_1424aa0f0; ~ParagraphFormat is FreeTabStops, folded with it).
 void ParagraphFormat_Destruct(Render::Text::ParagraphFormat* p); // exe 0x142606690 (~ParagraphFormat)
 
 // The storage of TextFormatObject's formats, destroyed by those.
 struct TextFormatMember
 {
     void* Data[9];
-    ~TextFormatMember() { TextFormat_Destruct((Render::Text::TextFormat*)Data); }
+    ~TextFormatMember() { ::FUN_1424aa0f0(Data); }
 };
 struct ParagraphFormatMember
 {
