@@ -58,9 +58,13 @@ struct Video02GCAccess : RefCountBaseGC<323> { using RefCountBaseGC<323>::Releas
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 // Unit-local classes of sfr_video_01, declared here for their native callbacks.
-class VideoProto
+// VideoProto: see its vftable model at the end of this file.
+class VideoProto : public Prototype<VideoObject>
 {
 public:
+    VideoProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+        : Prototype<VideoObject>(psc, pprototype, constructor) {}
+    // (implicit destructor: the ??_G 0x14000ec40 inlines it; FUN_14000ebe0 is the out-of-line ~Prototype<VideoObject>)
     static void AttachVideo(const FnCall& fn);   // exe 0x14000d400
 };
 class VideoCtorFunction
@@ -3059,14 +3063,7 @@ void FUN_14000ebe0(Scaleform::GFx::AS2::Object* object)
         ->Scaleform::GFx::AS2::Prototype<Scaleform::GFx::AS2::VideoObject>::~Prototype();
 }
 
-// scalar deleting form of VideoObject's prototype destruction.
-// @0x14000ec40
-Scaleform::GFx::AS2::Object* FUN_14000ec40(Scaleform::GFx::AS2::Object* object, unsigned flags)
-{
-    FUN_14000ebe0(object);
-    if (flags & 1) Scaleform::Memory::Free(object);
-    return object;
-}
+// (0x14000ec40, the scalar deleting form of the above, is cl's ??_G of the VideoProto model at the end of this file)
 
 // @0x1400113a0
 unsigned FUN_1400113a0(void* array, const unsigned* source)
@@ -3607,19 +3604,7 @@ void FUN_140011ac0(Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::Env
 
 // ---- vtable-slot adjustor thunks (no .pdata; `sub rcx,N; jmp` into the scalar deleting destructors above) ----
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 0x20) into FUN_14000ec40.
-// @0x14000ebc0
-Scaleform::GFx::AS2::Object* FUN_14000ebc0(void* self, unsigned flags)
-{
-    return FUN_14000ec40((Scaleform::GFx::AS2::Object*)((Scaleform::UByte*)self - 0x20), flags);
-}
-
-// MS2-FUNCTIONAL: adjustor thunk (this - 0x70) into FUN_14000ec40.
-// @0x14000ebd0
-Scaleform::GFx::AS2::Object* FUN_14000ebd0(void* self, unsigned flags)
-{
-    return FUN_14000ec40((Scaleform::GFx::AS2::Object*)((Scaleform::UByte*)self - 0x70), flags);
-}
+// (0x14000ebc0 / 0x14000ebd0, this - 0x20 / - 0x70 into 0x14000ec40, are cl's adjustor thunks of VideoProto's ??_G)
 
 // MS2-FUNCTIONAL: adjustor thunk (this - 0x20) into FUN_14000ed20.
 // @0x14000ed10
@@ -3857,7 +3842,22 @@ void Video02EmitAvmVideoVftables(void* p, const AvmVideoCharacter* pvideo)
 {
     ::new (p) AvmVideoCharacter(*pvideo);
 }
+
+// VideoObject's prototype (vftables 0x1431b5e20 / +0x20 0x1431b5e70 / +0x70 0x1431b5e18, stored by FUN_14000eb50):
+// Prototype<VideoObject> with no overriders of its own. Its ??_G is 0x14000ec40 and the ObjectInterface / GASPrototypeBase slots are cl's adjustor thunks
+// 0x14000ebc0 / 0x14000ebd0. Video02EmitVideoProtoVftables constructs one so cl emits them. (The class is
+// declared near the top of this file.)
+void Video02EmitVideoProtoVftables(void* p, ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+{
+    ::new (p) VideoProto(psc, pprototype, constructor);
+}
 }}} // namespace Scaleform::GFx::AS2
+#ifndef MS2_HOOK_DLL
+// FUN_14000eb50 stores VideoProto's vftables through these names (the hook DLL binds them by their symbols rows).
+#pragma comment(linker, "/alternatename:?PTR_FUN_1431b5e20@@3PEAXEA=??_7VideoProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
+#pragma comment(linker, "/alternatename:?PTR_LAB_1431b5e70@@3PEAXEA=??_7VideoProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
+#pragma comment(linker, "/alternatename:?PTR_LAB_1431b5e18@@3PEAXEA=??_7VideoProto@AS2@GFx@Scaleform@@6B@")
+#endif
 
 // MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
 // MS2-PIN: ??_7?$RefCountBase@VComplexFill@Render@Scaleform@@$01@Scaleform@@6B@ 0x14317b660
@@ -3899,3 +3899,11 @@ void Video02EmitAvmVideoVftables(void* p, const AvmVideoCharacter* pvideo)
 // MS2-PIN: ??_7AvmVideoCharacter@AS2@GFx@Scaleform@@6B@ 0x1431b5b40
 // MS2-PIN: ??_7AvmVideoCharacter@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b5c00
 // MS2-PIN: ??_7AvmVideoCharacter@AS2@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x1431b5cb0
+// VideoProto (declared near the top; vftables emitted by Video02EmitVideoProtoVftables)
+// MS2-PIN: ??_GVideoProto@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x14000ec40
+// MS2-PIN: ??_EVideoProto@AS2@GFx@Scaleform@@WCA@EAAPEAXI@Z 0x14000ebc0
+// MS2-PIN: ??_EVideoProto@AS2@GFx@Scaleform@@WHA@EAAPEAXI@Z 0x14000ebd0
+// MS2-PIN: ??_7VideoProto@AS2@GFx@Scaleform@@6B@ 0x1431b5e18
+// MS2-PIN: ??_7VideoProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b5e20
+// MS2-PIN: ??_7VideoProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b5e70
+// MS2-PIN: ??_7GASPrototypeBase@AS2@GFx@Scaleform@@6B@ 0x1431b5028
