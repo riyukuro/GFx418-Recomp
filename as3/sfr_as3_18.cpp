@@ -6715,15 +6715,74 @@ NamespaceSet& VMAbcFile::GetInternedNamespaceSet(UPInt ind)
 CheckResult ExecutePropertyUnsafe(VM& vm, const Multiname& prop_name, const Value& _this, Value& result, unsigned argc,
                                   const Value* argv);   // 0x1424ff910
 
+// Multiname::PostProcessName(false) (0x14251cef0) as the exe inlines it into OutputError: its own body, the three
+// renames sharing one assignment.
+static __forceinline void Sfr18PostProcessNameShared(Multiname& mn)
+{
+    if (!mn.Name.IsString())
+        return;
+    ASString n = mn.Name.AsString();
+    if (n.GetSize() != 0)
+    {
+        ASStringManager* const mgr = n.GetManager();
+        ASStringNode* node;
+        if (n[0] != '*')
+        {
+            if (n[0] != '@')
+                return;
+            mn.Kind = static_cast<Abc::MultinameKind>(mn.Kind | 8);
+            if (n.GetSize() != 2 || n[1] != '*')
+            {
+                node = n.SubstringNode(1, n.GetSize());
+                node->AddRef();
+                goto assign;
+            }
+        }
+        // "*" and "@*": the empty name.
+        node = mgr->GetEmptyStringNode();
+        node->AddRef();
+    assign:
+        // The temporary ASString of the assignment, released through the node (the exe sees operator='s body
+        // and keeps the node in a register across it).
+        ASStringNode* const tmp = node;
+        FUN_1424e0d40(mn.Name, reinterpret_cast<const ASString&>(tmp));
+        node->Release();
+    }
+}
+
+// Multiname(Namespace&, const Value&) (0x1424d8a90) as the exe inlines it into OutputError (other units define
+// their own copies of this declaration).
+__forceinline Multiname::Multiname(Instances::Namespace& ns, const Value& name, InlineCtorTag)
+    : Kind(static_cast<Abc::MultinameKind>(0))
+    , Obj(&ns)
+{
+    const UInt32 k = static_cast<UInt32>(name.GetKind());
+    if (k - 0xc <= 3 && name.GetGASRefCountBase() != NULL)
+    {
+        const Traits& tr = reinterpret_cast<Object*>(name.GetGASRefCountBase())->GetTraits();
+        if (static_cast<int>(tr.TraitsType) == 0xc && (static_cast<UInt8>(~static_cast<UInt8>(static_cast<UInt8>(tr.Flags) >> 5)) & 1) != 0)
+        {
+            Sfr27MultinameFromQName(this, &name);
+            return;
+        }
+    }
+    ValueAssignCopies::AssignFreshInline18(Name, name);
+    Sfr18PostProcessNameShared(*this);
+}
+
 // The error e as text through the UI: its getStackTrace() when it has one, else (or when that gives null) e
 // converted to a string.
-// MS2-FUNCTIONAL the exe inlines the Multiname constructor
+// The Multiname constructor (with PostProcessName) and the string Value are inlined, as in the exe.
+// MS2-FUNCTIONAL the exe keeps the name Value's flags and bonus in registers across the QName call (its LTCG sees
+// that the callee does not write it; ours reloads them), one AddRef arm of the name copy that cl threads, and
+// register allocation
 // @0x14251bdc0
 void VM::OutputError(const Value& e)
 {
     Value          result;
     ASString       msg = GetStringManager().CreateEmptyString();
-    const Multiname mn(GetPublicNamespace(), Value(GetStringManager().CreateConstString("getStackTrace")));
+    const Multiname mn(GetPublicNamespace(), Value(GetStringManager().CreateConstString("getStackTrace"), Value::InlineStr),
+                       Multiname::InlineCtorTag());
     if (e.IsNullOrUndefined() || !ExecutePropertyUnsafe(*this, mn, e, result, 0, NULL) || result.Convert2String(msg))
     {
         if ((!e.IsNullOrUndefined() && msg.GetNode() != GetStringManager().GetBuiltin(AS3Builtin_null).GetNode()) || e.Convert2String(msg))
