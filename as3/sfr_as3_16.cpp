@@ -2725,12 +2725,6 @@ bool FUN_1424e54f4(Scaleform::UPInt self) { return FUN_1424e54f0(self - 0x10); }
 #define SFR21_DTHUNK(name, off, target) \
     void* name(Scaleform::UPInt self, unsigned flags) { return Scaleform::GFx::AS3::target(reinterpret_cast<void*>(self - off), flags); }
 // MS2-FUNCTIONAL: adjustor thunk
-// @0x1424e1a98
-SFR21_DTHUNK(FUN_1424e1a98, 0x18, DeleteAs3_1424e2610)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x1424e1aa4
-SFR21_DTHUNK(FUN_1424e1aa4, 0x90, DeleteAs3_1424e2610)
-// MS2-FUNCTIONAL: adjustor thunk
 // @0x1424e1ab0
 SFR21_DTHUNK(FUN_1424e1ab0, 0x30, DeleteAs3_1424e26d0)
 // MS2-FUNCTIONAL: adjustor thunk
@@ -2754,12 +2748,6 @@ SFR21_DTHUNK(FUN_1424e1b7c, 0x28, DeleteAs3_1424e33f0)
 // MS2-FUNCTIONAL: adjustor thunk
 // @0x1424e1b88
 SFR21_DTHUNK(FUN_1424e1b88, 0x38, DeleteAs3_1424e33f0)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x1424e1b94
-SFR21_DTHUNK(FUN_1424e1b94, 0x18, DeleteAs3_1424e3890)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x1424e1ba0
-SFR21_DTHUNK(FUN_1424e1ba0, 0x90, DeleteAs3_1424e3890)
 #undef SFR21_DTHUNK
 // MS2-PIN: ??_GASMovieRootBase@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2210
 // MS2-PIN: ??_GAvmLoader@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e28e0
@@ -2768,3 +2756,7 @@ SFR21_DTHUNK(FUN_1424e1ba0, 0x90, DeleteAs3_1424e3890)
 // MS2-PIN: ??_GVM@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3e50
 // MS2-PIN: ??_7Stage@AS3@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@3@@ 0x14317d220
 // MS2-PIN: ??_7Stage@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317d5f0
+// MS2-PIN: ??_EAvmBitmap@AS3@GFx@Scaleform@@WBI@EAAPEAXI@Z 0x1424e1a98
+// MS2-PIN: ??_EAvmBitmap@AS3@GFx@Scaleform@@WJA@EAAPEAXI@Z 0x1424e1aa4
+// MS2-PIN: ??_EShapeObject@AS3@GFx@Scaleform@@WBI@EAAPEAXI@Z 0x1424e1b94
+// MS2-PIN: ??_EShapeObject@AS3@GFx@Scaleform@@WJA@EAAPEAXI@Z 0x1424e1ba0
