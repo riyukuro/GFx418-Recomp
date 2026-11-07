@@ -114,11 +114,12 @@ public:
     // the formats the shaders of a fill read for a source format: the shader's attributes in its order, each taken
     // from the source (the factors attribute is made up); the batch format adds the instance index argument, the
     // instanced one a per-instance index stream. All three are 0 when the source lacks an attribute.
+    // The body follows the SDK Render_Shader.h text (GetElement lookup, the two factor-order branches).
     void MapVertexFormat(PrimitiveFillType fill, const VertexFormat* sourceFormat, const VertexFormat** single,
                          const VertexFormat** batch, const VertexFormat** instanced, unsigned flags)   // 0x142732210
     {
-        SourceFormatHash key(fill, sourceFormat, flags);
         ResultFormat     result;
+        SourceFormatHash key(fill, sourceFormat, flags);
         if (VertexFormatComputedHash.Get(key, &result))
         {
             *single    = result.SingleFormat;
@@ -131,73 +132,83 @@ public:
         const VertexShaderDesc* vdesc  =
             VertexShaderDesc::GetDesc((typename VertexShaderDesc::ShaderType)StaticShaderForFill(fill, vflags, 0));
 
+        const auto*   psvf = vdesc->Attributes;
         VertexElement outf[8];
-        unsigned      maxalign     = 4;
-        int           batchOffset  = -1;
-        int           batchElement = -1;
-        unsigned      size         = 0;
-        int           j            = 0;
+        unsigned      size = 0, maxalign = 4;
+        int           batchOffset = -1, batchElement = -1;
+        int           j = 0;
+
         for (int i = 0; i < vdesc->NumAttribs; i++)
         {
-            unsigned attr = vdesc->Attributes[i].Attr;
-            if ((attr & 0xff0f) == (VET_Color | VET_Index1 | 4))
+            if ((psvf[i].Attr & (VET_Usage_Mask | VET_Index_Mask | VET_Components_Mask)) ==
+                (VET_Color | (1 << VET_Index_Shift) | 4))
             {
-                // the factors: a weight and an alpha byte, with the batch index between them
-                bool swap            = (flags & MVF_EndianSwapFactors) != 0;
-                outf[j].Offset       = size;
-                outf[j].Attribute    = swap ? VET_FactorAlpha8 : VET_T0Weight8;
-                outf[j + 1].Offset   = size + 3;
-                outf[j + 1].Attribute = swap ? VET_T0Weight8 : VET_FactorAlpha8;
-                batchOffset          = size + (swap ? 1 : 2);
-                batchElement         = ++j;
-                size += 4;
+                if ((flags & MVF_EndianSwapFactors) == 0)
+                {
+                    outf[j].Offset    = size;
+                    outf[j].Attribute = VET_T0Weight8;
+                    j++;
+                    outf[j].Offset    = size + 3;
+                    outf[j].Attribute = VET_FactorAlpha8;
+                    batchOffset       = size + 2;
+                    batchElement      = j;
+                }
+                else
+                {
+                    outf[j].Offset    = size;
+                    outf[j].Attribute = VET_FactorAlpha8;
+                    j++;
+                    outf[j].Offset    = size + 3;
+                    outf[j].Attribute = VET_T0Weight8;
+                    batchElement      = j;
+                    batchOffset       = size + 1;
+                }
                 j++;
+                size += 4;
                 continue;
             }
 
-            const VertexElement* src = sourceFormat->pElements;
-            for (; src->Attribute; src++)
-                if ((src->Attribute & VET_Usage_Mask) == (attr & VET_Usage_Mask) &&
-                    (src->Attribute & VET_Index_Mask) == (attr & VET_Index_Mask))
-                    break;
-            if (!src->Attribute)
+            const VertexElement* pv = sourceFormat->GetElement(psvf[i].Attr & (VET_Usage_Mask | VET_Index_Mask),
+                                                               VET_Usage_Mask | VET_Index_Mask);
+            if (!pv)
             {
-                *instanced = 0;
-                *single    = 0;
-                *batch     = 0;
+                *batch = *single = *instanced = 0;
                 return;
             }
-
-            outf[j]        = *src;
+            outf[j]        = *pv;
             outf[j].Offset = size;
-            unsigned type  = src->Attribute & VET_Type_Mask & 0xfff;
+
             if (flags & MVF_ReverseColor)
             {
-                if (type == VET_ColorRGBA8)
-                    outf[j].Attribute = (src->Attribute & ~0xfffu) | VET_ColorARGB8;
+                if ((pv->Attribute & (VET_Usage_Mask | VET_CompType_Mask | VET_Components_Mask)) == VET_ColorRGBA8)
+                    outf[j].Attribute =
+                        VET_ColorARGB8 | (pv->Attribute & ~(VET_Usage_Mask | VET_CompType_Mask | VET_Components_Mask));
             }
-            else if (type == VET_ColorARGB8)
-                outf[j].Attribute = (src->Attribute & ~0xfffu) | VET_ColorRGBA8;
-            if (src->CompSize() > maxalign)
-                maxalign = src->CompSize();
+            else
+            {
+                if ((pv->Attribute & (VET_Usage_Mask | VET_CompType_Mask | VET_Components_Mask)) == VET_ColorARGB8)
+                    outf[j].Attribute =
+                        VET_ColorRGBA8 | (pv->Attribute & ~(VET_Usage_Mask | VET_CompType_Mask | VET_Components_Mask));
+            }
+
+            maxalign = Alg::Max(maxalign, pv->CompSize());
             size += outf[j].Size();
             if (flags & MVF_AlignVertexAttrs)
-                size = (size + 3) & ~3u;
+                size = (size + 3) & ~3;
+
             j++;
         }
-
-        unsigned align = (flags & MVF_Align) ? maxalign : 1;
+        outf[j].Attribute = VET_None;
         outf[j].Offset    = 0;
-        outf[j].Attribute = 0;
-        *single = GetVertexFormat(outf, j + 1, size, align);
+        *single = GetVertexFormat(outf, j + 1, size, flags & MVF_Align ? maxalign : 1);
 
         if (flags & MVF_HasInstancing)
         {
-            outf[j].Offset        = 0;
             outf[j].Attribute     = VET_Instance | VET_I8 | 1 | VET_Argument_Flag;
+            outf[j].Offset        = 0;
+            outf[j + 1].Attribute = VET_None;
             outf[j + 1].Offset    = 0;
-            outf[j + 1].Attribute = 0;
-            *instanced = GetVertexFormat(outf, j + 2, size, align);
+            *instanced = GetVertexFormat(outf, j + 2, size, flags & MVF_Align ? maxalign : 1);
         }
         else
             *instanced = 0;
@@ -206,18 +217,19 @@ public:
         {
             for (int i = j - 1; i >= batchElement; i--)
                 outf[i + 1] = outf[i];
-            outf[batchElement].Offset    = batchOffset;
+
             outf[batchElement].Attribute = VET_Instance8;
+            outf[batchElement].Offset    = batchOffset;
         }
         else
         {
-            outf[j].Offset    = (flags & MVF_EndianSwapFactors) ? size + 3 : size;
             outf[j].Attribute = VET_Instance8;
+            outf[j].Offset    = (flags & MVF_EndianSwapFactors) == 0 ? size : size + 3;
             size += outf[j].Size();
         }
+        outf[j + 1].Attribute = VET_None;
         outf[j + 1].Offset    = 0;
-        outf[j + 1].Attribute = 0;
-        *batch = GetVertexFormat(outf, j + 2, size, align);
+        *batch = GetVertexFormat(outf, j + 2, size, flags & MVF_Align ? maxalign : 1);
 
         result.SingleFormat    = *single;
         result.BatchFormat     = *batch;
