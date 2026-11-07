@@ -6922,137 +6922,109 @@ void Sfr31ExecGetLexStatic(UPInt vmAddr, UPInt file, UInt32 idx)
 // ---- batch 66
 // hasnext2 opcode: registers objReg/idxReg hold the object and the enumeration index; advances the index (walking the prototype chain
 // when the own properties are exhausted), stores both back and pushes whether another property exists.
-// MS2-FUNCTIONAL 0x14253a6a0: raw-offset model; codegen differs from the exe
+// VM::GetRegister / SetRegister: the register file's current page is the word at VM+0x148.
+static __forceinline Value& Sfr19GetRegister(VM& vm, AbsoluteIndex ind)
+{
+    return reinterpret_cast<Value*>(*reinterpret_cast<const UPInt*>(reinterpret_cast<UPInt>(&vm) + 0x148))[ind.Get()];
+}
+static __forceinline void Sfr19SetRegister(VM& vm, AbsoluteIndex ind, const Value& v)
+{
+    Sfr19GetRegister(vm, ind).Assign(v);
+}
+
+// MS2-FUNCTIONAL 0x14253a6a0: SDK exec_hasnext2 form; the exe pushes the bool result from a value-union temp
+// (Flags/Bonus stored as constants), keeps its Value temps 8 bytes lower in a 0x58 frame, and allocates other registers
 // @0x14253a6a0
-void Sfr31ExecHasNext2(UPInt vmAddr, UInt32 objReg, UInt32 idxReg)
+void Sfr31ExecHasNext2(UPInt vmAddr, UInt32 object_reg, UInt32 index_reg)
 {
     VM& vm = *reinterpret_cast<VM*>(vmAddr);
-    const UPInt regs = Sfr31Rd(vmAddr, 0x148);
-    Value* ov = reinterpret_cast<Value*>(regs + static_cast<UPInt>(objReg) * 0x20);
-    Value* iv = reinterpret_cast<Value*>(regs + static_cast<UPInt>(idxReg) * 0x20);
-    const UPInt ovp = reinterpret_cast<UPInt>(ov);
-    if (idxReg == objReg)
-    {
-        VM::Error e(static_cast<VM::ErrorID>(0x464), vm);
-        vm.ThrowTypeError(e);
+    const AbsoluteIndex reg_ind(index_reg);
+    const AbsoluteIndex obj_ind(object_reg);
+    Value& obj_value = Sfr19GetRegister(vm, obj_ind);
+
+    if (index_reg == object_reg)
+        return vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x464), vm));
+
+    if (obj_value.IsNullOrUndefined())
+        return ValueStack::Of(vm).PushBack(Value(false));
+
+    UInt32 v = 0;
+    if (!Sfr19GetRegister(vm, reg_ind).Convert2UInt32(v))
         return;
-    }
-    const UInt32 kind = *reinterpret_cast<const UInt32*>(ov) & 0x1f;
-    bool result = false;
-    if (kind == 0 || (kind - 0xc < 4 && Sfr31Rd(ovp, 0x10) == 0))
+
+    GlobalSlotIndex slot_ind(v);
+
+    if (obj_value.IsObject())
     {
-        UPInt top = Sfr31Rd(vmAddr, 0x50) + 0x20;
-        Sfr31Wr(vmAddr, 0x50, top);
-        Sfr31Wr(top, 0, 1);
-        Sfr31Wr(top, 8, 0);
-        Sfr31Wr(top, 0x10, 0);
-        Sfr31Wr(top, 0x18, 0);
-        return;
-    }
-    UInt32 next = 0;
-    unsigned long idx = 0;
-    UInt8 okTmp[16];
-    if (*FUN_1424f1a30(iv, okTmp, &idx) == 0)
-        return;
-    typedef int* (*NextFn)(UPInt, void*, UInt32);
-    typedef void (*MakeFn)(UPInt);
-    if (kind - 0xc < 4)
-    {
-        const UPInt obj = Sfr31Rd(ovp, 0x10);
-        reinterpret_cast<NextFn>(Sfr31Rd(Sfr31Rd(obj, 0), 0x88))(obj, &next, static_cast<UInt32>(idx));
-        UPInt found = obj;
-        UPInt t = Sfr31Rd(obj, 0x20);
-        bool hit = false;
-        for (; t != 0; t = Sfr31Rd(t, 0x88))
+        Object& obj = obj_value;
+
+        GlobalSlotIndex ind = obj.GetNextDynPropIndex(slot_ind);
+        Object* cur_obj = &obj;
+
+        const Traits* cur_tr = &obj.GetTraits();
+        while (cur_tr && !ind.IsValid())
         {
-            if (next != 0)
-            {
-                hit = true;
-                break;
-            }
-            UPInt cls = Sfr31Rd(t, 0x80);
-            if (cls == 0)
-            {
-                reinterpret_cast<MakeFn>(Sfr31Rd(Sfr31Rd(t, 0), 0x68))(t);
-                cls = Sfr31Rd(t, 0x80);
-            }
-            found = reinterpret_cast<UPInt>(&reinterpret_cast<Class*>(cls)->GetPrototype());
-            UInt8 tmp[16];
-            next = *reinterpret_cast<UInt32*>(reinterpret_cast<NextFn>(Sfr31Rd(Sfr31Rd(found, 0), 0x88))(found, tmp, 0));
+            cur_obj = &const_cast<Class&>(cur_tr->GetConstructor()).GetPrototype();
+            ind = cur_obj->GetNextDynPropIndex(GlobalSlotIndex(0));
+            cur_tr = cur_tr->GetParent();
         }
-        if (t == 0 && next == 0)
-            ov->Assign(Value::GetNull());
-        else if (found != obj)
+
+        if (ind.IsValid())
         {
-            UPInt raw[4] = { 0xc, 0, found, 0 };
-            *reinterpret_cast<UInt32*>(found + 0x10) = (*reinterpret_cast<UInt32*>(found + 0x10) + 1u) & 0x8fbfffffu;
-            ov->Assign(*reinterpret_cast<const Value*>(raw));
-            FUN_142521f00(raw);
-        }
-        (void)hit;
-    }
-    else if (kind == 0xb)
-        FUN_1424161e0(Sfr31Rd(ovp, 0x10), &next, static_cast<UInt32>(idx));
-    else
-    {
-        const UPInt tr = reinterpret_cast<UPInt>(&vm.GetValueTraits(*ov));
-        if (*reinterpret_cast<const SInt32*>(tr + 0x70) == 6 && (~(*reinterpret_cast<const UInt8*>(tr + 0x68) >> 5) & 1) != 0 && idx < 2)
-        {
-            iv->Assign(Value(static_cast<UInt32>(idx + 1)));
-            result = true;
+            if (cur_obj != &obj)
+                Sfr19SetRegister(vm, obj_ind, Value(cur_obj, Value::InlineObj));
         }
         else
-        {
-            UPInt t = tr;
-            UPInt proto = 0;
-            UInt32 iVar = 0;
-            bool nullIt = false;
-            do
-            {
-                UPInt cls = Sfr31Rd(t, 0x80);
-                if (cls == 0)
-                {
-                    reinterpret_cast<MakeFn>(Sfr31Rd(Sfr31Rd(t, 0), 0x68))(t);
-                    cls = Sfr31Rd(t, 0x80);
-                }
-                proto = reinterpret_cast<UPInt>(&reinterpret_cast<Class*>(cls)->GetPrototype());
-                UInt8 tmp[16];
-                iVar = *reinterpret_cast<UInt32*>(reinterpret_cast<NextFn>(Sfr31Rd(Sfr31Rd(proto, 0), 0x88))(proto, tmp, 0));
-                t = Sfr31Rd(t, 0x88);
-                if (t == 0)
-                {
-                    nullIt = iVar == 0;
-                    break;
-                }
-            } while (iVar == 0);
-            if (nullIt)
-                ov->Assign(Value::GetNull());
-            else
-            {
-                UPInt raw[4] = { 0xc, 0, proto, 0 };
-                *reinterpret_cast<UInt32*>(proto + 0x10) = (*reinterpret_cast<UInt32*>(proto + 0x10) + 1u) & 0x8fbfffffu;
-                ov->Assign(*reinterpret_cast<const Value*>(raw));
-                FUN_142521f00(raw);
-            }
-            iv->Assign(Value(static_cast<UInt32>(iVar)));
-            result = iVar != 0;
-        }
-        UPInt top = Sfr31Rd(vmAddr, 0x50) + 0x20;
-        Sfr31Wr(vmAddr, 0x50, top);
-        Sfr31Wr(top, 0, 1);
-        Sfr31Wr(top, 8, 0);
-        Sfr31Wr(top, 0x10, result ? 1 : 0);
-        Sfr31Wr(top, 0x18, 0);
-        return;
+            Sfr19SetRegister(vm, obj_ind, Value::GetNull());
+
+        Sfr19SetRegister(vm, reg_ind, Value(ind.Get()));
+        ValueStack::Of(vm).PushBack(Value(ind.IsValid()));
     }
-    iv->Assign(Value(next));
-    result = next != 0;
-    UPInt top = Sfr31Rd(vmAddr, 0x50) + 0x20;
-    Sfr31Wr(vmAddr, 0x50, top);
-    Sfr31Wr(top, 0, 1);
-    Sfr31Wr(top, 8, 0);
-    Sfr31Wr(top, 0x10, result ? 1 : 0);
-    Sfr31Wr(top, 0x18, 0);
+    else
+    {
+        if (obj_value.IsNamespace())
+        {
+            GlobalSlotIndex ind(0);
+            ::FUN_1424161e0(obj_value.GetNamespace(), &ind, slot_ind);
+            Sfr19SetRegister(vm, reg_ind, Value(ind.Get()));
+            ValueStack::Of(vm).PushBack(Value(ind.IsValid()));
+            return;
+        }
+
+        GlobalSlotIndex ind = slot_ind;
+
+        const Traits* cur_tr = &vm.GetValueTraits(obj_value);
+        Object* cur_obj = NULL;
+
+        if (cur_tr->GetTraitsType() == Traits_Namespace && cur_tr->IsInstanceTraits())
+        {
+            switch (ind.Get())
+            {
+            case 0:
+            case 1:
+                Sfr19SetRegister(vm, reg_ind, Value(ind.Get() + 1));
+                ValueStack::Of(vm).PushBack(Value(true));
+                return;
+            default:
+                break;
+            }
+        }
+
+        do {
+            cur_obj = &const_cast<Class&>(cur_tr->GetConstructor()).GetPrototype();
+            ind = cur_obj->GetNextDynPropIndex(GlobalSlotIndex(0));
+            cur_tr = cur_tr->GetParent();
+        }
+        while (cur_tr && !ind.IsValid());
+
+        if (ind.IsValid())
+            Sfr19SetRegister(vm, obj_ind, Value(cur_obj, Value::InlineObj));
+        else
+            Sfr19SetRegister(vm, obj_ind, Value::GetNull());
+
+        Sfr19SetRegister(vm, reg_ind, Value(ind.Get()));
+        ValueStack::Of(vm).PushBack(Value(ind.IsValid()));
+    }
 }
 // ---- batch 67
 // constructprop opcode: the receiver stays on the operand stack; a class named by a static multiname is constructed directly, otherwise
