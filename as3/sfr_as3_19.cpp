@@ -4546,30 +4546,45 @@ void Sfr31ExecDeleteProp(UPInt vmAddr, UPInt file, UInt32 idx)
     }
 }
 
+// The SDK ReadValueMn / ReadValueMnObject: the popped value, the file, the multiname read off the stack, then the popped
+// object (null or undefined throws).
+struct Sfr31ExecReadValueMn : public Scaleform::GFx::AS3::StackReader
+{
+    __forceinline Sfr31ExecReadValueMn(UPInt link, UInt32 idx)
+        : Scaleform::GFx::AS3::StackReader(*reinterpret_cast<VM*>(Sfr31Rd(link, 0x20))), ArgValue(OpStack), File(*reinterpret_cast<VMAbcFile*>(link))
+        , ArgMN(File, Sfr31MnEntryW(reinterpret_cast<UPInt>(&File), idx))
+    {
+        FUN_1425201f0(this, &ArgMN.Get());
+    }
+    Value ArgValue;         // +0x10
+    VMAbcFile& File;        // +0x30 (MnReader)
+    Sfr31MnBox ArgMN;       // +0x38
+};
+struct Sfr31ExecReadValueMnObject : public Sfr31ExecReadValueMn
+{
+    __forceinline Sfr31ExecReadValueMnObject(UPInt link, UInt32 idx) : Sfr31ExecReadValueMn(link, idx), ArgObject(OpStack)
+    {
+        CheckObject(ArgObject);
+    }
+    // StackReader::CheckObject, inline.
+    SF_INLINE void CheckObject(const Value& v) const
+    {
+        if (v.IsNullOrUndefined())
+            GetVM().ThrowTypeError(VM::Error(v.IsNull() ? VM::eConvertNullToObjectError : VM::eConvertUndefinedToObjectError, GetVM()));
+    }
+    const Value ArgObject;  // +0x68
+};
+
 // initproperty: pops the value and the object, resolves the multiname and initializes the property.
-// MS2-FUNCTIONAL 0x14253ffa0: raw-offset model; codegen differs from the exe
 // @0x14253ffa0
 void Sfr31ExecInitProperty(UPInt vmAddr, UPInt file, UInt32 idx)
 {
-    const UPInt cvm = Sfr31Rd(file, 0x20);
-    Sfr31ExecMnCtx ctx = {cvm, cvm + 0x48, file};
-    Sfr31RawTraitsVal val;
-    Sfr31TakeTop(cvm, val);
-    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
-    FUN_1425201f0(&ctx, &mn);
-    const UPInt st = Sfr31Rd(ctx.stack, 8);
-    Sfr31RawTraitsVal obj;
-    for (int i = 0; i < 8; ++i)
-        reinterpret_cast<UInt32*>(&obj)[i] = reinterpret_cast<const UInt32*>(st)[i];
-    Sfr31Wr(ctx.stack, 8, st - 0x20);
-    Sfr31ThrowIfNullOperand(cvm, reinterpret_cast<const UInt32*>(&obj));
-    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
-    {
-        UInt8 ret[16];
-        Sfr27SetPropertyOfValue(reinterpret_cast<char*>(ret), reinterpret_cast<VM*>(vmAddr), reinterpret_cast<const Value*>(&obj), &mn, reinterpret_cast<const Value*>(&val));
-    }
-    reinterpret_cast<Value*>(&obj)->~Value();
-    reinterpret_cast<Value*>(&val)->~Value();
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    Sfr31ExecReadValueMnObject args(file, idx);
+    if (vm.IsException())
+        return;
+    char result;    // the setter's CheckResult return slot, not read
+    Sfr27SetPropertyOfValue(&result, &vm, &args.ArgObject, &args.ArgMN.Get(), &args.ArgValue);
 }
 // ---- batch 30
 // Tracer op: the popped operand becomes the traits describing its class: the Object traits for a null value, otherwise the
