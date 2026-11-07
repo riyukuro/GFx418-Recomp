@@ -932,10 +932,8 @@ public:
         Encoder.WriteUInt30(fill0);
         Encoder.WriteUInt30(fill1);
         Encoder.WriteUInt30(stroke);
-        pos->StartX = pos->LastX = int(x * Multiplier);
-        Encoder.WriteSInt30(pos->StartX);
-        pos->StartY = pos->LastY = int(y * Multiplier);
-        Encoder.WriteSInt30(pos->StartY);
+        Encoder.WriteSInt30(pos->StartX = pos->LastX = int(x * Multiplier));
+        Encoder.WriteSInt30(pos->StartY = pos->LastY = int(y * Multiplier));
     }
     // (appended for sfr_render_04o) a closing line back to the start point when the path ends elsewhere
     void ClosePath(ShapePosInfo* pos)
