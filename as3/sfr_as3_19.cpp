@@ -5590,57 +5590,71 @@ bool Sfr31SetTraitsForValue(UPInt st, const UInt32* v, UPInt traits)
     return FUN_142514560(itr, Sfr31Rd(traits, 0xc0));
 }
 
+// VM::GetClassTraits as the exe inlines it into Resolve2ClassTraits: the cache lookup, the global object's
+// classes on a miss, and the cache Add (MultinameHash::Add) expanded too.
+static __forceinline ClassTraits::Traits* Sfr31GetClassTraitsInl(VM* vm, const ASString& name, const Instances::Namespace& ns)
+{
+    ClassTraits::Traits** found = FUN_142414ac0(&vm->ClassTraitsSet, name, ns);
+    if (found != NULL && *found != NULL)
+        return *found;
+    ClassTraits::Traits* ct = FUN_142415520(reinterpret_cast<void*>(VmRd(vm, 0x298)), &name, &ns);
+    ClassTraits::Traits* added = ct;
+    if (ct != NULL)
+        vm->ClassTraitsSet.Add(name, ns, added);
+    return ct;
+}
+// The public namespace for a package URI (the VM's public namespace for the empty URI); the URI string dies here.
+static __forceinline SPtr<Instances::Namespace> Sfr31PublicNsOf(VM* vm, const char* pkg)
+{
+    const ASString uri = vm->GetStringManager().CreateString(pkg ? pkg : "");
+    if (uri.IsEmpty())
+        return SPtr<Instances::Namespace>(vm->PublicNamespace.GetPtr());
+    return SPtr<Instances::Namespace>(static_cast<InstanceTraits::fl::Namespace&>(vm->GetClassTraitsNamespace().GetInstanceTraits())
+                                                          .MakeInternedInstance(Abc::NS_Public, uri, Value::GetUndefined()));
+}
 // The class traits of a class description: its package namespace plus its name, resolved through the VM's class traits cache.
-// MS2-FUNCTIONAL 0x142525ca0: SDK-API model; the exe inlines the string and namespace construction
+// MS2-FUNCTIONAL 0x142525ca0: regalloc/frame: the exe keeps info in rdi on an rbp frame, its strlen counts from -1, ns/found slots swap
 // @0x142525ca0
 ClassTraits::Traits* Sfr31GetClassTraitsByInfo(VM* vm, UPInt info)
 {
     const UPInt ti = Sfr31Rd(info, 0x18);
     if (ti == 0)
         return NULL;
-    const char* pkg = reinterpret_cast<const char*>(Sfr31Rd(ti, 0x10));
-    ASString uri = vm->GetStringManager().CreateString(pkg ? pkg : "");
-    SPtr<Instances::Namespace> ns;
-    if (uri.IsEmpty())
-        ns = vm->PublicNamespace.GetPtr();
-    else
-        ns = SPtr<Instances::Namespace>(static_cast<InstanceTraits::fl::Namespace&>(vm->GetClassTraitsNamespace().GetInstanceTraits())
-                                            .MakeInternedInstance(Abc::NS_Public, uri, Value::GetUndefined()));
+    const SPtr<Instances::Namespace> ns = Sfr31PublicNsOf(vm, reinterpret_cast<const char*>(Sfr31Rd(ti, 0x10)));
     const char* nm = reinterpret_cast<const char*>(Sfr31Rd(ti, 8));
     UPInt len = 0;
     while (nm[len] != '\0')
         ++len;
     ASString name(reinterpret_cast<ASStringManager*>(Sfr31Rd(Sfr31Rd(reinterpret_cast<UPInt>(vm), 0x10), 0x1e8))->CreateConstStringNode(nm, len, 0));
-    return Sfr27GetClassTraitsByName(vm, &name, ns.GetPtr());
+    return Sfr31GetClassTraitsInl(vm, name, *ns.GetPtr());
 }
 
+// VMAbcFile::GetMultiname(ind): index 0 is the file's any-type multiname.
+static __forceinline UPInt Sfr31MnEntryAt(UPInt link, int ind)
+{
+    return ind == 0 ? Sfr31Rd(link, 0x28) + 0xe8 : static_cast<SPInt>(ind) * 0x10 + Sfr31Rd(Sfr31Rd(link, 0x28), 0xb8);
+}
 // ---- batch 43
 // Resolves the class traits named by a multiname entry; the Vector.<T> cases map to the specialised builtin traits.
-// MS2-FUNCTIONAL 0x142524f60: raw-offset model; codegen differs from the exe
+// MS2-FUNCTIONAL 0x142524f60: the exe re-tests idx inside the inlined GetMultiname and keeps the name node in rcx for its dtor
 // @0x142524f60
 UPInt Sfr31ResolveClassTraits(UPInt vmAddr, UPInt link, UPInt entry)
 {
-    const UPInt file = Sfr31Rd(link, 0x28);
-    if (entry == file + 0xe8)
+    if (entry == Sfr31Rd(link, 0x28) + 0xe8)
         return Sfr31Rd(vmAddr, 0x1f0);
-    UPInt nameNode = 0;
-    FUN_14250b240(link, &nameNode, *reinterpret_cast<const int*>(entry + 8));
+    VM* vm = reinterpret_cast<VM*>(vmAddr);
+    const ASString name(reinterpret_cast<VMAbcFile*>(link)->GetInternedString(static_cast<UPInt>(*reinterpret_cast<const int*>(entry + 8))));
     UPInt r;
-    if (nameNode == Sfr31Rd(Sfr31Rd(vmAddr, 0x10), 0x18))
+    if (name == *reinterpret_cast<const ASString*>(Sfr31Rd(vmAddr, 0x10) + 0x18))
         r = Sfr31Rd(vmAddr, 0x1f8);
     else
     {
-        const UPInt ns = FUN_14250ae60(link, *reinterpret_cast<const int*>(entry + 4));
-        ASString name(reinterpret_cast<ASStringNode*>(nameNode));
-        r = reinterpret_cast<UPInt>(Sfr27GetClassTraitsByName(reinterpret_cast<VM*>(vmAddr), &name, reinterpret_cast<const Instances::Namespace*>(ns)));
+        const Instances::Namespace& ns = *reinterpret_cast<const Instances::Namespace*>(FUN_14250ae60(link, *reinterpret_cast<const int*>(entry + 4)));
+        r = reinterpret_cast<UPInt>(Sfr31GetClassTraitsInl(vm, name, ns));
         if (r == Sfr31Rd(vmAddr, 0x248))
         {
             const int idx = *reinterpret_cast<const int*>(entry + 0xc);
-            UPInt r2;
-            if (idx == 0)
-                r2 = Sfr31Rd(vmAddr, 0x1f8);
-            else
-                r2 = Sfr31ResolveClassTraits(vmAddr, link, static_cast<SPInt>(idx) * 0x10 + Sfr31Rd(file, 0xb8));
+            const UPInt r2 = idx == 0 ? Sfr31Rd(vmAddr, 0x1f8) : Sfr31ResolveClassTraits(vmAddr, link, Sfr31MnEntryAt(link, idx));
             if (r2 != 0)
             {
                 if (r2 == Sfr31Rd(vmAddr, 0x220))
@@ -5656,7 +5670,6 @@ UPInt Sfr31ResolveClassTraits(UPInt vmAddr, UPInt link, UPInt entry)
             }
         }
     }
-    Sfr31ReleaseStr(nameNode);
     return r;
 }
 // ---- batch 44
