@@ -2472,9 +2472,61 @@ void AvmSprite::SpriteHitTest(const FnCall& fn)
 }
 #pragma strict_gs_check(pop)
 
+// SharedObject::SetNameAndLocalPath (exe 0x142989250, sfr_as2_07), which the exe inlines into getLocal.
+static SF_FORCEINLINE bool GetLocalSetNameAndLocalPath(SharedObject* pthis, const String& name,
+                                                       const String& localPath)
+{
+    const char* pstr;
+    UInt32 c = name.GetFirstCharAt(0, &pstr);
+    while (c)
+    {
+        switch (c)
+        {
+        case '~':
+        case '%':
+        case '&':
+        case '\\':
+        case ';':
+        case ':':
+        case '"':
+        case '\'':
+        case ',':
+        case '<':
+        case '>':
+        case '?':
+        case '#':
+            return false;
+        }
+        if (SFiswspace((wchar_t)c))
+            return false;
+        c = name.GetNextChar(&pstr);
+    }
+    pthis->Name = name;
+    pthis->LocalPath = localPath;
+    return true;
+}
+
+// Hash::Get (SDK header inline): the value of key's node, or null.
+static SF_FORCEINLINE SharedObjectPtr* GetLocalHashGet(ASStringHash_GC<SharedObjectPtr>::SetType& objects,
+                                                       const ASString& key)
+{
+    ASStringHash_GC<SharedObjectPtr>::NodeType* p = objects.GetAlt(key);
+    if (p)
+        return &p->Second;
+    return 0;
+}
+
+// Hash::Add (SDK header inline): the value is a temp that lives across the add.
+static SF_FORCEINLINE void GetLocalHashAdd(ASStringHash_GC<SharedObjectPtr>& hash, const ASString& key,
+                                           const SharedObjectPtr& value)
+{
+    ASStringHash_GC<SharedObjectPtr>::NodeType::NodeRef e(key, value);
+    reinterpret_cast<ASStringHash_GC<SharedObjectPtr>::SetType&>(hash).Add(&hash, e);
+}
+
 // getLocal(name[, localPath]): shared objects are cached by "localPath:name"; a new one gets its data replayed by
 // the shared object manager, null when the name is invalid or nothing could be loaded.
-// MS2-FUNCTIONAL: the exe inlines SetNameAndLocalPath (its character switch) and the cache lookup
+// MS2-FUNCTIONAL: 4 bytes long; the exe keeps the constructor in rsi and releases its reference without nulling it
 // @0x142901410
 void SharedObjectCtorFunction::GetLocal(const FnCall& fn)
 {
@@ -2494,15 +2546,15 @@ void SharedObjectCtorFunction::GetLocal(const FnCall& fn)
     SharedObjectCtorFunction* pctor = static_cast<SharedObjectCtorFunction*>(ctor.GetObjectPtr());
     typedef ASStringHash_GC<SharedObjectPtr>::SetType SetType;
     SetType& objects = *reinterpret_cast<SetType*>(&pctor->SharedObjects);
-    ASStringHash_GC<SharedObjectPtr>::NodeType* pnode = objects.GetAlt(key);
-    if (pnode)
+    SharedObjectPtr* psavedObj = GetLocalHashGet(objects, key);
+    if (psavedObj)
     {
-        fn.Result->SetAsObject(pnode->Second.GetPtr());
+        fn.Result->SetAsObject(psavedObj->GetPtr());
         return;
     }
 
     Ptr<SharedObject> pobj = *static_cast<SharedObject*>(fn.Env->OperatorNew(fn.Env->GetBuiltin(ASBuiltin_SharedObject)));
-    if (!pobj->SetNameAndLocalPath(nameStr, localPathStr))
+    if (!GetLocalSetNameAndLocalPath(pobj, nameStr, localPathStr))
     {
         fn.Result->SetNull();
         return;
@@ -2517,8 +2569,7 @@ void SharedObjectCtorFunction::GetLocal(const FnCall& fn)
     {
         pobj->SetDataObject(fn.Env, pdata);
         fn.Result->SetAsObject(pobj);
-        ASStringHash_GC<SharedObjectPtr>::NodeType::NodeRef e(key, SharedObjectPtr(pobj));
-        objects.Add(&pctor->SharedObjects, e);
+        GetLocalHashAdd(pctor->SharedObjects, key, pobj.GetPtr());
     }
     else
         fn.Result->SetNull();
