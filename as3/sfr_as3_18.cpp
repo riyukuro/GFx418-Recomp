@@ -5694,6 +5694,14 @@ static inline AvmDisplayObjContainer* Sfr34_ToAvmContainer(DisplayObject* p)
     return static_cast<AvmDisplayObjContainer*>(p->GetAvmObjImpl()->ToAvmDispContainerBase());
 }
 
+// ToAvmDisplayObjContainer (AS3_AvmDisplayObjContainer.h) with its null test
+static inline AvmDisplayObjContainer* Sfr18ToAvmContainerN(DisplayObject* p)
+{
+    if (!p)
+        return NULL;
+    return static_cast<AvmDisplayObjContainer*>(p->GetAvmObjImpl()->ToAvmDispContainerBase());
+}
+
 // The AS3 container part of the stage, NULL for none (the SDK's ToAvmDisplayObjContainer).
 static inline AvmDisplayObjContainer* Sfr34_ToAvmStage(DisplayObject* p)
 {
@@ -8252,24 +8260,30 @@ void MovieRoot::ProcessLoadQueueEntry(GFx::LoadQueueEntry* pentry, LoadStates* p
             else
                 pmovieDef = *LoaderImpl::CreateMovie_LoadState(pls, *entry.mBytes, lf);
 
-            if (!pmovieDef)
+            if (pmovieDef)
+            {
+                // MovieDataDef::GetASVersion: 3 with the DoAbc file attribute, else 2
+                if (pmovieDef->GetVersion() != ~0u &&
+                    (pmovieDef->GetVersion() < 9 ||
+                     ((pmovieDef->GetDataDef()->GetFileAttributes() & 8) ? 3u : 2u) < 3))
+                {
+                    if (plog && !pentry->QuietOpen)
+                        plog->LogScriptWarning("Failed loading SWF \"%s\": ActionScript version mismatch", url.ToCStr());
+                    entry.mLoader->ExecuteErrorEvent(url.ToCStr());
+                    if (entry.NotifyLoadInitCInterface)
+                        entry.NotifyLoadInitCInterface->ErrorEventCallback();
+                    pmovieDef = NULL;
+                    goto error_exit;
+                }
+            }
+            else
             {
                 if (plog && !pentry->QuietOpen)
                     plog->LogScriptWarning("Failed loading URL \"%s\"", url.ToCStr());
                 entry.mLoader->ExecuteErrorEvent(url.ToCStr());
                 if (entry.NotifyLoadInitCInterface)
                     entry.NotifyLoadInitCInterface->ErrorEventCallback();
-                return;
-            }
-            if (pmovieDef->GetVersion() != ~0u &&
-                (pmovieDef->GetVersion() < 9 || !(pmovieDef->GetDataDef()->GetFileAttributes() & 8)))
-            {
-                if (plog && !pentry->QuietOpen)
-                    plog->LogScriptWarning("Failed loading SWF \"%s\": ActionScript version mismatch", url.ToCStr());
-                entry.mLoader->ExecuteErrorEvent(url.ToCStr());
-                if (entry.NotifyLoadInitCInterface)
-                    entry.NotifyLoadInitCInterface->ErrorEventCallback();
-                return;
+                goto error_exit;
             }
         }
         if (pmovieDef)
@@ -8293,8 +8307,8 @@ void MovieRoot::ProcessLoadQueueEntry(GFx::LoadQueueEntry* pentry, LoadStates* p
                 if (pres && pres->GetResourceType() == Resource::RT_Image)
                     FUN_1425274b0(pnewBmpChar, pres);
             }
-            Sfr34_ToAvmContainer(pparent)->AddChild(pnewBmpChar);
-            Sfr18LoadedCtor(ToAvmDisplayObj(pnewBmpChar), entry.mLoader);
+            Sfr18ToAvmContainerN(pparent)->AddChild(pnewBmpChar);
+            Sfr18LoadedCtor(Sfr18ToAvmDisplayObj(pnewBmpChar), entry.mLoader);
             pnewChar = pnewBmpChar;
         }
         else if (pmovieDef)
@@ -8314,7 +8328,7 @@ void MovieRoot::ProcessLoadQueueEntry(GFx::LoadQueueEntry* pentry, LoadStates* p
             avmSpr->ExecuteInitActionFrameTags(0);
             pnewSprite->SetFOV(55.0);
             Sfr18LoadedCtor(avmSpr, entry.mLoader);
-            Sfr34_ToAvmContainer(pparent)->AddChild(pnewSprite);
+            Sfr18ToAvmContainerN(pparent)->AddChild(pnewSprite);
             ResolveStickyVariables(pnewSprite);
             pnewSprite->ModifyOptimizedPlayListLocal<Sprite>();
             DoActions();
@@ -8335,6 +8349,7 @@ void MovieRoot::ProcessLoadQueueEntry(GFx::LoadQueueEntry* pentry, LoadStates* p
             entry.mLoader->ExecuteCompleteEvent();
         }
     }
+error_exit:;
 }
 
 // sfr34 batch AG: one element of TextField.setImageSubstitutions (an object with subString, image, width, height,
