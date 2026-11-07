@@ -65,6 +65,12 @@ SF_FORCEINLINE ASString XmlConstString(ASStringContext* psc, const char* pstr)
     return psc->pContext->GetStringManager()->CreateConstString(pstr);
 }
 
+// Environment::GetGC() const (SDK header inline): StringContext.pContext.
+SF_FORCEINLINE GlobalContext* XmlEnvGC(const Environment* penv)
+{
+    return penv->StringContext.pContext;
+}
+
 SF_FORCEINLINE ASString XmlConstString(Environment* penv, const char* pstr)
 {
     return XmlConstString(penv->GetSC(), pstr);
@@ -213,7 +219,6 @@ void XmlProto::GetBytesTotal(const FnCall& fn)
 
 // load(url): queues the load; with the default onData the file is parsed into this, otherwise onData gets the
 // text.
-// MS2-FUNCTIONAL: register allocation (the onData and ignoreWhite names load fn.Env into rcx, the exe into rax)
 // @0x14299fcd0
 void XmlProto::Load(const FnCall& fn)
 {
@@ -229,7 +234,7 @@ void XmlProto::Load(const FnCall& fn)
     }
     ASString url = ArgCopy(&fn, 0)->ToString(fn.Env);
     Value    ondata;
-    pthis->GetMember(fn.Env, XmlConstString(fn.Env, "onData"), &ondata);
+    pthis->GetMember(fn.Env, XmlEnvGC(fn.Env)->GetStringManager()->CreateConstString("onData"), &ondata);
     FunctionRef handler = ondata.ToFunction_Call(fn.Env);
     if (handler->IsCFunction() && handler->IsCFunction() &&
         static_cast<CFunctionObject*>(handler.GetObjectPtr())->pFunction == XmlProto::DefaultOnData)
@@ -246,7 +251,7 @@ void XmlProto::Load(const FnCall& fn)
         XML::SupportBase* psupport = GetXmlSupport(pmovieroot);
         pthis->BytesLoadedCurrent = 0;
         Value ignoreWhite;
-        pthis->GetMember(fn.Env, XmlConstString(fn.Env, "ignoreWhite"), &ignoreWhite);
+        pthis->GetMember(fn.Env, XmlEnvGC(fn.Env)->GetStringManager()->CreateConstString("ignoreWhite"), &ignoreWhite);
         bool                  ignorews = ignoreWhite.ToBool(fn.Env);
         Ptr<XMLFileLoader>    ploader  = *SF_HEAP_NEW(Memory::pGlobalHeap)
             XMLFileLoaderAndParserImpl(psupport, memMgr, ignorews);
