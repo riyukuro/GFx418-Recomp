@@ -156,7 +156,12 @@ class AvmInteractiveObj : public AvmDisplayObj, public AvmInteractiveObjBase
 public:
     AvmInteractiveObj(InteractiveObject* pdispObj);
     // Inline: the containers' destructors (AvmLoader 0x1424ddc40) inline it and reset the AvmInteractiveObjBase part.
+#ifdef SF_AS3_AVMINTERACTIVEOBJ_DTOR_OUTOFLINE
+    // Units whose destructors call it out of line (sfr_video_03's AvmVideoCharacter ??_G 0x14001b3a0).
+    virtual ~AvmInteractiveObj();                                       // 0x1424ddc20, ??_G 0x1424e2860
+#else
     virtual ~AvmInteractiveObj() {}                                     // 0x1424ddc20, ??_G 0x1424e2860
+#endif
 
     virtual AvmInteractiveObjBase* ToAvmInteractiveObjBase() { return this; }
     // Each class keeps its own (unfolded) NULL queries: 0x14252f430, 0x14252f280, 0x14252f4b0, 0x14252f2f0.

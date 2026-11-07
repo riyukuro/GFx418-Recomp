@@ -8,6 +8,7 @@
 // MS2-RANGE: 0x140016b50-0x14001c000 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
+#define SF_AS3_AVMINTERACTIVEOBJ_DTOR_OUTOFLINE // AvmVideoCharacter ??_G calls it (0x14001b3a0)
 #include "../include/video/video_video.h"
 #include "../include/video/video_videoplayerimpl.h"
 #include "../include/gfx/gfx_stream.h"
@@ -153,8 +154,6 @@ ExeDecl<void(void*, void*, const void*, void*, unsigned, void*, unsigned)>::type
 ExeDecl<void(void*, void*, double)>::type FUN_1424d2150;   // SoundTransform setter (Value const&, double): the value travels in xmm2
 ExeDecl<void(void*)>::type FUN_140026ed0;
 ExeDecl<void()>::type FUN_140026db0;
-// FUN_14001b3a0 below resets the AvmDisplayObjBase vptr at +0x40 through that class's inline destructor.
-static __forceinline void Sfr03ResetDisplayObjBase(void* p) { static_cast<Scaleform::GFx::AvmDisplayObjBase*>(p)->Scaleform::GFx::AvmDisplayObjBase::~AvmDisplayObjBase(); }
 extern ExeDecl<void*>::type DAT_1431b7c70;
 #define VideoTraitsVtable DAT_1431b7c70
 extern ExeDecl<void*>::type DAT_1431b7f60;
@@ -163,6 +162,13 @@ extern ExeDecl<void*>::type DAT_1431b7ea0;
 #define VideoTraitsSubVtableA DAT_1431b7ea0
 extern ExeDecl<void*>::type DAT_1431b7de0;
 #define VideoTraitsSubVtableB DAT_1431b7de0
+// The AvmVideoCharacter model at the end of the file emits these three tables; the hand-inlined ctor FUN_14001af70
+// stores them through the DAT_ names. The hook DLL binds the DAT_ names to the exe by their symbols rows.
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:?DAT_1431b7f60@@3PEAXEA=??_7AvmVideoCharacter@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@")
+#pragma comment(linker, "/alternatename:?DAT_1431b7ea0@@3PEAXEA=??_7AvmVideoCharacter@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@")
+#pragma comment(linker, "/alternatename:?DAT_1431b7de0@@3PEAXEA=??_7AvmVideoCharacter@AS3@GFx@Scaleform@@6B@")
+#endif
 extern ExeDecl<void*>::type DAT_1431b7160; extern ExeDecl<void*>::type DAT_1431b7900;
 #define VideoClassInfoA DAT_1431b7160
 #define VideoClassVtableA DAT_1431b7900
@@ -728,7 +734,7 @@ __declspec(noinline) bool FUN_14001b120(void*) { return true; }
 __declspec(noinline) bool FUN_14001b130(void*) { return true; }
 // AvmInteractiveObj::IsTabable
 // @0x14001b140
-__declspec(noinline) bool FUN_14001b140(const void* object) { return static_cast<const Scaleform::GFx::AS3::AvmInteractiveObj*>(object)->Scaleform::GFx::AS3::AvmInteractiveObj::IsTabable(); }
+__declspec(noinline) bool FUN_14001b140(const void* object) { return reinterpret_cast<const Scaleform::GFx::AS3::AvmInteractiveObj*>(static_cast<const unsigned char*>(object) - 0x30)->Scaleform::GFx::AS3::AvmInteractiveObj::IsTabable(); }
 // The traits' debug class names (slot 2 of each traits vtable; 0x1431b7f60 [16] for the display object).
 // @0x140019af0
 const char* FUN_140019af0(const void*) { return "ClassTraits::NetStream"; }
@@ -1214,19 +1220,6 @@ __declspec(noinline) void FUN_14001b0e0(void* object, uint32_t event, void* targ
 {
     reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(static_cast<unsigned char*>(object) - 0x30)->Scaleform::GFx::AS3::AvmInteractiveObj::OnFocus(static_cast<Scaleform::GFx::InteractiveObject::FocusEventType>(event), static_cast<Scaleform::GFx::InteractiveObject*>(target), controller, static_cast<Scaleform::GFx::FocusMovedType>(moved));
 }
-// restores the executable's AvmInteractiveObj vtable and destroys the base object.
-#pragma inline_depth(0) // the exe calls the AvmInteractiveObj destructor out of line
-// @0x14001b3a0
-__declspec(noinline) void* FUN_14001b3a0(void* object)
-{
-    Sfr03ResetDisplayObjBase(static_cast<unsigned char*>(object) + 0x40);
-    reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(object)->Scaleform::GFx::AS3::AvmInteractiveObj::~AvmInteractiveObj();
-    return object;
-}
-#pragma inline_depth()
-// the out-of-line AvmInteractiveObj destructor emits these vftables (pinned as in sfr_as3_15; Scaleform has no RTTI).
-// MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
-// MS2-PIN: ??_7AvmInteractiveObj@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ca60
 // replaces the pointer only after releasing the previously stored value.
 // @0x14001bac0
 uint64_t* FUN_14001bac0(uint64_t* holder, uint64_t replacement)
@@ -1260,117 +1253,6 @@ void FUN_14001bfd0(void* object, const uint32_t* id, void* pResource)
             Scaleform::GFx::ResourceId(*id), static_cast<Scaleform::GFx::Resource*>(pResource));
     }
 }
-
-// The Video display object's this-adjusting slots: 0x1431b7de0 is the +0x40 / +0x10 bases' table, 0x1431b7ea0 the
-// +0x30 / +0x10 bases'; each moves `this` back and runs the primary slot (slot index in brackets).
-// 0x1431b7de0 [0]
-// @0x14001b1e0
-void* FUN_14001b1e0(void* p) { return FUN_14001b3a0(static_cast<unsigned char*>(p) - 0x40); }
-// 0x1431b7de0 [1]
-// @0x14001b2a0
-void* FUN_14001b2a0(void* p) { return FUN_14001afe0(static_cast<unsigned char*>(p) - 0x40); }
-// 0x1431b7de0 [2]
-// @0x14001b2c0
-uint64_t FUN_14001b2c0(void* p) { return FUN_14001b000(static_cast<unsigned char*>(p) - 0x40); }
-// 0x1431b7de0 [3]
-// @0x14001b280
-uint64_t FUN_14001b280(void* p) { return FUN_14001b010(static_cast<unsigned char*>(p) - 0x40); }
-// 0x1431b7de0 [4]
-// @0x14001b2d0
-uint64_t FUN_14001b2d0(void* p) { return FUN_14001b020(static_cast<unsigned char*>(p) - 0x40); }
-// 0x1431b7de0 [5]
-// @0x14001b200
-uint64_t FUN_14001b200(void* p) { return FUN_14001b030(static_cast<unsigned char*>(p) - 0x40); }
-// 0x1431b7de0 [6]
-// @0x14001b270
-const char* FUN_14001b270(void* p, void* path) { return thunk_FUN_142506e10(static_cast<unsigned char*>(p) - 0x40, path); }
-// 0x1431b7de0 [7]
-// @0x14001b1f0
-bool FUN_14001b1f0(void* p, const void* id) { return thunk_FUN_142510dc0(static_cast<unsigned char*>(p) - 0x40, id); }
-// 0x1431b7de0 [8]
-// @0x14001b220
-bool FUN_14001b220(void* p, void* event) { return thunk_FUN_142518c70(static_cast<unsigned char*>(p) - 0x40, event); }
-// 0x1431b7de0 [9]
-// @0x14001b350
-void FUN_14001b350(void* p) { thunk_FUN_142519080(static_cast<unsigned char*>(p) - 0x40); }
-// 0x1431b7de0 [10]
-// @0x14001b1a0
-void FUN_14001b1a0(void* p) { thunk_FUN_142519860(static_cast<unsigned char*>(p) - 0x40); }
-// 0x1431b7de0 [11]
-// @0x14001b2e0
-uint8_t FUN_14001b2e0(void* p) { return FUN_14001b070(static_cast<unsigned char*>(p) - 0x40); }
-// 0x1431b7de0 [12]
-// @0x14001b250
-void* FUN_14001b250(void* p) { return FUN_14001afd0(static_cast<unsigned char*>(p) - 0x40); }
-// 0x1431b7de0 [13]
-// @0x14001b210
-uint8_t FUN_14001b210(void* p) { return FUN_14001b090(static_cast<unsigned char*>(p) - 0x10); }
-// 0x1431b7de0 [14]
-// @0x14001b330
-uint64_t FUN_14001b330(void* p) { return FUN_14001b0b0(static_cast<unsigned char*>(p) - 0x10); }
-// 0x1431b7de0 [15]
-// @0x14001b240
-void FUN_14001b240(void* p, const void* source) { thunk_FUN_1424efe00(static_cast<unsigned char*>(p) - 0x10, source); }
-// 0x1431b7de0 [16]
-// @0x14001b190
-void FUN_14001b190(void* p, const void* source) { thunk_FUN_1424f1f70(static_cast<unsigned char*>(p) - 0x10, source); }
-// 0x1431b7de0 [17]
-// @0x14001b290
-void FUN_14001b290(void* p, uint32_t event, void* target, uint32_t controller, uint32_t moved) { FUN_14001b0e0(static_cast<unsigned char*>(p) - 0x10, event, target, controller, moved); }
-// 0x1431b7de0 [18]
-// @0x14001b230
-void FUN_14001b230(void* p) { FUN_14001b100(static_cast<unsigned char*>(p) - 0x10); }
-// 0x1431b7de0 [19]
-// @0x14001b180
-bool FUN_14001b180(void* p) { return FUN_14001b110(static_cast<unsigned char*>(p) - 0x10); }
-// 0x1431b7de0 [20]
-// @0x14001b380
-bool FUN_14001b380(void* p) { return FUN_14001b120(static_cast<unsigned char*>(p) - 0x10); }
-// 0x1431b7de0 [21]
-// @0x14001b160
-bool FUN_14001b160(void* p) { return FUN_14001b130(static_cast<unsigned char*>(p) - 0x10); }
-// 0x1431b7de0 [22]
-// @0x14001b370
-bool FUN_14001b370(void* p) { return FUN_14001b140(static_cast<unsigned char*>(p) - 0x10); }
-// 0x1431b7ea0 [0]
-// @0x14001b2f0
-void* FUN_14001b2f0(void* p) { return FUN_14001b3a0(static_cast<unsigned char*>(p) - 0x30); }
-// 0x1431b7ea0 [1]
-// @0x14001b170
-void* FUN_14001b170(void* p) { return FUN_14001afe0(static_cast<unsigned char*>(p) - 0x30); }
-// 0x1431b7ea0 [2]
-// @0x14001b1b0
-uint64_t FUN_14001b1b0(void* p) { return FUN_14001b000(static_cast<unsigned char*>(p) - 0x30); }
-// 0x1431b7ea0 [3]
-// @0x14001b390
-uint64_t FUN_14001b390(void* p) { return FUN_14001b010(static_cast<unsigned char*>(p) - 0x30); }
-// 0x1431b7ea0 [4]
-// @0x14001b1c0
-uint64_t FUN_14001b1c0(void* p) { return FUN_14001b020(static_cast<unsigned char*>(p) - 0x30); }
-// 0x1431b7ea0 [5]
-// @0x14001b310
-uint64_t FUN_14001b310(void* p) { return FUN_14001b030(static_cast<unsigned char*>(p) - 0x30); }
-// 0x1431b7ea0 [6]
-// @0x14001b360
-const char* FUN_14001b360(void* p, void* path) { return thunk_FUN_142506e10(static_cast<unsigned char*>(p) - 0x30, path); }
-// 0x1431b7ea0 [7]
-// @0x14001b300
-bool FUN_14001b300(void* p, const void* id) { return thunk_FUN_142510dc0(static_cast<unsigned char*>(p) - 0x30, id); }
-// 0x1431b7ea0 [8]
-// @0x14001b320
-bool FUN_14001b320(void* p, void* event) { return thunk_FUN_142518c70(static_cast<unsigned char*>(p) - 0x30, event); }
-// 0x1431b7ea0 [9]
-// @0x14001b260
-void FUN_14001b260(void* p) { thunk_FUN_142519080(static_cast<unsigned char*>(p) - 0x30); }
-// 0x1431b7ea0 [10]
-// @0x14001b2b0
-void FUN_14001b2b0(void* p) { thunk_FUN_142519860(static_cast<unsigned char*>(p) - 0x30); }
-// 0x1431b7ea0 [11]
-// @0x14001b1d0
-uint8_t FUN_14001b1d0(void* p) { return FUN_14001b070(static_cast<unsigned char*>(p) - 0x30); }
-// 0x1431b7ea0 [12]
-// @0x14001b340
-void* FUN_14001b340(void* p) { return FUN_14001afd0(static_cast<unsigned char*>(p) - 0x30); }
 
 namespace {
 
@@ -2073,3 +1955,104 @@ void FUN_14001a180(void*, void*, void* callFrame, void* result)
     unsigned char* root = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callFrame) + 0x10);
     reinterpret_cast<void(*)(void*, void*)>(DAT_143b27788)(root + DAT_143b27790, result);
 }
+
+// The AS3 part of a Video display object (flash.media.Video): AvmInteractiveObj with the AvmVideoCharacterBase part at
+// +0x40 and its own fields at +0x48 (ctor FUN_14001af70). Vftables 0x1431b7f60 (+0x00), 0x1431b7ea0 (+0x30) and
+// 0x1431b7de0 (+0x40). The overriders are the leaves above at their exe VAs (declared here, symbols-manual rows), so
+// the two secondary tables' slots are cl's own adjustor thunks (sub rcx,N; jmp member), which are the exe ones in
+// 0x14001b160-0x14001b390. Sfr03EmitAvmVideoVftables copy-constructs one so that cl emits the vftables and thunks.
+namespace Scaleform { namespace GFx {
+class __declspec(novtable) AvmVideoCharacterBase : public AvmInteractiveObjBase
+{
+};
+namespace AS3 {
+class AvmVideoCharacter : public AvmInteractiveObj, public AvmVideoCharacterBase
+{
+public:
+    // the AS3 part lives inside its display object's allocation: the deleting destructor (0x14001b3a0) frees nothing
+    // (implicit destructor: the exe's 0x14001b3a0 stores no AvmVideoCharacter vftable)
+    void operator delete(void*) {}
+
+    virtual AvmInteractiveObjBase*      ToAvmInteractiveObjBase();      // 0x14001afe0
+    virtual AvmSpriteBase*              ToAvmSpriteBase();              // 0x14001b000
+    virtual AvmButtonBase*              ToAvmButttonBase();             // 0x14001b010
+    virtual AvmTextFieldBase*           ToAvmTextFieldBase();           // 0x14001b020
+    virtual AvmDisplayObjContainerBase* ToAvmDispContainerBase();       // 0x14001b030
+    virtual const char* GetAbsolutePath(String* ppath) const;           // 0x14001b0a0
+    virtual bool        HasEventHandler(const EventId& id) const;       // 0x14001b080
+    virtual bool        OnEvent(const EventId& id);                     // 0x14001b040
+    virtual void        OnEventLoad();                                  // 0x14001b050
+    virtual void        OnEventUnload();                                // 0x14001b060
+    virtual bool        OnUnloading(bool mayRemove);                    // 0x14001b070
+    virtual AvmVideoCharacterBase* ToAvmVideoCharacterBase();           // 0x14001afd0
+    virtual const char* GetDefaultASClassName() const;                  // 0x14001aff0
+
+    virtual bool     ActsAsButton() const;                              // 0x14001b090
+    virtual unsigned GetCursorType() const;                             // 0x14001b0b0
+    virtual void     CloneInternalData(const InteractiveObject* src);   // 0x14001b0c0
+    virtual void     CopyPhysicalProperties(const InteractiveObject* poldChar);    // 0x14001b0d0
+    virtual void     OnFocus(InteractiveObject::FocusEventType event, InteractiveObject* oldOrNewFocusCh,
+                             unsigned controllerIdx, FocusMovedType fmt);          // 0x14001b0e0
+    virtual void     OnGettingKeyboardFocus(unsigned controllerIdx, FocusMovedType fmt);   // 0x14001b100
+    virtual bool     OnKeyEvent(const EventId& id, int* pkeyMask);      // 0x14001b110
+    virtual bool     OnLosingKeyboardFocus(InteractiveObject* newFocusCh, unsigned controllerIdx,
+                                           FocusMovedType fmt = GFx_FocusMovedByKeyboard);  // 0x14001b120
+    virtual bool     IsFocusEnabled(FocusMovedType fmt = GFx_FocusMovedByKeyboard) const;   // 0x14001b130
+    virtual bool     IsTabable() const;                                 // 0x14001b140
+
+    UInt32  FieldA, FieldB, FieldC;     // +0x48
+    bool    Flag;                       // +0x54
+};
+void Sfr03EmitAvmVideoVftables(void* p, const AvmVideoCharacter* pvideo)
+{
+    new (p) AvmVideoCharacter(*pvideo);
+}
+}}} // namespace Scaleform::GFx::AS3
+
+// The AvmVideoCharacter model's vftables and its bases' (pinned as in sfr_as3_17; Scaleform has no RTTI), its
+// deleting destructor and cl's adjustor thunks for the 0x1431b7de0 / 0x1431b7ea0 slots.
+// MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
+// MS2-PIN: ??_7AvmInteractiveObjBase@GFx@Scaleform@@6B@ 0x14317bfe8
+// MS2-PIN: ??_7AvmDisplayObj@AS3@GFx@Scaleform@@6B@ 0x14317c160
+// MS2-PIN: ??_7AvmInteractiveObj@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ca60
+// MS2-PIN: ??_7AvmInteractiveObj@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317cb30
+// MS2-PIN: ??_7AvmVideoCharacter@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x1431b7f60
+// MS2-PIN: ??_7AvmVideoCharacter@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x1431b7ea0
+// MS2-PIN: ??_7AvmVideoCharacter@AS3@GFx@Scaleform@@6B@ 0x1431b7de0
+// MS2-PIN: ??_GAvmVideoCharacter@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x14001b3a0
+// MS2-PIN: ??_EAvmVideoCharacter@AS3@GFx@Scaleform@@WDA@EAAPEAXI@Z 0x14001b2f0
+// MS2-PIN: ??_EAvmVideoCharacter@AS3@GFx@Scaleform@@WEA@EAAPEAXI@Z 0x14001b1e0
+// MS2-PIN: ?ActsAsButton@AvmVideoCharacter@AS3@GFx@Scaleform@@WBA@EBA_NXZ 0x14001b210
+// MS2-PIN: ?CloneInternalData@AvmVideoCharacter@AS3@GFx@Scaleform@@WBA@EAAXPEBVInteractiveObject@34@@Z 0x14001b240
+// MS2-PIN: ?CopyPhysicalProperties@AvmVideoCharacter@AS3@GFx@Scaleform@@WBA@EAAXPEBVInteractiveObject@34@@Z 0x14001b190
+// MS2-PIN: ?GetAbsolutePath@AvmVideoCharacter@AS3@GFx@Scaleform@@WDA@EBAPEBDPEAVString@4@@Z 0x14001b360
+// MS2-PIN: ?GetAbsolutePath@AvmVideoCharacter@AS3@GFx@Scaleform@@WEA@EBAPEBDPEAVString@4@@Z 0x14001b270
+// MS2-PIN: ?GetCursorType@AvmVideoCharacter@AS3@GFx@Scaleform@@WBA@EBAIXZ 0x14001b330
+// MS2-PIN: ?HasEventHandler@AvmVideoCharacter@AS3@GFx@Scaleform@@WDA@EBA_NAEBVEventId@34@@Z 0x14001b300
+// MS2-PIN: ?HasEventHandler@AvmVideoCharacter@AS3@GFx@Scaleform@@WEA@EBA_NAEBVEventId@34@@Z 0x14001b1f0
+// MS2-PIN: ?IsFocusEnabled@AvmVideoCharacter@AS3@GFx@Scaleform@@WBA@EBA_NW4FocusMovedType@34@@Z 0x14001b160
+// MS2-PIN: ?IsTabable@AvmVideoCharacter@AS3@GFx@Scaleform@@WBA@EBA_NXZ 0x14001b370
+// MS2-PIN: ?OnEvent@AvmVideoCharacter@AS3@GFx@Scaleform@@WDA@EAA_NAEBVEventId@34@@Z 0x14001b320
+// MS2-PIN: ?OnEvent@AvmVideoCharacter@AS3@GFx@Scaleform@@WEA@EAA_NAEBVEventId@34@@Z 0x14001b220
+// MS2-PIN: ?OnEventLoad@AvmVideoCharacter@AS3@GFx@Scaleform@@WDA@EAAXXZ 0x14001b260
+// MS2-PIN: ?OnEventLoad@AvmVideoCharacter@AS3@GFx@Scaleform@@WEA@EAAXXZ 0x14001b350
+// MS2-PIN: ?OnEventUnload@AvmVideoCharacter@AS3@GFx@Scaleform@@WDA@EAAXXZ 0x14001b2b0
+// MS2-PIN: ?OnEventUnload@AvmVideoCharacter@AS3@GFx@Scaleform@@WEA@EAAXXZ 0x14001b1a0
+// MS2-PIN: ?OnFocus@AvmVideoCharacter@AS3@GFx@Scaleform@@WBA@EAAXW4FocusEventType@InteractiveObject@34@PEAV634@IW4FocusMovedType@34@@Z 0x14001b290
+// MS2-PIN: ?OnGettingKeyboardFocus@AvmVideoCharacter@AS3@GFx@Scaleform@@WBA@EAAXIW4FocusMovedType@34@@Z 0x14001b230
+// MS2-PIN: ?OnKeyEvent@AvmVideoCharacter@AS3@GFx@Scaleform@@WBA@EAA_NAEBVEventId@34@PEAH@Z 0x14001b180
+// MS2-PIN: ?OnLosingKeyboardFocus@AvmVideoCharacter@AS3@GFx@Scaleform@@WBA@EAA_NPEAVInteractiveObject@34@IW4FocusMovedType@34@@Z 0x14001b380
+// MS2-PIN: ?OnUnloading@AvmVideoCharacter@AS3@GFx@Scaleform@@WDA@EAA_N_N@Z 0x14001b1d0
+// MS2-PIN: ?OnUnloading@AvmVideoCharacter@AS3@GFx@Scaleform@@WEA@EAA_N_N@Z 0x14001b2e0
+// MS2-PIN: ?ToAvmButttonBase@AvmVideoCharacter@AS3@GFx@Scaleform@@WDA@EAAPEAVAvmButtonBase@34@XZ 0x14001b390
+// MS2-PIN: ?ToAvmButttonBase@AvmVideoCharacter@AS3@GFx@Scaleform@@WEA@EAAPEAVAvmButtonBase@34@XZ 0x14001b280
+// MS2-PIN: ?ToAvmDispContainerBase@AvmVideoCharacter@AS3@GFx@Scaleform@@WDA@EAAPEAVAvmDisplayObjContainerBase@34@XZ 0x14001b310
+// MS2-PIN: ?ToAvmDispContainerBase@AvmVideoCharacter@AS3@GFx@Scaleform@@WEA@EAAPEAVAvmDisplayObjContainerBase@34@XZ 0x14001b200
+// MS2-PIN: ?ToAvmInteractiveObjBase@AvmVideoCharacter@AS3@GFx@Scaleform@@WDA@EAAPEAVAvmInteractiveObjBase@34@XZ 0x14001b170
+// MS2-PIN: ?ToAvmInteractiveObjBase@AvmVideoCharacter@AS3@GFx@Scaleform@@WEA@EAAPEAVAvmInteractiveObjBase@34@XZ 0x14001b2a0
+// MS2-PIN: ?ToAvmSpriteBase@AvmVideoCharacter@AS3@GFx@Scaleform@@WDA@EAAPEAVAvmSpriteBase@34@XZ 0x14001b1b0
+// MS2-PIN: ?ToAvmSpriteBase@AvmVideoCharacter@AS3@GFx@Scaleform@@WEA@EAAPEAVAvmSpriteBase@34@XZ 0x14001b2c0
+// MS2-PIN: ?ToAvmTextFieldBase@AvmVideoCharacter@AS3@GFx@Scaleform@@WDA@EAAPEAVAvmTextFieldBase@34@XZ 0x14001b1c0
+// MS2-PIN: ?ToAvmTextFieldBase@AvmVideoCharacter@AS3@GFx@Scaleform@@WEA@EAAPEAVAvmTextFieldBase@34@XZ 0x14001b2d0
+// MS2-PIN: ?ToAvmVideoCharacterBase@AvmVideoCharacter@AS3@GFx@Scaleform@@WDA@EAAPEAVAvmVideoCharacterBase@34@XZ 0x14001b340
+// MS2-PIN: ?ToAvmVideoCharacterBase@AvmVideoCharacter@AS3@GFx@Scaleform@@WEA@EAAPEAVAvmVideoCharacterBase@34@XZ 0x14001b250
