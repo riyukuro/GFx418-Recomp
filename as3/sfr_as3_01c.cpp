@@ -2901,26 +2901,30 @@ namespace Instances {
     }
 
     // HashLH<UPInt, Value>::Get on the sparse part.
-    static inline const Value* SparseHashGet(const SparseArray& sa, UPInt ind)
+    static SF_FORCEINLINE const Value* SparseHashGet(const SparseArray& sa, const UPInt& ind)
     {
         const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = sa.ValueH.mHash.GetAlt(ind);
         return p ? &p->Second : 0;
     }
 
     // SparseArray::At, inlined here (out of line in sfr_as3_03).
-    static SF_INLINE const Value& SparseAt(const SparseArray& sa, UPInt ind)
+    static SF_FORCEINLINE const Value& SparseAt(const SparseArray& sa, UPInt ind)
     {
         if (ind < sa.ValueA.GetSize())
             return sa.ValueA[ind];
-        if (ind >= sa.ValueHLowInd && ind <= sa.ValueHHighInd)
+        else if (ind < sa.ValueHLowInd || ind > sa.ValueHHighInd)
+            return sa.DefaultValue;
+        else
         {
-            if (const Value* v = SparseHashGet(sa, ind))
-                return *v;
+            const Value* vp;
+            if ((vp = SparseHashGet(sa, ind)) != NULL)
+                return *vp;
+            else
+                return sa.DefaultValue;
         }
-        return sa.DefaultValue;
     }
 
-    // MS2-FUNCTIONAL: same flow; exe keeps the hash node->value select as a cmove (as in SparseArray::At) and allocates registers differently.
+    // MS2-FUNCTIONAL: one byte off: the repack loop's args[i] address is lea rcx,[r15+r14] (data+offset) in the exe, ours encodes [r14+r15].
     // @0x1423e4e40
     void FunctionBase::apply(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
@@ -2944,19 +2948,19 @@ namespace Instances {
             if (!coerced.IsNull())
             {
                 Instances::fl::Array* array = static_cast<Instances::fl::Array*>(coerced.GetObject());
-                const SparseArray& sa = array->SA;
-                if (sa.GetSize() > sa.ValueA.GetSize())
+                if (array->SA.GetSize() > array->SA.ValueA.GetSize())
                 {
-                    args.Resize(sa.GetSize());
+                    args.Resize(array->SA.GetSize());
                     for (UPInt i = 0; i < args.GetSize(); ++i)
-                        args[i] = SparseAt(sa, i);
+                        args[i] = SparseAt(array->SA, i);
                     f_argc = (unsigned)args.GetSize();
                     f_argv = args.GetDataPtr();
                 }
                 else
                 {
-                    f_argc = (unsigned)sa.ValueA.GetSize();
-                    f_argv = sa.ValueA.GetDataPtr();
+                    const ValueArrayDH& cont_args = array->SA.ValueA;
+                    f_argc = (unsigned)cont_args.GetSize();
+                    f_argv = cont_args.GetDataPtr();
                 }
             }
             VMExecuteUnsafe(vm, _this, argv[0], r, f_argc, f_argv);
