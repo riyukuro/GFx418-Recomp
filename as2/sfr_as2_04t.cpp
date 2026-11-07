@@ -9,83 +9,151 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
+namespace {
+typedef Environment::TryDescr CeTryDescr;
+
+// The SDK's TryDescr inlines (AS2_Action.h): the sizes are read byte by byte from the ActionTry record.
+SF_FORCEINLINE unsigned CeTrySize(const CeTryDescr& d)     { return d.pTryBlock[1] | (((UInt16)d.pTryBlock[2]) << 8); }
+SF_FORCEINLINE unsigned CeCatchSize(const CeTryDescr& d)   { return d.pTryBlock[3] | (((UInt16)d.pTryBlock[4]) << 8); }
+SF_FORCEINLINE unsigned CeFinallySize(const CeTryDescr& d) { return d.pTryBlock[5] | (((UInt16)d.pTryBlock[6]) << 8); }
+SF_FORCEINLINE bool CeIsCatchInRegister(const CeTryDescr& d) { return (d.pTryBlock[0] & 0x4) != 0; }
+SF_FORCEINLINE bool CeIsFinallyBlockFlag(const CeTryDescr& d) { return (d.pTryBlock[0] & 0x2) != 0; }
+SF_FORCEINLINE bool CeIsCatchBlockFlag(const CeTryDescr& d) { return (d.pTryBlock[0] & 0x1) != 0; }
+SF_FORCEINLINE ASString CeGetCatchName(const CeTryDescr& d, Environment* penv)
+{
+    ASString str = penv->GetBuiltin(ASBuiltin_empty_);
+    if (CeIsCatchBlockFlag(d))
+    {
+        if (!CeIsCatchInRegister(d))
+            str = penv->CreateString((const char*)&d.pTryBlock[7]);
+    }
+    return str;
+}
+SF_FORCEINLINE int CeGetCatchRegister(const CeTryDescr& d)
+{
+    if (CeIsCatchBlockFlag(d))
+    {
+        if (CeIsCatchInRegister(d))
+            return (int)((UInt16)d.pTryBlock[7]);
+    }
+    return -1;
+}
+} // namespace
+
+// Environment::PopTryBlock, LocalRegisterPtr and SetLocal as the exe inlines them here.
+static SF_FORCEINLINE Environment::TryDescr CePopTryBlock(Environment* penv)
+{
+    Environment::TryDescr descr = penv->TryBlocks[penv->TryBlocks.GetSize() - 1];
+    (reinterpret_cast<TryBlocksData*>(&penv->TryBlocks)->*&TryBlocksData::Resize)(penv->TryBlocks.GetSize() - 1);
+    return descr;
+}
+static SF_FORCEINLINE Value* CeLocalRegisterPtr(Environment* penv, unsigned reg)
+{
+    if (reg >= penv->LocalRegister.GetSize())
+    {
+        penv->LogError("Invalid local register %d, stack only has %d entries", reg, (int)penv->LocalRegister.GetSize());
+        return &penv->GlobalRegister[0];
+    }
+    return &penv->LocalRegister[penv->LocalRegister.GetSize() - reg - 1];
+}
+static SF_FORCEINLINE void CeSetLocal(Environment* penv, const ASString& varname, const Value& val)
+{
+    if (penv->LocalFrames.GetSize() == 0)
+        return;
+    if (!penv->LocalFrames[penv->LocalFrames.GetSize() - 1])
+        return;
+    Value* pvalue = const_cast<Value*>(penv->FindLocal(varname));
+    if (!pvalue)
+        penv->AddLocal(varname, val);
+    else
+        *pvalue = val;
+}
+
+// The frame array's ResizeNoConstruct stays out of line (exe 0x14297e450), as in InvokeContext::Cleanup (sfr_as2_04o).
+typedef ArrayDataBase<Ptr<LocalFrame>, AllocatorLH<Ptr<LocalFrame>, Stat_Default_Mem>, ArrayDefaultPolicy> CeLocalFramesData;
+
+// Environment::SetLocalFrameTop: LocalFrames.Resize(t).
+static SF_FORCEINLINE void CeSetLocalFrameTop(Environment* penv, unsigned t)
+{
+    CeLocalFramesData* pdata   = reinterpret_cast<CeLocalFramesData*>(&penv->LocalFrames);
+    UPInt              oldSize = pdata->Size;
+    (pdata->*&CeLocalFramesData::ResizeNoConstruct)(&penv->LocalFrames, t);
+    if (t > oldSize)
+        AllocatorLH<Ptr<LocalFrame>, Stat_Default_Mem>::ConstructArray(pdata->Data + oldSize, t - oldSize);
+}
+
+// Environment::ClearThrowing (exe 0x1429345d0), inlined here.
+static SF_FORCEINLINE void CeClearThrowing(Environment* penv)
+{
+    penv->ThrowingValue.SetUnset();
+    penv->Unrolling = false;
+}
+
 // The thrown value ends the try blocks it leaves: each one's catch block gets it (as a local or a register), then its
 // finally block runs. Returns where the code goes on.
-// MS2-FUNCTIONAL: the catch variable goes through SetLocal, the frame stack and the registers are restored by their
-// array operations
 // @0x142933440
-int Environment::CheckExceptions(ActionBuffer* pactBuf, int pc, int* plocalTryBlockCount, Value* retval,
-                                 const WithStackArray* pinitialWithStack, int execType)
+int Environment::CheckExceptions(ActionBuffer* pactBuf, int nextPc, int* plocalTryBlockCount, Value* retval,
+                                 const WithStackArray* pwithStack, int execType)
 {
-    bool rerun;
+    bool needContinueExecution;
     do
     {
-        rerun = false;
-        if (ThrowingValue.GetType() == Value::UNSET)
-            return pc;
-        int count = *plocalTryBlockCount;
-        if (count < 1)
-            break;
-        do
+        needContinueExecution = false;
+        if (ThrowingValue.GetType() != Value::UNSET)
         {
-            if (rerun)
-                break;
-            TryDescr descr = TryBlocks[TryBlocks.GetSize() - 1];
-            (reinterpret_cast<TryBlocksData*>(&TryBlocks)->*&TryBlocksData::Resize)(TryBlocks.GetSize() - 1);
-            --*plocalTryBlockCount;
-            unsigned topIndex = (unsigned)GetTopIndex();
-            if (descr.TopStackIndex < topIndex)
-                Drop(int(topIndex - descr.TopStackIndex));
-            const UByte* prec = descr.pTryBlock;
-            int          beginPc = (int)descr.TryBeginPC;
-            if (prec[0] & 1)
+            for (int tc = *plocalTryBlockCount; tc > 0 && !needContinueExecution; --tc)
             {
-                UPInt savedFrames = 0;
-                if (!(prec[0] & 4))
+                Environment::TryDescr tryDescr = CePopTryBlock(this);
+                --(*plocalTryBlockCount);
+
+                unsigned topIndex = GetTopIndex();
+                if (topIndex > tryDescr.TopStackIndex)
+                    Drop(topIndex - tryDescr.TopStackIndex);
+
+                if (CeIsCatchBlockFlag(tryDescr))
                 {
-                    savedFrames = LocalFrames.GetSize();
-                    Ptr<LocalFrame> pouter = GetTopLocalFrame(0);
-                    Ptr<LocalFrame> pframe = CreateNewLocalFrame();
-                    pframe->PrevFrame      = pouter;
-                    ASString name = GetBuiltin(ASBuiltin_empty_);
-                    if ((prec[0] & 1) && !(prec[0] & 4))
-                        name = CreateString(reinterpret_cast<const char*>(prec + 7));
-                    SetLocal(name, ThrowingValue);
+                    int localStackTop = 0;
+                    if (CeIsCatchInRegister(tryDescr))
+                        *(CeLocalRegisterPtr(this, CeGetCatchRegister(tryDescr))) = ThrowingValue;
+                    else
+                    {
+                        localStackTop = (unsigned)LocalFrames.GetSize();
+                        Ptr<LocalFrame> prevLocalFrame = GetTopLocalFrame();
+                        Ptr<LocalFrame> curLocalFrame  = CreateNewLocalFrame();
+                        curLocalFrame->PrevFrame = prevLocalFrame;
+
+                        CeSetLocal(this, CeGetCatchName(tryDescr, this), ThrowingValue);
+                    }
+                    CeClearThrowing(this);
+                    int catchPc = tryDescr.TryBeginPC + CeTrySize(tryDescr);
+
+                    pactBuf->Execute(this, catchPc, CeCatchSize(tryDescr), retval, pwithStack,
+                                     static_cast<ActionBuffer::ExecuteType>(execType));
+
+                    nextPc = tryDescr.TryBeginPC + CeTrySize(tryDescr) + CeCatchSize(tryDescr) + CeFinallySize(tryDescr);
+
+                    needContinueExecution = true;
+
+                    if (CeIsCatchInRegister(tryDescr))
+                        *(CeLocalRegisterPtr(this, CeGetCatchRegister(tryDescr))) = Value();
+                    else
+                        CeSetLocalFrameTop(this, localStackTop);
                 }
-                else
+                if (CeIsFinallyBlockFlag(tryDescr))
                 {
-                    *LocalRegisterPtr(prec[7]) = ThrowingValue;
-                }
-                ThrowingValue.SetUnset();
-                Unrolling = false;
-                ActionBuffer* pbuf = pactBuf;
-                pbuf->Execute(this, int(*reinterpret_cast<const UInt16*>(prec + 1)) + beginPc,
-                              *reinterpret_cast<const UInt16*>(prec + 3), retval, pinitialWithStack, static_cast<ActionBuffer::ExecuteType>(execType));
-                rerun = true;
-                pc = int(*reinterpret_cast<const UInt16*>(prec + 3)) + int(*reinterpret_cast<const UInt16*>(prec + 1)) +
-                     beginPc + int(*reinterpret_cast<const UInt16*>(prec + 5));
-                if (!(prec[0] & 4))
-                    LocalFrames.Resize(savedFrames);
-                else
-                {
-                    unsigned reg = (prec[0] & 1) ? prec[7] : 0xffffffffu;
-                    *LocalRegisterPtr(reg) = Value();
+                    int finallyPc = tryDescr.TryBeginPC + CeTrySize(tryDescr) + CeCatchSize(tryDescr);
+                    Unrolling = true;
+                    pactBuf->Execute(this, finallyPc, CeFinallySize(tryDescr), retval, pwithStack,
+                                     static_cast<ActionBuffer::ExecuteType>(execType));
+                    Unrolling = false;
                 }
             }
-            if (prec[0] & 2)
-            {
-                Unrolling = true;
-                pactBuf->Execute(this,
-                                 int(*reinterpret_cast<const UInt16*>(prec + 3)) +
-                                     int(*reinterpret_cast<const UInt16*>(prec + 1)) + beginPc,
-                                 *reinterpret_cast<const UInt16*>(prec + 5), retval, pinitialWithStack, static_cast<ActionBuffer::ExecuteType>(execType));
-                Unrolling = false;
-            }
-            --count;
-        } while (count > 0);
-    } while (rerun);
-    return int(*reinterpret_cast<const UInt32*>(reinterpret_cast<const UByte*>(*reinterpret_cast<void* const*>(
-                                                    reinterpret_cast<const UByte*>(pactBuf) + 0x10)) + 0x18));
+            if (!needContinueExecution)
+                return int(*reinterpret_cast<const UInt32*>(reinterpret_cast<const UByte*>(*reinterpret_cast<void* const*>(
+                    reinterpret_cast<const UByte*>(pactBuf) + 0x10)) + 0x18)); // pBufferData->GetLength()
+        }
+    } while (needContinueExecution);
+    return nextPc;
 }
 
 }}} // namespace Scaleform::GFx::AS2
