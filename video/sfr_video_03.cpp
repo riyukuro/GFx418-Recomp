@@ -1555,43 +1555,72 @@ void FUN_14001b620(void* state)
     *reinterpret_cast<uint32_t*>(bytes + 0x38) = 0;
 }
 
-// MS2-FUNCTIONAL: reads interleaved PCM words from the per-channel stream buffers. Left: the exe loads the stream state
-// for the interleave loop after the frame-loop guard and numbers the loop registers differently (r11/r10/r9/r8).
+// Reads interleaved PCM samples from the per-channel stream buffers.
 // @0x14001b6b0
 int FUN_14001b6b0(void* player, uint32_t* output, uint32_t requestedBytes)
 {
-    // the stream state is reread through the player after every reader call: [player+0x10]
-#define VIDEO_PCM_STATE (*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(player) + 0x10))
-    typedef uint32_t (*ReadFn)(void*, uint32_t, void*, uint32_t);
-    uint32_t* dst = output;
-    uint32_t samples = 0;
-    uint32_t remaining = requestedBytes * 8 / 32 / *reinterpret_cast<uint32_t*>(VIDEO_PCM_STATE + 0x38);
-    if (*reinterpret_cast<void**>(VIDEO_PCM_STATE + 0x30)) {
-        // the reader takes an array of per-channel plane pointers: mono passes &output (0x14001b6f2), and the
-        // multi-channel reads are capped at the 0x1000-sample (0x4000-byte) staging buffers (0x14001b749)
-        if (*reinterpret_cast<uint32_t*>(VIDEO_PCM_STATE + 0x38) == 1) {
-            void* reader = *reinterpret_cast<void**>(VIDEO_PCM_STATE + 0x30);
-            samples = reinterpret_cast<ReadFn>((*reinterpret_cast<void***>(reader))[2])(reader, 1, &dst, remaining);
-        } else {
-            while (remaining) {
-                void* reader = *reinterpret_cast<void**>(VIDEO_PCM_STATE + 0x30);
-                const uint32_t received = reinterpret_cast<ReadFn>((*reinterpret_cast<void***>(reader))[2])(
-                    reader, *reinterpret_cast<uint32_t*>(VIDEO_PCM_STATE + 0x38), VIDEO_PCM_STATE + 0x50, remaining > 0x1000 ? 0x1000 : remaining);
-                if (!received)
+    // SDK VideoSoundRendererStream::Streamer::GetPCMData (float samples): views of the streamer (+0x10 pParent) and the
+    // parent's PCM stream (+0x30), channel count (+0x38), sample total (+0x48) and per-channel buffers (+0x50)
+    struct PCMStream
+    {
+        virtual void v0() = 0;
+        virtual void v1() = 0;
+        virtual uint32_t GetDataFloat(uint32_t nch, float* pcmbuf[], uint32_t req) = 0;
+    };
+    struct Parent
+    {
+        char pad[0x30];
+        PCMStream* pPCMStream;
+        unsigned ChannelCount;
+        char pad2[0xc];
+        uint64_t TotalGotSamples;
+        float* SampleBuffers[8];
+    };
+    struct Streamer
+    {
+        char pad[0x10];
+        Parent* pParent;
+        uint32_t GetData(uint32_t nch, float* pcmbuf[], uint32_t req_nsmpl)
+        {
+            return pParent->pPCMStream->GetDataFloat(nch, pcmbuf, req_nsmpl);
+        }
+    };
+    Streamer* self = static_cast<Streamer*>(player);
+    uint32_t recv_nsmpl = 0;
+    unsigned recv_bytes = 0;
+    unsigned ssize = 32;
+    uint32_t nsmpl = requestedBytes * 8 / ssize / self->pParent->ChannelCount;
+    float* buffer = reinterpret_cast<float*>(output);
+
+    if (self->pParent->pPCMStream)
+    {
+        if (self->pParent->ChannelCount == 1)
+        {
+            recv_nsmpl = self->GetData(1, &buffer, nsmpl);
+        }
+        else
+        {
+            while (nsmpl > 0)
+            {
+                uint32_t gsmpl = self->GetData(self->pParent->ChannelCount, self->pParent->SampleBuffers,
+                    nsmpl > 0x1000 ? 0x1000 : nsmpl);
+                if (gsmpl == 0)
                     break;
-                unsigned char* state = VIDEO_PCM_STATE;
-                for (uint32_t frame = 0; frame < received; ++frame) {
-                    for (uint32_t channel = 0; channel < *reinterpret_cast<uint32_t*>(state + 0x38); ++channel)
-                        *dst++ = reinterpret_cast<uint32_t*>(reinterpret_cast<void**>(state + 0x50)[channel])[frame];
+
+                for (unsigned count = 0; count < gsmpl; count++)
+                {
+                    for (unsigned i = 0; i < self->pParent->ChannelCount; ++i)
+                        *buffer++ = self->pParent->SampleBuffers[i][count];
                 }
-                samples += received;
-                remaining -= received;
+                nsmpl -= gsmpl;
+                recv_nsmpl += gsmpl;
             }
         }
     }
-    *reinterpret_cast<uint64_t*>(VIDEO_PCM_STATE + 0x48) += samples;
-    return *reinterpret_cast<uint32_t*>(VIDEO_PCM_STATE + 0x38) * samples * 32 / 8;
-#undef VIDEO_PCM_STATE
+
+    self->pParent->TotalGotSamples += recv_nsmpl;
+    recv_bytes = recv_nsmpl * ssize * self->pParent->ChannelCount / 8;
+    return recv_bytes;
 }
 
 namespace {
