@@ -45,18 +45,11 @@
 namespace Scaleform {
 void LogDebugMessage(LogMessageId id, const char* fmt, ...);
 }
-void FUN_14257dcb0(void* pobj);   // RefCountBase release (a global, as defined)
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The text allocator of the movie a character belongs to (the exe reads it through the character's movie pointers).
 void* FUN_142936510(TextField* ptf);                  // TextField::CreateImageSubstitutor
-
-// The movie context the text allocator hangs off: the character's movie, +0x10 of its +0x20 member.
-static inline MovieImpl* MS2_AS2_TextAllocatorOwner(InteractiveObject* ptarget)
-{
-    return *(MovieImpl**)(*(char**)((char*)ptarget + 0x20) + 0x10);
-}
 
 // The movie's image creator.
 static inline Ptr<ImageCreator> MS2_AS2_GetImageCreator(MovieDefImpl* pmd)
@@ -64,24 +57,31 @@ static inline Ptr<ImageCreator> MS2_AS2_GetImageCreator(MovieDefImpl* pmd)
     return *static_cast<ImageCreator*>(pmd->GetStateAddRef(State::State_ImageCreator));
 }
 
-// The DocView fields the extent measure sets (exe layout).
-inline void* DocView_GetStyledText(void* pdoc) { return *(void**)((char*)pdoc + 0x10); }
-inline Render::Text::FontManagerBase* DocView_GetFontManager(void* pdoc)
-{
-    return *(Render::Text::FontManagerBase**)((char*)pdoc + 0x18);
-}
-inline void DocView_SetFlag(void* pdoc, unsigned off, unsigned bit)
-{
-    void* pst = DocView_GetStyledText(pdoc);
-    *((unsigned char*)pst + off) |= (unsigned char)bit;
-}
-inline void DocView_SetMultiline(void* pdoc) { *((unsigned char*)pdoc + 0x149) |= 4; }
-inline void DocView_ClearMultiline(void* pdoc) { *((unsigned char*)pdoc + 0x149) &= 0xfe; }
+// The DocView flag the image substitution update sets (exe layout).
 
 inline void DocView_SetReformatReq(void* pdoc) { *((unsigned char*)pdoc + 0x14b) |= 2; }
 
+// The SDK's header-inline ObjectInterface::SetConstMemberRaw, which the exe inlines here.
+static SF_FORCEINLINE bool GteSetConstMemberRaw(ObjectInterface& obj, ASStringContext* psc, const char* pname, const Value& val)
+{
+    return obj.SetMemberRaw(psc, ASString(psc->CreateConstString(pname)), val);
+}
+
+// FnCall::Arg(0) with the PagedStack::Bottom body, which the exe inlines here.
+static SF_FORCEINLINE Value& GteArg0(const FnCall& fn)
+{
+    unsigned offset = (unsigned)fn.FirstArgBottomIndex;
+    Value*   p      = 0;
+    if (offset <= fn.Env->Stack.GetTopIndex())
+        p = &fn.Env->Stack.Pages[offset / 32]->Values[offset % 32];
+    return *p;
+}
+
+#ifndef GFX_TEXT_GUTTER
+#define GFX_TEXT_GUTTER 40 // 2 pixels in twips (text_linebuffer.h)
+#endif
+
 // TextFormat.getTextExtent(text [, width]): the size and font metrics of the text in the format, as an object.
-// MS2-FUNCTIONAL the metrics are the same expressions; register allocation and stack layout differ from the exe
 // @0x1429006a0
 void TextFormatProto::GetTextExtent(const FnCall& fn)
 {
@@ -93,75 +93,82 @@ void TextFormatProto::GetTextExtent(const FnCall& fn)
         fn.Env->LogScriptError("Error: Null or invalid 'this' is used for a method of %s class.\n", "TextFormat");
         return;
     }
-    InteractiveObject* ptarget = fn.Env->GetTarget();
-    if (!ptarget)
-        return;
-    Ptr<InteractiveObject> holdTarget = ptarget;
-    TextFormatObject*      pfmtObj    = static_cast<TextFormatObject*>(fn.ThisPtr);
-
-    Ptr<Object> pres = *SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);
-    ASString    text = fn.Arg(0).ToString(fn.Env);
-
-    void* pdoc = SF_HEAP_AUTO_ALLOC(ptarget, 0x150);
-    // Built by an explicit ctor call: a placement new adds a null test the exe does not have.
-    Render::Text::DocView* pdv = static_cast<Render::Text::DocView*>(pdoc);
-    pdv->Render::Text::DocView::DocView(MS2_AS2_TextAllocatorOwner(ptarget)->GetTextAllocator(), reinterpret_cast<Render::Text::FontManagerBase*>(ptarget->GetFontManager()), 0);
-    DocView_SetFlag(pdoc, 0x40, 2);
-    pdv->SetAutoSizeX();
-    pdv->SetAutoSizeY();
-    if (fn.Env->CheckExtensions() && fn.NArgs > 1)
+    TextFormatObject* pfmtObj = static_cast<TextFormatObject*>(fn.ThisPtr);
+    Ptr<InteractiveObject> ptarget = fn.Env->GetTarget();
+    if (ptarget)
     {
-        float width = float(fn.Arg(1).ToNumber(fn.Env));
-        DocView_ClearMultiline(pdoc);
-        pdv->SetWordWrap();
-        pdv->SetViewRect(Render::RectF(0, 0, width * 20.0f, 0));
+        Ptr<Object> pobj = *SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);
+        ASString str = GteArg0(fn).ToString(fn.Env);
+
+        Ptr<Render::Text::DocView> pdocument =
+            *SF_HEAP_NEW(fn.Env->GetHeap()) Render::Text::DocView(fn.Env->GetTarget()->GetMovieImpl()->GetTextAllocator(),
+                reinterpret_cast<Render::Text::FontManagerBase*>(ptarget->GetFontManager()), NULL);
+        pdocument->GetStyledText()->SetNewLine0D();
+        pdocument->SetAutoSizeX();
+        pdocument->SetAutoSizeY();
+        if (fn.Env->GetVersion() >= 7)
+        {
+            if (fn.NArgs >= 2)
+            {
+                Number width = fn.Arg(1).ToNumber(fn.Env);
+                pdocument->ClearAutoSizeX();
+                pdocument->SetWordWrap();
+                float x1 = 0, y1 = 0;
+                Render::RectF vr(x1, y1, x1 + Render::PixelsToTwips((float)width), y1 + 0);
+                pdocument->SetViewRect(vr);
+            }
+        }
+        pdocument->SetMultiline();
+
+        Render::Text::TextFormat      eTextFmt(fn.Env->GetHeap());
+        Render::Text::ParagraphFormat eParagraphFmt;
+        eTextFmt.InitByDefaultValues();
+        eParagraphFmt.InitByDefaultValues();
+        // The exe calls the implicit TextFormat / ParagraphFormat operator= out of line.
+        Render::Text::TextFormat& (Render::Text::TextFormat::*const assignText)(const Render::Text::TextFormat&) =
+            &Render::Text::TextFormat::operator=;
+        Render::Text::ParagraphFormat& (Render::Text::ParagraphFormat::*const assignPara)(const Render::Text::ParagraphFormat&) =
+            &Render::Text::ParagraphFormat::operator=;
+        (eTextFmt.*assignText)(eTextFmt.Merge(pfmtObj->GetTextFormat()));
+        (eParagraphFmt.*assignPara)(eParagraphFmt.Merge(pfmtObj->GetParagraphFormat()));
+
+        pdocument->SetDefaultTextFormat(eTextFmt);
+        pdocument->SetDefaultParagraphFormat(eParagraphFmt);
+        pdocument->SetText(str.ToCStr());
+        pdocument->Format();
+
+        GteSetConstMemberRaw(*pobj, fn.Env->GetSC(), "textFieldWidth",
+            Value((Number)Render::TwipsToPixels((Double)pdocument->GetTextWidth() + GFX_TEXT_GUTTER*2)));
+        GteSetConstMemberRaw(*pobj, fn.Env->GetSC(), "textFieldHeight",
+            Value((Number)Render::TwipsToPixels((Double)pdocument->GetTextHeight() + GFX_TEXT_GUTTER*2)));
+        GteSetConstMemberRaw(*pobj, fn.Env->GetSC(), "width",
+            Value((Number)Render::TwipsToPixels((Double)pdocument->GetTextWidth())));
+        GteSetConstMemberRaw(*pobj, fn.Env->GetSC(), "height",
+            Value((Number)Render::TwipsToPixels((Double)pdocument->GetTextHeight())));
+
+        // now determine the ascent and descent of used font
+        Ptr<Render::Text::FontHandle> pfontHandle = *pdocument->GetFontManager()->CreateFontHandle(
+            eTextFmt.GetFontList().ToCStr(),
+            eTextFmt.IsBold(),
+            eTextFmt.IsItalic(),
+            true, true);
+        Double ascent = 0, descent = 0;
+        if (pfontHandle)
+        {
+            ascent  = pfontHandle->GetFont()->GetAscent();
+            descent = pfontHandle->GetFont()->GetDescent();
+        }
+        if (ascent == 0)
+            ascent = 960.f;
+        if (descent == 0)
+            descent = 1024.f - ascent;
+        Double scale = Render::PixelsToTwips((Double)eTextFmt.GetFontSize()) / 1024.0f; // the EM square is 1024 x 1024
+        unsigned uascent  = (unsigned)Render::TwipsToPixels(ascent * scale);
+        unsigned udescent = (unsigned)Render::TwipsToPixels(descent * scale);
+        GteSetConstMemberRaw(*pobj, fn.Env->GetSC(), "ascent", Value(Number(uascent)));
+        GteSetConstMemberRaw(*pobj, fn.Env->GetSC(), "descent", Value(Number(udescent)));
+        fn.Result->SetAsObject(pobj);
     }
-    DocView_SetMultiline(pdoc);
-
-    MemoryHeap*                    pheap = fn.Env->GetHeap();
-    Render::Text::TextFormat       textFmt(pheap);
-    Render::Text::ParagraphFormat  paraFmt;
-    textFmt.InitByDefaultValues();
-    paraFmt.InitByDefaultValues();
-    textFmt = textFmt.Merge(pfmtObj->GetTextFormat());
-    paraFmt = paraFmt.Merge(pfmtObj->GetParagraphFormat());
-    void* pstyled = DocView_GetStyledText(pdoc);
-    static_cast<Render::Text::StyledText*>(pstyled)->SetDefaultTextFormat(textFmt);
-    static_cast<Render::Text::StyledText*>(pstyled)->SetDefaultParagraphFormat(paraFmt);
-    pdv->SetText(text.ToCStr(), ~0ull);
-    pdv->Format();
-
-    const Double kGutter = 80.0;
-    const Double kScale  = 0.05;
-    pres->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("textFieldWidth"),
-                       Value((Double(pdv->GetTextWidth()) + kGutter) * kScale));
-    pres->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("textFieldHeight"),
-                       Value((Double(pdv->GetTextHeight()) + kGutter) * kScale));
-    pres->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("width"), Value(Double(pdv->GetTextWidth()) * kScale));
-    pres->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("height"), Value(Double(pdv->GetTextHeight()) * kScale));
-
-    // ascent and descent of the first font of the list, scaled by the font size
-    Ptr<Render::Text::FontHandle> pfont = *DocView_GetFontManager(pdoc)->CreateFontHandle(
-        textFmt.GetFontList().ToCStr(), textFmt.IsBold(), textFmt.IsItalic(), true, true);
-    Double fontAscent = 0, fontDescent = 0;
-    if (pfont)
-    {
-        fontAscent  = Double(pfont->GetFont()->GetAscent());
-        fontDescent = Double(pfont->GetFont()->GetDescent());
-    }
-    if (fontAscent == 0.0)
-        fontAscent = 960.0;
-    if (fontDescent == 0.0)
-        fontDescent = 1024.0 - fontAscent;
-    Double sizeScale = Double(float(textFmt.GetFontSizeInFixp()) * 0.05f) * 20.0 * (1.0 / 1024.0);
-    unsigned descent = unsigned(SInt64(sizeScale * fontDescent * kScale));
-    unsigned ascent  = unsigned(SInt64(sizeScale * fontAscent * kScale));
-    pres->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("ascent"), Value(Double(ascent)));
-    pres->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("descent"), Value(Double(descent)));
-    fn.Result->SetAsObject(pres);
-    if (pfont)
-        pfont = 0;
-    FUN_14257dcb0(pdoc);
 }
 
 // The field's StringHashLH<Ptr<ImageDesc>> of images by id (+0x120).
