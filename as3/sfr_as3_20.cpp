@@ -4,6 +4,11 @@
 // MS2-UNIT: sfr_as3_20
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142542820-0x1425584f0 .text$mn
+// MS2-RANGE: 0x1425600c0-0x142560110 .text$mn
+// MS2-RANGE: 0x142560120-0x142560150 .text$mn
+// MS2-RANGE: 0x142560160-0x142560190 .text$mn
+// MS2-RANGE: 0x1425601a0-0x1425601d0 .text$mn
+// MS2-RANGE: 0x1425601e0-0x142560210 .text$mn
 #define MS2_SF_HASH_CLEAR_NOINLINE           // HashSet Clear out of line, as the exe calls it
 #include "ms2/scaleform/include/kernel/sf_string.h"
 #include "ms2/scaleform/include/kernel/sf_std.h"

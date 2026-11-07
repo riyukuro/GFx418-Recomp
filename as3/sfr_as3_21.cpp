@@ -3,7 +3,12 @@
 // as3_marshalling.h; they call through ThunkFuncN<...>::Method, defined in the sfr_as3di_* units.
 // MS2-UNIT: sfr_as3_21
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1425584f0-0x142568420 .text$mn
+// MS2-RANGE: 0x1425584f0-0x1425600c0 .text$mn
+// MS2-RANGE: 0x142560110-0x142560120 .text$mn
+// MS2-RANGE: 0x142560150-0x142560160 .text$mn
+// MS2-RANGE: 0x142560190-0x1425601a0 .text$mn
+// MS2-RANGE: 0x1425601d0-0x1425601e0 .text$mn
+// MS2-RANGE: 0x142560210-0x142568420 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PIN: ?Reserve@?$ArrayDataBase@PEBJU?$AllocatorDH@PEBJ$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1425629a0 ; prop
 // MS2-PIN: ?Reserve@?$ArrayDataBase@PEBNU?$AllocatorDH@PEBN$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x142562ae0 ; prop
