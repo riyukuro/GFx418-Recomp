@@ -2044,34 +2044,54 @@ struct ActionLoggerMovie
     virtual MovieDef* GetMovieDef() const = 0; // 1
 };
 
-// MS2-FUNCTIONAL 0x142917910: the exe saves rsi only on the suffix path and keeps suffix in rbp; same flag logic and stores
+// The CRT's C strcmp body (strcmp.c), which the exe has inlined here.
+static __forceinline int Sfr02StrCmp(const char* src, const char* dst)
+{
+    int ret;
+    do
+    {
+        ret = *(const unsigned char*)src - *(const unsigned char*)dst;
+        if (ret)
+            break;
+        ++src;
+        ++dst;
+    } while (dst[-1]);
+    return ret;
+}
+
+// MS2-FUNCTIONAL 0x142917910: regalloc floor: the exe keeps suffix in rbp (ours rsi), Flags in r8d across the inlined strcmp (src walked, dst as offset) and the GetLog result in rsi (ours r14); same flag logic and stores
 ActionLogger::ActionLogger(DisplayObject* ptarget, const char* suffix)
 {
     MovieImpl* pm = ptarget->FindMovieImpl();
     VerboseAction       = (pm->Flags >> 2) & 1;
-    LogSuffix           = suffix;
     VerboseActionErrors = !((pm->Flags >> 6) & 1);
-    UseSuffix = suffix ? ((strcmp(((ActionLoggerMovie*)pm)->GetMovieDef()->GetFileURL(), LogSuffix) == 0
-                               ? (pm->Flags >> 3) : (pm->Flags >> 4)) & 1)
-                       : false;
-    if (!((pm->Flags >> 1) & 1))
+    LogSuffix           = suffix;
+    if (!suffix)
+        UseSuffix = false;
+    else
+    {
+        const char* url   = ((ActionLoggerMovie*)pm)->GetMovieDef()->GetFileURL();
+        UInt32      flags = pm->Flags;
+        if (Sfr02StrCmp(url, LogSuffix) == 0)
+            UseSuffix = (flags >> 3) & 1;
+        else
+            UseSuffix = (flags >> 4) & 1;
+    }
+    if (!((UByte)(pm->Flags >> 1) & 1))
         pm->pCachedLog = pm->GetStateBag()->GetLog();
     pLog = pm->pCachedLog;
 
     // Only the file name of the suffix path.
-    if (UseSuffix && !((pm->Flags >> 5) & 1))
+    if (UseSuffix && !((UByte)(pm->Flags >> 5) & 1))
     {
         SPInt len = (SPInt)strlen(suffix);
-        if (len > 0)
+        for (SPInt i = len; i > 0; --i)
         {
-            const char* p = LogSuffix + len;
-            while (*p != '/' && *p != '\\')
+            if (LogSuffix[i] == '/' || LogSuffix[i] == '\\')
             {
-                --p;
-                if (p <= LogSuffix)
-                    return;
+                LogSuffix = LogSuffix + i + 1;
+                break;
             }
-            LogSuffix = p + 1;
         }
     }
 }
