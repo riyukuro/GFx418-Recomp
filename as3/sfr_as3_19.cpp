@@ -5684,43 +5684,22 @@ void Sfr31ExecSetSuper(UPInt vmAddr, UPInt file, UInt32 idx)
 }
 // ---- batch 45
 // Native with a required object argument: the current frame's parent-traits helper is invoked with the remaining arguments.
-// MS2-FUNCTIONAL 0x1425363e0: raw-offset model; codegen differs from the exe
 // @0x1425363e0
 void Sfr31ExecCallSuper(UPInt vmAddr, UInt32 a, UInt32 n)
 {
     VM& vm = *reinterpret_cast<VM*>(vmAddr);
-    UInt8 raBuf[0x140];
-    FUN_1424d9530(raBuf, &vm, n);
-    const UPInt frame = Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 8);
-    const UPInt top = Sfr31Rd(frame, 8);
-    Sfr31RawTraitsVal val;
-    for (int i = 0; i < 8; ++i)
-        reinterpret_cast<UInt32*>(&val)[i] = reinterpret_cast<const UInt32*>(top)[i];
-    Sfr31Wr(frame, 8, top - 0x20);
-    Sfr31ThrowIfNullOperand(vmAddr, reinterpret_cast<const UInt32*>(&val));
-    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
-    {
-        const UPInt cnt = Sfr31Rd(vmAddr, 0x78) - 1;
-        UPInt tr = Sfr31Rd(Sfr31Rd(Sfr31Rd(vmAddr, 0x90), (cnt >> 6) * 8) + 0x40 + (cnt & 0x3f) * 0xa8, 0);
-        if (tr == 0)
-            tr = reinterpret_cast<UPInt>(&vm.GetValueTraits(*reinterpret_cast<const Value*>(&val)));
-        const UPInt parent = Sfr31Rd(tr, 0x88);
-        if (parent != 0)
-        {
-            const UInt32 argc = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
-            void* args = argc > 8 ? reinterpret_cast<void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<void*>(raBuf + 0x18);
-            FUN_142500260(vmAddr, a, parent, &val, n, args);
-        }
-        else
-        {
-            alignas(8) char eb[sizeof(VM::Error)];
-            FUN_1424d7850(eb, 0x40b, reinterpret_cast<void*>(vmAddr), "Couldn't find parent property");
-            vm.ThrowReferenceError(*reinterpret_cast<VM::Error*>(eb));
-            reinterpret_cast<VM::Error*>(eb)->~Error();
-        }
-    }
-    reinterpret_cast<Value*>(&val)->~Value();
-    FUN_1424de9e0(raBuf);
+    Sfr31ReadArgsObject args(vm, n);
+    if (vm.IsException())
+        return;
+    // the running frame's origination traits, else the object's own
+    const UPInt cnt = Sfr31Rd(vmAddr, 0x78) - 1;
+    const Traits* ot = *reinterpret_cast<const Traits* const*>(Sfr31Rd(Sfr31Rd(vmAddr, 0x90), (cnt >> 6) * 8) + 0x40 + (cnt & 0x3f) * 0xa8);
+    if (ot == NULL)
+        ot = &vm.GetValueTraits(args.ArgObject);
+    const Traits* parent_tr = ot->GetParent();
+    if (parent_tr == NULL)
+        return vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x40b), vm, "Couldn't find parent property"));
+    FUN_142500260(vmAddr, a, reinterpret_cast<UPInt>(parent_tr), &args.ArgObject, n, const_cast<Value*>(args.GetCallArgs()));
 }
 // ---- batch 46
 ASString FUN_14250bc60(const Traits& tr);
@@ -6055,58 +6034,23 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // ---- batch 52
 // call-style opcode on the popped value: a null operand is a TypeError; an object kind is dispatched through its own call slot with the
 // remaining arguments; class kinds and everything else raise TypeErrors naming the offender.
-// MS2-FUNCTIONAL 0x142536f40: raw-offset model; codegen differs from the exe
+// MS2-FUNCTIONAL 0x142536f40: 674 B vs the exe 677; SDK exec_construct form, the only diff is register allocation (the exe holds
+// kind - kObject in r8d, ours in ecx)
 // @0x142536f40
 void Sfr31ExecCallValue(UPInt vmAddr, UInt32 argc)
 {
     VM& vm = *reinterpret_cast<VM*>(vmAddr);
-    UInt8 raBuf[0x140];
-    FUN_1424d9530(raBuf, &vm, argc);
-    const UInt32* v = reinterpret_cast<const UInt32*>(Sfr31Rd(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 8), 8));
-    Sfr31ThrowIfNullOperand(vmAddr, v);
-    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
-    {
-        const UInt32 kind = v[0] & 0x1f;
-        const UPInt obj = Sfr31Rd(reinterpret_cast<UPInt>(v), 0x10);
-        if (kind == 0 || (kind - 0xc < 4 && obj == 0))
-        {
-            VM::Error e(static_cast<VM::ErrorID>(0x3f1), vm);
-            vm.ThrowTypeError(e);
-        }
-        else if (kind == 7 || kind == 0x11)
-        {
-            const UPInt tr = reinterpret_cast<UPInt>(&vm.GetValueTraits(*reinterpret_cast<const Value*>(v)));
-            UPInt nameNode = 0;
-            Sfr31VFnName nf = *reinterpret_cast<Sfr31VFnName*>(Sfr31Rd(tr, 0) + 0x38);
-            UPInt* p = nf(tr, &nameNode);
-            UPInt raw[4] = {10, 0, *p, 0};
-            if (*p == Sfr31Rd(*p, 8) + 0x68)
-                raw[0] = 0xc, raw[2] = 0;
-            else
-                ++*reinterpret_cast<int*>(*p + 0x18);
-            alignas(8) char eb[sizeof(VM::Error)];
-            FUN_1424d6f40(eb, 0x428, &vm, raw);
-            vm.ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
-            reinterpret_cast<VM::Error*>(eb)->~Error();
-            reinterpret_cast<Value*>(raw)->~Value();
-            Sfr31ReleaseStr(nameNode);
-        }
-        else if (kind - 0xc < 4)
-        {
-            const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
-            void* args = cnt > 8 ? reinterpret_cast<void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<void*>(raBuf + 0x18);
-            typedef void (*Fn)(UPInt, const UInt32*, UInt32, void*, bool);
-            reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(obj, 0), 0x60))(obj, v, argc, args, false);
-        }
-        else
-        {
-            alignas(8) char eb[sizeof(VM::Error)];
-            FUN_1424d6f40(eb, 0x45b, &vm, v);
-            vm.ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
-            reinterpret_cast<VM::Error*>(eb)->~Error();
-        }
-    }
-    FUN_1424de9e0(raBuf);
+    Sfr31ReadArgsObjectRef args(vm, argc);
+    if (vm.IsException())
+        return;
+    if (args.ArgObject.IsNullOrUndefined())
+        return vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x3f1), vm));
+    const Value::KindType kind = args.ArgObject.GetKind();
+    if (kind == Value::kVTableInd || kind == Value::kVTableIndClosure)
+        return vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x428), vm, Value(vm.GetValueTraits(args.ArgObject).GetName(), Value::InlineStr)));
+    if (!args.ArgObject.IsObject())
+        return vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x45b), vm, args.ArgObject));
+    args.ArgObject.GetObject()->Construct(const_cast<Value&>(args.ArgObject), argc, args.GetCallArgs());
 }
 // ---- batch 53
 // Tears down a class traits' member tables: unregisters it, empties its arrays and hashes, and takes every traits recorded in the
@@ -6819,49 +6763,30 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // ---- batch 63
 // Super-property getter-and-call opcode: pops the receiver, resolves the frame's parent-slot accessor, runs it to get a function and
 // calls that with the popped arguments.
-// MS2-FUNCTIONAL 0x142535f40: raw-offset model; codegen differs from the exe
+// MS2-FUNCTIONAL 0x142535f40: SDK exec_callsupergetter form; the only diff is register allocation (the exe holds the parent
+// traits in rdx, ours in rcx) and the order of two argument stores before the getter call
+static __forceinline void Sfr19Execute(VM& vm, const Value& func, const Value& _this, unsigned argc, const Value* argv, bool discard_result);
 // @0x142535f40
 void Sfr31ExecCallParentSlot(UPInt vmAddr, UInt32 slotIdx, UInt32 argc)
 {
     VM& vm = *reinterpret_cast<VM*>(vmAddr);
-    UInt8 raBuf[0x140];
-    FUN_1424d9530(raBuf, &vm, argc);
-    const UPInt frame0 = Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 8);
-    const UPInt top = Sfr31Rd(frame0, 8);
-    Sfr31RawTraitsVal obj;
-    for (int i = 0; i < 8; ++i)
-        reinterpret_cast<UInt32*>(&obj)[i] = reinterpret_cast<const UInt32*>(top)[i];
-    Sfr31Wr(frame0, 8, top - 0x20);
-    Sfr31ThrowIfNullOperand(vmAddr, reinterpret_cast<const UInt32*>(&obj));
-    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
-    {
-        const UPInt n = Sfr31Rd(vmAddr, 0x78) - 1;
-        UPInt traits = Sfr31Rd(Sfr31Rd(Sfr31Rd(vmAddr, 0x90), (n >> 6) * 8) + 0x40 + (n & 0x3f) * 0xa8, 0);
-        if (traits == 0)
-            traits = reinterpret_cast<UPInt>(&vm.GetValueTraits(*reinterpret_cast<const Value*>(&obj)));
-        if (Sfr31Rd(traits, 0x88) == 0)
-        {
-            alignas(8) char eb[sizeof(VM::Error)];
-            FUN_1424d7850(eb, 0x40b, &vm, "Couldn't find parent property");
-            vm.ThrowReferenceError(*reinterpret_cast<VM::Error*>(eb));
-            reinterpret_cast<VM::Error*>(eb)->~Error();
-        }
-        else
-        {
-            Sfr31RawTraitsVal callee = {7, 0, slotIdx, Sfr31Rd(traits, 0x88)};
-            Value fn;
-            FUN_1424fef00(&vm, &callee, &obj, &fn, 0, 0, 0);
-            if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
-            {
-                const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
-                const void* args = cnt > 8 ? reinterpret_cast<const void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<const void*>(raBuf + 0x18);
-                Value result(Value::GetUndefined());
-                FUN_1424fef00(&vm, &fn, &obj, &result, argc, args, 1);
-            }
-        }
-    }
-    reinterpret_cast<Value*>(&obj)->~Value();
-    FUN_1424de9e0(raBuf);
+    Sfr31ReadArgsObject args(vm, argc);
+    if (vm.IsException())
+        return;
+    // the running frame's origination traits, else the object's own
+    const UPInt cnt = Sfr31Rd(vmAddr, 0x78) - 1;
+    const Traits* ot = *reinterpret_cast<const Traits* const*>(Sfr31Rd(Sfr31Rd(vmAddr, 0x90), (cnt >> 6) * 8) + 0x40 + (cnt & 0x3f) * 0xa8);
+    if (ot == NULL)
+        ot = &vm.GetValueTraits(args.ArgObject);
+    const Traits* parent_tr = ot->GetParent();
+    if (parent_tr == NULL)
+        return vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x40b), vm, "Couldn't find parent property"));
+    const Value funct_getter(static_cast<SInt32>(slotIdx), *parent_tr, Value::kVTableInd);
+    Value funct;
+    vm.ExecuteInternalUnsafe(funct_getter, args.ArgObject, funct, 0, NULL, false);
+    if (vm.IsException())
+        return;
+    Sfr19Execute(vm, funct, args.ArgObject, argc, args.GetCallArgs(), false);
 }
 // ---- batch 64
 // callstatic opcode: pops the receiver, then runs the method body of the file's method idx on it with the popped arguments in a new
