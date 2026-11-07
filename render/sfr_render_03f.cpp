@@ -374,8 +374,63 @@ SortKey TreeCacheShapeLayer::CreateSortKey(TreeCacheNode* refNode, ShapeMeshProv
     return SortKey(fill.GetPtr(), is3D);
 }
 
+// TreeCacheRoot::AddToDepthUpdate as LTCG inlined it into updateSortKey (the SDK defines it out of line in
+// TreeCacheNode.cpp): Link and grow fully inlined, the UpdateFlags test from memory and the final |= as a
+// memory or, which the barrier keeps from reusing the tested load. FeDUA is a public view of
+// DepthUpdateArrayPOD<TreeCacheNode*>.
+struct FeDUA
+{
+    typedef TreeCacheNode* N;
+    N*          pDepth;
+    unsigned    DepthUsed;
+    unsigned    DepthAvailable;
+    MemoryHeap* pHeap;
+    N           NullValue;
+    N           ArrayReserve[32];
+    __forceinline bool grow(unsigned depth)
+    {
+        unsigned size = (depth + 32 - 1) & ~(32 - 1);
+        N* p = (N*)SF_HEAP_ALLOC(pHeap, size * sizeof(N), Stat_Default_Mem);
+        if (!p)
+            return false;
+        memcpy(p, pDepth, DepthUsed * sizeof(N));
+        unsigned rest = size - DepthUsed;
+        for (unsigned i = 0; i < rest; i++)
+            p[DepthUsed + i] = NullValue;
+        if (pDepth != ArrayReserve)
+            SF_FREE(pDepth);
+        pDepth         = p;
+        DepthAvailable = depth;
+        return true;
+    }
+    __forceinline void Link(unsigned index, N* next, N val)
+    {
+        if (index < DepthAvailable || grow(index + 1))
+        {
+            *next         = pDepth[index];
+            pDepth[index] = val;
+            if (DepthUsed < index + 1)
+                DepthUsed = index + 1;
+        }
+    }
+};
+static __forceinline void FeDepthUpd(TreeCacheRoot* r, TreeCacheNode* node, unsigned flags)
+{
+    if (!(node->UpdateFlags & Update_InList))
+    {
+        if (r->DepthUpdatesChained)
+            ((FeDUA*)&r->DepthUpdates)->Link(node->Depth, &node->pNextUpdate, node);
+        else
+        {
+            node->pNextUpdate = r->pUpdateList;
+            r->pUpdateList    = node;
+        }
+        flags |= Update_InList;
+    }
+    _ReadWriteBarrier(); node->UpdateFlags |= flags;
+}
+
 // @0x142635d20
-// MS2-FUNCTIONAL: the inlined AddToDepthUpdate tests UpdateFlags through a register (exe cmp mem / or mem)
 void TreeCacheShapeLayer::updateSortKey()
 {
     // the key follows the flags (mask, scale9, 3D)
@@ -387,7 +442,7 @@ void TreeCacheShapeLayer::updateSortKey()
     pMeshKey.Clear();
 
     if (pRoot && GetParent())
-        pRoot->AddToDepthUpdate(GetParent(), Update_Pattern | Change_Matrix);
+        FeDepthUpd(pRoot, GetParent(), Update_Pattern | Change_Matrix);
 }
 
 // @0x142636040
