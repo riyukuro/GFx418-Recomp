@@ -606,23 +606,25 @@ MaskEffectState TreeCacheNode::calcMaskBounds(RectF* bounds, Matrix2F* boundArea
         RectF viewUnionBounds = EnclosedBounds(view2D, boundsUnion);
         float fraction        = (intersect.Width() * intersect.Height()) / (boundsUnion.Width() * boundsUnion.Height());
         float viewArea        = viewUnionBounds.Width() * viewUnionBounds.Height();
+        MaskEffectState newState;
         float uncoveredArea   = viewArea * (1.0f - fraction);
 
         if (uncoveredArea > MaskClipAreasThresholds[oldState] && (flags & TF_ParentFilter) == 0)
         {
-            // the overlap in view pixels (the matrix keeps no rotation, so a unit square clears it exactly)
+            newState = MES_Clipped;
             RectF viewClipRect;
             viewMatrix.EncloseTransform(&viewClipRect, intersect);
             SnapRectToPixels(viewClipRect);
-            boundAreaMatrix->SetMatrix(viewClipRect.Width(), 0, viewClipRect.x1, 0, viewClipRect.Height(),
+            boundAreaMatrix->SetMatrix(viewClipRect.Width(), 0.0f, viewClipRect.x1, 0.0f, viewClipRect.Height(),
                                        viewClipRect.y1);
-            return MES_Clipped;
         }
-
-        // the whole union, cleared in local space
-        boundAreaMatrix->SetMatrix(boundsUnion.Width(), 0, boundsUnion.x1, 0, boundsUnion.Height(), boundsUnion.y1);
-        boundAreaMatrix->Append(view2D);
-        return MES_Combinable;
+        else
+        {
+            newState = MES_Combinable;
+            boundAreaMatrix->SetMatrix(boundsUnion.Width(), 0.0f, boundsUnion.x1, 0.0f, boundsUnion.Height(), boundsUnion.y1);
+            boundAreaMatrix->Append(view2D);
+        }
+        return newState;
     }
 
     // 3D: both in viewport pixels, the view and projection from the root
