@@ -4,6 +4,7 @@
 // MS2-UNIT: sfr_as3_12
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142498890-0x1424abbe0 .text$mn
+// MS2-RANGE: 0x1424ac430-0x1424ac700 .text$mn
 // MS2-RANGE: 0x1424ad4d0-0x1424ad870 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
