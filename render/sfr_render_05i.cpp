@@ -22,9 +22,21 @@ struct SGMLElementDesc
     template<class Char> struct Comparable { const Char* Str; UPInt Size; };
     template<class Char> struct Comparator
     {
+        static int Compare(const SGMLElementDesc& element, const Comparable<Char>& key)
+        { return -SGMLCharIter<Char>::StrCompare(key.Str, element.ElemName, key.Size); }
         static int Less(const SGMLElementDesc& element, const Comparable<Char>& key)
         { return (-SGMLCharIter<Char>::StrCompare(key.Str, element.ElemName, key.Size)) < 0; }
     };
+    template<class Char>
+    static const SGMLElementDesc* FindElem(const Char* lookForElemName, UPInt nameSize,
+                                           const SGMLElementDesc* ptable, UPInt tableSize)
+    {
+        Comparable<Char> e = { lookForElemName, nameSize };
+        UPInt i = Alg::LowerBoundSliced(ptable, 0, tableSize, e, Comparator<Char>::Less);
+        if (i < tableSize && Comparator<Char>::Compare(ptable[i], e) == 0)
+            return &ptable[i];
+        return NULL;
+    }
 };
 
 template<class Char> struct SGMLStackElemDesc
@@ -37,6 +49,10 @@ template<class Char> struct SGMLStackElemDesc
     ParagraphFormat ParaFmt;
     SGMLStackElemDesc()
         : pElemName(0), ElemNameSize(0), pElemDesc(0), TextFmt(Memory::GetHeapByAddress(&pElemName))
+    {
+    }
+    SGMLStackElemDesc(MemoryHeap* pheap, const Char* pname, UPInt sz, const SGMLElementDesc* pelemDesc, UPInt startPos)
+        : pElemName(pname), ElemNameSize(sz), pElemDesc(pelemDesc), StartPos(startPos), TextFmt(pheap)
     {
     }
     explicit SGMLStackElemDesc(MemoryHeap* pheap)
@@ -92,7 +108,7 @@ template UPInt LowerBoundSliced<const Render::Text::SGMLElementDesc*,
 namespace Scaleform { namespace Render { namespace Text {
 
 // @0x14267dbe0
-StyledText::HTMLImageTagInfo::~HTMLImageTagInfo()
+__declspec(noinline) StyledText::HTMLImageTagInfo::~HTMLImageTagInfo()
 {
 }
 
@@ -818,570 +834,877 @@ static const SGMLElementDesc HTMLAttrsTable[] =
     { "WIDTH",         HTML_WIDTH,         false, false }
 };
 
-template<UPInt N>
-static const SGMLElementDesc* FindHTMLDesc(const SGMLElementDesc (&table)[N], const wchar_t* name, UPInt len)
+// SGMLParser::ParseFloat (SDK body) as the exe has it: inlined into the HTML parser only.
+static __forceinline bool ParseFloatInl(float* pdestVal, const wchar_t* pstr, UPInt len)
 {
-    SGMLElementDesc::Comparable<wchar_t> key = { name, len };
-    const SGMLElementDesc* ptable = table;
-    UPInt i = Alg::LowerBoundSliced(ptable, 0, N, key, SGMLElementDesc::Comparator<wchar_t>::Less);
-    if (i < N && SGMLCharIter<wchar_t>::StrCompare(name, table[i].ElemName, len) == 0)
-        return &table[i];
-    return 0;
-}
-
-static void AppendHTMLNewLine(StyledText* self, const TextFormat& fmt, const ParagraphFormat& paraFmt)
-{
-    self->AppendString(self->IsNewLine0D() ? "\r" : "\n", 1, StyledText::NLP_ReplaceCRLF, &fmt, &paraFmt);
+    if (len == 0)
+        return false;
+    Double v = 0, sign = 1;
+    const wchar_t* p = pstr;
+    const wchar_t* const pend = pstr + len;
+    if (*p == '-')
+    {
+        sign = -1;
+        ++p;
+    }
+    else
+    {
+        if (*p == '+') ++p;
+    }
+    for (; p < pend && *p != '.' && *p != ','; ++p)
+    {
+        if (!SGMLCharIter<wchar_t>::IsDigit(*p))
+            return false;
+        v *= 10;
+        v += (*p - '0');
+    }
+    if (p < pend && (*p == '.' || *p == ','))
+    {
+        ++p;
+        Double frac = 0;
+        for (; p < pend; ++p)
+        {
+            if (!SGMLCharIter<wchar_t>::IsDigit(*p))
+                return false;
+            frac += (*p - '0');
+            frac *= Double(0.1);
+        }
+        v += frac;
+    }
+    *pdestVal = (float)(v * sign);
+    return true;
 }
 
 // The HTML parser of both ParseHtml overloads (inlined into neither). Each open element keeps on the stack the
 // formats its content gets: those of its parent with the element's attributes (and style sheet styles) applied.
-// MS2-FUNCTIONAL: same tags, attributes, style lookups, paragraph handling and image descriptors as the exe; the
-// exe inlines ParseStartElement / ParseEndElement / ParseFloat and the table searches, and keeps more locals.
+// The SDK's StyledText::ParseHtmlImpl<wchar_t> (Text_HTMLParser.cpp, GFX_ENABLE_CSS on) statement for statement,
+// with ParseFloat inlined through the local copy above.
 // @0x14267b1c0
 bool FUN_14267b1c0(StyledText* self, const wchar_t* phtml, UPInt htmlSize,
                    StyledText::HTMLImageTagInfoArray* pimgInfoArr, bool multiline, bool condenseWhite,
-                   const StyleManagerBase* pstyleMgr, const TextFormat* txtFmt,
-                   const ParagraphFormat* paraFmt)
+                   const StyleManagerBase* pstyleMgr, const TextFormat* defTxtFmt,
+                   const ParagraphFormat* defParaFmt)
 {
-    typedef SGMLStackElemDesc<wchar_t> StackElem;
     if (htmlSize == 0)
     {
         self->EnsureTermNull();
         return false;
     }
+
     MemoryHeap* pheap = Memory::GetHeapByAddress(self);
+
+    ArrayDH<SGMLStackElemDesc<wchar_t> > elementsStack(pheap);
+
     SGMLParser<wchar_t> parser(pheap, phtml, htmlSize);
     if (condenseWhite)
         parser.SetCondenseWhite();
-    ArrayDH<StackElem> elemStack(pheap);
-    const SGMLElementDesc* pcurDesc = 0;
-    int paraCount = 0;
 
-    if (!txtFmt)
-        txtFmt = self->GetDefaultTextFormat();
-    TextFormat defTextFmt(*txtFmt);
-    if (!paraFmt)
-        paraFmt = self->GetDefaultParagraphFormat();
-    ParagraphFormat defParaFmt(*paraFmt);
-    TextFormat lastFmt(defTextFmt);
-    defTextFmt.SetUrl("");
+    int type;
+    Paragraph* pcurPara = NULL;
+    const SGMLElementDesc* plastElemDesc = NULL;
+    int p_elem_is_opened = 0;
 
-    int state;
-    while ((state = parser.GetNext()) != SGMLPS_FINISHED)
+    TextFormat defaultTextFmt        = (defTxtFmt)  ? *defTxtFmt  : *self->GetDefaultTextFormat();
+    ParagraphFormat defaultParaFmt   = (defParaFmt) ? *defParaFmt : *self->GetDefaultParagraphFormat();
+
+    TextFormat lastFormat = defaultTextFmt;
+
+    //clear URL for just inserted text
+    // This is necessary to prevent URL-style propagation after
+    // closing </A> tag. 
+    defaultTextFmt.SetUrl("");
+
+    while((type = parser.GetNext()) != SGMLPS_FINISHED && type != SGMLPS_ERROR)
     {
-        if (state == SGMLPS_ERROR)
-            break;
-        if (state == SGMLPS_CONTENT)
+        switch(type)
         {
-            const wchar_t* content;
-            UPInt contentSize;
-            if (!parser.ParseContent(&content, &contentSize) || !contentSize)
-                continue;
-            Paragraph* plast = self->GetLastParagraph();
-            UPInt lastLen = plast ? plast->GetLength() : 0;
-            // a blank alone at the start of a paragraph is dropped when white space is condensed
-            if (condenseWhite && contentSize <= 1 && *content == ' ' && lastLen == 0)
-                continue;
-            if (elemStack.GetSize() == 0)
+        case SGMLPS_START_ELEMENT:
             {
-                self->AppendString(content, contentSize, StyledText::NLP_ReplaceCRLF, &defTextFmt, &defParaFmt);
-                lastFmt = defTextFmt;
-            }
-            else
-            {
-                StackElem& top = elemStack.Back();
-                self->AppendString(content, contentSize, StyledText::NLP_ReplaceCRLF, &top.TextFmt, &top.ParaFmt);
-                lastFmt = top.TextFmt;
-            }
-        }
-        else if (state == SGMLPS_END_ELEMENT || state == SGMLPS_EMPTY_ELEMENT_FINISHED)
-        {
-            const wchar_t* elemName = 0;
-            UPInt elemLen = 0;
-            if (state == SGMLPS_END_ELEMENT)
-            {
-                parser.ParseEndElement(&elemName, &elemLen);
-                if (elemStack.GetSize() == 0)
-                    continue;
-            }
-            else
-            {
-                // "<x/>": only a container element that was just opened is closed
-                if ((pcurDesc && pcurDesc->EmptyElement) || elemStack.GetSize() == 0)
-                    continue;
-                elemName = elemStack.Back().pElemName;
-                elemLen = elemStack.Back().ElemNameSize;
-            }
+                const wchar_t* elemName;
+                UPInt elemLen;
 
-            bool matched = SGMLCharIter<wchar_t>::StrCompare(elemName, elemLen, elemStack.Back().pElemName,
-                                                              elemStack.Back().ElemNameSize) == 0;
-            if (!matched)
-            {
-                // an unclosed list item or paragraph is closed by the end of the enclosing one
-                const SGMLElementDesc* pdesc = FindHTMLDesc(HTMLElementsTable, elemName, elemLen);
-                if (!pdesc || paraCount == 0 || (pdesc->ElemId != HTML_LI && pdesc->ElemId != HTML_P))
-                    continue;
-                while (elemStack.GetSize() != 0)
+                parser.ParseStartElement(&elemName, &elemLen);
+
+                const SGMLElementDesc* pelemDesc = SGMLElementDesc::FindElem<wchar_t>
+                    (elemName, elemLen, HTMLElementsTable, sizeof(HTMLElementsTable)/sizeof(HTMLElementsTable[0]));
+                plastElemDesc = pelemDesc;
+
+                int prevStackIndex = int(elementsStack.GetSize()-1);
+
+                if (pelemDesc && pelemDesc->EmptyElement)
                 {
-                    const SGMLElementDesc* ptopDesc = elemStack.Back().pElemDesc;
-                    if (ptopDesc && ptopDesc->ElemId == pdesc->ElemId)
+                    switch(pelemDesc->ElemId)
                     {
-                        matched = true;
+                    case HTML_BR:
+                        // new paragraph
+                        if (multiline)
+                            self->AppendString((self->IsNewLine0D() ? "\r" : "\n"), 1, StyledText::NLP_ReplaceCRLF, &lastFormat, &defaultParaFmt);
                         break;
-                    }
-                    elemStack.PopBack();
-                }
-                if (!matched)
-                    continue;
-            }
-
-            StackElem& top = elemStack.Back();
-            const bool displaySet = top.ParaFmt.IsDisplaySet();
-            const ParagraphFormat::DisplayType display = top.ParaFmt.GetDisplay();
-            const UPInt startPos = top.StartPos;
-            pcurDesc = top.pElemDesc;
-            elemStack.PopBack();
-            if (!pcurDesc)
-            {
-                if (pstyleMgr && displaySet)
-                {
-                    if (display == ParagraphFormat::Display_Block)
-                    {
-                        if (multiline)
-                            AppendHTMLNewLine(self, lastFmt, defParaFmt);
-                    }
-                    else if (display == ParagraphFormat::Display_None)
-                    {
-                        const UPInt len = self->GetLength();
-                        if (multiline)
-                            AppendHTMLNewLine(self, lastFmt, defParaFmt);
-                        self->Remove(startPos, len - startPos);
-                    }
-                }
-            }
-            else if (pcurDesc->ElemId == HTML_LI ||
-                     (pcurDesc->ElemId == HTML_P && (--paraCount, state != SGMLPS_EMPTY_ELEMENT_FINISHED)))
-            {
-                if (multiline)
-                    AppendHTMLNewLine(self, lastFmt, defParaFmt);
-            }
-        }
-        else if (state == SGMLPS_START_ELEMENT)
-        {
-            const wchar_t* elemName;
-            UPInt elemLen;
-            parser.ParseStartElement(&elemName, &elemLen);
-            pcurDesc = FindHTMLDesc(HTMLElementsTable, elemName, elemLen);
-            const SPInt parentIdx = (SPInt)elemStack.GetSize() - 1;
-
-            if (pcurDesc && pcurDesc->EmptyElement)
-            {
-                if (pcurDesc->ElemId == HTML_BR)
-                {
-                    if (multiline)
-                        AppendHTMLNewLine(self, lastFmt, defParaFmt);
-                }
-                else if (pcurDesc->ElemId == HTML_IMG)
-                {
-                    if (!pimgInfoArr)
-                        continue;
-                    pimgInfoArr->PushBack(StyledText::HTMLImageTagInfo(pheap));
-                    StyledText::HTMLImageTagInfo& imgInfo = pimgInfoArr->Back();
-                    Paragraph* ppara = self->GetLastParagraph();
-                    if (!ppara)
-                        ppara = self->AppendNewParagraph(&defParaFmt);
-                    TextFormat imgFmt(defTextFmt);
-                    imgInfo.ParaId = ppara->GetId();
-
-                    const wchar_t* attrName;
-                    UPInt attrLen;
-                    while (parser.GetNextAttribute(&attrName, &attrLen))
-                    {
-                        const SGMLElementDesc* pattr = FindHTMLDesc(HTMLAttrsTable, attrName, attrLen);
-                        const wchar_t* value;
-                        UPInt valueLen;
-                        if (!pattr || !parser.GetNextAttributeValue(&value, &valueLen))
-                            continue;
-                        int v;
-                        switch (pattr->ElemId)
+                    case HTML_TAB:
+                        self->AppendString("\t", 1);
+                        break;
+                    case HTML_IMG:
                         {
-                        case HTML_ALIGN:
-                            if (const SGMLElementDesc* pval = FindHTMLDesc(HTMLAttrsTable, value, valueLen))
+                            if (pimgInfoArr)
                             {
-                                if (pval->ElemId == HTML_BASELINE)
-                                    imgInfo.Alignment = StyledText::HTMLImageTagInfo::Align_BaseLine;
-                                else if (pval->ElemId == HTML_LEFT)
-                                    imgInfo.Alignment = StyledText::HTMLImageTagInfo::Align_Left;
-                                else if (pval->ElemId == HTML_RIGHT)
-                                    imgInfo.Alignment = StyledText::HTMLImageTagInfo::Align_Right;
-                            }
-                            break;
-                        case HTML_HEIGHT:
-                            if (SGMLParser<wchar_t>::ParseInt(&v, value, valueLen) && v >= 0)
-                                imgInfo.Height = (unsigned)PixelsToFixp(v);
-                            break;
-                        case HTML_HSPACE:
-                            if (SGMLParser<wchar_t>::ParseInt(&v, value, valueLen))
-                                imgInfo.HSpace = PixelsToFixp(v);
-                            break;
-                        case HTML_ID:
-                            imgInfo.Id.AppendString(value, valueLen);
-                            break;
-                        case HTML_SRC:
-                            imgInfo.Url.AppendString(value, valueLen);
-                            break;
-                        case HTML_VSPACE:
-                            if (SGMLParser<wchar_t>::ParseInt(&v, value, valueLen))
-                                imgInfo.VSpace = PixelsToFixp(v);
-                            break;
-                        case HTML_WIDTH:
-                            if (SGMLParser<wchar_t>::ParseInt(&v, value, valueLen) && v >= 0)
-                                imgInfo.Width = (unsigned)PixelsToFixp(v);
-                            break;
-                        default:
-                            break;
-                        }
-                    }
-
-                    Ptr<HTMLImageTagDesc> pimgDesc = *SF_HEAP_AUTO_NEW(self) HTMLImageTagDesc;
-                    imgFmt.SetImageDesc(pimgDesc);
-                    pimgDesc->ScreenWidth = (float)imgInfo.Width;
-                    pimgDesc->ScreenHeight = (float)imgInfo.Height;
-                    pimgDesc->VSpace = imgInfo.VSpace;
-                    pimgDesc->HSpace = imgInfo.HSpace;
-                    pimgDesc->Url = imgInfo.Url;
-                    pimgDesc->Id = imgInfo.Id;
-                    pimgDesc->Alignment = imgInfo.Alignment;
-                    imgInfo.pTextImageDesc = pimgDesc;
-
-                    TextFormat* pparentFmt = (parentIdx < 0) ? &defTextFmt : &elemStack[parentIdx].TextFmt;
-                    ParagraphFormat* pparentPara = (parentIdx < 0) ? &defParaFmt : &elemStack[parentIdx].ParaFmt;
-                    if (pparentFmt->IsUrlSet())
-                        imgFmt.SetUrl(pparentFmt->GetUrl());
-                    self->AppendString(" ", 1, StyledText::NLP_ReplaceCRLF, &imgFmt, pparentPara);
-                    // the text after the image must not repeat it
-                    pparentFmt->SetImageDesc(0);
-                    lastFmt.SetImageDesc(0);
-                    self->SetDefaultTextFormat(*pparentFmt);
-                }
-                else if (pcurDesc->ElemId == HTML_TAB)
-                    self->AppendString("\t", 1, StyledText::NLP_ReplaceCRLF);
-                continue;
-            }
-
-            const UPInt startPos = self->GetLength();
-            {
-                StackElem newElem(pheap);
-                newElem.pElemName = elemName;
-                newElem.ElemNameSize = elemLen;
-                newElem.pElemDesc = pcurDesc;
-                elemStack.PushBack(newElem);
-            }
-            StackElem& elem = elemStack.Back();
-            elem.StartPos = startPos;
-            TextFormat* pfmt = &elem.TextFmt;
-            ParagraphFormat* ppfmt = &elem.ParaFmt;
-            if (parentIdx < 0)
-            {
-                *pfmt = defTextFmt;
-                *ppfmt = defParaFmt;
-            }
-            else
-            {
-                *pfmt = elemStack[parentIdx].TextFmt;
-                *ppfmt = elemStack[parentIdx].ParaFmt;
-            }
-
-            if (!pcurDesc)
-            {
-                // an unknown tag still takes the style sheet's style of that name
-                if (pstyleMgr)
-                {
-                    if (const Style* pstyle = pstyleMgr->GetStyle(StyleManagerBase::CSS_Tag, elemName, elemLen))
-                    {
-                        *ppfmt = ppfmt->Merge(pstyle->mParagraphFormat);
-                        *pfmt = pfmt->Merge(pstyle->mTextFormat);
-                    }
-                }
-            }
-            else
-            {
-                const wchar_t* attrName;
-                UPInt attrLen;
-                const wchar_t* value;
-                UPInt valueLen;
-                switch (pcurDesc->ElemId)
-                {
-                case HTML_A:
-                    while (parser.GetNextAttribute(&attrName, &attrLen))
-                    {
-                        const SGMLElementDesc* pattr = FindHTMLDesc(HTMLAttrsTable, attrName, attrLen);
-                        if (pattr && parser.GetNextAttributeValue(&value, &valueLen) && pattr->ElemId == HTML_HREF)
-                        {
-                            pfmt->SetUrl(value, valueLen);
-                            self->SetMayHaveUrl();
-                        }
-                    }
-                    if (pstyleMgr)
-                    {
-                        if (const Style* pstyle = pstyleMgr->GetStyle(StyleManagerBase::CSS_Tag, "a"))
-                            *pfmt = pfmt->Merge(pstyle->mTextFormat);
-                        if (pfmt->IsUrlSet())
-                        {
-                            if (const Style* pstyle = pstyleMgr->GetStyle(StyleManagerBase::CSS_Tag, "a:link"))
-                                *pfmt = pfmt->Merge(pstyle->mTextFormat);
-                        }
-                    }
-                    break;
-                case HTML_B:
-                    pfmt->SetBold(true);
-                    break;
-                case HTML_FONT:
-                    while (parser.GetNextAttribute(&attrName, &attrLen))
-                    {
-                        const SGMLElementDesc* pattr = FindHTMLDesc(HTMLAttrsTable, attrName, attrLen);
-                        if (!pattr || !parser.GetNextAttributeValue(&value, &valueLen))
-                            continue;
-                        UInt32 hex;
-                        int v;
-                        float f;
-                        switch (pattr->ElemId)
-                        {
-                        case HTML_ALPHA:
-                            if (*value == '#' && SGMLParser<wchar_t>::ParseHexInt(&hex, value + 1, valueLen - 1))
-                                pfmt->SetAlpha((UInt8)hex);
-                            break;
-                        case HTML_COLOR:
-                            if (*value == '#' && SGMLParser<wchar_t>::ParseHexInt(&hex, value + 1, valueLen - 1))
-                                pfmt->SetColor32(hex);
-                            break;
-                        case HTML_FACE:
-                            pfmt->SetFontList(value, valueLen);
-                            break;
-                        case HTML_KERNING:
-                            if (SGMLParser<wchar_t>::ParseInt(&v, value, valueLen) && v >= 0)
-                            {
-                                if (v == 0)
-                                    pfmt->ClearKerning();
+                                const wchar_t* pattrName;
+                                UPInt      attrSz;
+                                pimgInfoArr->PushBack(StyledText::HTMLImageTagInfo(pheap));
+                                StyledText::HTMLImageTagInfo&  imgInfo = (*pimgInfoArr)[pimgInfoArr->GetSize() - 1];
+                                pcurPara = self->GetLastParagraph();
+                                if (pcurPara == NULL)
+                                    pcurPara = self->AppendNewParagraph(&defaultParaFmt);
+                                TextFormat imgCharFmt(defaultTextFmt);
+                                imgInfo.ParaId = pcurPara->GetId();
+                                while(parser.GetNextAttribute(&pattrName, &attrSz))
+                                {
+                                    const SGMLElementDesc* pattrDesc = SGMLElementDesc::FindElem<wchar_t>
+                                        (pattrName, attrSz, HTMLAttrsTable, sizeof(HTMLAttrsTable)/sizeof(HTMLAttrsTable[0]));
+                                    if (pattrDesc)
+                                    {
+                                        const wchar_t* pattrVal;
+                                        UPInt      attrValSz;                                        
+                                        if (parser.GetNextAttributeValue(&pattrVal, &attrValSz))
+                                        {
+                                            switch(pattrDesc->ElemId)
+                                            {
+                                            case HTML_SRC:
+                                                imgInfo.Url.AppendString(pattrVal, attrValSz);
+                                                break;
+                                            case HTML_ID:
+                                                imgInfo.Id.AppendString(pattrVal, attrValSz);
+                                                break;
+                                            case HTML_ALIGN:
+                                                pattrDesc = SGMLElementDesc::FindElem<wchar_t>
+                                                    (pattrVal, attrValSz, HTMLAttrsTable, sizeof(HTMLAttrsTable)/sizeof(HTMLAttrsTable[0]));
+                                                if (pattrDesc)
+                                                {
+                                                    switch(pattrDesc->ElemId)
+                                                    {
+                                                    case HTML_LEFT:
+                                                        imgInfo.Alignment = StyledText::HTMLImageTagInfo::Align_Left;
+                                                        break;
+                                                    case HTML_RIGHT:
+                                                        imgInfo.Alignment = StyledText::HTMLImageTagInfo::Align_Right;
+                                                        break;
+                                                    case HTML_BASELINE:
+                                                        imgInfo.Alignment = StyledText::HTMLImageTagInfo::Align_BaseLine;
+                                                        break;
+                                                    default: break;
+                                                    }
+                                                }
+                                                break;
+                                            case HTML_WIDTH:
+                                                {
+                                                    int v;
+                                                    if (parser.ParseInt(&v, pattrVal, attrValSz) && v >= 0)
+                                                    {
+                                                        imgInfo.Width = PixelsToFixp((unsigned)v);
+                                                    }
+                                                }
+                                                break;
+                                            case HTML_HEIGHT:
+                                                {
+                                                    int v;
+                                                    if (parser.ParseInt(&v, pattrVal, attrValSz) && v >= 0)
+                                                    {
+                                                        imgInfo.Height = PixelsToFixp((unsigned)v);
+                                                    }
+                                                }
+                                                break;
+                                            case HTML_VSPACE:
+                                                {
+                                                    int v;
+                                                    if (parser.ParseInt(&v, pattrVal, attrValSz))
+                                                    {
+                                                        imgInfo.VSpace = PixelsToFixp(v);
+                                                    }
+                                                }
+                                                break;
+                                            case HTML_HSPACE:
+                                                {
+                                                    int v;
+                                                    if (parser.ParseInt(&v, pattrVal, attrValSz))
+                                                    {
+                                                        imgInfo.HSpace = PixelsToFixp(v);
+                                                    }
+                                                }
+                                                break;
+                                            default: break;
+                                            }
+                                        }
+                                    }
+                                }
+                                Ptr<HTMLImageTagDesc> ptextImageDesc = *SF_HEAP_AUTO_NEW(self) HTMLImageTagDesc;
+                                imgCharFmt.SetImageDesc(ptextImageDesc);
+                                ptextImageDesc->ScreenWidth     = (float)imgInfo.Width;
+                                ptextImageDesc->ScreenHeight    = (float)imgInfo.Height;
+                                ptextImageDesc->VSpace          = imgInfo.VSpace;
+                                ptextImageDesc->HSpace          = imgInfo.HSpace;
+                                ptextImageDesc->Url             = imgInfo.Url;
+                                ptextImageDesc->Id              = imgInfo.Id;
+                                ptextImageDesc->Alignment       = imgInfo.Alignment;
+                                imgInfo.pTextImageDesc = ptextImageDesc;
+                                TextFormat* ptextFmt;
+                                const ParagraphFormat* pparaFmt;
+                                if (prevStackIndex >= 0)
+                                {
+                                    ptextFmt = &elementsStack[prevStackIndex].TextFmt;
+                                    pparaFmt = &elementsStack[prevStackIndex].ParaFmt;
+                                }
                                 else
-                                    pfmt->SetKerning(true);
+                                {
+                                    ptextFmt = &defaultTextFmt;
+                                    pparaFmt = &defaultParaFmt;
+                                }
+                                if (ptextFmt->IsUrlSet())
+                                    imgCharFmt.SetUrl(ptextFmt->GetUrl());
+                                self->AppendString(" ", 1, StyledText::NLP_ReplaceCRLF, &imgCharFmt, pparaFmt);
+                                ptextFmt->SetImageDesc(NULL);  // make sure IMG is not duplicated for following content
+                                lastFormat.SetImageDesc(NULL); // make sure IMG is not duplicated for <br>
+                                self->SetDefaultTextFormat(*ptextFmt);
                             }
-                            break;
-                        case HTML_LETTERSPACING:
-                            if (SGMLParser<wchar_t>::ParseFloat(&f, value, valueLen))
-                                pfmt->SetLetterSpacing(f);
-                            break;
-                        case HTML_SIZE:
-                            if (SGMLParser<wchar_t>::ParseInt(&v, value, valueLen) && v >= 0)
-                                pfmt->SetFontSize((float)v);
-                            break;
-                        default:
-                            break;
                         }
+                        break;
+                    default: break;
                     }
-                    lastFmt = *pfmt;
-                    break;
-                case HTML_I:
-                    pfmt->SetItalic(true);
-                    break;
-                case HTML_LI:
+                }
+                else
                 {
-                    ppfmt->SetBullet();
-                    Paragraph* ppara = self->GetLastParagraph();
-                    if (!ppara)
-                        ppara = self->AppendNewParagraph(ppfmt);
+                    UPInt curPos = self->GetLength();
+                    elementsStack.PushBack(SGMLStackElemDesc<wchar_t>(pheap, elemName, elemLen, pelemDesc, 0));
+                    SGMLStackElemDesc<wchar_t>& stackElem = elementsStack[elementsStack.GetSize()-1];
+                    stackElem.StartPos = curPos;
+                    if (prevStackIndex >= 0)
+                    {
+                        stackElem.TextFmt = elementsStack[prevStackIndex].TextFmt;
+                        stackElem.ParaFmt = elementsStack[prevStackIndex].ParaFmt;
+                    }
                     else
                     {
-                        if (ppara->GetLength() != 0)
-                        {
-                            if (multiline)
-                                AppendHTMLNewLine(self, lastFmt, defParaFmt);
-                            ppara = self->GetLastParagraph();
-                        }
-                        ppara->SetFormat(self->GetAllocator(), *ppfmt);
+                        stackElem.TextFmt = defaultTextFmt;
+                        stackElem.ParaFmt = defaultParaFmt;
                     }
-                    if (pstyleMgr)
+
+                    if (!pelemDesc)
                     {
-                        if (const Style* pstyle = pstyleMgr->GetStyle(StyleManagerBase::CSS_Tag, elemName, elemLen))
+                        // apply CSS class for arbitrary tag
+                        if (pstyleMgr)
                         {
-                            *ppfmt = ppfmt->Merge(pstyle->mParagraphFormat);
-                            *pfmt = pfmt->Merge(pstyle->mTextFormat);
-                            ppara->SetFormat(self->GetAllocator(), *ppfmt);
-                        }
-                    }
-                    break;
-                }
-                case HTML_P:
-                {
-                    Paragraph* ppara = self->GetLastParagraph();
-                    if (!ppara)
-                        ppara = self->AppendNewParagraph(&defParaFmt);
-                    else if (paraCount != 0)
-                    {
-                        if (multiline)
-                            AppendHTMLNewLine(self, lastFmt, defParaFmt);
-                        ppara = self->GetLastParagraph();
-                    }
-                    if (pstyleMgr)
-                    {
-                        if (const Style* pstyle = pstyleMgr->GetStyle(StyleManagerBase::CSS_Tag, elemName, elemLen))
-                        {
-                            *ppfmt = ppfmt->Merge(pstyle->mParagraphFormat);
-                            *pfmt = pfmt->Merge(pstyle->mTextFormat);
-                        }
-                    }
-                    while (parser.GetNextAttribute(&attrName, &attrLen))
-                    {
-                        const SGMLElementDesc* pattr = FindHTMLDesc(HTMLAttrsTable, attrName, attrLen);
-                        if (!pattr || !parser.GetNextAttributeValue(&value, &valueLen))
-                            continue;
-                        if (pattr->ElemId == HTML_ALIGN)
-                        {
-                            const SGMLElementDesc* pval = FindHTMLDesc(HTMLAttrsTable, value, valueLen);
-                            if (!pval)
-                                continue;
-                            if (pval->ElemId == HTML_LEFT)
-                                ppfmt->SetAlignment(ParagraphFormat::Align_Left);
-                            else if (pval->ElemId == HTML_RIGHT)
-                                ppfmt->SetAlignment(ParagraphFormat::Align_Right);
-                            else if (pval->ElemId == HTML_CENTER)
-                                ppfmt->SetAlignment(ParagraphFormat::Align_Center);
-                            else if (pval->ElemId == HTML_JUSTIFY)
-                                ppfmt->SetAlignment(ParagraphFormat::Align_Justify);
-                        }
-                        else if (pattr->ElemId == HTML_CLASS && pstyleMgr)
-                        {
-                            if (const Style* pstyle = pstyleMgr->GetStyle(StyleManagerBase::CSS_Class, value, valueLen))
+                            const Style* pstyle =
+                                pstyleMgr->GetStyle(StyleManagerBase::CSS_Tag, elemName, elemLen);
+                            if (pstyle)
                             {
-                                *ppfmt = ppfmt->Merge(pstyle->mParagraphFormat);
-                                *pfmt = pfmt->Merge(pstyle->mTextFormat);
+                                stackElem.ParaFmt = stackElem.ParaFmt.Merge(pstyle->mParagraphFormat);
+                                stackElem.TextFmt = stackElem.TextFmt.Merge(pstyle->mTextFormat);
                             }
                         }
                     }
-                    if (ppara->GetLength() == 0)
-                        ppara->SetFormat(self->GetAllocator(), *ppfmt);
-                    ++paraCount;
-                    break;
-                }
-                case HTML_SPAN:
-                    while (parser.GetNextAttribute(&attrName, &attrLen))
+                    else
                     {
-                        const SGMLElementDesc* pattr = FindHTMLDesc(HTMLAttrsTable, attrName, attrLen);
-                        if (pattr && parser.GetNextAttributeValue(&value, &valueLen) &&
-                            pattr->ElemId == HTML_CLASS && pstyleMgr)
+                        switch(pelemDesc->ElemId)
                         {
-                            if (const Style* pstyle = pstyleMgr->GetStyle(StyleManagerBase::CSS_Class, value, valueLen))
+                        case HTML_A:
+                            const wchar_t* pattrName;
+                            UPInt      attrSz;
+                            while(parser.GetNextAttribute(&pattrName, &attrSz))
                             {
-                                *pfmt = pfmt->Merge(pstyle->mTextFormat);
-                                lastFmt = *pfmt;
-                            }
-                        }
-                    }
-                    break;
-                case HTML_TEXTFORMAT:
-                    while (parser.GetNextAttribute(&attrName, &attrLen))
-                    {
-                        const SGMLElementDesc* pattr = FindHTMLDesc(HTMLAttrsTable, attrName, attrLen);
-                        if (!pattr || !parser.GetNextAttributeValue(&value, &valueLen))
-                            continue;
-                        int v;
-                        switch (pattr->ElemId)
-                        {
-                        case HTML_BLOCKINDENT:
-                            if (SGMLParser<wchar_t>::ParseInt(&v, value, valueLen) && v >= 0)
-                                ppfmt->SetBlockIndent((unsigned)v);
-                            break;
-                        case HTML_INDENT:
-                            if (SGMLParser<wchar_t>::ParseInt(&v, value, valueLen))
-                                ppfmt->SetIndent(v);
-                            break;
-                        case HTML_LEADING:
-                            if (SGMLParser<wchar_t>::ParseInt(&v, value, valueLen))
-                                ppfmt->SetLeading(v);
-                            break;
-                        case HTML_LEFTMARGIN:
-                            if (SGMLParser<wchar_t>::ParseInt(&v, value, valueLen) && v >= 0)
-                                ppfmt->SetLeftMargin((unsigned)v);
-                            break;
-                        case HTML_RIGHTMARGIN:
-                            if (SGMLParser<wchar_t>::ParseInt(&v, value, valueLen) && v >= 0)
-                                ppfmt->SetRightMargin((unsigned)v);
-                            break;
-                        case HTML_TABSTOPS:
-                        {
-                            // "[a, b, ...]" or "a, b, ...": one stop per comma-separated number
-                            UPInt i = 0;
-                            while (i < valueLen && SGMLCharIter<wchar_t>::IsSpace(value[i]))
-                                ++i;
-                            if (value[i] == '[')
-                                ++i;
-                            unsigned num = 1;
-                            for (UPInt j = i; j < valueLen && value[j] != ']'; ++j)
-                            {
-                                if (value[j] == ',')
-                                    ++num;
-                            }
-                            ppfmt->BeginTabStops(num);
-                            unsigned idx = 0;
-                            while (i < valueLen && value[i] != ']')
-                            {
-                                unsigned stop = 0;
-                                for (; i < valueLen && SGMLCharIter<wchar_t>::IsDigit(value[i]); ++i)
-                                    stop = stop * 10 + (value[i] - '0');
-                                while (i < valueLen && SFiswspace(value[i]))
-                                    ++i;
-                                ppfmt->SetTabStopsElement(idx++, stop);
-                                if (value[i] == ',')
+                                const SGMLElementDesc* pattrDesc = SGMLElementDesc::FindElem<wchar_t>
+                                    (pattrName, attrSz, HTMLAttrsTable, sizeof(HTMLAttrsTable)/sizeof(HTMLAttrsTable[0]));
+                                if (pattrDesc)
                                 {
-                                    for (++i; i < valueLen && SFiswspace(value[i]); ++i)
-                                        ;
+                                    const wchar_t* pattrVal;
+                                    UPInt       attrValSz;                                        
+                                    if (parser.GetNextAttributeValue(&pattrVal, &attrValSz))
+                                    {
+                                        switch(pattrDesc->ElemId)
+                                        {
+                                        case HTML_HREF:
+                                            stackElem.TextFmt.SetUrl(pattrVal, attrValSz);
+                                            self->SetMayHaveUrl();
+                                            break;
+                                        default: break;
+                                        }
+                                    }
+                                }
+                            }
+                            if (pstyleMgr)
+                            {
+                                // apply CSS style, if any
+                                const Style* pstyle = 
+                                    pstyleMgr->GetStyle(StyleManagerBase::CSS_Tag, "a");
+                                if (pstyle)
+                                {
+                                    //?stackElem.ParaFmt = stackElem.ParaFmt.Merge(pstyle->mParagraphFormat);
+                                    stackElem.TextFmt = stackElem.TextFmt.Merge(pstyle->mTextFormat);
+                                }
+                                if (stackElem.TextFmt.IsUrlSet())
+                                {
+                                    // get a:link CSS style since there is a HREF attr
+                                    const Style* pstyle = 
+                                        pstyleMgr->GetStyle(StyleManagerBase::CSS_Tag, "a:link");
+                                    if (pstyle)
+                                    {
+                                        //?stackElem.ParaFmt = stackElem.ParaFmt.Merge(pstyle->mParagraphFormat);
+                                        stackElem.TextFmt = stackElem.TextFmt.Merge(pstyle->mTextFormat);
+                                    }
+                                }
+                            }
+                            break;
+                        case HTML_LI:
+                        {
+                            stackElem.ParaFmt.SetBullet();
+                            pcurPara = self->GetLastParagraph();
+                            if (pcurPara == NULL)
+                                pcurPara = self->AppendNewParagraph(&stackElem.ParaFmt);
+                            else if (pcurPara->GetLength() == 0)
+                                pcurPara->SetFormat(self->GetAllocator(), stackElem.ParaFmt);
+                            else
+                            {
+                                if (multiline)
+                                    self->AppendString((self->IsNewLine0D() ? "\r" : "\n"), 1, StyledText::NLP_ReplaceCRLF, &lastFormat, &defaultParaFmt); 
+                                pcurPara = self->GetLastParagraph();
+                                pcurPara->SetFormat(self->GetAllocator(), stackElem.ParaFmt);
+                            }
+                            // apply CSS class (on tag basis)
+                            if (pstyleMgr)
+                            {
+                                const Style* pstyle =
+                                    pstyleMgr->GetStyle(StyleManagerBase::CSS_Tag, elemName, elemLen);
+                                if (pstyle)
+                                {
+                                    stackElem.ParaFmt = stackElem.ParaFmt.Merge(pstyle->mParagraphFormat);
+                                    stackElem.TextFmt = stackElem.TextFmt.Merge(pstyle->mTextFormat);
+                                    pcurPara->SetFormat(self->GetAllocator(), stackElem.ParaFmt);
                                 }
                             }
                             break;
                         }
-                        default:
+                        case HTML_P:
+                        {
+                            if ((pcurPara = self->GetLastParagraph()) == NULL)
+                            {
+                                // no paragraphs yet
+                                pcurPara = self->AppendNewParagraph(&defaultParaFmt);
+                            }
+                            else if (p_elem_is_opened)
+                            {
+                                if (multiline)
+                                    self->AppendString((self->IsNewLine0D() ? "\r" : "\n"), 1, StyledText::NLP_ReplaceCRLF, &lastFormat, &defaultParaFmt);
+                                pcurPara = self->GetLastParagraph();
+                            }
+                            // apply CSS class (on tag basis)
+                            if (pstyleMgr)
+                            {
+                                const Style* pstyle =
+                                    pstyleMgr->GetStyle(StyleManagerBase::CSS_Tag, elemName, elemLen);
+                                if (pstyle)
+                                {
+                                    stackElem.ParaFmt = stackElem.ParaFmt.Merge(pstyle->mParagraphFormat);
+                                    stackElem.TextFmt = stackElem.TextFmt.Merge(pstyle->mTextFormat);
+                                }
+                            }
+
+                            // new paragraph
+                            const wchar_t* pattrName;
+                            UPInt       attrSz;
+                            while(parser.GetNextAttribute(&pattrName, &attrSz))
+                            {
+                                const SGMLElementDesc* pattrDesc = SGMLElementDesc::FindElem<wchar_t>
+                                    (pattrName, attrSz, HTMLAttrsTable, sizeof(HTMLAttrsTable)/sizeof(HTMLAttrsTable[0]));
+                                if (pattrDesc)
+                                {
+                                    const wchar_t* pattrVal;
+                                    UPInt       attrValSz;                                        
+                                    if (parser.GetNextAttributeValue(&pattrVal, &attrValSz))
+                                    {
+                                        switch(pattrDesc->ElemId)
+                                        {
+                                        case HTML_CLASS:
+                                            {
+                                                // apply CSS class
+                                                if (pstyleMgr)
+                                                {
+                                                    const Style* pstyle =
+                                                        pstyleMgr->GetStyle(StyleManagerBase::CSS_Class, pattrVal, attrValSz);
+                                                    if (pstyle)
+                                                    {
+                                                        stackElem.ParaFmt = stackElem.ParaFmt.Merge(pstyle->mParagraphFormat);
+                                                        stackElem.TextFmt = stackElem.TextFmt.Merge(pstyle->mTextFormat);
+                                                    }
+                                                }
+                                            }
+                                            break;
+                                        case HTML_ALIGN:
+                                            {
+                                                pattrDesc = SGMLElementDesc::FindElem<wchar_t>
+                                                    (pattrVal, attrValSz, HTMLAttrsTable, sizeof(HTMLAttrsTable)/sizeof(HTMLAttrsTable[0]));
+                                                if (pattrDesc)
+                                                {
+                                                    switch(pattrDesc->ElemId)
+                                                    {
+                                                    case HTML_LEFT:
+                                                        stackElem.ParaFmt.SetAlignment(ParagraphFormat::Align_Left);
+                                                        break;
+                                                    case HTML_RIGHT:
+                                                        stackElem.ParaFmt.SetAlignment(ParagraphFormat::Align_Right);
+                                                        break;
+                                                    case HTML_CENTER:
+                                                        stackElem.ParaFmt.SetAlignment(ParagraphFormat::Align_Center);
+                                                        break;
+                                                    case HTML_JUSTIFY:
+                                                        stackElem.ParaFmt.SetAlignment(ParagraphFormat::Align_Justify);
+                                                        break;
+                                                    default: break;
+                                                    }
+                                                }
+                                            }
+                                            break;
+                                        default: break;
+                                        }
+                                    }
+                                }
+                            }
+                            if (pcurPara->GetLength() == 0)
+                                pcurPara->SetFormat(self->GetAllocator(), stackElem.ParaFmt);
+                            //}
+                            ++p_elem_is_opened;
                             break;
                         }
+                        case HTML_B:
+                            stackElem.TextFmt.SetBold(true);
+                            break;
+                        case HTML_I:
+                            stackElem.TextFmt.SetItalic(true);
+                            break;
+                        case HTML_U:
+                            stackElem.TextFmt.SetUnderline(true);
+                            break;
+                        case HTML_FONT:
+                            {
+                                const wchar_t* pattrName;
+                                UPInt       attrSz;
+                                while(parser.GetNextAttribute(&pattrName, &attrSz))
+                                {
+                                    const SGMLElementDesc* pattrDesc = SGMLElementDesc::FindElem<wchar_t>
+                                        (pattrName, attrSz, HTMLAttrsTable, sizeof(HTMLAttrsTable)/sizeof(HTMLAttrsTable[0]));
+                                    if (pattrDesc)
+                                    {
+                                        const wchar_t* pattrVal;
+                                        UPInt       attrValSz;                                        
+                                        if (parser.GetNextAttributeValue(&pattrVal, &attrValSz))
+                                        {
+                                            switch(pattrDesc->ElemId)
+                                            {
+                                            case HTML_COLOR:
+                                                // parse color: #RRGGBB
+                                                if (*pattrVal == '#')
+                                                {
+                                                    UInt32 color;
+                                                    if (parser.ParseHexInt(&color, pattrVal+1, attrValSz-1))
+                                                    {
+                                                        stackElem.TextFmt.SetColor32(color);    
+                                                    }
+                                                }
+                                                break;
+                                            case HTML_FACE:
+                                                stackElem.TextFmt.SetFontList(pattrVal, attrValSz);
+                                                break;
+                                            case HTML_SIZE:
+                                                // parse size
+                                                int sz;
+                                                if (parser.ParseInt(&sz, pattrVal, attrValSz) && sz >= 0)
+                                                {
+                                                    stackElem.TextFmt.SetFontSize((float)sz);
+                                                }
+                                                break;
+                                            case HTML_KERNING:
+                                                // parse kerning
+                                                int kern;
+                                                if (parser.ParseInt(&kern, pattrVal, attrValSz) && kern >= 0)
+                                                {
+                                                    if (kern)
+                                                        stackElem.TextFmt.SetKerning();
+                                                    else
+                                                        stackElem.TextFmt.ClearKerning();
+                                                }
+                                                break;
+                                            case HTML_LETTERSPACING:
+                                                // parse letterspacing
+                                                float ls;
+                                                if (ParseFloatInl(&ls, pattrVal, attrValSz))
+                                                {
+                                                    stackElem.TextFmt.SetLetterSpacing(ls);
+                                                }
+                                                break;
+                                                // extension
+                                            case HTML_ALPHA:
+                                                // parse alpha: #AA
+                                                if (*pattrVal == '#')
+                                                {
+                                                    UInt32 alpha;
+                                                    if (parser.ParseHexInt(&alpha, pattrVal+1, attrValSz-1))
+                                                    {
+                                                        stackElem.TextFmt.SetAlpha(UInt8(alpha));    
+                                                    }
+                                                }
+                                                break;
+                                            default: break;
+                                            }
+                                        }
+                                    }
+                                }
+                                lastFormat = stackElem.TextFmt;
+                            }
+
+                            break;
+                        case HTML_TEXTFORMAT:
+                            {
+                                const wchar_t* pattrName;
+                                UPInt       attrSz;
+                                while(parser.GetNextAttribute(&pattrName, &attrSz))
+                                {
+                                    const SGMLElementDesc* pattrDesc = SGMLElementDesc::FindElem<wchar_t>
+                                        (pattrName, attrSz, HTMLAttrsTable, sizeof(HTMLAttrsTable)/sizeof(HTMLAttrsTable[0]));
+                                    if (pattrDesc)
+                                    {
+                                        const wchar_t* pattrVal;
+                                        UPInt       attrValSz;                                        
+                                        if (parser.GetNextAttributeValue(&pattrVal, &attrValSz))
+                                        {
+                                            switch(pattrDesc->ElemId)
+                                            {
+                                            case HTML_INDENT:
+                                                {
+                                                    // parse indent
+                                                    int indent;
+                                                    if (parser.ParseInt(&indent, pattrVal, attrValSz))
+                                                    {
+                                                        stackElem.ParaFmt.SetIndent(indent);
+                                                    }
+                                                    break;
+                                                }
+                                            case HTML_BLOCKINDENT:
+                                                {
+                                                    // parse indent
+                                                    int indent;
+                                                    if (parser.ParseInt(&indent, pattrVal, attrValSz) && indent >= 0)
+                                                    {
+                                                        stackElem.ParaFmt.SetBlockIndent((unsigned)indent);
+                                                    }
+                                                    break;
+                                                }
+                                            case HTML_LEADING:
+                                                {
+                                                    // parse indent
+                                                    int leading;
+                                                    if (parser.ParseInt(&leading, pattrVal, attrValSz))
+                                                    {
+                                                        stackElem.ParaFmt.SetLeading(leading);
+                                                    }
+                                                    break;
+                                                }
+                                            case HTML_LEFTMARGIN:
+                                                {
+                                                    // parse margin
+                                                    int margin;
+                                                    if (parser.ParseInt(&margin, pattrVal, attrValSz) && margin >= 0)
+                                                    {
+                                                        stackElem.ParaFmt.SetLeftMargin((unsigned)margin);
+                                                    }
+                                                    break;
+                                                }
+                                            case HTML_RIGHTMARGIN:
+                                                {
+                                                    // parse margin
+                                                    int margin;
+                                                    if (parser.ParseInt(&margin, pattrVal, attrValSz) && margin >= 0)
+                                                    {
+                                                        stackElem.ParaFmt.SetRightMargin((unsigned)margin);
+                                                    }
+                                                    break;
+                                                }
+                                            case HTML_TABSTOPS:
+                                                {
+                                                    // parse tabstops as [xx,xx,xx]
+                                                    // calculate number of tabstops first
+                                                    UPInt i = 0;
+                                                    while(i < attrValSz && SGMLCharIter<wchar_t>::IsSpace(pattrVal[i]))
+                                                        ++i;
+                                                    if (pattrVal[i] == '[')
+                                                        ++i; // skip the [
+                                                    unsigned n = 1;
+                                                    UPInt j;
+                                                    for (j = i; j < attrValSz && pattrVal[j] != ']'; ++j)
+                                                    {
+                                                        if (pattrVal[j] == ',')
+                                                            ++n;
+                                                    }
+                                                    stackElem.ParaFmt.BeginTabStops(n);
+                                                    unsigned idx = 0;
+                                                    for (j = i; j < attrValSz && pattrVal[j] != ']'; )
+                                                    {
+                                                        unsigned v = 0;
+                                                        for (; j < attrValSz && SGMLCharIter<wchar_t>::IsDigit(pattrVal[j]); ++j)
+                                                        {
+                                                            v *= 10;
+                                                            v += (pattrVal[j] - '0');
+                                                        }
+                                                        while(j < attrValSz && SGMLCharIter<wchar_t>::IsSpace(pattrVal[j]))
+                                                            ++j;
+                                                        stackElem.ParaFmt.SetTabStopsElement(idx, v);
+                                                        ++idx;
+                                                        if (pattrVal[j] == ',')
+                                                        {
+                                                            ++j;
+                                                            while(j < attrValSz && SGMLCharIter<wchar_t>::IsSpace(pattrVal[j]))
+                                                                ++j;
+                                                        }
+                                                    }
+                                                }
+                                                break;
+                                            default: break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        case HTML_SPAN:
+                            {
+                                const wchar_t* pattrName;
+                                UPInt       attrSz;
+                                while(parser.GetNextAttribute(&pattrName, &attrSz))
+                                {
+                                    const SGMLElementDesc* pattrDesc = SGMLElementDesc::FindElem<wchar_t>
+                                        (pattrName, attrSz, HTMLAttrsTable, sizeof(HTMLAttrsTable)/sizeof(HTMLAttrsTable[0]));
+                                    if (pattrDesc)
+                                    {
+                                        const wchar_t* pattrVal;
+                                        UPInt       attrValSz;                                        
+                                        if (parser.GetNextAttributeValue(&pattrVal, &attrValSz))
+                                        {
+                                            switch(pattrDesc->ElemId)
+                                            {
+                                                case HTML_CLASS:
+                                                    // apply CSS class
+                                                    if (pstyleMgr)
+                                                    {
+                                                        const Style* pstyle =
+                                                            pstyleMgr->GetStyle(StyleManagerBase::CSS_Class, pattrVal, attrValSz);
+                                                        if (pstyle)
+                                                        {
+                                                            //?stackElem.ParaFmt = stackElem.ParaFmt.Merge(pstyle->mParagraphFormat);
+                                                            stackElem.TextFmt = stackElem.TextFmt.Merge(pstyle->mTextFormat);
+                                                            lastFormat = stackElem.TextFmt;
+                                                        }
+                                                    }
+                                                    break;
+                                                default: break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        default: break;
+                        }
                     }
-                    break;
-                case HTML_U:
-                    pfmt->SetUnderline(true);
-                    break;
-                default:
+                    lastFormat = stackElem.TextFmt;
+                }
+            }
+            break;
+        case SGMLPS_CONTENT:
+            {
+                const wchar_t* content;
+                UPInt  contentSize;
+                if (parser.ParseContent(&content, &contentSize))
+                {
+                    if (contentSize > 0)
+                    {
+                        pcurPara = self->GetLastParagraph();
+                        UPInt paraLen = (pcurPara) ? pcurPara->GetLength() : 0;
+                        // do not add space at the beginning of paragraph, if condenseWhite
+                        if (!condenseWhite || contentSize > 1 || content[0] != ' ' || paraLen > 0)
+                        {
+                            if (elementsStack.GetSize() > 0)
+                            {
+                                SGMLStackElemDesc<wchar_t>& stackElem = elementsStack[elementsStack.GetSize()-1];
+                                self->AppendString(content, contentSize, StyledText::NLP_ReplaceCRLF, &stackElem.TextFmt, &stackElem.ParaFmt);
+                                lastFormat = stackElem.TextFmt;
+                            }
+                            else
+                            {
+                                self->AppendString(content, contentSize, StyledText::NLP_ReplaceCRLF, &defaultTextFmt, &defaultParaFmt);
+                                lastFormat = defaultTextFmt; 
+                            }
+                        }
+                    }
+                }
+            }
+            break;
+        case SGMLPS_END_ELEMENT:
+        case SGMLPS_EMPTY_ELEMENT_FINISHED:
+            {
+                const wchar_t* elemName = NULL;
+                UPInt  elemLen       = 0;
+
+                UPInt startPos;
+                const SGMLStackElemDesc<wchar_t>* pstackElem = NULL;
+                if (type == SGMLPS_END_ELEMENT)
+                {
+                    if (elementsStack.GetSize() > 0)
+                        pstackElem = &elementsStack[elementsStack.GetSize()-1];
+                    parser.ParseEndElement(&elemName, &elemLen);
+                }
+                else
+                {
+                    // ignore end elements for BR & TAB
+                    if (plastElemDesc)
+                    {
+                        if (plastElemDesc->EmptyElement)
+                            break;
+                    }
+                    if (elementsStack.GetSize() > 0)
+                    {
+                        pstackElem = &elementsStack[elementsStack.GetSize()-1];
+                        elemName = pstackElem->pElemName;
+                        elemLen  = pstackElem->ElemNameSize;
+                    }
+                    else
+                        break; // shouldn't get here at all.
+                }
+                if (pstackElem)
+                {
+                    // verify matching of end-element and start-element
+                    if (parser.StrCompare(elemName, elemLen, pstackElem->pElemName, pstackElem->ElemNameSize) != 0)
+                    {
+                        // mismatch!
+                        // just ignore such an element for now. Do we need to print
+                        // kinda warning?
+                        const SGMLElementDesc* pelemDesc = SGMLElementDesc::FindElem<wchar_t>
+                            (elemName, elemLen, HTMLElementsTable, sizeof(HTMLElementsTable)/sizeof(HTMLElementsTable[0]));
+                        if (pelemDesc && p_elem_is_opened && (pelemDesc->ElemId == HTML_P || pelemDesc->ElemId == HTML_LI))
+                        {
+                            // looks like, if </p> end tag is used w/o closing all tags nested to it
+                            // then it should close all opened tags till <p>
+                            while(elementsStack.GetSize() > 0)
+                            {
+                                const SGMLStackElemDesc<wchar_t>& stackElem = elementsStack[elementsStack.GetSize()-1];
+                                if (stackElem.pElemDesc && pelemDesc->ElemId == stackElem.pElemDesc->ElemId)
+                                    break;
+                                elementsStack.PopBack();
+                            }
+                            if (elementsStack.GetSize() > 0)
+                                pstackElem = &elementsStack[elementsStack.GetSize()-1];
+                            else
+                                break;
+                        }
+                        else
+                            break;
+                    }
+                    bool isDisplaySet = pstackElem->ParaFmt.IsDisplaySet();
+                    ParagraphFormat::DisplayType display = pstackElem->ParaFmt.GetDisplay();
+                    plastElemDesc = pstackElem->pElemDesc;
+                    startPos = pstackElem->StartPos;
+                    elementsStack.PopBack();
+
+                    if (plastElemDesc)
+                    {
+                        switch(plastElemDesc->ElemId)
+                        {
+                        case HTML_P:
+                            --p_elem_is_opened;
+                            // Empty <P/> element doesn't produce a new paragraph in Flash
+                            if (type == SGMLPS_EMPTY_ELEMENT_FINISHED)
+                                break;
+                        case HTML_LI:
+                            if (multiline)
+                                self->AppendString((self->IsNewLine0D() ? "\r" : "\n"), 1, StyledText::NLP_ReplaceCRLF, &lastFormat, &defaultParaFmt);
+                            break;
+                        default: break;
+                        }
+                    }
+                    else
+                    {
+                        // arbitrary tags handling, if necessary
+                        if (pstyleMgr)
+                        {
+                            // if CSS is used, check if we have block or none display
+                            if (isDisplaySet)
+                            {
+                                switch(display)
+                                {
+                                case ParagraphFormat::Display_Block:
+                                    // create a new paragraph
+                                    if (multiline)
+                                        self->AppendString((self->IsNewLine0D() ? "\r" : "\n"), 1, StyledText::NLP_ReplaceCRLF, &lastFormat, &defaultParaFmt);
+                                    break;
+                                case ParagraphFormat::Display_None:
+                                    {
+                                    // create a new paragraph and remove the invisible text
+                                    UPInt curPos = self->GetLength();
+                                    if (multiline)
+                                    {
+                                        self->AppendString((self->IsNewLine0D() ? "\r" : "\n"), 1, StyledText::NLP_ReplaceCRLF, &lastFormat, &defaultParaFmt);
+                                    }
+                                    self->Remove(startPos, curPos - startPos);
+                                    break;
+                                    }
+                                default:;
+                                }
+                            }
+
+                        }
+                    }
+                }
+                else
+                {
+                    // wrong end elem, ignore...
                     break;
                 }
             }
-            lastFmt = *pfmt;
+            break;
+        default: break;
         }
     }
-
-    if (elemStack.GetSize() != 0)
+    if (elementsStack.GetSize() > 0)
     {
-        StackElem& top = elemStack.Back();
-        self->SetDefaultTextFormat(top.TextFmt);
-        self->SetDefaultParagraphFormat(top.ParaFmt);
-        lastFmt = top.TextFmt;
+        SGMLStackElemDesc<wchar_t>& stackElem = elementsStack[elementsStack.GetSize()-1];
+        self->SetDefaultTextFormat(stackElem.TextFmt);
+        self->SetDefaultParagraphFormat(stackElem.ParaFmt);
+        lastFormat = stackElem.TextFmt;
     }
     else
     {
-        self->SetDefaultTextFormat(defTextFmt);
-        self->SetDefaultParagraphFormat(defParaFmt);
+        self->SetDefaultTextFormat(defaultTextFmt);
+        self->SetDefaultParagraphFormat(defaultParaFmt);
     }
     self->EnsureTermNull();
 
-    // the empty paragraphs at the end take the last format, so a caret there shows it
-    Paragraph* plast = self->GetLastParagraph();
-    if (plast && plast->GetLength() == 0)
+    // Flash treats empty paragraphs at the end of the specific way. For example, if 
+    // HTML code is as follows: 
+    // "<p align="left"><font face="Arial" size="20" color="#ffffff" letterSpacing="5" kerning="1">Test 12345</font></p><p align="left"></p>"
+    // then the last paragraph should be empty w/o any format data (<p align="left"></p>). Though,
+    // Flash propagates the last known text format on the empty paragraphs. The code below does
+    // this in GFx.
+    Paragraph* ppara = self->GetLastParagraph();
+    if (ppara && ppara->GetLength() == 0)
     {
-        for (SPInt i = (SPInt)self->GetParagraphsCount() - 1; i >= 0; --i)
+        StyledText::ParagraphsIterator paraIter = self->Paragraphs.Last();
+        while(!paraIter.IsFinished())
         {
-            Paragraph* ppara = const_cast<Paragraph*>(self->GetParagraph((unsigned)i));
-            if (ppara->GetLength() > 1)
+            Paragraph* pcurPara = paraIter->GetPtr();
+            if (pcurPara->GetLength() <= 1)
+            {
+                pcurPara->SetTextFormat(self->GetAllocator(), lastFormat, 0, SF_MAX_UPINT);
+            }
+            else
                 break;
-            ppara->SetTextFormat(self->GetAllocator(), lastFmt, 0, SF_MAX_UPINT);
+            --paraIter;
         }
     }
+
     return true;
 }
 
