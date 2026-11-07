@@ -898,3 +898,10 @@ void* DeleteAs2_14292b7a0(void* p, unsigned flags)
 // MS2-PIN: ??_7GASGlobalObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432202c0
 // MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432155c0
 // MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215648
+
+// The three Prototype<Object,Environment> vftable images stored above, bound by alternatename to the real vftables.
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:?DAT_143215f60@AS2@GFx@Scaleform@@3PAPEBXA=??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
+#pragma comment(linker, "/alternatename:?DAT_143215fa8@AS2@GFx@Scaleform@@3PAPEBXA=??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
+#pragma comment(linker, "/alternatename:?DAT_143216050@AS2@GFx@Scaleform@@3PAPEBXA=??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@")
+#endif

@@ -356,3 +356,8 @@ int FUN_1427443c0(void* channel, int type, void* commanddata1, void* commanddata
 }
 
 }} // namespace Scaleform::GFx
+
+// The AuxStreamer vftable image stored above, bound by alternatename to the real vftable.
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:DAT_1431b80b8=??_7AuxStreamer@SoundRenderer@Sound@Scaleform@@6B@")
+#endif
