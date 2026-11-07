@@ -1452,7 +1452,7 @@ void* FUN_1423c8e10(void* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: releases the executable-observed cue and object arrays before the common IME base teardown.
+// Releases the executable-observed cue and object arrays before the common IME base teardown.
 // @0x1423c8e70
 void* FUN_1423c8e70(unsigned long long* object, unsigned flags)
 {
@@ -1970,7 +1970,7 @@ struct Ime01CmdRecord
     const char* Name;
 };
 
-// MS2-FUNCTIONAL: walks the source's command array (0x10-byte {key, name} entries, ended by a null name) and
+// Walks the source's command array (0x10-byte {key, name} entries, ended by a null name) and
 // inserts each name -> {key, source} by Bernstein hash.
 // @0x1423d8e80
 void FUN_1423d8e80(void* table, void* source)
@@ -1988,7 +1988,7 @@ void FUN_1423d8e80(void* table, void* source)
     }
 }
 
-// MS2-FUNCTIONAL: clears the pending value array, builds the RemoveList path, and queries the movie object.
+// Clears the pending value array, builds the RemoveList path, and queries the movie object.
 // @0x1423d9520
 void FUN_1423d9520(void* raw)
 {
@@ -2433,7 +2433,7 @@ __declspec(noinline) void FUN_1423d94f0(void*, void*);
 
 // MS2-FUNCTIONAL: Movie is declared only for its recovered Release call; surrounding window/movie manager layout is opaque.
 
-// MS2-FUNCTIONAL: the factory interface and helper argument types remain opaque; recovered calls preserve offsets and order.
+// The factory interface and helper argument types remain opaque; recovered calls preserve offsets and order.
 // @0x1423d4690
 void FUN_1423d4690(void* self)
 {
@@ -2968,7 +2968,7 @@ HRESULT FUN_1423da940(void*, IUnknown* context, void* range, unsigned editCookie
 
 // The destructor call is qualified: self->~MemoryContextImpl() is a virtual call through slot 0, back into this
 // deleting destructor.
-// MS2-FUNCTIONAL: uses our AS3 memory context declaration to release its heap limit handler, owned references, and allocated storage.
+// Uses our AS3 memory context declaration to release its heap limit handler, owned references, and allocated storage.
 // @0x1423dbd20
 void* FUN_1423dbd20(Scaleform::GFx::AS3::MemoryContextImpl* self, unsigned flags)
 {
@@ -3128,7 +3128,7 @@ unsigned FUN_1423cb260()
     return Ime01ImeVersion();
 }
 
-// MS2-FUNCTIONAL: looks up an executable IME command by its Bernstein hash and forwards the matching record to its handler.
+// Looks up an executable IME command by its Bernstein hash and forwards the matching record to its handler.
 // @0x1423d8d60
 bool FUN_1423d8d60(Ime01CmdMap* map, long long operation, const char* key, unsigned long long flags)
 {
@@ -3488,7 +3488,7 @@ __declspec(noinline) unsigned long long* FUN_1423cabb0(unsigned long long* self,
     return self;
 }
 
-// MS2-FUNCTIONAL: removes every enumerated command key from the executable's chained 0x28-byte hash table.
+// Removes every enumerated command key from the executable's chained 0x28-byte hash table.
 // @0x1423d8f20
 void FUN_1423d8f20(unsigned long long* map, void* source)
 {
@@ -5078,7 +5078,7 @@ void GFxIMEManagerWin32::ProcessIMEMessage(const FunctionHandler::Params& params
 #undef owner
 }
 
-// MS2-FUNCTIONAL: for the (0x282, 0xe, 0x12) notification: on backspace ([+0xd0] == 8) in state 4/0x40000 it removes the
+// For the (0x282, 0xe, 0x12) notification: on backspace ([+0xd0] == 8) in state 4/0x40000 it removes the
 // input window, drops the last character of the wide buffer at [+0x40] and shows the rest; in state 2 it removes the
 // window through FUN_1423ca030, blanks the last non-space of the first four characters of [+0xb0] and shows that. The
 // text goes out as UTF-8 to DisplayInputWindow(text, cursor.x1, cursor.y2, 0.0) at the IME manager's cursor rect. On
@@ -6750,7 +6750,7 @@ unsigned long long FUN_1423db0c0(long long raw, unsigned message)
 // The vtable-slot leaves below have no pdata (leaf functions and adjustor thunks); data_rdata_sf_a's
 // IME vtable images reach them by VA.
 
-// MS2-FUNCTIONAL: maps the executable's IME conversion-mode bits to the language code they imply.
+// Maps the executable's IME conversion-mode bits to the language code they imply.
 // @0x1423cb5b0
 unsigned FUN_1423cb5b0(void*, unsigned flags)
 {
@@ -6816,7 +6816,7 @@ bool FUN_1423d3110(void* self, long long operation, const char* key, unsigned lo
     return FUN_1423d8d60((Ime01CmdMap*)((UByte*)self + 0x38), operation, key, flags);
 }
 
-// MS2-FUNCTIONAL: enables or disables the window's default input context (IACE_DEFAULT when enabled).
+// Enables or disables the window's default input context (IACE_DEFAULT when enabled).
 // @0x1423cfd30
 void FUN_1423cfd30(void* self, bool enable)
 {
@@ -6838,21 +6838,21 @@ long long FUN_1423dadb0(void*) { return 0; }
 // @0x1423dadc0
 long long FUN_1423dadc0(void*) { return 0; }
 
-// MS2-FUNCTIONAL: assigns the name string held at +0x20.
+// Assigns the name string held at +0x20.
 // @0x1423d0f40
 void FUN_1423d0f40(void* self, const char* text)
 {
     *(String*)((UByte*)self + 0x20) = text;
 }
 
-// MS2-FUNCTIONAL: assigns the name string held at +0x18.
+// Assigns the name string held at +0x18.
 // @0x1423d0f50
 void FUN_1423d0f50(void* self, const char* text)
 {
     *(String*)((UByte*)self + 0x18) = text;
 }
 
-// MS2-FUNCTIONAL: stores the three candidate-window settings.
+// Stores the three candidate-window settings.
 // @0x1423d14b0
 void FUN_1423d14b0(void* self, unsigned a, unsigned b, unsigned c)
 {
@@ -6868,7 +6868,7 @@ void FUN_1423d1870(void* self, bool value) { *(bool*)((UByte*)self + 0x80) = val
 // @0x1423d1880
 void FUN_1423d1880(void* self, void* value) { *(void**)((UByte*)self + 0x28) = value; }
 
-// MS2-FUNCTIONAL: clears the second field, then calls the object's own virtual slot 0x80.
+// Clears the second field, then calls the object's own virtual slot 0x80.
 // @0x1423d1890
 void FUN_1423d1890(void* self)
 {
@@ -6877,14 +6877,14 @@ void FUN_1423d1890(void* self)
     (*(Fn*)(*(UByte**)self + 0x80))(self);
 }
 
-// MS2-FUNCTIONAL: AddRef on the refcount at +0x14.
+// AddRef on the refcount at +0x14.
 // @0x1423d5ae0
 __declspec(noinline) int FUN_1423d5ae0(void* self)
 {
     return ++*(int*)((UByte*)self + 0x14);
 }
 
-// MS2-FUNCTIONAL: returns the language code of the named IME, else of the current input language.
+// Returns the language code of the named IME, else of the current input language.
 // @0x1423d61c0
 unsigned FUN_1423d61c0(void* self, const char* name)
 {
@@ -6893,7 +6893,7 @@ unsigned FUN_1423d61c0(void* self, const char* name)
     return *(unsigned*)((UByte*)self + 0x88);
 }
 
-// MS2-FUNCTIONAL: the same body as FUN_1423d61c0, slot 2 of the 17-slot table at 0x143138530.
+// The same body as FUN_1423d61c0, slot 2 of the 17-slot table at 0x143138530.
 // @0x1423d7dc0
 unsigned FUN_1423d7dc0(void* self, const char* name)
 {
@@ -6902,28 +6902,28 @@ unsigned FUN_1423d7dc0(void* self, const char* name)
     return *(unsigned*)((UByte*)self + 0x88);
 }
 
-// MS2-FUNCTIONAL: Release on the refcount at +0x14.
+// Release on the refcount at +0x14.
 // @0x1423d7350
 __declspec(noinline) int FUN_1423d7350(void* self)
 {
     return --*(int*)((UByte*)self + 0x14);
 }
 
-// MS2-FUNCTIONAL: refreshes the conversion-state labels with every conversion bit set.
+// Refreshes the conversion-state labels with every conversion bit set.
 // @0x1423d7410
 void FUN_1423d7410(void* self)
 {
     FUN_1423cc7c0(self, 0xffffffffu);
 }
 
-// MS2-FUNCTIONAL: returns the IME callback-name table (the records after the count in DAT_143a2a6b4's image).
+// Returns the IME callback-name table (the records after the count in DAT_143a2a6b4's image).
 // @0x1423da240
 const void* FUN_1423da240(void*)
 {
     return (const UByte*)&DAT_143a2a6b4 + 0xc;
 }
 
-// MS2-FUNCTIONAL: AddRef on the refcount at +0x3c.
+// AddRef on the refcount at +0x3c.
 // @0x1423da420
 __declspec(noinline) int FUN_1423da420(void* self)
 {

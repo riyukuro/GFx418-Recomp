@@ -2891,7 +2891,6 @@ bool FUN_1424e5460(Scaleform::UPInt) { return true; }
 // MS2-FUNCTIONAL: adjustor thunk
 // @0x1424e5464
 bool FUN_1424e5464(Scaleform::UPInt self) { return FUN_1424e5460(self - 0x10); }
-// MS2-FUNCTIONAL: the exe's slot is `xor al, al`
 // @0x1424e54f0
 bool FUN_1424e54f0(Scaleform::UPInt) { return false; }
 // MS2-FUNCTIONAL: adjustor thunk
