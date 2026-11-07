@@ -6729,15 +6729,13 @@ unsigned FUN_1423cb5b0(void*, unsigned flags)
     return (flags & 0xf0000) ? 0x80000 : 0x1000000;
 }
 
-// MS2-FUNCTIONAL: looks up the language code of an installed input-language record by its id.
+// Looks up the language code of an installed input-language record by its id.
 // @0x1423cb600
 unsigned FUN_1423cb600(void* self, long long id)
 {
-    const unsigned count = *(unsigned*)((UByte*)self + 0x80);
-    UByte* records = *(UByte**)((UByte*)self + 0x90);
-    for (unsigned i = 0; i < count; ++i) {
-        UByte* record = records + i * 0x20;
-        if (*(unsigned*)((UByte*)record + 0x18) == (unsigned)id) return *(unsigned*)((UByte*)record + 0x10);
+    struct LangRecord { UByte pad[0x10]; unsigned code; unsigned pad14; unsigned id; unsigned pad1c; };
+    for (unsigned i = 0; i < *(unsigned*)((UByte*)self + 0x80); ++i) {
+        if ((unsigned)id == (*(LangRecord**)((UByte*)self + 0x90))[i].id) return (*(LangRecord**)((UByte*)self + 0x90))[i].code;
     }
     return 0x1000000;
 }
@@ -6772,16 +6770,16 @@ void FUN_1423d2ef0(void*) {}
 // @0x1423d7130
 void FUN_1423d7130(void*) {}
 
-// MS2-FUNCTIONAL: forwards the IME command to the command map embedded at +0x38.
+// Forwards the IME command to the command map embedded at +0x38.
 // @0x1423cf1a0
-unsigned long long FUN_1423cf1a0(void* self, long long operation, const char* key, unsigned long long flags)
+bool FUN_1423cf1a0(void* self, long long operation, const char* key, unsigned long long flags)
 {
     return FUN_1423d8d60((Ime01CmdMap*)((UByte*)self + 0x38), operation, key, flags);
 }
 
-// MS2-FUNCTIONAL: forwards the IME command to the command map embedded at +0x38.
+// Forwards the IME command to the command map embedded at +0x38.
 // @0x1423d3110
-unsigned long long FUN_1423d3110(void* self, long long operation, const char* key, unsigned long long flags)
+bool FUN_1423d3110(void* self, long long operation, const char* key, unsigned long long flags)
 {
     return FUN_1423d8d60((Ime01CmdMap*)((UByte*)self + 0x38), operation, key, flags);
 }
