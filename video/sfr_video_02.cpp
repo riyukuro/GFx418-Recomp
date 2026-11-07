@@ -3155,79 +3155,86 @@ void FUN_1400112a0(
 }
 
 // MS2-FUNCTIONAL: recreates the video render node after its provider changes, retaining the parent slot and transform.
-// BEHAVIOUR FIX: as in the exe, the old node's transform is kept and the node moved only when it has a parent; with
-// no parent the new node gets the identity 2D matrix (ours copied the old transform). The child index is the
-// search position, so a node not found in its parent removes and reinserts at the end (ours skipped both).
+// Written out as the SDK body (Ptr<TreeNode> slot at +0x48, memcpy matrix copies, virtual CreateRenderNode). As in the
+// exe, the transform is kept only when the old node has a parent (else identity), and the child index is the search
+// position. Remaining diffs are VC9 scheduling: the exe loads the creator's vtable right before the call (ours early
+// into r9), computes the visible flag after reloading the slot, and orders the entry zeroing and setne differently.
+// slot 1 of the video character: builds its render node (returned as a Ptr through the hidden result slot)
+struct Video02NodeCreator
+{
+    virtual void Slot0();
+    virtual Scaleform::Ptr<Scaleform::Render::TreeNode> CreateRenderNode(void* context);
+};
+#pragma function(memcpy)   // the matrix copies call memcpy out of line in the exe
+// TreeNode::GetViewMatrix3D / GetProjectionMatrix3D (render_treenode.h); the gfx_rendertree.h view lacks them.
+static __forceinline bool Video02GetViewMatrix3D(const Scaleform::Render::TreeNode* node, Scaleform::Render::Matrix3F* m)
+{
+    const Scaleform::Render::State* state = node->GetState(static_cast<Scaleform::Render::StateType>(5));
+    if (!state)
+        return false;
+    const unsigned char* data = *reinterpret_cast<const unsigned char* const*>(reinterpret_cast<const unsigned char*>(state) + 8);
+    *m = Scaleform::Render::Matrix3F(reinterpret_cast<const float (*)[4]>(data + 0x10));
+    return true;
+}
+static __forceinline bool Video02GetProjectionMatrix3D(const Scaleform::Render::TreeNode* node, Scaleform::Render::Matrix4F* m)
+{
+    const Scaleform::Render::State* state = node->GetState(static_cast<Scaleform::Render::StateType>(6));
+    if (!state)
+        return false;
+    const unsigned char* data = *reinterpret_cast<const unsigned char* const*>(reinterpret_cast<const unsigned char*>(state) + 8);
+    *m = Scaleform::Render::Matrix4F(reinterpret_cast<const float (*)[4]>(data + 0x10));
+    return true;
+}
 // @0x1400105b0
 void* FUN_1400105b0(void* object)
 {
     using namespace Scaleform::Render;
     unsigned char* bytes = static_cast<unsigned char*>(object);
-    TreeNode** nodeSlot = reinterpret_cast<TreeNode**>(bytes + 0x48);
-    TreeNode* oldNode = *nodeSlot;
-    const bool hadNode = oldNode != 0;
-    Matrix2F matrix2;
-    Matrix3F matrix3;
-    Matrix3F view;
-    Matrix4F projection;
-    Scaleform::UPInt childIndex = ~Scaleform::UPInt(0);
-    bool is3D = false, hasView = false, hasProjection = false;
+    Scaleform::Ptr<TreeNode>& pnode = *reinterpret_cast<Scaleform::Ptr<TreeNode>*>(bytes + 0x48);
+    const bool hadNode = pnode.GetPtr() != 0;
     TreeContainer* parent = 0;
-    if (oldNode && (parent = static_cast<TreeContainer*>(oldNode->GetParent())) != 0) {
+    Scaleform::UPInt childIndex = ~0u;   // SF_MAX_UINT
+    Matrix2F matrix2;
+    bool is3D = false;
+    Matrix3F matrix3;
+    bool hasView = false;
+    Matrix3F view;
+    bool hasProjection = false;
+    Matrix4F projection;
+    TreeNode* oldNode = pnode;
+    if (oldNode && oldNode->GetParent()) {
+        parent = static_cast<TreeContainer*>(oldNode->GetParent());
         const Scaleform::UPInt count = parent->GetSize();
         for (childIndex = 0; childIndex < count; ++childIndex)
             if (parent->GetAt(childIndex) == oldNode) break;
-        const unsigned char* oldData = reinterpret_cast<const unsigned char*>(oldNode->GetReadOnlyDataBase());
         is3D = oldNode->Is3D();
         if (is3D) {
-            memcpy(&matrix3, oldData + 0x10, sizeof(matrix3));
-            const State* state = oldNode->GetState(static_cast<StateType>(5));
-            if (state) {
-                const unsigned char* const payload = *reinterpret_cast<const unsigned char* const*>(reinterpret_cast<const unsigned char*>(state) + 8);
-                memcpy(&view, payload + 0x10, sizeof(view));
-                hasView = true;
-            }
-            else hasView = false;
-            state = (*nodeSlot)->GetState(static_cast<StateType>(6));
-            if (state) {
-                const unsigned char* const payload = *reinterpret_cast<const unsigned char* const*>(reinterpret_cast<const unsigned char*>(state) + 8);
-                memcpy(&projection, payload + 0x10, sizeof(projection));
-                hasProjection = true;
-            }
-            else hasProjection = false;
+            matrix3 = oldNode->M3D();
+            hasView = Video02GetViewMatrix3D(oldNode, &view);
+            hasProjection = Video02GetProjectionMatrix3D(pnode, &projection);
         }
-        else memcpy(&matrix2, oldData + 0x10, sizeof(matrix2));
+        else matrix2 = oldNode->M2D();
         parent->Remove(childIndex, 1);
     }
-    if (*nodeSlot) (*nodeSlot)->Release();
-    *nodeSlot = 0;
-    if (!hadNode) return *nodeSlot;
-
-    // slot 1 returns the new node as a Ptr through the hidden result slot; the exe reads the node from it (0x14001094d)
-    typedef Scaleform::Render::ContextImpl::Entry** (*CreateNode)(void*, Scaleform::Render::ContextImpl::Entry**, void*);
-    CreateNode create = reinterpret_cast<CreateNode>((*reinterpret_cast<void***>(object))[1]);
-    Scaleform::Render::ContextImpl::Entry* temporary = 0;
-    const uintptr_t contextBase = *reinterpret_cast<uintptr_t*>(bytes + 0x20);
-    Scaleform::Render::ContextImpl::Entry* replacement = *create(object, &temporary,
-        reinterpret_cast<void*>(*reinterpret_cast<uintptr_t*>(contextBase + 0x10) + 0x34f0));
-    if (replacement) {
-        replacement->AddRef();
-        *nodeSlot = reinterpret_cast<TreeNode*>(replacement);
-    }
-    if (temporary) temporary->Release();
-    TreeNode* node = *nodeSlot;
-    if (node) {
-        node->SetVisible((*reinterpret_cast<unsigned short*>(bytes + 0x6a) & 0x4000) != 0);
-        if (is3D) {
-            node->SetMatrix3D(matrix3);
-            if (hasView) node->SetViewMatrix3D(view);
-            if (hasProjection) node->SetProjectionMatrix3D(projection);
+    pnode = 0;
+    if (hadNode) {
+        if (!reinterpret_cast<void* const*>(object)[9]) {
+            const uintptr_t contextBase = *reinterpret_cast<uintptr_t*>(bytes + 0x20);
+            pnode = static_cast<Video02NodeCreator*>(object)->CreateRenderNode(
+                reinterpret_cast<void*>(*reinterpret_cast<uintptr_t*>(contextBase + 0x10) + 0x34f0));
+            pnode->SetVisible((*reinterpret_cast<unsigned short*>(bytes + 0x6a) & 0x4000) != 0);
+            if (is3D) {
+                pnode->SetMatrix3D(matrix3);
+                if (hasView) pnode->SetViewMatrix3D(view);
+                if (hasProjection) pnode->SetProjectionMatrix3D(projection);
+            }
+            else pnode->SetMatrix(matrix2);
         }
-        else node->SetMatrix(matrix2);
+        if (parent) parent->Insert(childIndex, pnode);
     }
-    if (parent) parent->Insert(childIndex, *nodeSlot);
-    return *nodeSlot;
+    return pnode;
 }
+#pragma intrinsic(memcpy)
 
 // MS2-FUNCTIONAL: constructs the video shape provider, scales its geometry to the decoded frame, and creates a tree entry.
 // BEHAVIOUR FIX: the video rectangle is (0, 0, width, height) as in the exe, where ours drew it at the frame bounds
