@@ -758,8 +758,10 @@ bool VideoPlayerImpl::Init(Video* pvideo, TaskManager*, FileOpenerBase* pfileOpe
             Ptr<VideoSound> pinterface    = *psoundSystem->Create();
             Ptr<VideoSound> psubinterface = *psoundSystem->Create();
 
-            void* mem = pHeap->Alloc(0x50);
-            VideoPlayerSound* psound = mem ? (VideoPlayerSound*)CriMvSoundCtor02(mem, pHeap, pinterface) : NULL;
+            void* mem;
+            VideoPlayerSound* psound = (VideoPlayerSound*)pHeap->Alloc(0x50);
+            if (psound)
+                CriMvSoundCtor02(psound, pHeap, pinterface);
             pSound = *psound;
 
             mem = pHeap->Alloc(0x50);
