@@ -231,14 +231,20 @@ inline ThunkDefs6<A0, A1, A2, A3, A4, A5> ThunkMakeDefs6(StringManager& sm)
         ThunkMethodDefault<T, N, 5, A5>::Get(sm));
 }
 
+template <typename RT>
+SF_INLINE void ThunkReadArgN(unsigned n, RT& result, unsigned argc, const Value* argv)
+{
+    if (argc > n)
+        ThunkReadArg(result, argv[n]);
+}
+
 template <typename R, typename A0>
 struct ThunkArgs1 : public ThunkArgs0<R>
 {
     SF_INLINE ThunkArgs1(VM& vm, Value& result, unsigned argc, const Value* argv, const ThunkDefs1<A0>& d)
         : ThunkArgs0<R>(vm, result), a0(d._0)
     {
-        if (argc > 0)
-            ThunkReadArg(a0, argv[0]);
+        ThunkReadArgN(0, a0, argc, argv);
     }
 
     typename ThunkClean<A0>::type a0;
@@ -274,8 +280,7 @@ struct ThunkArgs2 : public ThunkArgs1<R, A0>
     {
         if (vm.IsException())
             return;
-        if (argc > 1)
-            ThunkReadArg(a1, argv[1]);
+        ThunkReadArgN(1, a1, argc, argv);
     }
 
     typename ThunkClean<A1>::type a1;
@@ -311,8 +316,7 @@ struct ThunkArgs3 : public ThunkArgs2<R, A0, A1>
     {
         if (vm.IsException())
             return;
-        if (argc > 2)
-            ThunkReadArg(a2, argv[2]);
+        ThunkReadArgN(2, a2, argc, argv);
     }
 
     typename ThunkClean<A2>::type a2;
@@ -348,8 +352,7 @@ struct ThunkArgs4 : public ThunkArgs3<R, A0, A1, A2>
     {
         if (vm.IsException())
             return;
-        if (argc > 3)
-            ThunkReadArg(a3, argv[3]);
+        ThunkReadArgN(3, a3, argc, argv);
     }
 
     typename ThunkClean<A3>::type a3;
@@ -385,8 +388,7 @@ struct ThunkArgs5 : public ThunkArgs4<R, A0, A1, A2, A3>
     {
         if (vm.IsException())
             return;
-        if (argc > 4)
-            ThunkReadArg(a4, argv[4]);
+        ThunkReadArgN(4, a4, argc, argv);
     }
 
     typename ThunkClean<A4>::type a4;
@@ -422,8 +424,7 @@ struct ThunkArgs6 : public ThunkArgs5<R, A0, A1, A2, A3, A4>
     {
         if (vm.IsException())
             return;
-        if (argc > 5)
-            ThunkReadArg(a5, argv[5]);
+        ThunkReadArgN(5, a5, argc, argv);
     }
 
     typename ThunkClean<A5>::type a5;
