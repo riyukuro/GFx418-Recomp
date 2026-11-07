@@ -962,8 +962,15 @@ static SF_FORCEINLINE InteractiveObject* MovieClipLoader_CharacterOf(const Value
     return 0;
 }
 
+// ParseLevelName with a throwaway tail pointer.
+static __forceinline int Sfr01ParseLevel(const char* name, bool caseSensitive)
+{
+    const char* ptail;
+    return MovieRoot::ParseLevelName(name, &ptail, caseSensitive);
+}
+
 // @0x1428eb340
-// MS2-FUNCTIONAL the exe packs ptail into the level-name temp's slot; its frame is 0x10 smaller
+// MS2-FUNCTIONAL 0x1428eb340: stack-slot floor: the else-branch ToString temps reuse the dead url slot (rsp+0x68), the exe the path temp slot (rsp+0x60); frame, calls and stores are the same
 void MovieClipLoaderProto::LoadClip(const FnCall& fn)
 {
     fn.Result->SetBool(false);
@@ -986,8 +993,7 @@ void MovieClipLoaderProto::LoadClip(const FnCall& fn)
     else
     {
         bool         caseSensitive = fn.Env->GetTarget()->GetVersion() > 6;
-        const char*  ptail;
-        int          level = MovieRoot::ParseLevelName(fn.Arg(1).ToString(fn.Env).ToCStr(), &ptail, caseSensitive);
+        int          level = Sfr01ParseLevel(fn.Arg(1).ToString(fn.Env).ToCStr(), caseSensitive);
         if (level == -1)
             return;
         Sfr01GetAS2Root(fn.Env)->AddLoadQueueEntry(fn.Arg(1).ToString(fn.Env).ToCStr(), url.ToCStr(), fn.Env,
