@@ -1092,11 +1092,10 @@ void FUN_140013a20(UByte* result, Scaleform::GFx::AS3::Value* input)
     *result = input->Convert2Boolean();
 }
 
-// MS2-FUNCTIONAL: transfers the object reference into the AS3 Value through Value::Pick. The exe calls Pick from a
-// frame (sub rsp; call; add rsp); ours tail-jumps, and neither optimize("t", off) nor optimize("g", off) gives the
-// exe's form.
+// transfers the object reference into the AS3 Value: Value::Pick<Object>(Pickable<Object>). The Pickable taken by value
+// makes cl call Pick from a frame (sub rsp; call; add rsp) as the exe does, not tail-jump.
 // @0x140013790
-void FUN_140013790(Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3::Object* object)
+void FUN_140013790(Scaleform::GFx::AS3::Value* value, Scaleform::Pickable<Scaleform::GFx::AS3::Object> object)
 {
     value->Pick(object);
 }
