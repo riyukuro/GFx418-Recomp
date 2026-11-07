@@ -442,38 +442,41 @@ void FUN_142621820(char* self, char* snap)
 // ViewStats::CollectMarkers(snap): each marker becomes a value-initialised MarkerInfo {name, count} pushed onto
 // snap->Markers (the PushBack and its ResizeNoConstruct inlined). Its vftable (folded with the RefCountBase<MarkerInfo,
 // 0x242> one) is DAT_14318f048.
-// MS2-FUNCTIONAL: same code; the exe keeps snap in rbp and the array in r15 (ours folds the array into rbp), 2 bytes long.
+// MS2-FUNCTIONAL: one-instruction operand order in the Number load (exe [rax+rsi+0x28], ours [rsi+rax+0x28]); same size, same blocks.
 // MS2-PIN: ??_7MarkerInfo@MovieProfile@AMP@GFx@Scaleform@@6B@ 0x14318f048
 // MS2-PIN: ??_7?$RefCountBase@UMarkerInfo@MovieProfile@AMP@GFx@Scaleform@@$0CEC@@Scaleform@@6B@ 0x14318f048
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0CEC@@Scaleform@@6B@ 0x14318f020
+// ArrayLH<Ptr<MarkerInfo>>::PushBack(val), the array as its own `this`.
+static __forceinline void RawPushMarker(U* array, const Ptr<AMP::MovieProfile::MarkerInfo>& val)
+{
+    U oldSize = array[1];
+    U newSize = oldSize + 1;
+    if (newSize < oldSize)
+    {
+        void** p = (void**)array[0] + newSize;
+        U count = oldSize - newSize;
+        p += count - 1;
+        for (U i = 0; i < count; ++i, --p)
+            if (*p)
+                FUN_14257dcb0(*p);
+        if (newSize < (array[2] >> 1))
+            FUN_142623da0(array, array, newSize);
+    }
+    else if (newSize >= array[2])
+        FUN_142623da0(array, array, newSize + (newSize >> 2));
+    array[1] = newSize;
+    new ((Ptr<AMP::MovieProfile::MarkerInfo>*)array[0] + newSize - 1) Ptr<AMP::MovieProfile::MarkerInfo>(val);
+}
 // @0x142621c80
 void FUN_142621c80(char* self, char* snap)
 {
     RawLocker lock(self + 0xe0);
     for (RawSetIterator<0x20> it = RawSetIterator<0x20>::Begin(RawFieldPtr<U*>(self, 0x168)); !it.IsEnd(); ++it)
     {
-        AMP::MovieProfile::MarkerInfo* info = SF_HEAP_AUTO_NEW(snap) AMP::MovieProfile::MarkerInfo();
+        Ptr<AMP::MovieProfile::MarkerInfo> info = *SF_HEAP_AUTO_NEW(snap) AMP::MovieProfile::MarkerInfo();
         info->Name = RawField<String>(it.Entry(), 0x10);
         info->Number = RawField<UInt32>(it.Entry(), 0x18);
-        U* array = RawFieldPtr<U>(snap, 0x40);
-        U oldSize = array[1];
-        U newSize = oldSize + 1;
-        if (newSize < oldSize)
-        {
-            void** p = (void**)array[0] + oldSize - 1;
-            for (U n = oldSize - newSize; n; --n, --p)
-                if (*p)
-                    FUN_14257dcb0(*p);
-            if (newSize < (array[2] >> 1))
-                FUN_142623da0(array, array, newSize);
-        }
-        else if (newSize >= array[2])
-            FUN_142623da0(array, array, newSize + (newSize >> 2));
-        array[1] = newSize;
-        void** slot = (void**)array[0] + newSize - 1;
-        FUN_14257dc30(info);
-        *slot = info;
-        FUN_14257dcb0(info);
+        RawPushMarker(RawFieldPtr<U>(snap, 0x40), info);
     }
 }
 
