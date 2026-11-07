@@ -5318,8 +5318,9 @@ unsigned FUN_1423cb400(void* raw, const char* name)
 }
 
 // MS2-FUNCTIONAL: HashSetBase::setRawCapacity on the command table (clear on 0, round up with UpperBit, rehash each
-// live entry through CheckExpand and the inline add). Left: the stat id and the new table sit in other home slots
-// (rbx is saved at 0x58, not 0x50), and the entry and hash swap rbx and rdi.
+// live entry through CheckExpand and the inline add, whose probe and walk re-read the table through fresh). Left: the
+// stat id and the new table sit in other home slots (rbx is saved at 0x58, not 0x50), and the entry and hash swap rbx
+// and rdi.
 // @0x1423d9090
 void FUN_1423d9090(void* raw, void* heap, unsigned long long requested)
 {
@@ -5387,12 +5388,11 @@ void FUN_1423d9090(void* raw, void* heap, unsigned long long requested)
                 natural->key = e->key;
                 *reinterpret_cast<Payload*>(&natural->value0) = *reinterpret_cast<Payload*>(&e->value0);
             } else {
-                auto* entries = reinterpret_cast<cx18_CommandEntry*>(table + 2);
                 long long blank = index;
                 do {
-                    blank = (blank + 1) & table[1];
-                } while (static_cast<long long>(entries[blank].next) != -2);
-                cx18_CommandEntry* free = &entries[blank];
+                    blank = (blank + 1) & reinterpret_cast<unsigned long long*>(fresh)[1];
+                } while (static_cast<long long>(reinterpret_cast<cx18_CommandEntry*>(reinterpret_cast<unsigned long long*>(fresh) + 2)[blank].next) != -2);
+                cx18_CommandEntry* free = &reinterpret_cast<cx18_CommandEntry*>(reinterpret_cast<unsigned long long*>(fresh) + 2)[blank];
                 if (natural->home == static_cast<unsigned long long>(index)) {
                     free->next = natural->next;
                     free->home = natural->home;
@@ -5403,7 +5403,7 @@ void FUN_1423d9090(void* raw, void* heap, unsigned long long requested)
                 } else {
                     long long walk = static_cast<long long>(natural->home);
                     for (;;) {
-                        cx18_CommandEntry* w = &entries[walk];
+                        cx18_CommandEntry* w = &reinterpret_cast<cx18_CommandEntry*>(reinterpret_cast<unsigned long long*>(fresh) + 2)[walk];
                         if (static_cast<long long>(w->next) == index) {
                             free->next = natural->next;
                             free->home = natural->home;
@@ -5426,8 +5426,8 @@ void FUN_1423d9090(void* raw, void* heap, unsigned long long requested)
     slot[0] = fresh;
 }
 
-// MS2-FUNCTIONAL: HashSetBase::add on the command table (grow, then insert at the home slot, moving the old head
-// or a borrowed slot to the next free entry). Left: cl keeps the table base in r9 and the mask in rdx, the exe the reverse.
+// HashSetBase::add on the command table (grow, then insert at the home slot, moving the old head or a borrowed slot to
+// the next free entry). The probe and walk re-read the table through map[0] each time, as the SDK's E(i) reads pTable.
 // @0x1423d8b80
 __declspec(noinline) void FUN_1423d8b80(unsigned long long* map, void* heap, void** item, unsigned long long hash)
 {
@@ -5449,12 +5449,11 @@ __declspec(noinline) void FUN_1423d8b80(unsigned long long* map, void* heap, voi
         natural->key = *static_cast<unsigned long long*>(item[0]);
         *reinterpret_cast<Payload*>(&natural->value0) = *static_cast<Payload*>(item[1]);
     } else {
-        auto* entries = reinterpret_cast<cx18_CommandEntry*>(table + 2);
         long long blank = index;
         do {
-            blank = (blank + 1) & table[1];
-        } while (static_cast<long long>(entries[blank].next) != -2);
-        cx18_CommandEntry* free = &entries[blank];
+            blank = (blank + 1) & reinterpret_cast<unsigned long long*>(map[0])[1];
+        } while (static_cast<long long>(reinterpret_cast<cx18_CommandEntry*>(reinterpret_cast<unsigned long long*>(map[0]) + 2)[blank].next) != -2);
+        cx18_CommandEntry* free = &reinterpret_cast<cx18_CommandEntry*>(reinterpret_cast<unsigned long long*>(map[0]) + 2)[blank];
         if (natural->home == static_cast<unsigned long long>(index)) {
             free->next = natural->next;
             free->home = natural->home;
@@ -5467,7 +5466,7 @@ __declspec(noinline) void FUN_1423d8b80(unsigned long long* map, void* heap, voi
         } else {
             long long walk = static_cast<long long>(natural->home);
             for (;;) {
-                cx18_CommandEntry* e = &entries[walk];
+                cx18_CommandEntry* e = &reinterpret_cast<cx18_CommandEntry*>(reinterpret_cast<unsigned long long*>(map[0]) + 2)[walk];
                 if (static_cast<long long>(e->next) == index) {
                     free->next = natural->next;
                     free->home = natural->home;
