@@ -244,9 +244,9 @@ class NetConnection : public Object
 {
 public:
     NetConnection(ASStringContext* psc, Object* pprototype) : Object(psc) { Set__proto__(psc, pprototype); }
-    virtual ObjectType GetObjectType() const;   // exe 0x140011b80 (FUN_140011b80, bound by /alternatename)
+    virtual ObjectType GetObjectType() const;   // exe 0x140011b80
 };
-// constructor and __constructor__ from the prototype part (exe 0x140011de0, FUN_140011de0, bound by /alternatename)
+// constructor and __constructor__ from the prototype part (exe 0x140011de0)
 template<> bool Prototype<NetConnection>::GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
 // NetConnection's prototype (vftables 0x1431b6640 / +0x20 0x1431b6690 / +0x68 0x1431b6638). Its ??_G is 0x1400125e0;
 // the ObjectInterface / GASPrototypeBase slots are cl's adjustor thunks 0x140012580 / 0x140012590. The
@@ -1582,15 +1582,15 @@ Scaleform::GFx::AS2::Object* FUN_140011c90(Scaleform::GFx::AS2::Object* object,
     return object;
 }
 
-// BEHAVIOUR FIX: allocates from the movie's heap (Environment::GetHeap), as the exe does and as the constructor
-// path at 0x140012340 already did; it used the global heap.
-// @0x140011d50
-Scaleform::GFx::AS2::Object* FUN_140011d50(void*, Scaleform::GFx::AS2::Environment* environment)
-{
-    void* storage = environment->GetHeap()->Alloc(0x68);
-    if (storage) return FUN_140011c90(static_cast<Scaleform::GFx::AS2::Object*>(storage), environment);
-    return 0;
-}
+// (0x140011d50 is NetConnectionCtorFunction::CreateNewObject, defined after its class below)
+//
+//
+//
+//
+//
+//
+//
+//
 
 // Releases the interface array storage and runs the executable prototype finalizer.
 // @0x140011d90
@@ -2210,31 +2210,31 @@ void FUN_14000f470(void* object, void* value)
         heap, value, object, &flags);
 }
 
+namespace Scaleform { namespace GFx { namespace AS2 {
+// "constructor" and "__constructor__" are answered by the prototype part (as sfr_video_01's Prototype<NetStream>).
+// The slot's raw this is the ObjectInterface subobject; the complete Object starts 0x20 before it.
+// The builtins come from the string manager at +0x280 (__constructor__) and +0x278 (constructor), the exe's
+// out-of-line GetStringManager call (0x140011e14); constructor is only tested when __constructor__ fails.
+// BEHAVIOUR FIX: the compare runs on the builtin with the name as its argument, as in the exe, so the name's
+// lowercase node is resolved before the case-insensitive compare (SWF <= 6). Ours resolved the builtin's and
+// read the name's pLower unresolved, so "constructor" spelled in another case could miss.
 // @0x140011de0
-void FUN_140011de0(Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context,
-                   Scaleform::GFx::ASString* name, Scaleform::GFx::AS2::Value* value)
+template<>
+bool Prototype<NetConnection>::GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val)
 {
-    // `object` is the ObjectInterface subobject (the vtable slot's this); the complete Object starts 0x20 before it.
-    // the builtins come from the string manager at +0x280 (__constructor__) and +0x278 (constructor), the exe's
-    // out-of-line GetStringManager call (0x140011e14); constructor is only tested when __constructor__ fails.
-    // BEHAVIOUR FIX: the compare runs on the builtin with the name as its argument, as in the exe, so the name's
-    // lowercase node is resolved before the case-insensitive compare (SWF <= 6). Ours resolved the builtin's and
-    // read the name's pLower unresolved, so "constructor" spelled in another case could miss.
-    typedef Scaleform::GFx::ASString Builtin;
-    const bool constructor2 = reinterpret_cast<const Builtin*>(reinterpret_cast<char*>(context->pContext->GetStringManager()) + 0x280)
-        ->CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive());
-    if (constructor2 || reinterpret_cast<const Builtin*>(reinterpret_cast<char*>(context->pContext->GetStringManager()) + 0x278)
-        ->CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive()))
+    bool isConstructor2 = psc->pContext->GetStringManager()->GetBuiltin(ASBuiltin___constructor__)
+                              .CompareBuiltIn_CaseCheck(name, psc->IsCaseSensitive());
+    if (isConstructor2 || psc->pContext->GetStringManager()->GetBuiltin(ASBuiltin_constructor)
+                              .CompareBuiltIn_CaseCheck(name, psc->IsCaseSensitive()))
     {
-        Scaleform::GFx::AS2::Object* owner = reinterpret_cast<Scaleform::GFx::AS2::Object*>(reinterpret_cast<char*>(object) - 0x20);
-        Scaleform::GFx::AS2::GASPrototypeBase* prototypeBase = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
-            reinterpret_cast<char*>(object) + 0x48);
-        prototypeBase->GetMemberRawConstructor(owner, context, *name, value, constructor2);
-        return;
+        return GetMemberRawConstructor(this, psc, name, val, isConstructor2);
     }
-    reinterpret_cast<Scaleform::GFx::AS2::Object*>(reinterpret_cast<char*>(object) - 0x20)
-        ->Scaleform::GFx::AS2::Object::GetMemberRaw(context, *name, value);
+    return NetConnection::GetMemberRaw(psc, name, val);
 }
+}}} // namespace Scaleform::GFx::AS2
+//
+//
+//
 
 // The NetConnection constructor: reuses a NetConnection `this` that is not the builtin prototype
 // (exe: type 0x21, slot 0x80 IsBuiltinPrototype, AddRef on this-0x20), otherwise allocates a plain Object.
@@ -3370,7 +3370,7 @@ static void* Video02ThunkThis(const void* thisValue, int adjust)
 
 // object type tag 0x21.
 // @0x140011b80
-int FUN_140011b80(void*) { return 0x21; }
+Scaleform::GFx::AS2::ObjectInterface::ObjectType Scaleform::GFx::AS2::NetConnection::GetObjectType() const { return static_cast<ObjectType>(0x21); }
 
 // forwards to virtual slot 11 with the member block at +0xe8 of the second argument.
 // @0x140011b90
@@ -3636,8 +3636,17 @@ class NetConnectionCtorFunction : public CFunctionObject
 public:
     NetConnectionCtorFunction(ASStringContext* psc) : CFunctionObject(psc, ::FUN_140012340) {}
     // (implicit destructor: the ??_G 0x1400126b0 calls the out-of-line ~CFunctionObject)
-    virtual Object* CreateNewObject(Environment* penv) const;   // exe 0x140011d50 (FUN_140011d50)
+    virtual Object* CreateNewObject(Environment* penv) const;   // exe 0x140011d50
 };
+// BEHAVIOUR FIX: allocates from the movie's heap (Environment::GetHeap), as the exe does and as the constructor
+// path at 0x140012340 already did; it used the global heap.
+// @0x140011d50
+Object* NetConnectionCtorFunction::CreateNewObject(Environment* environment) const
+{
+    void* storage = environment->GetHeap()->Alloc(0x68);
+    if (storage) return ::FUN_140011c90(static_cast<Object*>(storage), environment);
+    return 0;
+}
 // Emits NetConnectionCtorFunction's vftables with its ??_G and the ObjectInterface (+0x20) adjustor thunk.
 void Video02EmitNetConnectionCtorVftables(void* p, ASStringContext* psc)
 {
@@ -3797,12 +3806,12 @@ Ptr<Render::TreeNode> Video02Character::CreateRenderNode(Render::ContextImpl::Co
 #pragma comment(linker, "/alternatename:?PTR_FUN_1431b6640@@3PEAXEA=??_7NetConnectionProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
 #pragma comment(linker, "/alternatename:?PTR_LAB_1431b6690@@3PEAXEA=??_7NetConnectionProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
 #pragma comment(linker, "/alternatename:?PTR_LAB_1431b6638@@3PEAXEA=??_7NetConnectionProto@AS2@GFx@Scaleform@@6B@")
-// NetConnection::GetObjectType and Prototype<NetConnection>::GetMemberRaw are the hand FUN_ bodies.
+//
 #pragma comment(linker, "/alternatename:?PTR_LAB_1431b6740@@3PEAXEA=??_7NetConnectionCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
 #pragma comment(linker, "/alternatename:?PTR_LAB_1431b67d0@@3PEAXEA=??_7NetConnectionCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
-#pragma comment(linker, "/alternatename:?CreateNewObject@NetConnectionCtorFunction@AS2@GFx@Scaleform@@UEBAPEAVObject@234@PEAVEnvironment@234@@Z=?FUN_140011d50@@YAPEAVObject@AS2@GFx@Scaleform@@PEAXPEAVEnvironment@234@@Z")
-#pragma comment(linker, "/alternatename:?GetObjectType@NetConnection@AS2@GFx@Scaleform@@UEBA?AW4ObjectType@ObjectInterface@234@XZ=?FUN_140011b80@@YAHPEAX@Z")
-#pragma comment(linker, "/alternatename:?GetMemberRaw@?$Prototype@VNetConnection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAA_NPEAVASStringContext@234@AEBVASString@34@PEAVValue@234@@Z=?FUN_140011de0@@YAXPEAVObject@AS2@GFx@Scaleform@@PEAVASStringContext@234@PEAVASString@34@PEAVValue@234@@Z")
+//
+//
+//
 #endif
 
 // MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
