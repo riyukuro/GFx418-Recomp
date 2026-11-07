@@ -1716,7 +1716,7 @@ __forceinline ColorProto::ColorProto(ASStringContext* psc, Object* pprototype, c
 }
 
 __forceinline GASLoadVarsLoaderCtorFunction::GASLoadVarsLoaderCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
-    : CFunctionObject(psc, GlobalCtor, t)
+    : CFunctionObject(psc, GlobalCtor, ObjectGcInlineCtorTag())
 {
 }
 
@@ -1951,8 +1951,7 @@ FunctionRef DropShadowFilterCtorFunction::Register(GlobalContext* pgc)
     return RegisterFilterClassInline<DropShadowFilterCtorFunction, DropShadowFilterProto>(pgc, ASBuiltin_DropShadowFilter);
 }
 
-// MS2-FUNCTIONAL regalloc floor: the CtorFunction ctor is inlined via its ObjectInlineCtorTag ctor, like the exe;
-// the remaining diff is register allocation and a 2-byte longer prolog (mov rax,rsp frame).
+// The CtorFunction ctor is inlined via the GetGC Object path (ObjectGcInlineCtorTag), and the class name is read through pgc, as in the exe.
 // @0x142977ad0
 FunctionRef GASLoadVarsLoaderCtorFunction::Register(GlobalContext* pgc)
 {
@@ -1961,7 +1960,7 @@ FunctionRef GASLoadVarsLoaderCtorFunction::Register(GlobalContext* pgc)
     FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) GASLoadVarsLoaderCtorFunction(&sc, ObjectInlineCtorTag()));
     Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) LoadVarsProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor);
     SetBuiltinPrototype(pgc, ASBuiltin_LoadVars, proto);
-    pgc->pGlobal->SetMemberRaw(&sc, sc.GetBuiltin(ASBuiltin_LoadVars), Value(ctor));
+    pgc->pGlobal->SetMemberRaw(&sc, ((MovieRoot*)pgc->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin_LoadVars), Value(ctor));
     return ctor;
 }
 
