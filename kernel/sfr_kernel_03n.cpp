@@ -228,7 +228,7 @@ struct Sfr21ImageGroup
 // Groups the records of a movie (array +0x18, each with a key at +0x10, data [+0x18, +0x20) and children +0x30) by
 // key, counting them and summing their sizes; records whose key's high word is not 1 count only when `all` is set.
 // Returns a new summary object (vftable 0x143192190) holding the groups and a copy of the movie's hash +0x30.
-// MS2-FUNCTIONAL: same calls and loop; the exe saves its registers late (166-byte prolog) and its frame is larger.
+// MS2-FUNCTIONAL: SDK-ordered Accumulate body, same calls and loops; the exe saves rbx/rbp by mov (shrink-wrap) and keeps the hash table loaded across the Find hit, ours pushes r12 and re-reads it.
 // @0x142689640
 __declspec(noinline) void* FUN_142689640(void* movie, bool all)
 {
@@ -236,59 +236,54 @@ __declspec(noinline) void* FUN_142689640(void* movie, bool all)
     char* summary = (char*)Memory::AllocAutoHeap(movie, 0x30, info);
     if (summary)
     {
+        RawField<U>(summary, 8) = 0;
+        RawField<U>(summary, 0x10) = 0;
+        RawField<U>(summary, 0x18) = 0;
+        RawField<U>(summary, 0x20) = 0;
+        RawField<U>(summary, 0x28) = 0;
+        ::new (summary) RefCountImplCore;
         RawField<void* const*>(summary, 0) = DAT_143192190;
-        RawField<UInt32>(summary, 8) = 1;
         RawField<U>(summary, 0x10) = 0;
         RawField<U>(summary, 0x18) = 0;
         RawField<U>(summary, 0x20) = 0;
         RawField<U>(summary, 0x28) = 0;
     }
+    else
+        summary = 0;
     reinterpret_cast<Sfr03nFunctionDescSet*>(summary + 0x28)->Assign(summary + 0x28, *RawFieldPtr<const Sfr03nFunctionDescSet>(movie, 0x30));
 
     Sfr21ImageGrouping grouping;
     grouping.Table = 0;
     grouping.All = all;
+    Sfr03nFuncStatsHash& map = reinterpret_cast<Sfr03nFuncStatsHash&>(grouping);
     for (U i = 0; i < RawField<U>(movie, 0x20); i++)
     {
         char* record = RawField<char**>(movie, 0x18)[i];
         if (grouping.All || (RawField<U>(record, 0x10) >> 32) == 1)
         {
-            Sfr03nFuncStatsSet::Iterator found = reinterpret_cast<Sfr03nFuncStatsSet*>(&grouping)->FindAlt(RawField<UInt64>(record, 0x10));
-            struct { U** Hash; SPInt Index; }& it = reinterpret_cast<decltype(it)>(found);
-            U bytes = RawField<U>(record, 0x20) - RawField<U>(record, 0x18);
-            if (it.Hash && *it.Hash && it.Index <= (SPInt)(*it.Hash)[1])
+            Sfr03nFuncStatsHash::Iterator it = map.Find(RawField<UInt64>(record, 0x10));
+            if (it != map.End())
             {
-                Sfr21ImageGroup* g = (Sfr21ImageGroup*)(RawEntry(*it.Hash, (U)it.Index, 0x38) + 0x18);
-                g->Count++;
-                g->Bytes += bytes;
+                ++it->Second.TimesCalled;
+                it->Second.TotalTime += RawField<U>(record, 0x20) - RawField<U>(record, 0x18);
             }
             else
             {
-                Sfr21ImageGroup g;
-                g.Key = RawField<U>(record, 0x10);
-                g.Zero = 0;
-                g.Count = 1;
-                g.Bytes = bytes;
-                reinterpret_cast<Sfr03nFuncStatsHash*>(&grouping)->Add(RawField<UInt64>(record, 0x10), reinterpret_cast<const AMP::MovieFunctionStats::FuncStats&>(g));
+                AMP::MovieFunctionStats::FuncStats funcStats;
+                funcStats.FunctionId = RawField<U>(record, 0x10);
+                funcStats.CallerId = 0;
+                funcStats.TimesCalled = 1;
+                funcStats.TotalTime = RawField<U>(record, 0x20) - RawField<U>(record, 0x18);
+                map.Add(RawField<UInt64>(record, 0x10), funcStats);
             }
         }
         for (U j = 0; j < RawField<U>(record, 0x38); j++)
             RawField<AMP::FuncTreeItem**>(record, 0x30)[j]->Visit(reinterpret_cast<AMP::FunctionTreeVisitor&>(grouping));
     }
 
-    if (U* table = grouping.Table)
-    {
-        U i = 0;
-        while (i <= table[1] && *(SPInt*)RawEntry(table, i, 0x38) == -2)
-            i++;
-        while (i <= table[1])
-        {
-            char* slot = RawArrayPush<FUN_142623bc0>(RawFieldPtr<U>(summary, 0x10), 0x20);
-            memcpy(slot, RawEntry(table, i, 0x38) + 0x18, 0x20);
-            for (i++; i <= table[1] && *(SPInt*)RawEntry(table, i, 0x38) == -2; i++)
-                ;
-        }
-    }
+    typedef ArrayData<AMP::MovieFunctionStats::FuncStats, AllocatorLH<AMP::MovieFunctionStats::FuncStats, 2>, ArrayDefaultPolicy> TimingsArr;
+    for (Sfr03nFuncStatsHash::Iterator it = map.Begin(); it != map.End(); ++it)
+        reinterpret_cast<TimingsArr*>(summary + 0x10)->PushBack(it->Second);
     reinterpret_cast<Sfr03nFuncStatsSet*>(&grouping)->Sfr03nFuncStatsSet::~Sfr03nFuncStatsSet();
     return summary;
 }
