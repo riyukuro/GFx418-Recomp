@@ -42,28 +42,33 @@ struct Sd_1431bee78; extern Sd_1431bee78 DAT_1431bee78;
 struct Sd_1431beef0; extern Sd_1431beef0 DAT_1431beef0;
 #define VideoAudioStreamSubVtable (*reinterpret_cast<void**>(&DAT_1431beef0))
 
-// MS2-FUNCTIONAL: copies a VideoPlayer pointer array into fresh allocator owned storage.
-// Left: our cl folds the fresh array's old size to 0 and drops the exe's test of the new size before the grow path.
-// @0x142742ed0
-__declspec(noinline) void* FUN_142742ed0(void* destination, const uint64_t* source)
+typedef Scaleform::GFx::Video::VideoPlayerImpl* Video03bElement;
+typedef Scaleform::ArrayData<Video03bElement, Scaleform::AllocatorGH<Video03bElement, 2>, Scaleform::ArrayDefaultPolicy> Video03bData;
+// ArrayData::Append with ArrayDataBase::ResizeNoConstruct, Reserve bound to the exe's 0x1427463e0
+static inline void Video03bAppend(Video03bData* output, const Video03bElement other[], Scaleform::UPInt count)
 {
-    typedef Scaleform::GFx::Video::VideoPlayerImpl* Element;
-    typedef Scaleform::ArrayData<Element, Scaleform::AllocatorGH<Element, 2>, Scaleform::ArrayDefaultPolicy> Data;
-    Data* output = static_cast<Data*>(destination);
-    output->Data = 0; output->Size = 0; output->Policy.SetCapacity(0);
-    Scaleform::UPInt count = source[1];
-    Element* input = reinterpret_cast<Element*>(source[0]);
     if (count) {
-        const Scaleform::UPInt oldSize = output->Size;
-        const Scaleform::UPInt newSize = oldSize + count;
+        Scaleform::UPInt oldSize = output->Size;
+        Scaleform::UPInt newSize = output->Size + count;
         if (newSize < oldSize) {
             if (newSize < (output->Policy.GetCapacity() >> 1)) Scaleform::ReserveVideoPlayerArray(reinterpret_cast<void**>(output), output, newSize);
         }
         else if (newSize > output->Policy.GetCapacity()) Scaleform::ReserveVideoPlayerArray(reinterpret_cast<void**>(output), output, newSize + (newSize >> 2));
         output->Size = newSize;
-        Element* to = output->Data + oldSize;
-        for (; count; --count) *to++ = *input++;
+        // AllocatorBaseGH ConstructArray(p, count, psource)
+        Scaleform::UByte* pdata = reinterpret_cast<Scaleform::UByte*>(output->Data + oldSize);
+        for (Scaleform::UPInt i = 0; i < count; ++i, pdata += sizeof(Video03bElement))
+            ::new (pdata) Video03bElement(*other++);
     }
+}
+// ArrayData copy ctor: copies a VideoPlayer pointer array into fresh allocator owned storage. The base ctor from the
+// source's Policy keeps the exe's unfolded old size (cl folds it to 0 when the three fields are zeroed by hand).
+// @0x142742ed0
+__declspec(noinline) void* FUN_142742ed0(void* destination, const uint64_t* source)
+{
+    const Video03bData& a = *reinterpret_cast<const Video03bData*>(source);
+    Video03bData* output = static_cast<Video03bData*>(::new (destination) Video03bData::BaseType(a.Policy));
+    Video03bAppend(output, a.Data, a.Size);
     return destination;
 }
 // copies the three leading array fields and deep copies the VideoPlayer list.
