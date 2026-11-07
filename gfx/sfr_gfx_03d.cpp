@@ -209,7 +209,27 @@ void IMEManagerBase::OnCandidateListStyleRequest(IMECandidateListStyle* pstyle) 
 // @0x1425b48e0
 void IMEManagerBase::OnEnableIME(bool) {}
 
-// MS2-FUNCTIONAL 0x1425b49b0: the exe inlines the Ptr assignments (SDK SF_INLINE = __forceinline); ours calls them out of line
+// The exe inlines these two Ptr assignments into SetActiveMovie (the header's are plain inline and stay out of line).
+template<class C>
+static __forceinline void Sfr03dPtrSet(Ptr<C>& dst, const Ptr<C>& src)
+{
+    C*& slot = reinterpret_cast<C*&>(dst);
+    if (src.GetPtr())
+        src.GetPtr()->AddRef();
+    if (slot)
+        slot->Release();
+    slot = src.GetPtr();
+}
+template<class C>
+static __forceinline void Sfr03dPtrAdopt(Ptr<C>& dst, C& src)
+{
+    C*& slot = reinterpret_cast<C*&>(dst);
+    if (slot)
+        slot->Release();
+    slot = &src;
+}
+
+// MS2-FUNCTIONAL 0x1425b49b0: same length and code; only the unrolled FixedSizeHash<Movie*> of Find/Add (sf_hash.h) uses key bytes 6 and 7 in the other order
 // @0x1425b49b0
 void IMEManagerBase::SetActiveMovie(Movie* pmovie)
 {
@@ -231,13 +251,13 @@ void IMEManagerBase::SetActiveMovie(Movie* pmovie)
             ASSupport* psupport = reinterpret_cast<MovieImpl*>(pmovie)->pASMovieRoot->pASSupport;
             if (psupport)
             {
-                pASIMEManager = psupport->CreateASIMEManager();
+                Sfr03dPtrSet(pASIMEManager, psupport->CreateASIMEManager());
                 if (pASIMEManager)
                 {
                     pASIMEManager->SetIMEManager(this);
                     pASIMEManager->SetIMEMoviePath(CandidateSwfPath.ToCStr());
-                    pASIMEManager->CustomFuncCandList    = *SF_NEW ASIMEManager::IMEFuncHandler(this);
-                    pASIMEManager->CustomFuncLanguageBar = *SF_NEW ASIMEManager::IMEFuncHandler(this);
+                    Sfr03dPtrAdopt(pASIMEManager->CustomFuncCandList, *SF_NEW ASIMEManager::IMEFuncHandler(this));
+                    Sfr03dPtrAdopt(pASIMEManager->CustomFuncLanguageBar, *SF_NEW ASIMEManager::IMEFuncHandler(this));
                     pASIMEManager->SetActiveMovie(pmovie);
                     MovieASIMEManagerHash.Add(pmovie, pASIMEManager);
                 }
