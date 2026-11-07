@@ -2080,9 +2080,9 @@ void StageCtorFunction::NotifyOnResize(Environment* penv)
 {
     if (penv->GetSC()->pContext->CheckExtensions())
     {
-        Value         v;
         Render::RectF rect = penv->GetTarget()->GetMovieImpl()->AsMovieInterface()->GetVisibleFrameRect();
         // CreateRectangleObject (0x142937bc0) inlined
+        Value         v;
         {
             Ptr<Object> obj =
                 *penv->OperatorNew(penv->GetSC()->pContext->FlashGeomPackage, penv->GetBuiltin(ASBuiltin_Rectangle));

@@ -13,8 +13,9 @@
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // ArrayObject::PushBack (0x142971ba0) and StringProto::CreateStringFromCStr (0x142937e20), which the exe inlines here.
-static SF_FORCEINLINE void PushElem(ArrayObject* parr, const Value& val)
+static SF_FORCEINLINE void PushElem(ArrayObject* parr, const ASString& s)
 {
+    Value val(s);
     parr->Elements.PushBack(SF_HEAP_AUTO_NEW(parr) Value(val));
 }
 
@@ -59,7 +60,7 @@ Ptr<ArrayObject> StringProto::StringSplit(Environment* penv, const ASString& str
         {
             tmpStr.Clear();
             tmpStr.AppendChar(c1);
-            PushElem(retVal, Value(psc->CreateString(tmpStr)));
+            PushElem(retVal, psc->CreateString(tmpStr));
         }
     }
     else
@@ -93,7 +94,7 @@ Ptr<ArrayObject> StringProto::StringSplit(Environment* penv, const ASString& str
             {
                 if (count >= limit)
                     break;
-                PushElem(retVal, Value(PieceString(psc, start, end)));
+                PushElem(retVal, PieceString(psc, start, end));
                 pstr = start = prev;
                 ++count;
             }
@@ -102,9 +103,9 @@ Ptr<ArrayObject> StringProto::StringSplit(Environment* penv, const ASString& str
                 if (count < limit)
                 {
                     if (c2 == 0)
-                        PushElem(retVal, Value(PieceString(psc, start, end)));
+                        PushElem(retVal, PieceString(psc, start, end));
                     else
-                        PushElem(retVal, Value(PieceString(psc, start)));
+                        PushElem(retVal, PieceString(psc, start));
                 }
                 break;
             }
