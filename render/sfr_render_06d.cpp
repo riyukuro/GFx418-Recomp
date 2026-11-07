@@ -1568,7 +1568,8 @@ void GlyphCache::addShapeToRasterizer(const ShapeDataInterface* shape, float sca
 // Copies the font outline into the cached glyph shape, sheared for faux italic. Faux bold grows every filled contour
 // by an equidistant on its outer side, an outline glyph strokes the (possibly bolded) contours with a mitered line;
 // both come out as polygons (layer 1 = fill style 1).
-// MS2-FUNCTIONAL: same instruction stream; stack frame 0x10 smaller (local slot order) and register allocation
+// MS2-FUNCTIONAL: SDK 4.2 body; 2 lines left, the two inlined EndPath/EndShape PushBack(0) stores address
+// [rdi+rax-1] where the exe has [rax+rdi-1] (operand order only)
 // @0x1426c8d80
 void GlyphCache::copyAndTransformShape(VectorGlyphShape* glyphShape, const ShapeDataInterface* srcShape,
                                        bool fauxBold, bool fauxItalic, unsigned outline,
@@ -1577,8 +1578,11 @@ void GlyphCache::copyAndTransformShape(VectorGlyphShape* glyphShape, const Shape
     if (srcShape->IsEmpty())
         return;
 
+    float tolerance = nominalSize / 64;
+
     ToleranceParams param;
-    InitGlyphTolerance(&param, nominalSize / 64);
+    param.CurveTolerance *= tolerance;
+    param.CollinearityTolerance *= tolerance;
 
     Matrix2F italic;
     if (fauxItalic)
@@ -1591,131 +1595,140 @@ void GlyphCache::copyAndTransformShape(VectorGlyphShape* glyphShape, const Shape
     ShapePosInfo  srcPos(srcShape->GetStartingPos());
     ShapePosInfo  dstPos(0);
     ShapePathType pathType;
-    PathEdgeType  edge;
+    PathEdgeType  pathEdge;
     float         coord[Edge_MaxCoord];
     unsigned      styles[3];
     bool          first = true;
-    GlyphShape*   dst;
 
-    if (!fauxBold && !outline)
+    if (fauxBold || outline)
     {
+        const float verScale = 1000;
+        bool cw = isOuterContourCW(srcShape);
+        mStroker.Clear();
+        TmpPath1.Clear();
+        float fauxBoldWidth = fauxBold ? Param.FauxBoldRatio * nominalSize : 0.0f;
+        mStroker.SetWidth(fauxBoldWidth);
+        StrokeScaler scaler(mStroker, 1, verScale);
         while ((pathType = srcShape->ReadPathInfo(&srcPos, coord, styles)) != Shape_EndShape)
         {
             if (!first && pathType == Shape_NewLayer)
                 break;
             first = false;
-            if (styles[0] == styles[1])
+
+            if (styles[0] != styles[1])
+            {
+                italic.Transform(&coord[0], &coord[1]);
+                scaler.AddVertex(coord[0], coord[1]);
+                while ((pathEdge = srcShape->ReadEdge(&srcPos, coord)) != Edge_EndPath)
+                {
+                    if (pathEdge == Edge_LineTo)
+                    {
+                        italic.Transform(&coord[0], &coord[1]);
+                        scaler.AddVertex(coord[0], coord[1]);
+                    }
+                    else
+                    {
+                        italic.Transform(&coord[0], &coord[1]);
+                        italic.Transform(&coord[2], &coord[3]);
+                        TessellateQuadCurve(&scaler, param, coord[0], coord[1], coord[2], coord[3]);
+                    }
+                }
+                mStroker.ClosePath();
+                mStroker.CalcEquidistant(&TmpPath1, cw ? Stroker::DirForward : Stroker::DirBackward);
+            }
+            else
             {
                 srcShape->SkipPathData(&srcPos);
-                continue;
             }
-            italic.Transform(&coord[0], &coord[1]);
-            glyphShape->pShape->StartPath(&dstPos, pathType, styles[0], styles[1], styles[2], coord[0], coord[1]);
-            while ((edge = srcShape->ReadEdge(&srcPos, coord)) != Edge_EndPath)
+        }
+        TmpPath1.Scale(1, 1 / verScale);
+        const VertexPath* vp = &TmpPath1;
+
+        unsigned i, j;
+        if (outline)
+        {
+            TmpPath2.Clear();
+            mStroker.Clear();
+            mStroker.SetWidth(float(outline) * Param.OutlineRatio * nominalSize);
+            mStroker.SetLineJoin(Stroker::MiterJoin);
+
+            for (i = 0; i < TmpPath1.GetNumPaths(); ++i)
             {
-                dst = glyphShape->pShape;
-                if (edge == Edge_LineTo)
+                const PathBasic& path = TmpPath1.GetPath(i);
+                if (path.Count > 2)
                 {
-                    italic.Transform(&coord[0], &coord[1]);
-                    dst->LineTo(&dstPos, coord[0], coord[1]);
-                }
-                else
-                {
-                    italic.Transform(&coord[0], &coord[1]);
-                    italic.Transform(&coord[2], &coord[3]);
-                    dst->QuadTo(&dstPos, coord[0], coord[1], coord[2], coord[3]);
+                    for (j = 0; j < path.Count; ++j)
+                    {
+                        const VertexBasic& v2 = TmpPath1.GetVertex(path.Start + j);
+                        mStroker.AddVertex(v2.x, v2.y);
+                    }
+                    mStroker.ClosePath();
+                    mStroker.GenerateStroke(&TmpPath2);
                 }
             }
-            glyphShape->pShape->ClosePath(&dstPos);
-            glyphShape->pShape->EndPath();
+            vp = &TmpPath2;
+        }
+
+        unsigned np = 0;
+        for (i = 0; i < vp->GetNumPaths(); ++i)
+        {
+            const PathBasic& path = vp->GetPath(i);
+            if (path.Count > 2)
+            {
+                const VertexBasic& v1 = vp->GetVertex(path.Start);
+                glyphShape->pShape->StartPath(&dstPos, (np == 0) ? Shape_NewLayer : Shape_NewPath, 1, 0, 0, v1.x, v1.y);
+                for (j = 1; j < path.Count; ++j)
+                {
+                    const VertexBasic& v2 = vp->GetVertex(path.Start + j);
+                    glyphShape->pShape->LineTo(&dstPos, v2.x, v2.y);
+                }
+                glyphShape->pShape->ClosePath(&dstPos);
+                glyphShape->pShape->EndPath();
+                ++np;
+            }
         }
         glyphShape->pShape->EndShape();
+        mStroker.Clear();
+        TmpPath1.Clear();
+        TmpPath2.Clear();
+        LHeap1.ClearAndRelease();
+        LHeap2.ClearAndRelease();
         return;
     }
 
-    bool cw = isOuterContourCW(srcShape);
-    mStroker.Clear();
-    TmpPath1.Clear();
-    mStroker.SetWidth(fauxBold ? nominalSize * Param.FauxBoldRatio : 0.0f);
-    StrokeScaler scaler(mStroker, 1, 1000);
     while ((pathType = srcShape->ReadPathInfo(&srcPos, coord, styles)) != Shape_EndShape)
     {
         if (!first && pathType == Shape_NewLayer)
             break;
         first = false;
-        if (styles[0] == styles[1])
+
+        if (styles[0] != styles[1])
+        {
+            italic.Transform(&coord[0], &coord[1]);
+            glyphShape->pShape->StartPath(&dstPos, pathType, styles[0], styles[1], styles[2], coord[0], coord[1]);
+            while ((pathEdge = srcShape->ReadEdge(&srcPos, coord)) != Edge_EndPath)
+            {
+                if (pathEdge == Edge_LineTo)
+                {
+                    italic.Transform(&coord[0], &coord[1]);
+                    glyphShape->pShape->LineTo(&dstPos, coord[0], coord[1]);
+                }
+                else
+                {
+                    italic.Transform(&coord[0], &coord[1]);
+                    italic.Transform(&coord[2], &coord[3]);
+                    glyphShape->pShape->QuadTo(&dstPos, coord[0], coord[1], coord[2], coord[3]);
+                }
+            }
+            glyphShape->pShape->ClosePath(&dstPos);
+            glyphShape->pShape->EndPath();
+        }
+        else
         {
             srcShape->SkipPathData(&srcPos);
-            continue;
         }
-        italic.Transform(&coord[0], &coord[1]);
-        scaler.AddVertex(coord[0], coord[1]);
-        while ((edge = srcShape->ReadEdge(&srcPos, coord)) != Edge_EndPath)
-        {
-            if (edge == Edge_LineTo)
-            {
-                italic.Transform(&coord[0], &coord[1]);
-                scaler.AddVertex(coord[0], coord[1]);
-            }
-            else
-            {
-                italic.Transform(&coord[0], &coord[1]);
-                italic.Transform(&coord[2], &coord[3]);
-                TessellateQuadCurve(&scaler, param, coord[0], coord[1], coord[2], coord[3]);
-            }
-        }
-        mStroker.ClosePath();
-        mStroker.CalcEquidistant(&TmpPath1, cw ? Stroker::DirForward : Stroker::DirBackward);
-    }
-    TmpPath1.Scale(1, 1.0f / 1000);
-
-    VertexPath* path = &TmpPath1;
-    unsigned    i, j;
-    if (outline)
-    {
-        path = &TmpPath2;
-        TmpPath2.Clear();
-        mStroker.Clear();
-        mStroker.SetLineJoin(Stroker::MiterJoin);
-        mStroker.SetWidth(float(outline) * Param.OutlineRatio * nominalSize);
-        for (i = 0; i < TmpPath1.GetNumPaths(); ++i)
-        {
-            const PathBasic& p = TmpPath1.GetPath(i);
-            if (p.Count <= 2)
-                continue;
-            for (j = 0; j < p.Count; ++j)
-            {
-                const VertexBasic& v = TmpPath1.GetVertex(p.Start + j);
-                mStroker.AddVertex(v.x, v.y);
-            }
-            mStroker.ClosePath();
-            mStroker.GenerateStroke(&TmpPath2);
-        }
-    }
-
-    unsigned np = 0;
-    for (i = 0; i < path->GetNumPaths(); ++i)
-    {
-        const PathBasic& p = path->GetPath(i);
-        if (p.Count <= 2)
-            continue;
-        const VertexBasic& v1 = path->GetVertex(p.Start);
-        glyphShape->pShape->StartPath(&dstPos, np ? Shape_NewPath : Shape_NewLayer, 1, 0, 0, v1.x, v1.y);
-        for (j = 1; j < p.Count; ++j)
-        {
-            const VertexBasic& v = path->GetVertex(p.Start + j);
-            glyphShape->pShape->LineTo(&dstPos, v.x, v.y);
-        }
-        glyphShape->pShape->ClosePath(&dstPos);
-        glyphShape->pShape->EndPath();
-        ++np;
     }
     glyphShape->pShape->EndShape();
-    mStroker.Clear();
-    TmpPath1.Clear();
-    TmpPath2.Clear();
-    LHeap1.ClearAndRelease();
-    LHeap2.ClearAndRelease();
 }
 
 // ---- blur / filters on the A8 work raster ----
