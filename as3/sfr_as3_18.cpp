@@ -2076,7 +2076,9 @@ SF_FORCEINLINE bool TrIsClassTypeSlot(const SlotInfo& si)
         const Abc::NamespaceInfo& ns = mn.Ind == 0 ? cp.any_namespace : cp.ConstNamespace[mn.Ind];
         const StringDataPtr       tn = cp.GetString(mn.NameIndex);
         // NamespaceInfo::IsPublic (public or explicit) with an empty URI
-        if (tn.ToCStr() && strncmp(tn.ToCStr(), "Class", 5) == 0 && (static_cast<UInt32>(ns.Kind) & ~4u) == 0 &&
+        const char* const cls = "Class";
+        if (((tn.ToCStr() == cls && tn.GetSize() == 5) || (tn.ToCStr() && strncmp(tn.ToCStr(), cls, 5) == 0)) &&
+            (static_cast<UInt32>(ns.Kind) & ~4u) == 0 &&
             ns.NameURI.GetSize() == 0)
             result = true;
     }
@@ -2094,9 +2096,9 @@ namespace TR {
 // The traced type of a property read through the slot si of obj_traits, into type: the function type of a method
 // slot, the return type of a getter, else the slot's declared type (its class for a Class-typed or class-bound slot).
 // An unknown declared type raises VerifyError 1014 (false).
-// MS2-FUNCTIONAL 0x14250cf20: the exe packs every Value temp into one stack slot with a shared type= tail
-// and duplicates the slot-trait GetMultiname branch; ours keeps the BT_Code temp apart in a 0x10-larger frame
-// (left: slot offsets, the NameIndex load width, register allocation)
+// MS2-FUNCTIONAL 0x14250cf20: the exe duplicates the slot-trait GetMultiname branch and computes the slot
+// index into rbx before the first call (ours keeps the binding word in edi); left: entry register allocation,
+// the NameIndex load width and some slot offsets
 // @0x14250cf20
 __declspec(safebuffers) CheckResult State::GetPropertyType(const Traits* obj_traits, const SlotInfo& si, Value& type) const
 {
@@ -2105,7 +2107,12 @@ __declspec(safebuffers) CheckResult State::GetPropertyType(const Traits* obj_tra
         if (si.BindType == SlotInfo::BT_Code)
         {
             // Retrieve function type.
-            InstanceTraits::Traits& tr = GetFunctType(obj_traits->GetVT().GetValue(AbsoluteIndex(si.ValueInd)));
+            InstanceTraits::Traits* ptr;
+            {
+                const Value f = obj_traits->GetVT().GetValue(AbsoluteIndex(si.ValueInd));
+                ptr = &GetFunctType(f);
+            }
+            InstanceTraits::Traits& tr = *ptr;
             type = Value(tr, CanBeNull(tr));
         }
         else
