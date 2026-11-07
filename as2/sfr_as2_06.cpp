@@ -1269,7 +1269,9 @@ static SF_FORCEINLINE FunctionRef RegisterBuiltinClass(GlobalContext* pgc, ASBui
     return ctor;
 }
 
-// Object(psc) + Set__proto__ inlined (prototype instances); the exe calls Object::SetMemberRaw directly.
+// Object(psc) + Set__proto__ inlined (prototype instances); the exe calls Object::SetMemberRaw directly here.
+// Ctors whose __proto__ store the exe makes virtually ([vptr+0x50] on the ObjectInterface base) spell it
+// static_cast<ObjectInterface*>(this)->SetMemberRaw; each was measured per site against its Register.
 #define SFR06_INLINE_PROTO_OBJECT(T)                                                                                     \
     __forceinline T::T(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag) : Object(psc, ObjectInlineCtorTag()) \
     {                                                                                                                    \
@@ -1344,7 +1346,7 @@ __forceinline AmpMarker::AmpMarker(ASStringContext* psc, Object* pprototype, Obj
     : Object(psc, ObjectInlineCtorTag())
 {
     if (!pProto)
-        Object::SetMemberRaw(
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(
             psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
             Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
     pProto = pprototype;
@@ -1367,7 +1369,7 @@ __forceinline TextSnapshotObject::TextSnapshotObject(ASStringContext* psc, Objec
 {
     ::new (Data68) StaticTextSnapshotData();
     if (!pProto)
-        Object::SetMemberRaw(
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(
             psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
             Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
     pProto = pprototype;
@@ -1440,7 +1442,7 @@ __forceinline StringObject::StringObject(ASStringContext* psc, Object* pprototyp
     : Object(psc, ObjectInlineCtorTag()), sValue(psc->GetBuiltin(ASBuiltin_empty_))
 {
     if (!pProto)
-        Object::SetMemberRaw(
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(
             psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
             Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
     pProto = pprototype;
@@ -1464,7 +1466,7 @@ __forceinline NumberObject::NumberObject(ASStringContext* psc, Object* pprototyp
     : Object(psc, ObjectInlineCtorTag()), NumberValue(0)
 {
     if (!pProto)
-        Object::SetMemberRaw(
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(
             psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
             Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
     pProto = pprototype;
@@ -1511,7 +1513,7 @@ __forceinline ExternalInterface::ExternalInterface(ASStringContext* psc, Object*
     : Object(psc, ObjectInlineCtorTag())
 {
     if (!pProto)
-        Object::SetMemberRaw(
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(
             psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
             Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
     pProto = pprototype;
@@ -1569,7 +1571,7 @@ __forceinline MovieClipLoader::MovieClipLoader(ASStringContext* psc, Object* ppr
     : Object(psc, ObjectInlineCtorTag())
 {
     if (!pProto)
-        Object::SetMemberRaw(
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(
             psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
             Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
     pProto = pprototype;
@@ -1590,7 +1592,7 @@ __forceinline SharedObject::SharedObject(ASStringContext* psc, Object* pprototyp
     : Object(psc, ObjectInlineCtorTag())
 {
     if (!pProto)
-        Object::SetMemberRaw(
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(
             psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
             Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
     pProto = pprototype;
@@ -1619,7 +1621,7 @@ __forceinline BitmapData::BitmapData(ASStringContext* psc, Object* pprototype, O
     : Object(psc, ObjectInlineCtorTag())
 {
     if (!pProto)
-        Object::SetMemberRaw(
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(
             psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
             Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
     pProto = pprototype;
@@ -1643,7 +1645,7 @@ __forceinline ArrayObject::ArrayObject(ASStringContext* psc, Object* pprototype,
     : Object(psc, ObjectInlineCtorTag()), LogPtr(0), RecursionCount(0), LengthValueOverriden(false)
 {
     if (!pProto)
-        Object::SetMemberRaw(
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(
             psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
             Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
     pProto = pprototype;
@@ -1683,7 +1685,7 @@ __forceinline ButtonObject::ButtonObject(ASStringContext* psc, Object* pprototyp
     : Object(psc, ObjectInlineCtorTag())
 {
     if (!pProto)
-        Object::SetMemberRaw(
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(
             psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
             Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
     pProto = pprototype;
@@ -1701,7 +1703,7 @@ __forceinline ColorObject::ColorObject(ASStringContext* psc, Object* pprototype,
     : Object(psc, ObjectInlineCtorTag())
 {
     if (!pProto)
-        Object::SetMemberRaw(
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(
             psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
             Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
     pProto = pprototype;
