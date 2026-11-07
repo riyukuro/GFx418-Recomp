@@ -15,59 +15,71 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-// The environment of _level0.
-static SF_FORCEINLINE Environment* ItLevel0Env(MovieRoot* proot)
+// IntervalTimer::GetNextInterval, inlined in the exe: never more than ten calls a frame.
+static SF_FORCEINLINE UInt64 ItGetNextInterval(const IntervalTimer* pt, UInt64 currentTime, UInt64 frameTime)
 {
-    return ToAvmCharacter(proot->GetLevelMovie(0))->GetASEnvironment();
+    UInt64 interval;
+    if (pt->Interval < frameTime / 10)
+        interval = unsigned(frameTime / 10);
+    else
+        interval = pt->Interval;
+    if (interval == 0)
+        return 0;
+    return (((currentTime - pt->InvokeTime) + interval) / interval) * interval;
 }
+
+// WeakPtr<InteractiveObject>::operator Ptr<InteractiveObject> (0x1422b4770), which the exe calls out of line, called
+// through a view of pTarget.
+struct Unk_ItWeakTarget { Ptr<InteractiveObject> FUN_1422b4770() const; };
 
 // Not yet due: false. Otherwise the callback runs with the timer's arguments, in the environment of its clip (or
 // _level0), and the next call is put a whole number of intervals after the last one, never sooner than a tenth of
 // the frame time. A timer whose object or clip is gone stops; a timeout stops after its call.
-// MS2-FUNCTIONAL: register allocation and block layout differ.
+// MS2-FUNCTIONAL: register allocation and block layout differ; the exe also keeps the converted target in a register
+// where ours reloads it from the temporary before releasing it.
 // @0x142962c90
 bool IntervalTimer::Invoke(MovieImpl* proot, float frameTime)
 {
     if (!Active)
         return false;
+    MovieRoot* asroot = static_cast<MovieRoot*>(proot->pASMovieRoot);
 
-    MovieRoot* pasRoot     = static_cast<MovieRoot*>(proot->pASMovieRoot);
-    UInt64     currentTime = proot->TimeElapsed;
-    bool       retval      = false;
+    UInt64 currentTime = proot->TimeElapsed;
+    bool   retval      = false;
     if (currentTime >= InvokeTime)
     {
         FunctionRef            function;
+        ObjectInterface*       thisPtr = 0;
         Ptr<Object>            thisHolder;
-        Ptr<InteractiveObject> target;
-        ObjectInterface*       pthis = 0;
-        Environment*           penv  = 0;
+        Ptr<InteractiveObject> targetHolder;
+        Environment*           penv = 0;
 
         if (!Function.IsNull())
+        {
             function = Function;
+        }
         else
         {
-            if (pObject)
+            thisHolder = Ptr<Object>(pObject);
+            if (thisHolder)
             {
-                thisHolder = pObject;
-                pthis      = thisHolder;
+                thisPtr = thisHolder;
             }
-            else
+            else if ((targetHolder = Ptr<InteractiveObject>(reinterpret_cast<const Unk_ItWeakTarget&>(pTarget).FUN_1422b4770().GetPtr())))
             {
-                target = pTarget;
-                if (target)
+                thisPtr = ToAvmCharacter(targetHolder);
+                penv    = ToAvmCharacter(targetHolder)->GetASEnvironment();
+            }
+            if (thisPtr)
+            {
+                Value            methodVal;
+                ASStringContext* psc = ToAvmCharacter(asroot->GetLevelMovie(0))->GetASEnvironment()->GetSC();
+                if (thisPtr->GetMemberRaw(psc, MethodName, &methodVal))
                 {
-                    pthis = ToAvmCharacter(target);
-                    penv  = ToAvmCharacter(target)->GetASEnvironment();
+                    function = methodVal.ToFunction(penv);
                 }
             }
-            if (pthis)
-            {
-                Value methodVal;
-                if (pthis->GetMemberRaw(ItLevel0Env(pasRoot)->GetSC(), MethodName, &methodVal))
-                    function = methodVal.ToFunction(penv);
-            }
-            else
-                // The object or clip is gone.
+            else // the object or clip is gone
                 Active = false;
         }
 
@@ -78,43 +90,41 @@ bool IntervalTimer::Invoke(MovieImpl* proot, float frameTime)
             {
                 if (Character)
                 {
-                    Ptr<DisplayObject> pch = Character->ResolveCharacter(proot);
-                    if (pch)
-                        penv = ToAvmCharacter(pch->IsInteractiveObject() ? static_cast<InteractiveObject*>(pch.GetPtr())
-                                                                          : 0)
-                                   ->GetASEnvironment();
+                    Ptr<DisplayObject> levelCh = Character->ResolveCharacter(proot);
+                    if (levelCh)
+                        penv = ToAvmCharacter(levelCh->IsInteractiveObject()
+                                                  ? static_cast<InteractiveObject*>(levelCh.GetPtr())
+                                                  : 0)->GetASEnvironment();
                 }
                 if (!penv)
-                    penv = ItLevel0Env(pasRoot);
+                {
+                    penv = ToAvmCharacter(asroot->GetLevelMovie(0))->GetASEnvironment();
+                }
             }
-            int nArgs = int(Params.GetSize());
+
+            int nArgs = (int)Params.GetSize();
             if (nArgs > 0)
             {
                 for (int i = nArgs - 1; i >= 0; --i)
                     penv->Push(Params[i]);
             }
-            function.Invoke(FnCall(&result, pthis, penv, nArgs, penv->GetTopIndex()));
-            penv->Drop(nArgs);
+            function.Invoke(FnCall(&result, thisPtr, penv, nArgs, penv->GetTopIndex()));
+            if (nArgs > 0)
+            {
+                penv->Drop(nArgs);
+            }
         }
 
         if (Unrecovered_79)
-            // setTimeout: once only.
+        {
+            // setTimeout: once only
             Active = false;
+        }
         else
         {
-            UInt64 interval    = Interval;
-            UInt64 minInterval = UInt64(frameTime * 1000000.f) / 10;
-            if (interval < minInterval)
-                interval = unsigned(minInterval);
-            if (interval)
-            {
-                UInt64 delta = currentTime - InvokeTime + interval;
-                delta -= delta % interval;
-                if (delta)
-                    InvokeTime += delta;
-                else
-                    InvokeTime = currentTime;
-            }
+            UInt64 interval = ItGetNextInterval(this, currentTime, UInt64(frameTime * 1000000.f));
+            if (interval > 0)
+                InvokeTime += interval;
             else
                 InvokeTime = currentTime;
         }
