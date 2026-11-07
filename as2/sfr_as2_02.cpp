@@ -1374,15 +1374,25 @@ void AvmSprite::SpriteGetSWFVersion(const FnCall& fn)
         fn.Result->SetInt(psprite->GetVersion());
 }
 
+// A DragState whose points the ctor body zeroes again, field by field: the exe zeroes them with three qword stores.
+struct StartDragState : MovieImpl::DragState
+{
+    SF_FORCEINLINE StartDragState()
+    {
+        BoundLT.x = BoundLT.y = 0;
+        BoundRB.x = BoundRB.y = 0;
+        CenterDelta.x = CenterDelta.y = 0;
+    }
+};
+
 // startDrag([lockCenter [, left, top, right, bottom]]): the clip follows the mouse, optionally kept in the rectangle.
-// MS2-FUNCTIONAL regalloc: the exe keeps the twips factor and the four bounds in xmm6-xmm11 and an rbp frame
 // @0x142906650
 void AvmSprite::SpriteStartDrag(const FnCall& fn)
 {
     Sprite* psprite = SpriteGetTarget(fn);
     if (!psprite)
         return;
-    MovieImpl::DragState st;
+    StartDragState st;
     bool lockCenter = false;
     if (fn.NArgs > 0)
     {
@@ -1390,18 +1400,21 @@ void AvmSprite::SpriteStartDrag(const FnCall& fn)
         if (fn.NArgs > 4)
         {
             st.Bound = true;
-            float x0 = Render::PixelsToTwips(float(fn.Arg(1).ToNumber(fn.Env)));
-            float y0 = Render::PixelsToTwips(float(fn.Arg(2).ToNumber(fn.Env)));
-            float x1 = Render::PixelsToTwips(float(fn.Arg(3).ToNumber(fn.Env)));
-            float y1 = Render::PixelsToTwips(float(fn.Arg(4).ToNumber(fn.Env)));
-            float left = x0, right = x1;
-            if (x1 < x0)
+            // Each low bound is copied as soon as it is read, so it keeps its own register beside the compared value.
+            float x0     = Render::PixelsToTwips(float(fn.Arg(1).ToNumber(fn.Env)));
+            float left   = x0;
+            float y0     = Render::PixelsToTwips(float(fn.Arg(2).ToNumber(fn.Env)));
+            float top    = y0;
+            float x1     = Render::PixelsToTwips(float(fn.Arg(3).ToNumber(fn.Env)));
+            float right  = x1;
+            float y1     = Render::PixelsToTwips(float(fn.Arg(4).ToNumber(fn.Env)));
+            float bottom = y1;
+            if (x0 > x1)
             {
                 left  = x1;
                 right = x0;
             }
-            float top = y0, bottom = y1;
-            if (y1 < y0)
+            if (y0 > y1)
             {
                 top    = y1;
                 bottom = y0;
