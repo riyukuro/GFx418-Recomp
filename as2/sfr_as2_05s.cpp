@@ -23,10 +23,35 @@ inline bool Environment::IsVerboseAction() const
 
 namespace {
 
-// The handler as a function object, for the trace lines.
-inline void* MethodPtr(const Value& method, Environment* penv)
+struct SetLocalFrameInline05sTag {};
+
+// FunctionRefBase::SetLocalFrame (exe 0x142981e70), expanded in place as the exe has it here (as in sfr_as2_05j).
+SF_FORCEINLINE void FunctionRefSetLocalFrame(FunctionRefBase* p, LocalFrame* localFrame, bool weakRef)
 {
-    return method.ToFunction(penv).GetObjectPtr();
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->Release();
+    p->pLocalFrame = localFrame;
+    if (weakRef)
+        p->Flags |= FunctionRefBase::FuncRef_Weak;
+    else
+        p->Flags &= ~FunctionRefBase::FuncRef_Weak;
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->AddRef();
+}
+
+struct ValueAccess : Value
+{
+    using Value::ResolveFunctionName;
+};
+
+// Value::ToFunction with the FunctionRef copy's SetLocalFrame expanded.
+SF_FORCEINLINE FunctionRef ValueToFunction(const Value& v, const Environment* penv)
+{
+    if (v.GetType() == Value::FUNCTION)
+        return FunctionRef(v.V.FunctionValue, SetLocalFrameInline05sTag());
+    else if (v.GetType() == Value::FUNCTIONNAME)
+        return static_cast<const ValueAccess&>(v).ResolveFunctionName(penv);
+    return FunctionRef();
 }
 
 inline const char* NamePathOf(DisplayObject* pdispObj)
@@ -36,10 +61,23 @@ inline const char* NamePathOf(DisplayObject* pdispObj)
 
 } // namespace
 
+// FunctionRefBase::Init(orig) with the SetLocalFrame call expanded.
+template<class Tag>
+SF_FORCEINLINE FunctionRef::FunctionRef(const FunctionRefBase& orig, Tag)
+{
+    Flags    = 0;
+    Function = orig.Function;
+    if (!(Flags & FuncRef_Internal) && Function)
+        Function->AddRef();
+    pLocalFrame = 0;
+    if (orig.pLocalFrame)
+        FunctionRefSetLocalFrame(this, orig.pLocalFrame, (orig.Flags & FuncRef_Weak) != 0);
+}
+
 // With the GFx extensions the method gets the button, the roll-over count or the key flag, and the mouse as
 // arguments; a nested roll over / out of another mouse only reaches a method taking two or more arguments.
-// MS2-FUNCTIONAL: the exe always pushes the button and the mouse (no aux mask test); GetMovieImpl, the verbose test
-// and the Value releases are inlined there
+// MS2-FUNCTIONAL: GetMovieImpl, ToFunction with SetLocalFrame and the Value releases are inlined as in the exe; the
+// frame is 8 bytes smaller and rbx is pushed where the exe saves it to its home slot
 // @0x142940160
 bool AvmCharacter::ExecuteEvent(const EventId& id)
 {
@@ -51,7 +89,7 @@ bool AvmCharacter::ExecuteEvent(const EventId& id)
     if (id.Id == EventId::Event_KeyDown || id.Id == EventId::Event_KeyUp)
     {
         // Key.getAscii() / Key.getCode() see the key inside onClipEvent(keyDown / keyUp).
-        if (MovieImpl* proot = env->GetMovieImpl())
+        if (MovieImpl* proot = env->GetTarget()->GetMovieImpl())
             proot->GetKeyboardState(id.KeyboardIndex)->UpdateListeners(id);
     }
 
@@ -80,7 +118,7 @@ bool AvmCharacter::ExecuteEvent(const EventId& id)
                 bool handlerFound = true;
                 if (id.RollOverCnt != 0)
                 {
-                    FunctionRef mfref = method.ToFunction(env);
+                    FunctionRef mfref = ValueToFunction(method, env);
                     if (!mfref.IsNull() && mfref->GetNumArgs() < 2)
                         handlerFound = false;
                 }
@@ -90,7 +128,7 @@ bool AvmCharacter::ExecuteEvent(const EventId& id)
                     ++handlerFoundCnt;
                     if (env->IsVerboseAction())
                         env->LogAction("\n!!! ExecuteEvent started '%s' = %p for %s\n", methodName.ToCStr(),
-                                       MethodPtr(method, env), NamePathOf(pDispObj));
+                                       ValueToFunction(method, env).GetObjectPtr(), NamePathOf(pDispObj));
 
                     int nArgs = 1;
                     env->Push(Value(int(id.ButtonId)));
@@ -115,7 +153,7 @@ bool AvmCharacter::ExecuteEvent(const EventId& id)
 
                     if (env->IsVerboseAction())
                         env->LogAction("!!! ExecuteEvent finished '%s' = %p for %s\n\n", methodName.ToCStr(),
-                                       MethodPtr(method, env), NamePathOf(pDispObj));
+                                       ValueToFunction(method, env).GetObjectPtr(), NamePathOf(pDispObj));
                 }
             }
             else if (id.RollOverCnt == 0)
@@ -123,13 +161,13 @@ bool AvmCharacter::ExecuteEvent(const EventId& id)
                 ++handlerFoundCnt;
                 if (env->IsVerboseAction())
                     env->LogAction("\n!!! ExecuteEvent started '%s' = %p for %s\n", methodName.ToCStr(),
-                                   MethodPtr(method, env), NamePathOf(pDispObj));
+                                   ValueToFunction(method, env).GetObjectPtr(), NamePathOf(pDispObj));
 
                 GAS_Invoke(method, NULL, this, env, 0, env->GetTopIndex() + 1, NULL);
 
                 if (env->IsVerboseAction())
                     env->LogAction("!!! ExecuteEvent finished '%s' = %p for %s\n\n", methodName.ToCStr(),
-                                   MethodPtr(method, env), NamePathOf(pDispObj));
+                                   ValueToFunction(method, env).GetObjectPtr(), NamePathOf(pDispObj));
             }
         }
     }
