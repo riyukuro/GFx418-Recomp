@@ -27,6 +27,8 @@
 #include "../include/gfx/gfx_imemanagerwin32.h"
 #include "../include/gfx/gfx_event.h"
 #include "../include/gfx/gfx_textfield.h"
+// AvmMovieClip's deleting destructor 0x1423dbb60 (emitted here) frees only for a global delete: the in-place class delete.
+#define SF_AS3_AVM_INPLACE_DELETE
 #include "../include/gfx/as3/as3_avm.h"   // AvmMovieClip (and as3_support.h)
 #include "../include/gfx/xml/xml_object.h"
 #include "ms2/scaleform/kernel/sf_wstring.h"
@@ -3274,16 +3276,7 @@ selected_entry:
 #undef cx40_States
 }
 
-// The object lives inside its owner's allocation: the class operator delete is empty, so only the global-delete
-// path (flags 5) reaches the exe's empty global delete; a plain delete frees nothing.
-// @0x1423dbb60
-__declspec(noinline) void* FUN_1423dbb60(void* object, unsigned flags)
-{
-    static_cast<AS3::AvmMovieClip*>(object)->AS3::AvmMovieClip::~AvmMovieClip();
-    if ((flags & 5) == 5)
-        FUN_14015b310(object, 0x68);
-    return object;
-}
+// (0x1423dbb60 is cl's ??_GAvmMovieClip, emitted here by Ime01EmitAvmMovieClipVftables at the end of the file)
 
 __declspec(noinline) void FUN_1423cdda0(void** table);
 
@@ -6979,28 +6972,18 @@ int FUN_1423daed8(void* self)
     return FUN_1423daeb0((long long*)((UByte*)self - 8));
 }
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 0x30) to the sized-delete destructor at 0x1423dbb60. The exe has a compiler-generated thunk (sub rcx,N); a hand-written one gives add rcx,-N. The target is noinline so the thunk stays a jmp.
-// @0x1423db880
-void* FUN_1423db880(void* self, unsigned flags)
+// (0x1423db880 / 0x1423db88c / 0x1423db898 are cl's AvmMovieClip ??_E adjustor thunks for its +0x30 / +0x40 / +0x48
+// parts, emitted by Ime01EmitAvmMovieClipVftables at the end of the file)
+
+}}}
+
+// AvmMovieClip (as3_avm.h): the exe keeps its deleting destructor 0x1423dbb60 and the ??_E adjustor thunks
+// 0x1423db880/88c/898 in this TU, so a copy-construct anchor makes cl emit its vftables, ??_G and thunks here.
+namespace Scaleform { namespace GFx { namespace IME {
+void Ime01EmitAvmMovieClipVftables(void* p, const AS3::AvmMovieClip* pclip)
 {
-    return FUN_1423dbb60((UByte*)self - 0x30, flags);
+    ::new (p) AS3::AvmMovieClip(*pclip);
 }
-
-// MS2-FUNCTIONAL: adjustor thunk (this - 0x40) to the sized-delete destructor at 0x1423dbb60. The exe has a compiler-generated thunk (sub rcx,N); a hand-written one gives add rcx,-N. The target is noinline so the thunk stays a jmp.
-// @0x1423db88c
-void* FUN_1423db88c(void* self, unsigned flags)
-{
-    return FUN_1423dbb60((UByte*)self - 0x40, flags);
-}
-
-// MS2-FUNCTIONAL: adjustor thunk (this - 0x48) to the sized-delete destructor at 0x1423dbb60. The exe has a compiler-generated thunk (sub rcx,N); a hand-written one gives add rcx,-N. The target is noinline so the thunk stays a jmp.
-// @0x1423db898
-void* FUN_1423db898(void* self, unsigned flags)
-{
-    return FUN_1423dbb60((UByte*)self - 0x48, flags);
-}
-
-
 }}}
 // MS2-PIN: ??_7MemoryContextImpl@AS3@GFx@Scaleform@@6B@ 0x14313c0a8
 // MS2-PIN: ??_7HeapLimit@MemoryContextImpl@AS3@GFx@Scaleform@@6B@ 0x14313c090
@@ -7016,3 +6999,12 @@ void* FUN_1423db898(void* self, unsigned flags)
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@PEAUDOMStringNode@XML@GFx@Scaleform@@UIme01NodeHash@IME@34@U5634@U?$AllocatorLH@PEAUDOMStringNode@XML@GFx@Scaleform@@$0CAB@@4@V?$HashsetEntry@PEAUDOMStringNode@XML@GFx@Scaleform@@UIme01NodeHash@IME@34@@4@@Scaleform@@AEAAXPEAX_K@Z 0x1423cce50
 // MS2-PIN: ??$Add@PEAUDOMStringNode@XML@GFx@Scaleform@@@?$HashSetBase@PEAUDOMStringNode@XML@GFx@Scaleform@@UIme01NodeHash@IME@34@U5634@U?$AllocatorLH@PEAUDOMStringNode@XML@GFx@Scaleform@@$0CAB@@4@V?$HashsetEntry@PEAUDOMStringNode@XML@GFx@Scaleform@@UIme01NodeHash@IME@34@@4@@Scaleform@@QEAAXPEAXAEBQEAUDOMStringNode@XML@GFx@1@@Z 0x1423ca950
 // MS2-PIN: ??$add@PEAUDOMStringNode@XML@GFx@Scaleform@@@?$HashSetBase@PEAUDOMStringNode@XML@GFx@Scaleform@@UIme01NodeHash@IME@34@U5634@U?$AllocatorLH@PEAUDOMStringNode@XML@GFx@Scaleform@@$0CAB@@4@V?$HashsetEntry@PEAUDOMStringNode@XML@GFx@Scaleform@@UIme01NodeHash@IME@34@@4@@Scaleform@@AEAAXPEAXAEBQEAUDOMStringNode@XML@GFx@1@_K@Z 0x1423caa80
+// AvmMovieClip's vftables (also emitted by sfr_as3_16), its deleting destructor and adjustor thunks.
+// MS2-PIN: ??_7AvmMovieClip@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14313bcd8
+// MS2-PIN: ??_7AvmMovieClip@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14313bdd0
+// MS2-PIN: ??_7AvmMovieClip@AS3@GFx@Scaleform@@6BAvmDisplayObjContainer@123@@ 0x14313be88
+// MS2-PIN: ??_7AvmMovieClip@AS3@GFx@Scaleform@@6BAvmSpriteBase@23@@ 0x14313bf48
+// MS2-PIN: ??_GAvmMovieClip@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1423dbb60
+// MS2-PIN: ??_EAvmMovieClip@AS3@GFx@Scaleform@@WDA@EAAPEAXI@Z 0x1423db880
+// MS2-PIN: ??_EAvmMovieClip@AS3@GFx@Scaleform@@WEA@EAAPEAXI@Z 0x1423db88c
+// MS2-PIN: ??_EAvmMovieClip@AS3@GFx@Scaleform@@WEI@EAAPEAXI@Z 0x1423db898
