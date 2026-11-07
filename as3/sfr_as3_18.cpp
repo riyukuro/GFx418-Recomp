@@ -7225,18 +7225,25 @@ static __forceinline void Sfr18PostProcessName(Multiname& mn)
     if (!mn.Name.IsString())
         return;
     ASString n = mn.Name.AsString();
-    if (n.GetSize() == 0)
-        return;
-    if (n[0] == '*')
-        FUN_1424e0d40(mn.Name, ASString(n.GetManager()->GetEmptyStringNode()));
-    else if (n[0] == '@')
+    if (n.GetSize() != 0)
     {
-        mn.Kind = static_cast<Abc::MultinameKind>(mn.Kind | 8);
-        if (n.GetSize() == 2 && n[1] == '*')
-            FUN_1424e0d40(mn.Name, ASString(n.GetManager()->GetEmptyStringNode()));
-        else
-            FUN_1424e0d40(mn.Name, ASString(n.SubstringNode(1, n.GetSize())));
+        ASStringManager* const mgr = n.GetManager();
+        ASStringNode* node;
+        if (n[0] != '*')
+        {
+            if (n[0] != '@') goto done;
+            mn.Kind = static_cast<Abc::MultinameKind>(mn.Kind | 8);
+            if (n.GetSize() != 2 || n[1] != '*')
+            { node = n.SubstringNode(1, n.GetSize()); node->AddRef(); goto assign; }
+        }
+        node = mgr->GetEmptyStringNode();
+        node->AddRef();
+    assign:
+        ASStringNode* const tmp = node;
+        FUN_1424e0d40(mn.Name, reinterpret_cast<const ASString&>(tmp));
+        node->Release();
     }
+done:;
 }
 
 // Multiname(Namespace&, const Value&) (0x1424d8a90) with Value::AssignUnsafe inlined, as FUN_14250dd20 has it
@@ -7309,8 +7316,8 @@ CheckResult Object::GetProperty(const Multiname& prop_name, Value& value)
 // into value, getters run); false when there is none or it could not be read.
 // MS2-FUNCTIONAL free function returning its CheckResult through ret, as sfr_as3_17 declares it. The Multiname ctor,
 // Value(ASString), PostProcessName and the slot read are inlined as in the exe; left: regalloc (the exe keeps the
-// name Value's flags and bonus in registers to its release, saves r12/r15 and shrink-wraps rbx) and PostProcessName's
-// tail layout (the exe keeps the new node in rbx across Value::operator=)
+// name Value's flags and bonus in registers across Sfr27MultinameFromQName (LTCG; ours reloads them from the frame),
+// saves r12/r15 and shrink-wraps rbx). PostProcessName's tail now matches (single exit, shared n release).
 // @0x14250dd20
 Scaleform::UByte* FUN_14250dd20(Scaleform::GFx::AS3::Object* self, Scaleform::UByte* ret,
                                 const Scaleform::GFx::ASString* name, Scaleform::GFx::AS3::Instances::Namespace* ns,
