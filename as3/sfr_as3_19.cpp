@@ -4377,6 +4377,30 @@ struct Sfr31TracePropRef
     Sfr31TracePropRef() : f(0), x(0) {}
 };
 
+// PropRef holder whose Value destructor clears a weak ref as the exe does: flags first, then Bonus and VS._1 in one 16-byte zero store.
+struct Sfr31PropRefW
+{
+    UPInt f, x;
+    union { UPInt Align; UByte Buf[sizeof(Value)]; };
+    __forceinline Sfr31PropRefW() : f(0), x(0) { ::new (Buf) Value(); }
+    Value& V() { return *reinterpret_cast<Value*>(Buf); }
+    __forceinline ~Sfr31PropRefW()
+    {
+        Value& v = V();
+        if (!v.IsRefCounted())
+            return;
+        if (v.IsWeakRef())
+        {
+            (*reinterpret_cast<WeakProxy**>(Buf + 8))->Release();
+            *reinterpret_cast<UInt32*>(Buf) &= ~0x21fu;
+            _mm_storeu_si128(reinterpret_cast<__m128i*>(Buf + 8), _mm_setzero_si128());
+            *reinterpret_cast<UPInt*>(Buf + 0x18) = 0;
+        }
+        else
+            FUN_142521f00(&v);
+    }
+};
+
 // PropRef::IsAsValue / IsAsObject: the tag bit as a bool (as in PropRef::operator bool, 0x1424e0e20)
 static inline bool Sfr31PRTag(UPInt p, UPInt mask) { return (p & mask) != 0; }
 
@@ -4521,13 +4545,8 @@ struct Sfr31ExecReadMn : Sfr31ExecStackReader
 };
 
 // ReferenceError 0x429 (eUndefinedVarError) naming the multiname.
-static __forceinline void Sfr31ThrowUndefinedVar(VM& vm, Sfr31MnBox& mn)
-{
-    vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x429), vm, *reinterpret_cast<const Value*>(&mn.w2)));
-}
-
 // getlex-style resolve: pushes the value the multiname resolves to, or raises a ReferenceError naming it.
-// MS2-FUNCTIONAL 0x142538d30: 465 B vs the exe 487; the exe lays the early return out inside its prolog, puts the Error temp above rd and clears the weak ref with one movdqu
+// The exe returns the ThrowReferenceError from its branch (its own epilog) and clears the weak ref with one movdqu (Sfr31PropRefW).
 // @0x142538d30
 void Sfr31ExecGetLex(UPInt vmAddr, UPInt file, UInt32 idx)
 {
@@ -4536,13 +4555,12 @@ void Sfr31ExecGetLex(UPInt vmAddr, UPInt file, UInt32 idx)
     Sfr31MnBox& mn = rd.mn;
     if (vm.IsException())
         return;
-    Sfr31TracePropRef pr;
+    Sfr31PropRefW pr;
     FUN_142502570(vmAddr, &pr, &mn.Get());
     const UPInt f = pr.f;
-    if ((*reinterpret_cast<const UInt32*>(&pr.v) & 0x1f) == 0 || f == 1 || ((static_cast<UInt8>(f >> 1) & 1) != 0 && (f & ~static_cast<UPInt>(2)) == 0))
-        Sfr31ThrowUndefinedVar(vm, mn);
-    else
-        ExecPushCopy(&vm, pr.v);
+    if ((*reinterpret_cast<const UInt32*>(&pr.V()) & 0x1f) == 0 || f == 1 || ((static_cast<UInt8>(f >> 1) & 1) != 0 && (f & ~static_cast<UPInt>(2)) == 0))
+        return vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x429), vm, *reinterpret_cast<const Value*>(&mn.w2)));
+    ExecPushCopy(&vm, pr.V());
 }
 
 // getdescendants: the XML support reads the descendants of the object; when it declines, pops the operand and raises a TypeError naming the traits.
@@ -5111,25 +5129,6 @@ void Sfr31UnregisterClassTraits(UPInt self)
             }
         }
     }
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
     (reinterpret_cast<Sfr19TraitsArr*>(self + 0xa0)->*static_cast<void (Sfr19TraitsArr::*)(const void*, UPInt)>(&Sfr19TraitsArr::ResizeNoConstruct))(reinterpret_cast<const void*>(self + 0xa0), 0);
 }
 
@@ -5293,7 +5292,7 @@ SF_FORCEINLINE Value::Value(Object* v, InlineObjType)
 }
 
 // findproperty-style resolve: pushes the property's value, or the VM's fallback object when it does not resolve.
-// MS2-FUNCTIONAL 0x1425389b0: 528 B, same length as the exe; the exe encodes shr al,1 with an imm8 and clears the weak ref with one movdqu (ours two mov qword)
+// The weak-ref clear of the PropRef value is one 16-byte zero store in the exe (Sfr31PropRefW).
 // @0x1425389b0
 void Sfr31ExecFindPropOrGlobal(UPInt vmAddr, UPInt file, UInt32 idx)
 {
@@ -5302,13 +5301,13 @@ void Sfr31ExecFindPropOrGlobal(UPInt vmAddr, UPInt file, UInt32 idx)
     Sfr31MnBox& mn = rd.mn;
     if (vm.IsException())
         return;
-    Sfr31TracePropRef pr;
+    Sfr31PropRefW pr;
     FUN_142502570(vmAddr, &pr, &mn.Get());
     const UPInt f = pr.f;
-    if ((*reinterpret_cast<const UInt32*>(&pr.v) & 0x1f) == 0 || f == 1 || ((static_cast<UInt8>(f >> 1) & 1) != 0 && (f & ~static_cast<UPInt>(2)) == 0))
+    if ((*reinterpret_cast<const UInt32*>(&pr.V()) & 0x1f) == 0 || f == 1 || ((static_cast<UInt8>(f >> 1) & 1) != 0 && (f & ~static_cast<UPInt>(2)) == 0))
         ExecPushCopy(&vm, Value(FUN_14250a550(vm), Value::InlineObj));
     else
-        ExecPushCopy(&vm, pr.v);
+        ExecPushCopy(&vm, pr.V());
 }
 
 // Verifies that the top of the operand stack is usable as the scope object named by the multiname (name check, class lookup, type check).
