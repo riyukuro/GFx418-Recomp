@@ -1925,8 +1925,14 @@ namespace {
 // MovieDefImpl::GetCharacterCreateInfo(rid) with its hidden return slot spelled out (as in sfr_as2_01).
 typedef Scaleform::GFx::CharacterCreateInfo* (Scaleform::GFx::MovieDefImpl::*MS2_GetCreateInfoFn)(
     Scaleform::GFx::CharacterCreateInfo* pret, const Scaleform::GFx::ResourceId* prid);
-// MS2-FUNCTIONAL: resolves and creates the Video display character from the owning MovieDef. Left: the exe stores the
-// ResourceId argument before loading the ASSupport vftable, and indexes the AVM object offset through eax, not ecx.
+// SDK ToAvmDisplayObj: the AVM object sits AvmObjOffset (byte at +0x6d) dwords into the display object.
+static __forceinline unsigned char* VideoToAvmDisplayObj(void* po)
+{
+    if (!po)
+        return 0;
+    return reinterpret_cast<unsigned char*>(reinterpret_cast<uint32_t*>(po) + static_cast<unsigned char*>(po)[0x6d]);
+}
+// Video::CreateStageObject: resolves and creates the Video display character from the owning MovieDef.
 // @0x14001a470
 void* FUN_14001a470(void* self)
 {
@@ -1950,12 +1956,13 @@ void* FUN_14001a470(void* self)
                     &Scaleform::GFx::MovieDefImpl::GetCharacterCreateInfo))(reinterpret_cast<Scaleform::GFx::CharacterCreateInfo*>(tmp), &emptyVideoId),
                     sizeof(createInfo));
             }
-            Scaleform::GFx::ASSupport* asSupport = *reinterpret_cast<Scaleform::GFx::ASSupport**>(library + 0x18);
-            void* display = asSupport->CreateCharacterInstance(*reinterpret_cast<Scaleform::GFx::MovieImpl**>(library + 0x10), createInfo, 0,
-                                                               Scaleform::GFx::ResourceId(), Scaleform::GFx::CharacterDef::Video);
+            // the ASSupport pointer is read inside the call (SDK proot->GetASSupport()->...), after the ResourceId() store
+            void* display = (*reinterpret_cast<Scaleform::GFx::ASSupport**>(library + 0x18))->CreateCharacterInstance(
+                *reinterpret_cast<Scaleform::GFx::MovieImpl**>(library + 0x10), createInfo, 0, Scaleform::GFx::ResourceId(),
+                Scaleform::GFx::CharacterDef::Video);
             if (*slot) FUN_14257dcd0(*slot);
             *slot = display;
-            unsigned char* frame = display ? reinterpret_cast<unsigned char*>(reinterpret_cast<uint32_t*>(display) + static_cast<unsigned char*>(display)[0x6d]) : 0;
+            unsigned char* frame = VideoToAvmDisplayObj(display);
             Scaleform::GFx::AS3::Sfr33SetValueDropObject(frame, self);
         }
     }
