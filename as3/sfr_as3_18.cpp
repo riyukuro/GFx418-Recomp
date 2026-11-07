@@ -4272,8 +4272,8 @@ template<> inline SF_NOINLINE void ArrayData<GFx::AS3::Value, AllocatorGH<GFx::A
 // plog is a raw pointer taken from the returned Ptr, as in the SDK (the temp is released at once).
 // MS2-FUNCTIONAL a member of the exe's MovieRoot, defined as a free function. ArrayData<Value>::PushBack
 // (0x14251f660) is out of line as in the exe (a noinline specialization); the exe places the shared
-// whitespace-skip loop latch after the %d case and keeps arg in other registers and slots. The SDK for(;;)
-// loop form and the SDK skip loop score worse here.
+// whitespace-skip loop latch after the %d case and keeps arg in other registers and slots. The loop is the
+// SDK for(;;) with an explicit break on the terminator; the SDK skip-loop form scores worse here.
 // @0x14251c1c0
 void FUN_14251c1c0(const Scaleform::GFx::AS3::MovieRoot* self, Scaleform::Array<Scaleform::GFx::AS3::Value>& arr,
                    const char* pmethodName, const char* pargFmt, va_list args)
@@ -4286,10 +4286,12 @@ void FUN_14251c1c0(const Scaleform::GFx::AS3::MovieRoot* self, Scaleform::Array<
         return;
     Value       arg;
     const char* p = pargFmt;
-    while (*p)
+    for (;;)
     {
         char c = *p++;
-        if (c == '%')
+        if (c == 0)
+            break;
+        else if (c == '%')
         {
             c = *p++;
             if (c == 'd')
