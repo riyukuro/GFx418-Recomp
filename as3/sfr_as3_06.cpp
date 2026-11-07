@@ -2585,7 +2585,15 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // addFrameScript's descriptor array instances.
 template Scaleform::ArrayDataBase<Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr, Scaleform::AllocatorGH_CPP<Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr, 2>, Scaleform::ArrayDefaultPolicy>::~ArrayDataBase();
 template void Scaleform::ArrayDataBase<Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr, Scaleform::AllocatorGH_CPP<Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr, 2>, Scaleform::ArrayDefaultPolicy>::Reserve(const void*, Scaleform::UPInt);
-template void Scaleform::ConstructorCPP<Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr>::Construct(void*, const Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr&);
+// Construct stays out of line: the exe's Reserve calls it for each element moved.
+namespace Scaleform {
+template <>
+inline SF_NOINLINE void ConstructorCPP<GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr>::Construct(
+    void* p, const GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr& source)
+{
+    ::new(p) GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr(source);
+}
+} // namespace Scaleform
 
 namespace Scaleform {
 // The pixel vector's Resize, out of line as in the exe (VectorBase<UInt32>::Set calls it).
@@ -3072,7 +3080,6 @@ template SPtr<Instances::fl_display::Stage>& SPtr<Instances::fl_display::Stage>:
 // MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@V?$Ptr@VFilter@Render@Scaleform@@@Scaleform@@U?$AllocatorGH@V?$Ptr@VFilter@Render@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1424464a0
 // MS2-PIN: ??1?$ArrayDataBase@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@U?$AllocatorGH_CPP@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$01@8@UArrayDefaultPolicy@8@@Scaleform@@QEAA@XZ 0x14243cf90
 // MS2-PIN: ?Construct@?$ConstructorCPP@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAXAEBUDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@2@@Z 0x142440f00
-// MS2-FUNCTIONAL ?Reserve@?$ArrayDataBase@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@U?$AllocatorGH_CPP@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$01@8@UArrayDefaultPolicy@8@@Scaleform@@QEAAXPEBX_K@Z: the exe calls ConstructorCPP<Descr>::Construct out of line in the element-wise move; ours inlines it
 // MS2-PIN: ?Reserve@?$ArrayDataBase@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@U?$AllocatorGH_CPP@UDescr@FrameScript@MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@$01@8@UArrayDefaultPolicy@8@@Scaleform@@QEAAXPEBX_K@Z 0x142446140
 // MS2-FUNCTIONAL ??0?$ThunkArgs5@$$CBVValue@AS3@GFx@Scaleform@@PEAVObject@fl@Instances@234@PEAVMatrix@fl_geom@7234@PEAVColorTransform@97234@AEBVASString@34@PEAVRectangle@97234@@AS3@GFx@Scaleform@@QEAA@AEAVVM@123@AEAVValue@123@IPEBV5123@AEBU?$ThunkDefs5@PEAVObject@fl@Instances@AS3@GFx@Scaleform@@PEAVMatrix@fl_geom@3456@PEAVColorTransform@83456@AEBVASString@56@PEAVRectangle@83456@@123@@Z: the exe inlines the base argument readers; ours calls the ThunkArgs4 ctor
 // MS2-PIN: ??0?$ThunkArgs5@$$CBVValue@AS3@GFx@Scaleform@@PEAVObject@fl@Instances@234@PEAVMatrix@fl_geom@7234@PEAVColorTransform@97234@AEBVASString@34@PEAVRectangle@97234@@AS3@GFx@Scaleform@@QEAA@AEAVVM@123@AEAVValue@123@IPEBV5123@AEBU?$ThunkDefs5@PEAVObject@fl@Instances@AS3@GFx@Scaleform@@PEAVMatrix@fl_geom@3456@PEAVColorTransform@83456@AEBVASString@56@PEAVRectangle@83456@@123@@Z 0x142439a70
