@@ -1727,28 +1727,29 @@ void Traits::Add2VT(const ClassInfo& ci, const ThunkInfo& func)
     }
 }
 
-// MS2-FUNCTIONAL: same calls (SDK AddSlot inlined in the append branch); ours has a 0x60 frame and saves rsi/rdi
-// by mov where the exe has 0x50 and pushes them, and the exe forms the slot index with a 64-bit add.
+// MS2-FUNCTIONAL: same calls (SDK AddSlot inlined in the append branch, SDK SetSlot in the other); the exe keeps the
+// 64-bit index (AbsoluteIndex(ind, *this)) and its 32-bit copy for the loop apart. Left: the exe pushes rsi/rdi
+// (ours saves them in home slots), has no loop-alignment nop, swaps ecx/r8d in the flag word, and indexes the set slot
+// with the 64-bit index (ours with the 32-bit copy).
 // @0x1424e93b0
 SlotInfo& Traits::AddSetSlot(RelativeIndex ind, const ASString& name, Pickable<const Instances::Namespace> ns,
                              VMAbcFile& file, const Abc::TraitInfo& ti, bool const_)
 {
-    const UInt32 abs_ind = static_cast<UInt32>(FirstOwnSlotInd.Get() + ind.Get());
+    const SPInt  sum     = static_cast<SPInt>(static_cast<UInt32>(FirstOwnSlotInd.Get())) + static_cast<SPInt>(ind.Get());
+    const UInt32 abs_ind = static_cast<UInt32>(sum);
 
     // slot ids may skip: the gap gets unnamed placeholders
-    while (GetSlotInfoNum() < abs_ind)
+    while (abs_ind > GetSlotInfoNum())
         Add(GetVM().GetStringManager().CreateEmptyString(), SlotInfo());
 
-    AbsoluteIndex result(abs_ind);
-    if (abs_ind == GetSlotInfoNum())
+    AbsoluteIndex result(sum);
+    if (static_cast<UInt32>(result.Get()) == GetSlotInfoNum())
         result = AddSlot(name, ns, file, ti, const_);
     else
-    {
-        const SlotInfo& v = SlotInfo(ns, file, ti, (const_ ? (SlotInfo::aDontEnum | SlotInfo::aReadOnly) : SlotInfo::aDontEnum),
-                                     name.GetNode(), SlotInfo::SdkFlagsInBody);
-        GetOwnSlotInfo(result) = v;
-        SetKey(result, name);
-    }
+        // SDK SetSlot / SetSlotInfo inlined: the SlotInfo temporary lives until after SetKey
+        (GetOwnSlotInfo(result) = SlotInfo(ns, file, ti, (const_ ? (SlotInfo::aDontEnum | SlotInfo::aReadOnly) : SlotInfo::aDontEnum),
+                                           name.GetNode(), SlotInfo::SdkFlagsInBody)),
+            SetKey(result, name);
 
     return GetOwnSlotInfo(result);
 }
