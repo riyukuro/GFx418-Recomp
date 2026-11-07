@@ -1502,7 +1502,7 @@ static bool IsSameNamespace(const Instances::Namespace& a, const Instances::Name
 
 // The namespace a native method is registered in: its own (the AS3 one, or interned by uri), else the package of a
 // nameless class, else public.
-static Pickable<const Instances::Namespace> GetMethodNamespace(VM& vm, const ClassInfo& ci, const ThunkInfo& func)
+static __forceinline Pickable<const Instances::Namespace> GetMethodNamespace(VM& vm, const ClassInfo& ci, const ThunkInfo& func)
 {
     const char* ns_name = func.NamespaceName;
     if (ns_name && *ns_name)
@@ -1568,61 +1568,153 @@ void Traits::Add2VT(const ASString& name, const Instances::Namespace& ns, const 
     Add2VT(si, v, bt);
 }
 
-// MS2-FUNCTIONAL: the exe inlines VM::MakeInternedNamespace, UpdateVT4IM and UpdateVT (with VTable::SetMethod) from
-// the same unity TU; ours calls them.
-// @0x1424e56f0
-void Traits::Add2VT(const ClassInfo& ci, const ThunkInfo& func)
+// Unit-local copies of the bodies the exe inlines into Add2VT(ClassInfo, ThunkInfo) from the unity TU:
+// VTable::SetMethod, Traits::UpdateVT, Traits::UpdateVT4IM and the five-argument Traits::Add2VT (the out-of-line
+// ones stay in sfr_as3_19 and above). The SDK body of each.
+static __forceinline void Sfr16SetMethod(VTable& vt, AbsoluteIndex ind, const Value& m, SlotInfo::BindingType dt,
+                                         const ASString& name)
 {
-    VM& vm = GetVM();
-    const ASString name = vm.GetStringManager().CreateConstString(func.Name);
-    bool ok = true;
-
+    Value* vt_value = NULL;
+    switch (dt)
     {
-        SlotInfo::BindingType bt = SlotInfo::BT_Code;
-        switch (func.GetCodeType())
-        {
-        case CT_Method: bt = SlotInfo::BT_Code; break;
-        case CT_Get:    bt = SlotInfo::BT_Get;  break;
-        case CT_Set:    bt = SlotInfo::BT_Set;  break;
-        }
+    case SlotInfo::BT_Code:
+    case SlotInfo::BT_Get:
+        vt_value = &vt.VTMethods[ind.Get()];
+        break;
+    case SlotInfo::BT_Set:
+        vt_value = &vt.VTMethods[ind.Get() + 1];
+        break;
+    default:
+        break;
+    }
+    vt.SetMethodName(ind, dt, name);
+    if (m.GetKind() == Value::kInt)
+        *vt_value = Value(m.AsInt(), vt.GetTraits(), Value::kMethodInd);
+    else
+        *vt_value = m;
+}
 
-        const Value v(func);
-        const SlotInfo nsi(GetMethodNamespace(vm, ci, func), NULL, SlotInfo::aDontEnum, name.GetNode());
-        const Instances::Namespace& ns = *nsi.pNs;
+template <bool InlineSet>
+static __forceinline void Sfr16UpdateVT(Traits& t, const SlotInfo& si, const Value& v, SlotInfo::BindingType new_bt)
+{
+    VTable& vt = t.GetVT();
+    AbsoluteIndex method_ind(si.ValueInd);
+    const SlotInfo::BindingType bt = static_cast<SlotInfo::BindingType>(si.BindType);
 
-        // the slot of this name in this namespace, own or inherited
-        SPInt ind = -1;
-        if (const UInt32* values = FindSlotValues(name))
+    if (bt == SlotInfo::BT_Code && new_bt != bt)
+    {
+        return;
+    } else if ((bt == SlotInfo::BT_GetSet || bt == SlotInfo::BT_Get || bt == SlotInfo::BT_Set) && new_bt == SlotInfo::BT_Code)
+    {
+    }
+
+    if (InlineSet)
+        Sfr16SetMethod(vt, method_ind, v, new_bt, ASString(si.Name.GetPtr()));
+    else
+        vt.SetMethod(method_ind, v, new_bt, ASString(si.Name.GetPtr()));
+}
+
+static __forceinline void Sfr16UpdateVT4IM(Traits& t, const ASString& mn_name, const Instances::Namespace& mn_ns,
+                                           const Value& v, SlotInfo::BindingType bt)
+{
+    VM& vm = t.GetVM();
+    if (&mn_ns == &vm.GetPublicNamespace())
+    {
+        const UInt32* values = t.FindSlotValues(mn_name);
+        for (SPInt ind = *values; ind >= 0; ind = t.GetPrevSlotIndex(ind))
         {
-            for (ind = *values; ind >= 0; ind = GetPrevSlotIndex(ind))
+            const SlotInfo& si = t.GetSlotInfo(AbsoluteIndex(ind));
+            if (si.pNs->GetIsInterface())
             {
-                if (IsSameNamespace(*GetSlotInfo(AbsoluteIndex(ind)).pNs, ns))
-                    break;
+                Sfr16UpdateVT<true>(t, si, v, bt);
+                break;
             }
         }
+    }
+}
 
-        if (ind < 0)
-            Add2VT(name, ns, nsi, v, bt);
-        else
+// Slots::Add is protected; the member Add2VT reaches it as a Traits member.
+struct Sfr16TraitsAccess : Traits { using Slots::Add; };
+
+static __forceinline void Sfr16Add2VT(Traits& t, const ASString& mn_name, const Instances::Namespace& mn_ns,
+                                      const SlotInfo& nsi, const Value& v, SlotInfo::BindingType bt)
+{
+    const AbsoluteIndex ind = static_cast<Sfr16TraitsAccess&>(t).Add(mn_name, nsi);
+    SlotInfo& si = t.GetOwnSlotInfo(ind);
+    Sfr16UpdateVT4IM(t, mn_name, mn_ns, v, bt);
+    t.Add2VT(si, v, bt);
+}
+
+// Traits::RegisterWithVT, inlined.
+static __forceinline bool Sfr16RegisterWithVT(Traits& t, const ASString& mn_name, const SlotInfo& nsi, const Value& v,
+                                              SlotInfo::BindingType bt)
+{
+    bool result = false;
+    const Instances::Namespace& mn_ns = *nsi.pNs;
+
+    SPInt ind = -1;
+    if (const UInt32* values = t.FindSlotValues(mn_name))
+    {
+        for (ind = *values; ind >= 0; ind = t.GetPrevSlotIndex(ind))
         {
-            const SlotInfo& si = GetSlotInfo(AbsoluteIndex(ind));
-            const SlotInfo::BindingType cur_bt = static_cast<SlotInfo::BindingType>(si.BindType);
-
-            if (cur_bt != SlotInfo::BT_Unknown && (cur_bt < SlotInfo::BT_Code || cur_bt > SlotInfo::BT_GetSet))
-                ok = false;
-            else if (GetNewBT(cur_bt, bt) == bt)
-            {
-                // an override
-                UpdateVT4IM(name, ns, v, bt);
-                UpdateVT(si, v, bt);
-            }
-            else
-                Add2VT(name, ns, si, v, bt);
+            if (IsSameNamespace(*t.GetSlotInfo(AbsoluteIndex(ind)).pNs, mn_ns))
+                break;
         }
     }
 
-    if (!ok)
-        vm.ThrowVerifyError(VM::Error(VM::eIllegalOverrideError, vm, name.ToCStr(), GetName().ToCStr()));
+    if (ind >= 0)
+    {
+        const SlotInfo& si = t.GetSlotInfo(AbsoluteIndex(ind));
+        const SlotInfo::BindingType cur_bt = static_cast<SlotInfo::BindingType>(si.BindType);
+
+        if (cur_bt == SlotInfo::BT_Unknown || (cur_bt >= SlotInfo::BT_Code && cur_bt <= SlotInfo::BT_GetSet))
+        {
+            const SlotInfo::BindingType new_bt = GetNewBT(cur_bt, bt);
+            if (new_bt != bt)
+                Sfr16Add2VT(t, mn_name, mn_ns, si, v, bt);
+            else
+            {
+                t.UpdateVT4IM(mn_name, mn_ns, v, bt);
+                Sfr16UpdateVT<false>(t, si, v, bt);
+            }
+            result = true;
+        }
+    }
+    else
+    {
+        Sfr16Add2VT(t, mn_name, mn_ns, nsi, v, bt);
+        result = true;
+    }
+
+    return result;
+}
+
+static __forceinline SlotInfo::BindingType Sfr16GetDataType(TCodeType ct)
+{
+    SlotInfo::BindingType bt = SlotInfo::BT_Code;
+    switch (ct)
+    {
+    case CT_Method: bt = SlotInfo::BT_Code; break;
+    case CT_Get:    bt = SlotInfo::BT_Get;  break;
+    case CT_Set:    bt = SlotInfo::BT_Set;  break;
+    }
+    return bt;
+}
+
+// MS2-FUNCTIONAL: SDK form with RegisterWithVT, the five-argument Add2VT, UpdateVT4IM, UpdateVT and SetMethod inlined
+// through unit-local copies.
+// @0x1424e56f0
+void Traits::Add2VT(const ClassInfo& ci, const ThunkInfo& func)
+{
+    ASString method_name = GetVM().GetStringManager().CreateConstString(func.Name);
+    VM& vm = GetVM();
+
+    if (!Sfr16RegisterWithVT(*this, method_name,
+                             SlotInfo(GetMethodNamespace(vm, ci, func), NULL, SlotInfo::aDontEnum, method_name.GetNode()),
+                             Value(func), Sfr16GetDataType(func.GetCodeType())))
+    {
+        vm.ThrowVerifyError(VM::Error(VM::eIllegalOverrideError, vm, method_name.ToCStr(), GetName().ToCStr()));
+    }
 }
 
 // MS2-FUNCTIONAL: same operations; the SlotInfo bit-field build and the inlined release of the placeholder's
