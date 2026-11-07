@@ -4273,7 +4273,8 @@ void FUN_14251c1c0(const Scaleform::GFx::AS3::MovieRoot* self, Scaleform::Array<
 
 // MovieRoot::InvokeArgs: Invoke with the arguments of a format. A throwing call gives false; its exception is
 // dropped without output.
-// MS2-FUNCTIONAL a slot of the exe's MovieRoot vftable, defined as a free function
+// A slot of the exe's MovieRoot vftable, defined as a free function. Value::GetUndefined() is bound to a named
+// reference first (as an argument expression its result load is scheduled after the stack argument stores).
 // @0x1425136f0
 bool FUN_1425136f0(Scaleform::GFx::AS3::MovieRoot* self, const char* pmethodName, Scaleform::GFx::Value* presult,
                    const char* pargFmt, va_list args)
@@ -4289,7 +4290,8 @@ bool FUN_1425136f0(Scaleform::GFx::AS3::MovieRoot* self, const char* pmethodName
     if (self->pInvokeAliases && (paliasFunc = FUN_142525400(self, pmethodName)) != NULL)
     {
         VM& vm = *self->pAVM;
-        vm.ExecuteInternalUnsafe(*paliasFunc, Value::GetUndefined(), resultVal, numArgs, pargs, false);
+        const Value& undef = Value::GetUndefined();
+        vm.ExecuteInternalUnsafe(*paliasFunc, undef, resultVal, numArgs, pargs, false);
     }
     else
     {
@@ -4297,7 +4299,8 @@ bool FUN_1425136f0(Scaleform::GFx::AS3::MovieRoot* self, const char* pmethodName
         if (FUN_142506000(self, &resolvedVal, pmethodName))
         {
             VM& vm = *self->pAVM;
-            vm.ExecuteInternalUnsafe(resolvedVal, Value::GetUndefined(), resultVal, numArgs, pargs, false);
+            const Value& undef = Value::GetUndefined();
+            vm.ExecuteInternalUnsafe(resolvedVal, undef, resultVal, numArgs, pargs, false);
         }
         else
             return false;
