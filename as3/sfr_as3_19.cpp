@@ -61,6 +61,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace TR { class State
 namespace Scaleform { namespace GFx { namespace AS3 {
 struct ValueAssignCopies
 {
+    static __forceinline void ReleaseStrong19(Value& v) { v.ReleaseInternal(); }
     // Value::PickUnsafe(Object*) (out of line in sfr_as3_18; the SCU inlines it into 0x14253bef0).
     static __forceinline void PickUnsafeObject19(Value& to, Object* v)
     {
@@ -7069,14 +7070,16 @@ static inline bool Sfr19PropFound(const PropRef& prop)
 }
 
 // The operands of exec_in: the object popped off the top into _2, the name below it (_1) left in place.
+// _2 sits in a union so it has no dtor: ExecIn caches the object's flags and weak proxy up front and
+// releases it by hand at each exit, as the LTCG build does with them held in registers.
 struct Sfr19ExecInArgs
 {
     __forceinline Sfr19ExecInArgs(ValueStack& vs) : _2(vs), _1(*vs.GetTopPtr()) { }
-    Value _2;
+    __forceinline ~Sfr19ExecInArgs() { }
+    union { Value _2; };
     Value& _1;
 };
-
-// MS2-FUNCTIONAL 0x14253b020: the exe keeps the popped object's kind and flags in registers across the property lookups (LTCG knows they leave it alone); ours reloads them
+// MS2-FUNCTIONAL 0x14253b020: the exe (LTCG) gives the cached flags/kind/weak proxy different registers and loads the object before storing its copy; 988 vs 1010 bytes
 // @0x14253b020
 void Sfr31ExecIn(UPInt vmAddr)
 {
@@ -7084,23 +7087,47 @@ void Sfr31ExecIn(UPInt vmAddr)
     Sfr19ExecInArgs stack(ValueStack::Of(vm));
     Value& obj = stack._2;
     Value& name = stack._1;
-    if (obj.IsNullOrUndefined())
-        return vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x3f1), vm));
-    Multiname prop_name(vm.GetPublicNamespace(), name, Multiname::InlineCtorTag());
-    if (obj.IsObject())
+    const UInt32 of = *reinterpret_cast<const UInt32*>(&obj);
+    WeakProxy* const owp = *reinterpret_cast<WeakProxy* const*>(reinterpret_cast<const char*>(&obj) + 8);
+    const UInt32 ok = of & 0x1f;
+    const bool isObj = Value::IsObject(static_cast<Value::KindType>(ok));
+    if (ok == 0 || (isObj && obj.GetObject() == NULL))
     {
-        Object* o = obj.GetObject();
-        const Traits& tr = o->GetTraits();
-        if (tr.IsArrayLike() || (tr.GetTraitsType() == Traits_XML && tr.IsInstanceTraits()))
+        vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x3f1), vm));
+        if (ok > 9)
         {
-            Value value = Value::GetUndefined();
-            name.SetBool(obj.GetObject()->GetProperty(prop_name, value));
-            return;
+            if ((of >> 9) & 1)
+                owp->Release();
+            else
+                ValueAssignCopies::ReleaseStrong19(obj);
         }
+        return;
     }
-    PropRef prop;
-    FUN_142501b00(&prop, &vm, &obj, &prop_name, 0);
-    name.SetBool(Sfr19PropFound(prop));
+    {
+        Multiname prop_name(vm.GetPublicNamespace(), name, Multiname::InlineCtorTag());
+        if (isObj)
+        {
+            Object* o = obj.GetObject();
+            const Traits& tr = o->GetTraits();
+            if (tr.IsArrayLike() || (tr.GetTraitsType() == Traits_XML && tr.IsInstanceTraits()))
+            {
+                Value value = Value::GetUndefined();
+                name.SetBool(o->GetProperty(prop_name, value));
+                goto done;
+            }
+        }
+        PropRef prop;
+        FUN_142501b00(&prop, &vm, &obj, &prop_name, 0);
+        name.SetBool(Sfr19PropFound(prop));
+    }
+done:
+    if (ok > 9)
+    {
+        if ((of >> 9) & 1)
+            owp->Release();
+        else
+            ValueAssignCopies::ReleaseStrong19(obj);
+    }
 }
 
 // ---- batch 61
