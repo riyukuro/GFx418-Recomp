@@ -15,17 +15,15 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The glyph's run index, selection, font, color, size, matrix and corners (in pixels) as an object pushed onto the
 // result array.
-// MS2-FUNCTIONAL: register allocation and stack layout differ.
 // @0x14296d330
 void GASTextSnapshotGlyphVisitor::OnVisit()
 {
     Ptr<Object> pobj = *SF_HEAP_NEW(pEnv->GetHeap()) Object(pEnv);
 
-    Value val((int)GetRunIndex());
+    Value val;
+    val.SetUInt((unsigned)GetRunIndex());
     pobj->SetMember(pEnv, pEnv->CreateConstString("indexInRun"), val);
-
-    ASString fontName = pEnv->CreateString(GetFont()->GetName());
-    pobj->SetMember(pEnv, pEnv->CreateConstString("font"), Value(fontName));
+    pobj->SetMember(pEnv, pEnv->CreateConstString("font"), pEnv->CreateString(GetFont()->GetName()));
 
     val.SetNumber((float)GetColor().ToColor32());
     pobj->SetMember(pEnv, pEnv->CreateConstString("color"), val);
@@ -36,7 +34,7 @@ void GASTextSnapshotGlyphVisitor::OnVisit()
     val.SetBool(IsSelected());
     pobj->SetMember(pEnv, pEnv->CreateConstString("selected"), val);
 
-    const Render::Matrix2F& mat = GetMatrix();
+    Render::Matrix2F& mat = const_cast<Render::Matrix2F&>(GetMatrix());
     val.SetNumber(Render::TwipsToPixels(mat.Sx()));
     pobj->SetMember(pEnv, pEnv->CreateString("matrix_a"), val);
     val.SetNumber(Render::TwipsToPixels(mat.Shy()));
