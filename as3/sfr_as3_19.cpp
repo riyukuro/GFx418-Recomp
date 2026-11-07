@@ -7292,8 +7292,8 @@ static __forceinline void Sfr19SetRegister(VM& vm, AbsoluteIndex ind, const Valu
     Sfr19GetRegister(vm, ind).Assign(v);
 }
 
-// MS2-FUNCTIONAL 0x14253a6a0: SDK exec_hasnext2 form; the exe pushes the bool result from a value-union temp
-// (Flags/Bonus stored as constants), keeps its Value temps 8 bytes lower in a 0x58 frame, and allocates other registers
+// MS2-FUNCTIONAL 0x14253a6a0: SDK exec_hasnext2 form with the bool pushes merged into one tail, as the exe has them;
+// the exe keeps its Value temps 8 bytes lower in a 0x58 frame and allocates other registers
 // @0x14253a6a0
 void Sfr31ExecHasNext2(UPInt vmAddr, UInt32 object_reg, UInt32 index_reg)
 {
@@ -7313,6 +7313,7 @@ void Sfr31ExecHasNext2(UPInt vmAddr, UInt32 object_reg, UInt32 index_reg)
         return;
 
     GlobalSlotIndex slot_ind(v);
+    bool result;
 
     if (obj_value.IsObject())
     {
@@ -7338,7 +7339,7 @@ void Sfr31ExecHasNext2(UPInt vmAddr, UInt32 object_reg, UInt32 index_reg)
             Sfr19SetRegister(vm, obj_ind, Value::GetNull());
 
         Sfr19SetRegister(vm, reg_ind, Value(ind.Get()));
-        ValueStack::Of(vm).PushBack(Value(ind.IsValid()));
+        result = ind.IsValid();
     }
     else
     {
@@ -7347,8 +7348,8 @@ void Sfr31ExecHasNext2(UPInt vmAddr, UInt32 object_reg, UInt32 index_reg)
             GlobalSlotIndex ind(0);
             ::FUN_1424161e0(obj_value.GetNamespace(), &ind, slot_ind);
             Sfr19SetRegister(vm, reg_ind, Value(ind.Get()));
-            ValueStack::Of(vm).PushBack(Value(ind.IsValid()));
-            return;
+            result = ind.IsValid();
+            goto push;
         }
 
         GlobalSlotIndex ind = slot_ind;
@@ -7363,8 +7364,8 @@ void Sfr31ExecHasNext2(UPInt vmAddr, UInt32 object_reg, UInt32 index_reg)
             case 0:
             case 1:
                 Sfr19SetRegister(vm, reg_ind, Value(ind.Get() + 1));
-                ValueStack::Of(vm).PushBack(Value(true));
-                return;
+                result = true;
+                goto push;
             default:
                 break;
             }
@@ -7383,8 +7384,10 @@ void Sfr31ExecHasNext2(UPInt vmAddr, UInt32 object_reg, UInt32 index_reg)
             Sfr19SetRegister(vm, obj_ind, Value::GetNull());
 
         Sfr19SetRegister(vm, reg_ind, Value(ind.Get()));
-        ValueStack::Of(vm).PushBack(Value(ind.IsValid()));
+        result = ind.IsValid();
     }
+push:
+    ValueStack::Of(vm).PushBack(Value(result));
 }
 // ---- batch 67
 // constructprop opcode: the receiver stays on the operand stack; a class named by a static multiname is constructed directly, otherwise
