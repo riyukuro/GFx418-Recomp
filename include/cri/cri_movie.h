@@ -417,8 +417,8 @@ struct CriMvSubtitleChunk
     CriUint32 Reserved;
 };
 
-void      CRIAPI criFixedAllocator_Create(void* begin, CriUint32 size, CriFixedAllocator* allocator);
-void*     CRIAPI criFixedAllocator_Allocate(CriFixedAllocator* allocator, CriUint32 size, CriUint32 align);
+extern "C" void      CRIAPI criFixedAllocator_Create(void* begin, CriUint32 size, CriFixedAllocator* allocator);
+extern "C" void*     CRIAPI criFixedAllocator_Allocate(CriFixedAllocator* allocator, CriUint32 size, CriUint32 align);
 
 // Movie data source the player streams from (implemented by the Scaleform video reader).
 class CriMvFileReaderInterface

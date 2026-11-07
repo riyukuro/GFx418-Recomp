@@ -186,23 +186,18 @@ typedef cri_u8 cri_any;
 #endif
 typedef unsigned char cri_u1;
 
-void M2V_GetPicAtr(cri_any, cri_any);
-void M2V_GetBitRate(cri_any, cri_any);
-void M2V_GetVbvBufSiz(cri_any, cri_any, cri_any, cri_any);
-void M2V_GetLinkFlg(cri_any, cri_any, cri_any);
+CRI_C_LINKAGE void M2V_GetPicAtr(cri_any, cri_any);
+CRI_C_LINKAGE void M2V_GetBitRate(cri_any, cri_any);
+CRI_C_LINKAGE void M2V_GetVbvBufSiz(cri_any, cri_any, cri_any, cri_any);
+CRI_C_LINKAGE void M2V_GetLinkFlg(cri_any, cri_any, cri_any);
 // the C names bind to sfr_cri_06's C++ definitions, and the C++ callers' name to the C definition below
 #ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:M2V_GetPicAtr=?M2V_GetPicAtr@@YAXUcri_any@@0@Z")
-#pragma comment(linker, "/alternatename:M2V_GetBitRate=?M2V_GetBitRate@@YAXUcri_any@@0@Z")
-#pragma comment(linker, "/alternatename:M2V_GetVbvBufSiz=?M2V_GetVbvBufSiz@@YAXUcri_any@@000@Z")
-#pragma comment(linker, "/alternatename:M2V_GetLinkFlg=?M2V_GetLinkFlg@@YAXUcri_any@@00@Z")
-#pragma comment(linker, "/alternatename:?mpvm2v_CopyPicAtr@@YAXUcri_any@@@Z=mpvm2v_CopyPicAtr")
 #endif
 
 // copy the decoder's picture attributes, bit rate, VBV buffer size and link flags into the handle. As C++ the struct
 // argument word moves the 0x16d8 load past the 0x16d4 store; the exe obj was C.
 // @0x140062950
-void mpvm2v_CopyPicAtr(cri_any cri_p0)
+CRI_C_LINKAGE void mpvm2v_CopyPicAtr(cri_any cri_p0)
 {
   longlong arg1 = (longlong)(cri_u8)cri_p0;
   cri_u4 loc_b8;

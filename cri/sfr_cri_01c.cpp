@@ -29,8 +29,8 @@
 
 // Player handle module (criMvPly, sfr_cri_02), error notification and the update lock.
 // C3: the definitions' names and signatures
-void criFixedAllocator_Create(void *, unsigned long, struct CriFixedAllocator *);
-void * criFixedAllocator_Allocate(struct CriFixedAllocator *, unsigned long, unsigned long);
+extern "C" void criFixedAllocator_Create(void *, unsigned long, struct CriFixedAllocator *);
+extern "C" void * criFixedAllocator_Allocate(struct CriFixedAllocator *, unsigned long, unsigned long);
 void criMvPly_SetMetaDataWorkAllocator(void *, void *, void *, void *, long);
 unsigned long criMvPly_AllocateWorkBuffer(void *, void *, void *);
 unsigned long criMvPly_AllocateWorkBufferWithWork(void *, void *, long, void *);
@@ -42,12 +42,12 @@ void criMvPly_TerminateSupply(void *);
 unsigned long criMvPly_GetDataSizeMainAudio(void *, unsigned long);
 unsigned long criMvPly_GetDataSizeSubAudio(void *, unsigned long);
 void criMvPly_SetSubtitleChannel(void *, unsigned long);
-void criMvPly_GetSubtitle(void *, void *, unsigned long, void *);
+extern "C" void criMvPly_GetSubtitle(void *, void *, unsigned long, void *);
 void criMvPly_GetNextSubtitleInfo(void *, void *);
 long criMvPly_PeekInputBufferData(void *);
-void criMvPly_SetPcmFormat(void *, long);
+extern "C" void criMvPly_SetPcmFormat(void *, long);
 void criErr_Notify(long, char const *);
-void criCs_Destroy(struct _RTL_CRITICAL_SECTION *);
+extern "C" void criCs_Destroy(struct _RTL_CRITICAL_SECTION *);
 unsigned long criAtomic_TestAndSet(unsigned long *, unsigned long);
 extern "C" void criUtfRtv_Destroy(unsigned __int64 *);
 extern "C" unsigned long FID_conflict_criUtfRtv_GetDataSint32Fn(struct CriUtfRtvView const *, unsigned long, char const *);
@@ -56,16 +56,16 @@ extern "C" unsigned char const * criUsfCmn_GetContents(unsigned char const *, un
 long criVmpv_CalcMovieHandleWork(long);
 unsigned long criVmpv_GetMaxNumberOfHandles(void);
 // C3: the definitions' names and signatures
-void criFixedAllocator_Destroy(struct CriFixedAllocator *);
+extern "C" void criFixedAllocator_Destroy(struct CriFixedAllocator *);
 void criMvPly_Initialize(void);
 void criMvPly_Finalize(void);
 long criMvPly_CalcHandleWorkSize(void);
-void * criMvPly_CreateWithWork(void *, long);
-void * criMvPly_CreateWithConfig(struct _criheap_struct *);
-void criMvPly_Destroy(unsigned long *);
+extern "C" void * criMvPly_CreateWithWork(void *, long);
+extern "C" void * criMvPly_CreateWithConfig(struct _criheap_struct *);
+extern "C" void criMvPly_Destroy(unsigned long *);
 void criMvPly_Update(void *);
-void criMvPly_GetStreamingParameters(void *, struct CriMvStreamingParameters *);
-void FUN_140030c70(void *);
+extern "C" void criMvPly_GetStreamingParameters(void *, struct CriMvStreamingParameters *);
+extern "C" void FUN_140030c70(void *);
 long criMvPly_AttachSubAudio(void *, void *, unsigned long);
 void FUN_140031020(void *, unsigned long);
 void criMvPly_SetNumberOfFramesForPrep(void *, long);
@@ -76,15 +76,15 @@ void criMvPly_DecodeHeader(void *);
 void criMvPly_CalcSeekPosition(void *, void const *, unsigned long, long, void **, long *);
 long criMvPly_Start(void *);
 void criMvPly_Stop(void *);
-void FUN_140034d40(void *, struct CriMovieInputChunk *);
+extern "C" void FUN_140034d40(void *, struct CriMovieInputChunk *);
 void criMvPly_PutInputChunk(void *, struct CriMovieInputChunk const *, unsigned long);
 unsigned long criMvPly_GetWave16(void *, unsigned long, void *, unsigned long, void *);
 unsigned long criMvPly_GetWave32(void *, unsigned long, void *, unsigned long, void *);
 unsigned long criMvPly_GetSubAudioWave16(void *, unsigned long, void *, unsigned long, void *);
 unsigned long criMvPly_GetSubAudioWave32(void *, unsigned long, void *, unsigned long, void *);
-void criMvPly_StartMemory(void *, void const *, unsigned long);
+extern "C" void criMvPly_StartMemory(void *, void const *, unsigned long);
 extern "C" void criMvPly_AddInputMemory(void *, void *, unsigned long);
-long criMvPly_CalcPlaybackWorkSize(void *, struct CriMvStreamingParameters const *);
+extern "C" long criMvPly_CalcPlaybackWorkSize(void *, struct CriMvStreamingParameters const *);
 void criMvPly_SetSeekPosition(void *, unsigned long, unsigned long);
 void criMvPly_SetSeekAlphaPosition(void *, unsigned long);
 void criMvPly_SetDefaultDecryptionKey(void const *);

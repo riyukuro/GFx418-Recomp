@@ -281,15 +281,21 @@ typedef struct CriMvStreamParamsView        // the public CriMvStreamingParamete
     CriUint32           Alpha[8];           // 0x264
     CriUint32           AlphaPlane;         // 0x284
 } CriMvStreamParamsView;
-CriUint32 decideReadBufferExtSize(void* params);
-CriSint32 criSjRbf_GetRequiredMemorySizeWithConfig(CriUint32 size, CriUint32 extSize, CriUint32 alignment, const CriUint32* config);
-void*     crimvply_findVdecIF(CriSint32 codecId);
-CriSint32 FUN_140044400(void* decoder, CriUint32 width, CriUint32 height, CriUint32 pools);
-void*     crimvply_findAlphadecIfIF(CriSint32 codecId);
-CriSint32 FUN_140043a80(void* decoder, CriSint32 width, CriSint32 height, CriSint32 pools);
-CriSint32 criMvPlyAmng_CalcAmngWorkSize(const void* params);
-CriSint32 criMvPlyAmng_CalcAudioDecoderWorkSize(const void* player, const CriUint32* audio);
-CriSint32 criSjUni_GetRequiredMemorySizeWithConfig(CriUint32 size, CriUint32 alignment, const CriUint32* config);
+// the C++ units define these with C linkage (extern "C"), so the clang-cl C++ compile declares them so too
+#ifdef __cplusplus
+#define CRI_C_LINKAGE extern "C"
+#else
+#define CRI_C_LINKAGE
+#endif
+CRI_C_LINKAGE CriUint32 decideReadBufferExtSize(void* params);
+CRI_C_LINKAGE CriSint32 criSjRbf_GetRequiredMemorySizeWithConfig(CriUint32 size, CriUint32 extSize, CriUint32 alignment, const CriUint32* config);
+CRI_C_LINKAGE void*     crimvply_findVdecIF(CriSint32 codecId);
+CRI_C_LINKAGE CriSint32 FUN_140044400(void* decoder, CriUint32 width, CriUint32 height, CriUint32 pools);
+CRI_C_LINKAGE void*     crimvply_findAlphadecIfIF(CriSint32 codecId);
+CRI_C_LINKAGE CriSint32 FUN_140043a80(void* decoder, CriSint32 width, CriSint32 height, CriSint32 pools);
+CRI_C_LINKAGE CriSint32 criMvPlyAmng_CalcAmngWorkSize(const void* params);
+CRI_C_LINKAGE CriSint32 criMvPlyAmng_CalcAudioDecoderWorkSize(const void* player, const CriUint32* audio);
+CRI_C_LINKAGE CriSint32 criSjUni_GetRequiredMemorySizeWithConfig(CriUint32 size, CriUint32 alignment, const CriUint32* config);
 typedef struct CriMvHeaderAnalysisView
 {
     CriUint8  Reserved0[0x5f8];
@@ -316,14 +322,8 @@ typedef struct CriMvSubtitleItemInfo        // analyzeSubtitleInfo fills 0x38 by
 } CriMvSubtitleItemInfo;
 typedef struct CriMvSubtitleFrameCounter { CriUint8 Reserved[0xe30]; CriUint32 Value; } CriMvSubtitleFrameCounter;
 
-// the C++ units define these with C linkage (extern "C"), so the clang-cl C++ compile declares them so too
-#ifdef __cplusplus
-#define CRI_C_LINKAGE extern "C"
-#else
-#define CRI_C_LINKAGE
-#endif
 CRI_C_LINKAGE CriBool allocateMetaWork(void* player);
-void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue);
+CRI_C_LINKAGE void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue);
 CRI_C_LINKAGE void criUsfDmx_Stop(void* demux);
 CRI_C_LINKAGE void criUsfDmx_Execute(void* demux);
 CRI_C_LINKAGE CriSint32 criUsfDmx_GetStatus(void* demux);
@@ -351,32 +351,32 @@ CRI_C_LINKAGE void crimvply_occurFatalError(void* owner, const char* message, Cr
 CRI_C_LINKAGE void criSj_PutChunk(void* queue, CriSint32 operation, void* chunk);
 CRI_C_LINKAGE const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
 typedef struct CriUsfStandardHeader CriUsfStandardHeader;
-CriBool criMvPly_IsSetDefaultDecryptionKey(void);
-CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8* data, CriUint32 size, CriUsfStandardHeader* header);
-void retrieveHeaderInfo(void* player, void* stream, const struct CriMovieParsedChunk* parsed);
+CRI_C_LINKAGE CriBool criMvPly_IsSetDefaultDecryptionKey(void);
+CRI_C_LINKAGE CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8* data, CriUint32 size, CriUsfStandardHeader* header);
+CRI_C_LINKAGE void retrieveHeaderInfo(void* player, void* stream, const struct CriMovieParsedChunk* parsed);
 struct CriUtfRtvView;
 struct CriMvStreamingParameters;
 struct _RTL_CRITICAL_SECTION;
-void FUN_140030c70(void* player);
-CriBool freeMetaWork(void* player);
-void criUsfDmx_Destroy(void* demux);
-void criCs_Destroy(struct _RTL_CRITICAL_SECTION* section);
+CRI_C_LINKAGE void FUN_140030c70(void* player);
+CRI_C_LINKAGE CriBool freeMetaWork(void* player);
+CRI_C_LINKAGE void criUsfDmx_Destroy(void* demux);
+CRI_C_LINKAGE void criCs_Destroy(struct _RTL_CRITICAL_SECTION* section);
 void* FUN_1400385c8(void* work, CriSint32 size);
-void* criSj_CreateNamedRingBuffer(void* heap, CriUint32 size, CriUint32 flags, CriUint32 align, CriUint64 name);
-void* criUsfDmx_Create(void* heap, CriSint32 streams);
-void* criSj_CreateUniversal(void* heap, CriUint32 mode, CriUint32 count);
-void initializeHandleParameters(void* player);
-void criMvPly_SetPcmFormat(void* player, CriSint32 format);
-void criMvPly_Destroy(CriUint32* object);
-void criFixedAllocator_Create(void* begin, CriUint32 size, CriFixedAllocator* allocator);
-void criFixedAllocator_Destroy(CriFixedAllocator* allocator);
-void* criFixedAllocator_Allocate(CriFixedAllocator* allocator, CriUint32 size, CriUint32 align);
-CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config);
-void* criSjRbf_Create(const void* config, void* work, CriSint32 workSize);
-CriSint32 criUsfDmx_CalculateWorkSizeWithWork(CriSint32 workCount);
-void* criUsfDmx_CreateWithWork(CriSint32 count, void* work, CriSint32 workSize);
-CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config);
-void* criSjUni_Create(const void* config, void* work, CriSint32 workSize);
+CRI_C_LINKAGE void* criSj_CreateNamedRingBuffer(void* heap, CriUint32 size, CriUint32 flags, CriUint32 align, CriUint64 name);
+CRI_C_LINKAGE void* criUsfDmx_Create(void* heap, CriSint32 streams);
+CRI_C_LINKAGE void* criSj_CreateUniversal(void* heap, CriUint32 mode, CriUint32 count);
+CRI_C_LINKAGE void initializeHandleParameters(void* player);
+CRI_C_LINKAGE void criMvPly_SetPcmFormat(void* player, CriSint32 format);
+CRI_C_LINKAGE void criMvPly_Destroy(CriUint32* object);
+CRI_C_LINKAGE void criFixedAllocator_Create(void* begin, CriUint32 size, CriFixedAllocator* allocator);
+CRI_C_LINKAGE void criFixedAllocator_Destroy(CriFixedAllocator* allocator);
+CRI_C_LINKAGE void* criFixedAllocator_Allocate(CriFixedAllocator* allocator, CriUint32 size, CriUint32 align);
+CRI_C_LINKAGE CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config);
+CRI_C_LINKAGE void* criSjRbf_Create(const void* config, void* work, CriSint32 workSize);
+CRI_C_LINKAGE CriSint32 criUsfDmx_CalculateWorkSizeWithWork(CriSint32 workCount);
+CRI_C_LINKAGE void* criUsfDmx_CreateWithWork(CriSint32 count, void* work, CriSint32 workSize);
+CRI_C_LINKAGE CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config);
+CRI_C_LINKAGE void* criSjUni_Create(const void* config, void* work, CriSint32 workSize);
 extern CriSint32 DAT_143ffd500;
 #ifdef __cplusplus
 extern "C" {
@@ -402,10 +402,10 @@ typedef struct CriUtfRtvCell                // criUtfRtv_GetCellVal output: a st
     CriUint32 Size;
     CriUint32 Reserved14;
 } CriUtfRtvCell;
-CriUint32 criUtfRtv_ConvFieldNameToNo(const struct CriUtfRtvView* table, const char* name);
-CriSint32 criUtfRtv_GetCellVal(const struct CriUtfRtvView* table, CriUint32 row, CriUint32 field, CriUtfRtvCell* cell);
-CriUint64 criUtfRtv_GetDataUint64(const struct CriUtfRtvView* table, CriUint32 row, CriUint32 field);
-CriUint32 criUtfRtv_GetDataSint32Fn(const struct CriUtfRtvView* table, CriUint32 row, const char* name);
+CRI_C_LINKAGE CriUint32 criUtfRtv_ConvFieldNameToNo(const struct CriUtfRtvView* table, const char* name);
+CRI_C_LINKAGE CriSint32 criUtfRtv_GetCellVal(const struct CriUtfRtvView* table, CriUint32 row, CriUint32 field, CriUtfRtvCell* cell);
+CRI_C_LINKAGE CriUint64 criUtfRtv_GetDataUint64(const struct CriUtfRtvView* table, CriUint32 row, CriUint32 field);
+CRI_C_LINKAGE CriUint32 criUtfRtv_GetDataSint32Fn(const struct CriUtfRtvView* table, CriUint32 row, const char* name);
 typedef struct CriMvEventEntry              // the cue event table entries (0x38 bytes)
 {
     const char* Name;
@@ -458,28 +458,28 @@ CRI_C_LINKAGE void retrieveCuePointHeader(void* player, void* workInfo, CriUint3
 CRI_C_LINKAGE CriBool recordSubtitleHeader(void* player, const CriMovieInputChunk* input);
 CRI_C_LINKAGE CriBool isEndStopProcessingProc(void* player);
 CRI_C_LINKAGE void resetHandle(void* player);
-void executeMvPlyPrepServer(void* player);
+CRI_C_LINKAGE void executeMvPlyPrepServer(void* player);
 CRI_C_LINKAGE void executeMvPlyPlayingServer(void* player);
 CRI_C_LINKAGE void executeVideoServer(void* player);
-void executeUsfServer(void* player);
+CRI_C_LINKAGE void executeUsfServer(void* player);
 CRI_C_LINKAGE void criMvPlyAmng_ExecuteAudioServer(void* audioManager, void* player);
-CriSint32 getInternalStatus(void* player);
-CriBool isLockedInputChunk(const void* player);
+CRI_C_LINKAGE CriSint32 getInternalStatus(void* player);
+CRI_C_LINKAGE CriBool isLockedInputChunk(const void* player);
 CRI_C_LINKAGE void criMvPlyAmng_Destroy(void* manager, void* heap);
 CRI_C_LINKAGE void criAlphaDec_Destroy(void* decoder);
 CRI_C_LINKAGE void criVdec_Destroy(CriUint64* adapter);
 CRI_C_LINKAGE void criSj_Destroy(void* streamJoint);
-CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* chunk, CriSint32 channel);
+CRI_C_LINKAGE CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* chunk, CriSint32 channel);
 CRI_C_LINKAGE void releaseSubtitleChunk(void* player, CriMvSubtitleChunk* chunk);
 CRI_C_LINKAGE void ungetSubtitleChunk(void* player, CriMvSubtitleChunk* chunk);
 CRI_C_LINKAGE void analyzeSubtitleInfo(void* player, CriMvSubtitleChunk* chunk, void* outputInfo);
-CriBool criMvPly_IsSetDefaultDecryptionKey(void);
+CRI_C_LINKAGE CriBool criMvPly_IsSetDefaultDecryptionKey(void);
 CRI_C_LINKAGE void crimvply_makeFrameInfoMembers(void* player, void* output, const void* frameInfo, CriUint64 firstWord, CriUint32 flags);
 CRI_C_LINKAGE void crimvply_makeAlphaFrameInfoMembers(void* player, void* destination, const void* source);
 CRI_C_LINKAGE void* criAlphaDec_GetAlphaFramePointer(void* decoder, void* frameInfo);
-void crimvply_clearAlphaFrameInfoMembers(void* info);
-CriBool crimvply_isUnderGetFrameCondition(void* player);
-void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct CriMvAlphaDecoderFrameInfo* info);
+CRI_C_LINKAGE void crimvply_clearAlphaFrameInfoMembers(void* info);
+CRI_C_LINKAGE CriBool crimvply_isUnderGetFrameCondition(void* player);
+CRI_C_LINKAGE void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct CriMvAlphaDecoderFrameInfo* info);
 typedef struct CriMvPrepServerView         // the player fields executeMvPlyPrepServer reads
 {
     CriUint32 Reserved0;
@@ -523,134 +523,39 @@ typedef struct CriMvPrepServerView         // the player fields executeMvPlyPrep
     CriUint8  ReservedE68[0xed8 - 0xe68];
     CriUint32 RequiredPictures;             // 0xed8
 } CriMvPrepServerView;
-void criMvPly_SetDemuxOutputSj(void* player, void* value, CriUint32 type, CriUint32 flags);
-void FUN_140041df0(void* audioManager, void* callback, void* userData);
-void FUN_140044cc0(void* decoder, void* callback, void* userData);
-void FUN_140044210(CriUint64* decoder, void* callback, void* userData);
-CriUint64 FUN_1400445d0(CriUint64* decoder);
-void* FUN_140043c50(void** decoder);
-void FUN_140044710(void* decoder);
-void FUN_140043d90(void* decoder);
-void FUN_140044c60(void* decoder, CriUint32 offset, CriUint32 size);
-void FUN_1400441b0(CriUint64* decoder, CriUint32 offset, CriUint32 size);
+CRI_C_LINKAGE void criMvPly_SetDemuxOutputSj(void* player, void* value, CriUint32 type, CriUint32 flags);
+CRI_C_LINKAGE void FUN_140041df0(void* audioManager, void* callback, void* userData);
+CRI_C_LINKAGE void FUN_140044cc0(void* decoder, void* callback, void* userData);
+CRI_C_LINKAGE void FUN_140044210(CriUint64* decoder, void* callback, void* userData);
+CRI_C_LINKAGE CriUint64 FUN_1400445d0(CriUint64* decoder);
+CRI_C_LINKAGE void* FUN_140043c50(void** decoder);
+CRI_C_LINKAGE void FUN_140044710(void* decoder);
+CRI_C_LINKAGE void FUN_140043d90(void* decoder);
+CRI_C_LINKAGE void FUN_140044c60(void* decoder, CriUint32 offset, CriUint32 size);
+CRI_C_LINKAGE void FUN_1400441b0(CriUint64* decoder, CriUint32 offset, CriUint32 size);
 void FUN_140042700(void* trackSet, void* player);
-void criUsfDmx_TerminateSupply(void* demux);
-CriSint32 criVdec_GetStatus(void* decoder);
-CriUint32 criVdec_GetNumDecPool(void* decoder);
-CriSint32 criVdec_GetNumPictureData(void* decoder);
-CriSint32 criAlphaDec_GetStatus(void* decoder);
-CriUint32 criAlphaDec_GetNumDecPool(void* decoder);
-CriSint32 criAlphaDec_GetNumPictureData(void* decoder);
-CriSint32 criMvPlyAmng_IsReadyAudioPlayback(void* audioManager, void* player);
-CriSint32 FUN_140033d70(void* player, const CriMovieInputChunk* chunk, CriUint8 last);
-CriSint32 FUN_1400340f0(void* player, const CriMovieInputChunk* chunk);
-CriSint32 FUN_1400341d0(void* player, const CriMovieInputChunk* chunk);
+CRI_C_LINKAGE void criUsfDmx_TerminateSupply(void* demux);
+CRI_C_LINKAGE CriSint32 criVdec_GetStatus(void* decoder);
+CRI_C_LINKAGE CriUint32 criVdec_GetNumDecPool(void* decoder);
+CRI_C_LINKAGE CriSint32 criVdec_GetNumPictureData(void* decoder);
+CRI_C_LINKAGE CriSint32 criAlphaDec_GetStatus(void* decoder);
+CRI_C_LINKAGE CriUint32 criAlphaDec_GetNumDecPool(void* decoder);
+CRI_C_LINKAGE CriSint32 criAlphaDec_GetNumPictureData(void* decoder);
+CRI_C_LINKAGE CriSint32 criMvPlyAmng_IsReadyAudioPlayback(void* audioManager, void* player);
+CRI_C_LINKAGE CriSint32 FUN_140033d70(void* player, const CriMovieInputChunk* chunk, CriUint8 last);
+CRI_C_LINKAGE CriSint32 FUN_1400340f0(void* player, const CriMovieInputChunk* chunk);
+CRI_C_LINKAGE CriSint32 FUN_1400341d0(void* player, const CriMovieInputChunk* chunk);
 // the C names bind to sfr_cri_02c's C++ definitions in the full exe (alias.py pairs only FUN_<va> names by their VA);
 // the hook DLL's ms2sym.obj already maps them to the exe addresses; the C++ callers' mangled names of this unit's two
 // definitions (sfr_cri_02c, sfr_cri_07) bind to the plain C names the same way
 #ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:?FUN_140030cb0@@YAXPEAX@Z=FUN_140030cb0")
-#pragma comment(linker, "/alternatename:?FUN_140031290@@YAXPEAX@Z=FUN_140031290")
-#pragma comment(linker, "/alternatename:?FUN_140031990@@YAJPEAX@Z=FUN_140031990")
-#pragma comment(linker, "/alternatename:?criMvPly_CreateWithWork@@YAPEAXPEAXJ@Z=criMvPly_CreateWithWork")
-#pragma comment(linker, "/alternatename:?criMvPly_CreateWithConfig@@YAPEAXPEAU_criheap_struct@@@Z=criMvPly_CreateWithConfig")
-#pragma comment(linker, "/alternatename:?criMvPly_Destroy@@YAXPEAK@Z=criMvPly_Destroy")
-#pragma comment(linker, "/alternatename:FUN_1400385c8=?FUN_1400385c8@@YAPEAXPEAXJ@Z")
-#pragma comment(linker, "/alternatename:criFixedAllocator_Create=?criFixedAllocator_Create@@YAXPEAXKPEAUCriFixedAllocator@@@Z")
-#pragma comment(linker, "/alternatename:criFixedAllocator_Destroy=?criFixedAllocator_Destroy@@YAXPEAUCriFixedAllocator@@@Z")
-#pragma comment(linker, "/alternatename:criFixedAllocator_Allocate=?criFixedAllocator_Allocate@@YAPEAXPEAUCriFixedAllocator@@KK@Z")
-#pragma comment(linker, "/alternatename:criSjRbf_CalculateWorkSize=?criSjRbf_CalculateWorkSize@@YAJPEBJ@Z")
-#pragma comment(linker, "/alternatename:criSjRbf_Create=?criSjRbf_Create@@YAPEAXPEBXPEAXJ@Z")
-#pragma comment(linker, "/alternatename:criUsfDmx_CalculateWorkSizeWithWork=?criUsfDmx_CalculateWorkSizeWithWork@@YAJJ@Z")
-#pragma comment(linker, "/alternatename:criUsfDmx_CreateWithWork=?criUsfDmx_CreateWithWork@@YAPEAXJPEAXJ@Z")
-#pragma comment(linker, "/alternatename:criSjUni_CalculateWorkSize=?criSjUni_CalculateWorkSize@@YAJPEBJ@Z")
-#pragma comment(linker, "/alternatename:criSjUni_Create=?criSjUni_Create@@YAPEAXPEBXPEAXJ@Z")
-#pragma comment(linker, "/alternatename:criSj_CreateNamedRingBuffer=?criSj_CreateNamedRingBuffer@@YAPEAXPEAXKKK_K@Z")
-#pragma comment(linker, "/alternatename:criUsfDmx_Create=?criUsfDmx_Create@@YAPEAXPEAXJ@Z")
-#pragma comment(linker, "/alternatename:criSj_CreateUniversal=?criSj_CreateUniversal@@YAPEAXPEAXKK@Z")
-#pragma comment(linker, "/alternatename:initializeHandleParameters=?initializeHandleParameters@@YAXPEAX@Z")
-#pragma comment(linker, "/alternatename:criMvPly_SetPcmFormat=?criMvPly_SetPcmFormat@@YAXPEAXJ@Z")
-#pragma comment(linker, "/alternatename:FUN_140030c70=?FUN_140030c70@@YAXPEAX@Z")
-#pragma comment(linker, "/alternatename:freeMetaWork=?freeMetaWork@@YAJPEAX@Z")
-#pragma comment(linker, "/alternatename:criUsfDmx_Destroy=?criUsfDmx_Destroy@@YAXPEAX@Z")
-#pragma comment(linker, "/alternatename:criCs_Destroy=?criCs_Destroy@@YAXPEAU_RTL_CRITICAL_SECTION@@@Z")
-#pragma comment(linker, "/alternatename:?criMvPly_GetStreamingParameters@@YAXPEAXPEAUCriMvStreamingParameters@@@Z=criMvPly_GetStreamingParameters")
-#pragma comment(linker, "/alternatename:?retrieveHeaderInfo@@YAXPEAX0PEBUCriMovieParsedChunk@@@Z=retrieveHeaderInfo")
-#pragma comment(linker, "/alternatename:?FUN_140032090@@YAJPEAX@Z=FUN_140032090")
-#pragma comment(linker, "/alternatename:?decodeMetaData@@YAJPEAX@Z=decodeMetaData")
-#pragma comment(linker, "/alternatename:criUtfRtv_ConvFieldNameToNo=?criUtfRtv_ConvFieldNameToNo@@YAKPEBUCriUtfRtvView@@PEBD@Z")
-#pragma comment(linker, "/alternatename:criUtfRtv_GetCellVal=?criUtfRtv_GetCellVal@@YAJPEBUCriUtfRtvView@@KKPEAUCriUtfRtvCell@@@Z")
-#pragma comment(linker, "/alternatename:criUtfRtv_GetDataUint64=?criUtfRtv_GetDataUint64@@YA_KPEBUCriUtfRtvView@@KK@Z")
-#pragma comment(linker, "/alternatename:criUtfRtv_GetDataSint32Fn=?criUtfRtv_GetDataSint32Fn@@YAKPEBUCriUtfRtvView@@KPEBD@Z")
-#pragma comment(linker, "/alternatename:?FUN_140034330@@YAXPEAX000@Z=FUN_140034330")
-#pragma comment(linker, "/alternatename:?executeUsfServer@@YAXPEAX@Z=executeUsfServer")
-#pragma comment(linker, "/alternatename:?FUN_140034d40@@YAXPEAXPEAUCriMovieInputChunk@@@Z=FUN_140034d40")
-#pragma comment(linker, "/alternatename:getInternalStatus=?getInternalStatus@@YAJPEAX@Z")
-#pragma comment(linker, "/alternatename:isLockedInputChunk=?isLockedInputChunk@@YAJPEBX@Z")
-#pragma comment(linker, "/alternatename:?criMvPly_GetSubtitle@@YAXPEAX0K0@Z=criMvPly_GetSubtitle")
-#pragma comment(linker, "/alternatename:?FUN_1400356a0@@YAXPEAX00PEBUCriMvFrameInfo@@PEBX@Z=FUN_1400356a0")
-#pragma comment(linker, "/alternatename:?FUN_140035800@@YAJPEAX00@Z=FUN_140035800")
-#pragma comment(linker, "/alternatename:?FUN_1400358d0@@YAKPEAXPEBX@Z=FUN_1400358d0")
-#pragma comment(linker, "/alternatename:?criMvPly_StartMemory@@YAXPEAXPEBXK@Z=criMvPly_StartMemory")
-#pragma comment(linker, "/alternatename:?executeHeaderServer@@YAXPEAX@Z=executeHeaderServer")
-#pragma comment(linker, "/alternatename:?FUN_140036b80@@YAJPEAXPEAUCriMvSubtitleChunk@@J@Z=FUN_140036b80")
-#pragma comment(linker, "/alternatename:crimvply_clearAlphaFrameInfoMembers=?crimvply_clearAlphaFrameInfoMembers@@YAXPEAX@Z")
-#pragma comment(linker, "/alternatename:crimvply_isUnderGetFrameCondition=?crimvply_isUnderGetFrameCondition@@YAJPEAX@Z")
-#pragma comment(linker, "/alternatename:crimvply_updateMvPlyYuvBuffersFromAlphadecInfo=?crimvply_updateMvPlyYuvBuffersFromAlphadecInfo@@YAXPEAXPEBUCriMvAlphaDecoderFrameInfo@@@Z")
-#pragma comment(linker, "/alternatename:?criMvPly_CalcPlaybackWorkSize@@YAJPEAXPEBUCriMvStreamingParameters@@@Z=criMvPly_CalcPlaybackWorkSize")
-#pragma comment(linker, "/alternatename:decideReadBufferExtSize=?decideReadBufferExtSize@@YAKPEAX@Z")
-#pragma comment(linker, "/alternatename:criSjRbf_GetRequiredMemorySizeWithConfig=?criSjRbf_GetRequiredMemorySizeWithConfig@@YAJKKKPEBK@Z")
-#pragma comment(linker, "/alternatename:crimvply_findVdecIF=?crimvply_findVdecIF@@YAPEAXJ@Z")
-#pragma comment(linker, "/alternatename:FUN_140044400=?FUN_140044400@@YAJPEAXKKK@Z")
-#pragma comment(linker, "/alternatename:crimvply_findAlphadecIfIF=?crimvply_findAlphadecIfIF@@YAPEAXJ@Z")
-#pragma comment(linker, "/alternatename:FUN_140043a80=?FUN_140043a80@@YAJPEAXJJJ@Z")
-#pragma comment(linker, "/alternatename:criMvPlyAmng_CalcAmngWorkSize=?criMvPlyAmng_CalcAmngWorkSize@@YAJPEBX@Z")
-#pragma comment(linker, "/alternatename:criMvPlyAmng_CalcAudioDecoderWorkSize=?criMvPlyAmng_CalcAudioDecoderWorkSize@@YAJPEBXPEBK@Z")
-#pragma comment(linker, "/alternatename:criSjUni_GetRequiredMemorySizeWithConfig=?criSjUni_GetRequiredMemorySizeWithConfig@@YAJKKPEBK@Z")
-#pragma comment(linker, "/alternatename:?crimvply_AllocateWorkBufferInCs@@YAKPEAX00@Z=crimvply_AllocateWorkBufferInCs")
-#pragma comment(linker, "/alternatename:criSj_GetChunk=?criSj_GetChunk@@YAXPEAXJK0@Z")
-#pragma comment(linker, "/alternatename:criAlphaDec_Create=?criAlphaDec_Create@@YAPEAXPEAX00@Z")
-#pragma comment(linker, "/alternatename:criVdec_Create=?criVdec_Create@@YAPEAXPEAX00@Z")
-#pragma comment(linker, "/alternatename:FUN_140044de0=?FUN_140044de0@@YAXPEAX00@Z")
-#pragma comment(linker, "/alternatename:FUN_140044c10=?FUN_140044c10@@YAXPEAXK@Z")
-#pragma comment(linker, "/alternatename:FUN_140044330=?FUN_140044330@@YAXPEA_KPEAX1@Z")
-#pragma comment(linker, "/alternatename:setProcessorParams=?setProcessorParams@@YAXPEAX00@Z")
-#pragma comment(linker, "/alternatename:?FUN_140037a40@@YAXPEBUCriMovieInputChunk@@0PEAX@Z=FUN_140037a40")
-#pragma comment(linker, "/alternatename:criMvPly_IsSetDefaultDecryptionKey=?criMvPly_IsSetDefaultDecryptionKey@@YAJXZ")
-#pragma comment(linker, "/alternatename:criUsfCmn_ParseUsfHeaderStd=?criUsfCmn_ParseUsfHeaderStd@@YAKPEBEKPEAUCriUsfStandardHeader@@@Z")
-#pragma comment(linker, "/alternatename:FUN_140038000=?FUN_140038000@@YAXPEAPEAXPEAX@Z")
-#pragma comment(linker, "/alternatename:criMvPlyAmng_Create=?criMvPlyAmng_Create@@YAPEAXPEAX0PEBX@Z")
-#pragma comment(linker, "/alternatename:criMvPlyAmng_CreateAudioDecoder=?criMvPlyAmng_CreateAudioDecoder@@YAJPEAX00PEBKKJ@Z")
-#pragma comment(linker, "/alternatename:criMvPlyAmng_SetDecryptCallback=?criMvPlyAmng_SetDecryptCallback@@YAXPEAX00J@Z")
-#pragma comment(linker, "/alternatename:?executeMvPlyPrepServer@@YAXPEAX@Z=executeMvPlyPrepServer")
-#pragma comment(linker, "/alternatename:criMvPly_SetDemuxOutputSj=?criMvPly_SetDemuxOutputSj@@YAXPEAX0KK@Z")
-#pragma comment(linker, "/alternatename:FUN_140041df0=?FUN_140041df0@@YAXPEAX00@Z")
-#pragma comment(linker, "/alternatename:FUN_140044cc0=?FUN_140044cc0@@YAXPEAX00@Z")
-#pragma comment(linker, "/alternatename:FUN_140044210=?FUN_140044210@@YAXPEA_KPEAX1@Z")
-#pragma comment(linker, "/alternatename:FUN_1400445d0=?FUN_1400445d0@@YA_KPEA_K@Z")
-#pragma comment(linker, "/alternatename:FUN_140043c50=?FUN_140043c50@@YAPEAXPEAPEAX@Z")
-#pragma comment(linker, "/alternatename:FUN_140044710=?FUN_140044710@@YAXPEAX@Z")
-#pragma comment(linker, "/alternatename:FUN_140043d90=?FUN_140043d90@@YAXPEAX@Z")
-#pragma comment(linker, "/alternatename:FUN_140044c60=?FUN_140044c60@@YAXPEAXKK@Z")
-#pragma comment(linker, "/alternatename:FUN_1400441b0=?FUN_1400441b0@@YAXPEA_KKK@Z")
-#pragma comment(linker, "/alternatename:criUsfDmx_TerminateSupply=?criUsfDmx_TerminateSupply@@YAXPEAX@Z")
-#pragma comment(linker, "/alternatename:criVdec_GetStatus=?criVdec_GetStatus@@YAJPEAX@Z")
-#pragma comment(linker, "/alternatename:criVdec_GetNumDecPool=?criVdec_GetNumDecPool@@YAKPEAX@Z")
-#pragma comment(linker, "/alternatename:criVdec_GetNumPictureData=?criVdec_GetNumPictureData@@YAJPEAX@Z")
-#pragma comment(linker, "/alternatename:criAlphaDec_GetStatus=?criAlphaDec_GetStatus@@YAJPEAX@Z")
-#pragma comment(linker, "/alternatename:criAlphaDec_GetNumDecPool=?criAlphaDec_GetNumDecPool@@YAKPEAX@Z")
-#pragma comment(linker, "/alternatename:criAlphaDec_GetNumPictureData=?criAlphaDec_GetNumPictureData@@YAJPEAX@Z")
-#pragma comment(linker, "/alternatename:criMvPlyAmng_IsReadyAudioPlayback=?criMvPlyAmng_IsReadyAudioPlayback@@YAJPEAX0@Z")
-#pragma comment(linker, "/alternatename:FUN_140033d70=?FUN_140033d70@@YAJPEAXPEBUCriMovieInputChunk@@E@Z")
-#pragma comment(linker, "/alternatename:FUN_1400340f0=?FUN_1400340f0@@YAJPEAXPEBUCriMovieInputChunk@@@Z")
-#pragma comment(linker, "/alternatename:FUN_1400341d0=?FUN_1400341d0@@YAJPEAXPEBUCriMovieInputChunk@@@Z")
 #endif
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // construct a CRI Movie player and its work queues inside the supplied memory block
 // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe).
 // @0x14002eb20
-void* criMvPly_CreateWithWork(void* work, CriSint32 workSize)
+CRI_C_LINKAGE void* criMvPly_CreateWithWork(void* work, CriSint32 workSize)
 {
     void* outWBuf;
     void* inputWork;
@@ -786,7 +691,7 @@ void* criMvPly_CreateWithWork(void* work, CriSint32 workSize)
 
 // allocate and initialize a CRI Movie player from the caller's heap
 // @0x14002f1f0
-void* criMvPly_CreateWithConfig(CriHeap heap)
+CRI_C_LINKAGE void* criMvPly_CreateWithConfig(CriHeap heap)
 {
     CriMvOwnedResourceView* ply;
     if (DAT_143ffd500 <= 0) {
@@ -867,7 +772,7 @@ void* criMvPly_CreateWithConfig(CriHeap heap)
 // release decoder queues, demux state, and heap-owned CRI Movie work areas
 // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): sjrb, insj, cs, sjmemory, heap, objwork.
 // @0x14002f610
-void criMvPly_Destroy(CriUint32* object)
+CRI_C_LINKAGE void criMvPly_Destroy(CriUint32* object)
 {
     void* sjrb;
     void* insj;
@@ -929,7 +834,7 @@ void criMvPly_Destroy(CriUint32* object)
 // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): sti, oaud, i, vinfo, vprm, track, defTrack,
 // oalph, info, alph, sno.
 // @0x14002fbe0
-void criMvPly_GetStreamingParameters(void* player, struct CriMvStreamingParameters* output)
+CRI_C_LINKAGE void criMvPly_GetStreamingParameters(void* player, struct CriMvStreamingParameters* output)
 {
     CriMvAnalyzedHeader* info;
     CriUint32* vinfo;
@@ -1093,27 +998,27 @@ typedef struct CriMvDecoderConfig
 // CriMvVideoParameters (0x30) and CriMvAlphaParameters (0x1c)
 typedef struct CriMvAllocVideoView { CriUint32 MaxWidth, MaxHeight, DispWidth, DispHeight, NumFramePools, Framerate, TotalFrames, Unk1c[5]; } CriMvAllocVideoView;
 typedef struct CriMvAllocAlphaView { CriUint32 MaxWidth, MaxHeight, DispWidth, DispHeight, Framerate, TotalFrames, AlphaType; } CriMvAllocAlphaView;
-void criSj_GetChunk(void* object, CriSint32 operation, CriUint32 limit, void* output);
-void* criAlphaDec_Create(void* implementation, void* heap, void* parameter);
-void* criVdec_Create(void* implementation, void* heap, void* parameter);
-CriSint32 criMvPly_IsSetDefaultDecryptionKey(void);
-void FUN_140044de0(void* decoder, void* first, void* second);
-void FUN_140044c10(void* decoder, CriUint32 mask);
-void FUN_140044330(CriUint64* pair, void* first, void* second);
-void FUN_140037a40(const CriMovieInputChunk* current, const CriMovieInputChunk* previous, void* player);
-void FUN_140038000(void** record, void* userData);
-void setProcessorParams(void* player, void* videoDecoder, void* alphaDecoder);
-void* criMvPlyAmng_Create(void* owner, void* heap, const void* config);
-CriSint32 criMvPlyAmng_CreateAudioDecoder(void* manager, void* player, void* source, const CriUint32* streamInfo,
+CRI_C_LINKAGE void criSj_GetChunk(void* object, CriSint32 operation, CriUint32 limit, void* output);
+CRI_C_LINKAGE void* criAlphaDec_Create(void* implementation, void* heap, void* parameter);
+CRI_C_LINKAGE void* criVdec_Create(void* implementation, void* heap, void* parameter);
+CRI_C_LINKAGE CriSint32 criMvPly_IsSetDefaultDecryptionKey(void);
+CRI_C_LINKAGE void FUN_140044de0(void* decoder, void* first, void* second);
+CRI_C_LINKAGE void FUN_140044c10(void* decoder, CriUint32 mask);
+CRI_C_LINKAGE void FUN_140044330(CriUint64* pair, void* first, void* second);
+CRI_C_LINKAGE void FUN_140037a40(const CriMovieInputChunk* current, const CriMovieInputChunk* previous, void* player);
+CRI_C_LINKAGE void FUN_140038000(void** record, void* userData);
+CRI_C_LINKAGE void setProcessorParams(void* player, void* videoDecoder, void* alphaDecoder);
+CRI_C_LINKAGE void* criMvPlyAmng_Create(void* owner, void* heap, const void* config);
+CRI_C_LINKAGE CriSint32 criMvPlyAmng_CreateAudioDecoder(void* manager, void* player, void* source, const CriUint32* streamInfo,
     CriUint32 track, CriSint32 flags);
-void criMvPlyAmng_SetDecryptCallback(void* manager, void* callback, void* userData, CriSint32 stream);
+CRI_C_LINKAGE void criMvPlyAmng_SetDecryptCallback(void* manager, void* callback, void* userData, CriSint32 stream);
 
 // Configure the movie's read queue, decoder interfaces, audio manager, and output stream.
 // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): aprm, inp (video parameters), mode (status),
 // bound (read extension), fsize (read size), chunk, load (video interface), fmt (video config),
 // lane (alpha interface), fill (alpha config), done.
 // @0x140030280
-CriUint32 crimvply_AllocateWorkBufferInCs(void* player, void* heap, void* work)
+CRI_C_LINKAGE CriUint32 crimvply_AllocateWorkBufferInCs(void* player, void* heap, void* work)
 {
     const CriMvAllocAlphaView* aprm;
     const CriMvAllocVideoView* inp;
@@ -1207,7 +1112,7 @@ CriUint32 crimvply_AllocateWorkBufferInCs(void* player, void* heap, void* work)
             fmt.BufferSize = 0;
             fmt.BufferExtension = 0;
         }
-        MS2_ALLOC_PLAYER->VideoDecoder = criAlphaDec_Create(load, heap, &fmt);
+        MS2_ALLOC_PLAYER->VideoDecoder = criVdec_Create(load, heap, &fmt);
         if (MS2_ALLOC_PLAYER->VideoDecoder == NULL)
         {
             crimvply_occurUserError(player, "E05063013M : Can't create Video decoder.", 0);
@@ -1237,7 +1142,7 @@ CriUint32 crimvply_AllocateWorkBufferInCs(void* player, void* heap, void* work)
             fill.OutputBuffer = MS2_ALLOC_PLAYER->ChunkData;
             fill.BufferSize = MS2_ALLOC_PLAYER->ChunkSize;
             fill.BufferExtension = MS2_ALLOC_PLAYER->ChunkExtension;
-            MS2_ALLOC_PLAYER->AlphaDecoder = criVdec_Create(lane, heap, &fill);
+            MS2_ALLOC_PLAYER->AlphaDecoder = criAlphaDec_Create(lane, heap, &fill);
             if (MS2_ALLOC_PLAYER->AlphaDecoder == NULL)
             {
                 crimvply_occurUserError(player, "E08082100M : Can't create Alpha decoder.", 0);
@@ -1287,7 +1192,7 @@ CriUint32 crimvply_AllocateWorkBufferInCs(void* player, void* heap, void* work)
 
 // release every CRI Movie player subsystem and clear its owned state
 // @0x140030cb0
-void FUN_140030cb0(void* player)
+CRI_C_LINKAGE void FUN_140030cb0(void* player)
 {
     void* heap;
     void* handle;
@@ -1333,7 +1238,7 @@ void FUN_140030cb0(void* player)
 
 // advance decoder and audio processing according to the CRI Movie state machine
 // @0x140031290
-void FUN_140031290(void* player)
+CRI_C_LINKAGE void FUN_140031290(void* player)
 {
     CriSint32 status;
     status = getInternalStatus(player);
@@ -1381,7 +1286,7 @@ void FUN_140031290(void* player)
 
 // reset the demux and its output stream after the player update completes
 // @0x140031990
-CriBool FUN_140031990(void* player)
+CRI_C_LINKAGE CriBool FUN_140031990(void* player)
 {
     void* demux;
     demux = ((CriMvPlyDemuxFields*)player)->Demux;
@@ -1406,7 +1311,7 @@ CriBool FUN_140031990(void* player)
 // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): sti, contentsInfo, vinfo, readBytes, track,
 // queue, completed, usfHead, hdr, info, alph.
 // @0x140032090
-CriSint32 FUN_140032090(void* player)
+CRI_C_LINKAGE CriSint32 FUN_140032090(void* player)
 {
     void* queue = ((CriMvPlyDemuxFields*)player)->ReadBuffer;
     CriSint32 completed = 0;
@@ -1494,7 +1399,7 @@ CriSint32 FUN_140032090(void* player)
 // initialize analyzed stream counts from the CRI Movie file header
 // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): count, recPos, records, streamId.
 // @0x140032420
-void retrieveHeaderInfo(void* player, void* streamInfo, const struct CriMovieParsedChunk* parsed)
+CRI_C_LINKAGE void retrieveHeaderInfo(void* player, void* streamInfo, const struct CriMovieParsedChunk* parsed)
 {
     CriUint32 streamId;
     void* records;
@@ -1542,7 +1447,7 @@ void retrieveHeaderInfo(void* player, void* streamInfo, const struct CriMoviePar
 // Consume USF metadata records and keep the SFV, ALP and CUE tables; the CUE table fills the event entries.
 // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe).
 // @0x140033030
-CriBool decodeMetaData(void* player)
+CRI_C_LINKAGE CriBool decodeMetaData(void* player)
 {
     const CriUint8* payload;
     CriSint32 clen;
@@ -1647,7 +1552,7 @@ CriBool decodeMetaData(void* player)
 // Start demuxing the prepared movie, hand the stream headers to the decoders, and move the player to READY once
 // enough frames are decoded. Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe).
 // @0x140033810
-void executeMvPlyPrepServer(void* player)
+CRI_C_LINKAGE void executeMvPlyPrepServer(void* player)
 {
     void* videoDecoder;
     void* adecSj;
@@ -1742,7 +1647,7 @@ void executeMvPlyPrepServer(void* player)
 // Drain the two CRI input streams into the decoder read queue.
 // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): dst, written, chunk.
 // @0x140034330
-void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue)
+CRI_C_LINKAGE void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue)
 {
     CriMovieChunkQueueRecord chunk;
     CriSint32 written;
@@ -1778,7 +1683,7 @@ void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue
 // validate the CRI Movie signature, reset the demux, and start ready decoders
 // Local names pick the exe's VC9 /Od stack slots: dmx, record.
 // @0x140034730
-void executeUsfServer(void* player)
+CRI_C_LINKAGE void executeUsfServer(void* player)
 {
     CriMovieChunkQueueRecord record;
     void* dmx;
@@ -1828,7 +1733,7 @@ void executeUsfServer(void* player)
 
 // expose the next decoded file-read record when the movie state permits a read
 // @0x140034d40
-void FUN_140034d40(void* player, CriMovieInputChunk* output)
+CRI_C_LINKAGE void FUN_140034d40(void* player, CriMovieInputChunk* output)
 {
     CriMovieInputChunk* record;
     CriSint32 status;
@@ -1872,7 +1777,7 @@ void FUN_140034d40(void* player, CriMovieInputChunk* output)
 
 // copy the decoded frame metadata and add the alpha frame metadata when available
 // @0x1400356a0
-void FUN_1400356a0(void* player, void* output, void* alphaOutput,
+CRI_C_LINKAGE void FUN_1400356a0(void* player, void* output, void* alphaOutput,
                    const struct CriMvFrameInfo* frameInfo, const void* alphaInfo)
 {
     crimvply_makeFrameInfoMembers(player, output, frameInfo, *(const CriUint64*)frameInfo,
@@ -1883,7 +1788,7 @@ void FUN_1400356a0(void* player, void* output, void* alphaOutput,
 
 // get the current alpha frame only while the movie is in a frame-producing state
 // @0x140035800
-CriBool FUN_140035800(void* player, void* movieYuvState, void* outputInfo)
+CRI_C_LINKAGE CriBool FUN_140035800(void* player, void* movieYuvState, void* outputInfo)
 {
     CriBool result;
     CriUint64 frameInfo[10];
@@ -1907,7 +1812,7 @@ CriBool FUN_140035800(void* player, void* movieYuvState, void* outputInfo)
 
 // copy the decoded frame's plane descriptors (buffer, size, height) into the caller's YUV buffer description
 // @0x1400358d0
-CriUint32 FUN_1400358d0(void* output, const void* info)
+CRI_C_LINKAGE CriUint32 FUN_1400358d0(void* output, const void* info)
 {
     memset(output, 0, 0x40);
     if (((const CriMvFramePlaneSource*)info)->PlaneCount >= 1)
@@ -1934,7 +1839,7 @@ CriUint32 FUN_1400358d0(void* output, const void* info)
 // initialize a new input stream, reset demux state, and seed the read queue
 // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): len, buf, demux.
 // @0x1400361a0
-void criMvPly_StartMemory(void* player, const void* inputData, CriUint32 inputSize)
+CRI_C_LINKAGE void criMvPly_StartMemory(void* player, const void* inputData, CriUint32 inputSize)
 {
     void* demux = ((CriMvPlyDemuxFields*)player)->Demux;
     CriMvWriteBufferView buf;
@@ -1977,7 +1882,7 @@ void criMvPly_StartMemory(void* player, const void* inputData, CriUint32 inputSi
 
 // read the selected USF subtitle chunk, decode its metadata, and copy its text into caller storage
 // @0x140036470
-void criMvPly_GetSubtitle(void* player, void* destination, CriUint32 capacity, void* outputInfo)
+CRI_C_LINKAGE void criMvPly_GetSubtitle(void* player, void* destination, CriUint32 capacity, void* outputInfo)
 {
     CriMvSubtitleChunk chunk;  // FUN_140036b80 clears it
     CriUint32 count;
@@ -2007,7 +1912,7 @@ void criMvPly_GetSubtitle(void* player, void* destination, CriUint32 capacity, v
 // parse the next USF header chunk into the current stream entry and record its history fields
 // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): payload, res, stream, phase, chunk, target, info.
 // @0x140036710
-void executeHeaderServer(void* player)
+CRI_C_LINKAGE void executeHeaderServer(void* player)
 {
     CriSint32 res;
     void* stream;
@@ -2054,7 +1959,7 @@ void executeHeaderServer(void* player)
 // Select the next subtitle chunk matching a channel while consuming decoder control records.
 // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): count, sj, record, headerInfo, accepted, item.
 // @0x140036b80
-CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* output, CriSint32 channel)
+CRI_C_LINKAGE CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* output, CriSint32 channel)
 {
     CriSint32 count;
     CriMovieChunkQueueRecord record;
@@ -2112,7 +2017,7 @@ CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* output, CriSint32 chan
 // Work memory for one playback: stream-joint ring buffers sized from the bitrate, the video and alpha decoders, audio and subtitles.
 // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe).
 // @0x140037400
-CriSint32 criMvPly_CalcPlaybackWorkSize(void* player, const CriMvStreamParamsView* params)
+CRI_C_LINKAGE CriSint32 criMvPly_CalcPlaybackWorkSize(void* player, const CriMvStreamParamsView* params)
 {
     CriSint32 sizes;
     CriSint32 dec;
@@ -2224,7 +2129,7 @@ typedef struct Cri02dMaskPlayerView
     CriUint8* CarryBuffer;
 } Cri02dMaskPlayerView;
 // @0x140037a40
-void FUN_140037a40(const CriMovieInputChunk* current, const CriMovieInputChunk* previous, void* player)
+CRI_C_LINKAGE void FUN_140037a40(const CriMovieInputChunk* current, const CriMovieInputChunk* previous, void* player)
 {
     CriMovieInputChunk payload;
     Cri02dUsfChunkHeader usfhdr;

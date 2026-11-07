@@ -562,10 +562,10 @@ void M2V_SetUsrSj(cri_any = cri_any(), int = 0, cri_any = cri_any(), cri_any = c
 void M2V_SetPicUsrBuf(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void M2V_GetPicUsr(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 cri_u8 M2V_DecodePicAtr(cri_u8, cri_u8);
-void M2V_GetPicAtr(cri_any = cri_any(), cri_any = cri_any());
-void M2V_GetBitRate(cri_any = cri_any(), cri_any = cri_any());
-void M2V_GetVbvBufSiz(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
-void M2V_GetLinkFlg(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+extern "C" void M2V_GetPicAtr(cri_any = cri_any(), cri_any = cri_any());
+extern "C" void M2V_GetBitRate(cri_any = cri_any(), cri_any = cri_any());
+extern "C" void M2V_GetVbvBufSiz(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+extern "C" void M2V_GetLinkFlg(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void M2V_RequestStop(cri_any = cri_any());
 void FUN_14005b300(cri_u8, cri_u8);
 void FUN_14005b390(longlong, cri_u8, void *);
@@ -598,7 +598,7 @@ void MPVM2V_Init();
 ulonglong MPVM2V_Create(longlong);
 void MPVM2V_Destroy(longlong);
 void MPVM2V_SetCond(longlong);
-void mpvm2v_CopyPicAtr(cri_any = cri_any());
+extern "C" void mpvm2v_CopyPicAtr(cri_any = cri_any());
 cri_u8 MPVM2V_DecodeFrm(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void MPVM2V_RequestStop(cri_any = cri_any());
 int MPVM2V_DecodePicAtr(cri_any = cri_any(), cri_any = cri_any());
@@ -852,13 +852,13 @@ void M2V_GetPicUsr(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
 
 cri_u8 M2V_DecodePicAtr(cri_u8 arg1, cri_u8 arg2);
 
-void M2V_GetPicAtr(cri_any cri_p0, cri_any cri_p1);
+extern "C" void M2V_GetPicAtr(cri_any cri_p0, cri_any cri_p1);
 
-void M2V_GetBitRate(cri_any cri_p0, cri_any cri_p1);
+extern "C" void M2V_GetBitRate(cri_any cri_p0, cri_any cri_p1);
 
-void M2V_GetVbvBufSiz(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p3);
+extern "C" void M2V_GetVbvBufSiz(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p3);
 
-void M2V_GetLinkFlg(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
+extern "C" void M2V_GetLinkFlg(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
 
 void M2V_RequestStop(cri_any cri_p0);
 
@@ -935,7 +935,7 @@ void MPVM2V_Destroy(longlong arg1);
 
 void MPVM2V_SetCond(longlong arg1);
 
-void mpvm2v_CopyPicAtr(cri_any cri_p0);
+extern "C" void mpvm2v_CopyPicAtr(cri_any cri_p0);
 
 cri_u8 MPVM2V_DecodeFrm(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
 

@@ -159,13 +159,13 @@ extern "C" void criSj_UngetChunk(void* object, long operation, void* chunk);   /
 extern "C" void criSj_PutChunk(void* object, long operation, void* chunk);   // sfr_cri_03b, 0x1400467b0
 cri_u64 FUN_1400467b8(Any a0,Any a1 = 0);
 // sfr_cri_03's definitions; the /Od criAdec code calls them with these types
-void criSj_GetChunk(void* object, long operation, unsigned long limit, void* output);   // 0x1400467a0
+extern "C" void criSj_GetChunk(void* object, long operation, unsigned long limit, void* output);   // 0x1400467a0
 extern "C" long FUN_1400467b8(void* object, long query);
 void FUN_1400467c0(Any a0,Any a1,Any a2,Any a3);
 // sfr_cri_03's names and types for 0x14003b3fc, 0x14003b674 and 0x1400467c0: the /Od ADX loader functions below
 // call these and the typed 0x1400467a0-b8 overloads, so their arguments are passed directly (no Any temporaries).
 struct CriUsfStandardHeader;
-unsigned long criUsfCmn_ParseUsfHeaderStd(const unsigned char* data, unsigned long size, CriUsfStandardHeader* header);
+extern "C" unsigned long criUsfCmn_ParseUsfHeaderStd(const unsigned char* data, unsigned long size, CriUsfStandardHeader* header);
 extern "C" const unsigned char* criUsfCmn_GetContents(const unsigned char* data, unsigned long size, long* contentSize);
 void criSj_SplitChunk(const void* source, unsigned long maximum, void* prefix, void* suffix);
 void FUN_14004c370();

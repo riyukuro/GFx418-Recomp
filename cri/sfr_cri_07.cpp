@@ -450,10 +450,10 @@ extern "C" void* _DAT_143d749b0;
 void FUN_14006aa60(short *src, short *dst);
 
 void crimvply_clearFrameInfoMembers(void *);  // C3: the definition's signature
-void crimvply_clearAlphaFrameInfoMembers(void *);  // C3: sfr_cri_02c's definition (0x1400351c0)
+extern "C" void crimvply_clearAlphaFrameInfoMembers(void *);  // C3: sfr_cri_02c's definition (0x1400351c0)
 extern "C" void crimvply_makeFrameInfoMembers(void *, void *, void const *, unsigned __int64, unsigned long);  // C3: the definition's signature
-long crimvply_isUnderGetFrameCondition(void *);  // C3: sfr_cri_02c's definition (0x140035560)
-void FUN_1400356a0(void *, void *, void *, CriMvFrameInfo const *, void const *);  // C3: the definition's signature
+extern "C" long crimvply_isUnderGetFrameCondition(void *);  // C3: sfr_cri_02c's definition (0x140035560)
+extern "C" void FUN_1400356a0(void *, void *, void *, CriMvFrameInfo const *, void const *);  // C3: the definition's signature
 extern "C" void crimvply_occurFatalError(void *, char const *, long);  // C3: the definition (C linkage)
 extern "C" void crimvply_occurUserError(void *, char const *, long);  // C3: the definition (C linkage)
 void criErr_NotifyPrmArray(long, char const *, long, long, void *);  // C3: the definition's signature

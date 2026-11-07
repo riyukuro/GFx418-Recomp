@@ -224,7 +224,7 @@ void FUN_140035090(cri_any = cri_any());
 void FUN_1400351c0(cri_any = cri_any());
 void FUN_140035260(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 cri_u8 FUN_140035560(cri_any = cri_any());
-void FUN_1400356a0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+extern "C" void FUN_1400356a0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_140037910(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_140037950(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_140038ce4(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
