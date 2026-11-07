@@ -65,6 +65,7 @@
 #define MS2_AS3_COLLECT_NOALIAS   // Collect keeps no pointer to the caller's Stats (as3_gc.h)
 #define MS2_AS3_ASSIGN_NOALIAS   // one SCU in the exe: Assign/ReleaseInternal/getNext touch no caller memory (as3_value.h, as3_asvm.h)
 #define SF_AS3_SHAPEOBJECT_MODEL   // ShapeObject / AvmBitmap from the SDK MI layout (as3_avm.h)
+#define SF_AS3_AVM_INPLACE_DELETE   // the Avm* deleting destructors free only on a global delete, as sfr_ime_01 (??_GAvmMovieClip 0x1423dbb60)
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
@@ -2799,10 +2800,9 @@ void MS2_Sfr16EmitShapeDtors(Scaleform::GFx::AS3::AvmBitmap* b, Scaleform::GFx::
 
 // AvmMovieClip has no additional state; release the AvmSprite base.
 // @0x1424ddcb0
-Scaleform::GFx::AS3::AvmMovieClip::~AvmMovieClip()
+SF_NOINLINE Scaleform::GFx::AS3::AvmMovieClip::~AvmMovieClip()   // ??_G 0x1423dbb60 calls it, as in the exe
 {
 }
-//
 //
 
 //

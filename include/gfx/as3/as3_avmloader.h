@@ -21,6 +21,9 @@ public:
     // Body: AvmObjOffset = 0 (the AS3 part is a base here, not one DisplayObjectBase destroys). Exact, with the
     // inline ~AvmInteractiveObj, for 0x1424ddc40 and ??_G 0x1424e28e0 (the TU defining it emits both).
     virtual ~AvmLoader();
+#ifdef SF_AS3_AVM_INPLACE_DELETE
+    using DisplayObjContainer::operator delete;   // ??_G 0x1424e28e0 frees on (flags & 1): not AvmDisplayObj's in-place delete
+#endif
 
     virtual CharacterDef* GetCharacterDef() const { return NULL; }                  // 59 0x142507b40
     // (appended, sfr35) the AvmDisplayObj class-name queries: "flash.display.Loader".
