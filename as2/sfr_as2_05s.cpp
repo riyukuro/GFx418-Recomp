@@ -44,10 +44,11 @@ struct ValueAccess : Value
     using Value::ResolveFunctionName;
 };
 
-// Value::ToFunction with the FunctionRef copy's SetLocalFrame expanded.
+// Value::ToFunction with the FunctionRef copy's SetLocalFrame expanded. The switch is on the raw type byte, as the
+// exe compares it (cmp cl, imm).
 SF_FORCEINLINE FunctionRef ValueToFunction(const Value& v, const Environment* penv)
 {
-    switch (v.GetType())
+    switch (v.T.Type)
     {
     case Value::FUNCTION:
         return FunctionRef(v.V.FunctionValue, SetLocalFrameInline05sTag());
@@ -80,16 +81,16 @@ SF_FORCEINLINE FunctionRef::FunctionRef(const FunctionRefBase& orig, Tag)
 // With the GFx extensions the method gets the button, the roll-over count or the key flag, and the mouse as
 // arguments; a nested roll over / out of another mouse only reaches a method taking two or more arguments.
 // MS2-FUNCTIONAL: GetMovieImpl, ToFunction with SetLocalFrame and the Value releases are inlined as in the exe; the
-// frame is 8 bytes smaller and rbx is pushed where the exe saves it to its home slot, so handlerFoundCnt is zeroed at
-// entry (the exe zeroes it in its r9 home slot after the key listeners) and the locals sit one slot off
+// frame is 8 bytes smaller and rbx is pushed where the exe saves it to its home slot, so handlerFoundCnt is zeroed
+// earlier (the exe zeroes it in its r9 home slot after the key listeners) and the locals sit one slot off
 // @0x142940160
 bool AvmCharacter::ExecuteEvent(const EventId& id)
 {
-    int handlerFoundCnt = 0;
     // Keep the environment and its target alive during the calls.
     Ptr<InteractiveObject> thisPtr(GetDispObj());
     Environment*           env = GetASEnvironment();
     Ptr<InteractiveObject> targetPtr(env->GetTarget());
+    int handlerFoundCnt = 0;
 
     if (id.Id == EventId::Event_KeyDown || id.Id == EventId::Event_KeyUp)
     {
@@ -147,7 +148,10 @@ bool AvmCharacter::ExecuteEvent(const EventId& id)
                              id.Id == EventId::Event_PressAux || id.Id == EventId::Event_ReleaseAux)
                     {
                         // negative when the keyboard was used, 0 for the mouse
-                        env->Push(Value(id.KeyCode == 0 ? 0 : -1));
+                        if (id.KeyCode == 0)
+                            env->Push(Value(0));
+                        else
+                            env->Push(Value(-1));
                         ++nArgs;
                     }
                     env->Push(Value(int(id.MouseIndex)));
