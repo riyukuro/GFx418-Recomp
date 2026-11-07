@@ -91,6 +91,8 @@
 
 SF_NOINLINE void FUN_1424dc9f0(void* self);
 namespace Scaleform {
+// The exe calls the Value range destructor out of line (0x1424f6d50, sfr_as3_17) from the TR::State arrays in ~Tracer.
+template<> SF_NOINLINE void ConstructorMov<GFx::AS3::Value>::DestructArray(GFx::AS3::Value* p, UPInt count);
 // LoadQueueEntry's mBytes destructor is the out-of-line 0x1424dc9f0 in the exe.
 namespace GFx { template<> inline AutoPtr<ArrayPOD<UByte> >::~AutoPtr() { FUN_1424dc9f0(this); } }
 
@@ -413,53 +415,66 @@ Scaleform::GFx::AS3::CallFrame::~CallFrame()
     }
 }
 
-// The tracer frees its temporary states, their three Value arrays, the block list, and its scratch arrays.
-// MS2-FUNCTIONAL 0x1424df070: follows the exe's state/list ownership; template-array teardown is expressed via headers.
+// The tracer's TR::State as ~Tracer deletes it (as3_readargs.h keeps its members private): the implicit destructor
+// frees the register bits, then the three Value arrays in reverse order.
+namespace {
+struct Sfr16TRStateView
+{
+    struct RegisterBits
+    {
+        Scaleform::UInt8*  Data;
+        Scaleform::UInt32  BitCount;
+        ~RegisterBits() { SF_FREE(Data); }
+    };
+    void*                                     pTracer;
+    Scaleform::GFx::AS3::Abc::TCodeOffset     BCP;
+    Scaleform::GFx::AS3::Abc::TCodeOffset     OpcodeCP;
+    Scaleform::ArrayDH<Scaleform::GFx::AS3::Value> Registers;
+    Scaleform::ArrayDH<Scaleform::GFx::AS3::Value> OpStack;
+    Scaleform::ArrayDH<Scaleform::GFx::AS3::Value> ScopeStack;
+    RegisterBits                              RegChanged;
+    void operator delete(void* p) { SF_FREE(p); }
+};
+static_assert(sizeof(Sfr16TRStateView) == 0x88, "TR::State view size");
+struct Sfr16TRBlockView { Sfr16TRBlockView* pPrev; Sfr16TRBlockView* pNext; void operator delete(void* p) { SF_FREE(p); } };
+}
+
+// The exe's ICF folds the Catch traits array destructor into the out-of-line SPtr array one (0x1424dc4b0, sfr_as3_15).
+namespace Scaleform {
+typedef ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::NamespaceSet>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::NamespaceSet>, 2>,
+                      ArrayDefaultPolicy> Sfr16SPtrArrayData;
+template<> SF_NOINLINE Sfr16SPtrArrayData::~ArrayDataBase();
+}
+
+// SDK Tracer::~Tracer: the block list is freed, then the states; the arrays release themselves.
 // @0x1424df070
 extern "C" void FUN_1424df070(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
-    auto* heap = Scaleform::Memory::pGlobalHeap;   // the exe frees through Memory::pGlobalHeap
     *reinterpret_cast<const void***>(bytes) = Scaleform::GFx::AS3::DAT_14317b938;
-    auto* sentinel = reinterpret_cast<unsigned char*>(bytes + 0x110);
-    auto* node = *reinterpret_cast<unsigned char**>(bytes + 0x118);
-    while (node && node != sentinel)
     {
-        auto* next = *reinterpret_cast<unsigned char**>(node + 8);
-        heap->Free(node);
-        node = next;
-    }
-    *reinterpret_cast<unsigned char**>(bytes + 0x110) = sentinel;
-    *reinterpret_cast<unsigned char**>(bytes + 0x118) = sentinel;
-
-    auto* states = *reinterpret_cast<Scaleform::GFx::AS3::TR::State***>(bytes + 0xf0);
-    const auto stateCount = *reinterpret_cast<Scaleform::UPInt*>(bytes + 0xf8);
-    for (Scaleform::UPInt i = 0; i < stateCount; ++i)
-    {
-        auto* state = reinterpret_cast<unsigned char*>(states[i]);
-        if (!state)
-            continue;
-        for (Scaleform::UPInt off : {Scaleform::UPInt(0x18), Scaleform::UPInt(0x38), Scaleform::UPInt(0x58)})
+        auto* blocks = reinterpret_cast<Sfr16TRBlockView*>(bytes + 0x110);
+        Sfr16TRBlockView* block = *reinterpret_cast<Sfr16TRBlockView**>(bytes + 0x118);
+        while (block != blocks)
         {
-            auto* values = *reinterpret_cast<Scaleform::GFx::AS3::Value**>(state + off);
-            const auto count = *reinterpret_cast<Scaleform::UPInt*>(state + off + 8);
-            for (Scaleform::UPInt j = 0; values && j < count; ++j)
-                values[j].~Value();
-            if (values)
-                heap->Free(values);
+            Sfr16TRBlockView* next = block->pNext;
+            delete block;
+            block = next;
         }
-        void* changed = *reinterpret_cast<void**>(state + 0x78);
-        if (changed)
-            heap->Free(changed);
-        heap->Free(state);
+        blocks->pPrev = blocks;
+        blocks->pNext = blocks;
     }
+
+    using StateArray = Scaleform::ArrayDH<Sfr16TRStateView*, Scaleform::GFx::AS3::StatMV_VM>;
+    auto& states = *reinterpret_cast<StateArray*>(bytes + 0xf0);
+    const Scaleform::UPInt size = states.GetSize();
+    for (Scaleform::UPInt i = 0; i < size; ++i)
+        delete states[i];
 
     using PosArray = Scaleform::ArrayDH_POD<Scaleform::UPInt, Scaleform::GFx::AS3::StatMV_VM>;
     using RecalcArray = Scaleform::ArrayDH_POD<Scaleform::GFx::AS3::Tracer::Recalculate, Scaleform::GFx::AS3::StatMV_VM>;
-    using StateArray = Scaleform::ArrayDH<Scaleform::GFx::AS3::TR::State*, Scaleform::GFx::AS3::StatMV_VM>;
-    using CatchArray = Scaleform::ArrayDH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::InstanceTraits::fl::Catch>, Scaleform::GFx::AS3::StatMV_VM>;
-    reinterpret_cast<CatchArray*>(bytes + 0x120)->~CatchArray();
-    reinterpret_cast<StateArray*>(bytes + 0xf0)->~StateArray();
+    reinterpret_cast<Scaleform::Sfr16SPtrArrayData*>(bytes + 0x120)->~ArrayDataBase();
+    states.~StateArray();
     reinterpret_cast<PosArray*>(bytes + 0xd0)->~PosArray();
     reinterpret_cast<RecalcArray*>(bytes + 0xb0)->~RecalcArray();
     reinterpret_cast<PosArray*>(bytes + 0x90)->~PosArray();
