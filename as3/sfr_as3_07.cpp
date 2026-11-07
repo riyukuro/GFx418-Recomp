@@ -2696,7 +2696,7 @@ namespace Instances { namespace fl_display
 
     // pixelDissolve(sourceBitmapData, sourceRect, destPoint, randomSeed, numPixels, fillColor).
 #pragma strict_gs_check(push, on)
-    // MS2-FUNCTIONAL: stack slots of the point / color / rect locals and the error temporaries; same code otherwise
+    // MS2-FUNCTIONAL: slots match; the exe computes the rect after the color / point temps (named rect keeps the /GS cookie)
     // @0x142451770
     void BitmapData::pixelDissolve(SInt32& result, Instances::fl_display::BitmapData* sourceBitmapData, Instances::fl_geom::Rectangle* sourceRect,
                                    Instances::fl_geom::Point* destPoint, SInt32 randomSeed, SInt32 numPixels, UInt32 fillColor)
@@ -2729,12 +2729,12 @@ namespace Instances { namespace fl_display
         }
         else
         {
-            Render::Point<SInt32> dp((SInt32)destPoint->x, (SInt32)destPoint->y);
-            Render::Color color(fillColor);
-            Render::Rect<SInt32> rect((SInt32)sourceRect->x, (SInt32)sourceRect->y,
+            alignas(16) Render::Rect<SInt32> rect((SInt32)sourceRect->x, (SInt32)sourceRect->y,
                                       (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height));
             Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
-            result = pimage->PixelDissolve(Render::AsDrawableImage(sourceBitmapData->pImage), rect, dp, randomSeed, numPixels, color);
+            result = pimage->PixelDissolve(Render::AsDrawableImage(sourceBitmapData->pImage), rect,
+                                           Render::Point<SInt32>((SInt32)destPoint->x, (SInt32)destPoint->y), randomSeed, numPixels,
+                                           Render::Color(fillColor));
         }
     }
 #pragma strict_gs_check(pop)
