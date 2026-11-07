@@ -8195,152 +8195,155 @@ void MovieRoot::ProcessLoadQueueEntry(GFx::LoadQueueEntry* pentry, LoadStates* p
             entry.mURLLoader->ExecuteProgressEvent(fileLen, fileLen);
             entry.mURLLoader->ExecuteCompleteEvent();
         }
-        return;
     }
-
-    String            url(pentry->URL), urlStrGfx;
-    LogState*         plog      = pls->GetLogState();
-    Ptr<MovieDefImpl> pmovieDef;
-    const unsigned    loadFlags = pMovieImpl->pMainMovieDef->GetLoadFlags();
-    if (pMovieImpl->pMainMovie &&
-        (pMovieImpl->pMainMovie->GetResourceMovieDef()->GetSWFFlags() & 0x10))  // stripped (a .gfx player)
-        urlStrGfx = GetUrlStrGfx(url);
-
-    bool       bilinearImage     = false;
-    const bool userImageProtocol = LoaderImpl::IsProtocolImage(url, &bilinearImage, NULL);
-    if (userImageProtocol)
+    else
     {
-        ImageCreator* pimageLoader = pls->GetImageCreator();
-        if (pimageLoader)
+        String            url(pentry->URL), urlStrGfx;
+        bool              stripped = false;
+        LogState*         plog      = pls->GetLogState();
+        Ptr<MovieDefImpl> pmovieDef;
+        const unsigned    loadFlags = pMovieImpl->pMainMovieDef->GetLoadFlags();
+        if (pMovieImpl->pMainMovie)
+            stripped = ((pMovieImpl->pMainMovie->GetResourceMovieDef()->GetSWFFlags() & 0x10) != 0);  // a .gfx player
+        if (stripped)
+            urlStrGfx = GetUrlStrGfx(url);
+
+        bool       bilinearImage     = false;
+        const bool userImageProtocol = LoaderImpl::IsProtocolImage(url, &bilinearImage, NULL);
+        if (userImageProtocol)
         {
-            ImageCreateInfo icinfo(ImageCreateInfo::Create_ProtocolImage, pMovieImpl->GetMovieHeap());
-            icinfo.SetStates(pls->GetLog(), pls->pBindStates->pFileOpener, pls->GetImageFileHandlerRegistry());
-            icinfo.pMovie = pMovieImpl;
-            Ptr<Render::Image> pimg = *pimageLoader->LoadProtocolImage(icinfo, url.ToCStr());
-            if (pimg)
+            ImageCreator* pimageLoader = pls->GetImageCreator();
+            if (pimageLoader)
             {
-                Ptr<ImageResource> pimageRes =
-                    *SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) ImageResource(pimg, Resource::Use_Bitmap);
-                if (pimageRes)
-                    pmovieDef = *pMovieImpl->CreateImageMovieDef(pimageRes, bilinearImage, url.ToCStr(), pls);
+                ImageCreateInfo icinfo(ImageCreateInfo::Create_ProtocolImage, pMovieImpl->GetMovieHeap());
+                icinfo.SetStates(pls->GetLog(), pls->pBindStates->pFileOpener, pls->GetImageFileHandlerRegistry());
+                icinfo.pMovie = pMovieImpl;
+                Ptr<Render::Image> pimg = *pimageLoader->LoadProtocolImage(icinfo, url.ToCStr());
+                if (pimg)
+                {
+                    Ptr<ImageResource> pimageRes =
+                        *SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) ImageResource(pimg, Resource::Use_Bitmap);
+                    if (pimageRes)
+                        pmovieDef = *pMovieImpl->CreateImageMovieDef(pimageRes, bilinearImage, url.ToCStr(), pls);
+                }
+                else if (plog)
+                {
+                    plog->LogScriptWarning("ImageCreator::LoadProtocolImage failed to load image \"%s\"", url.ToCStr());
+                    entry.mLoader->ExecuteErrorEvent(url.ToCStr());
+                    return;
+                }
             }
             else if (plog)
             {
-                plog->LogScriptWarning("ImageCreator::LoadProtocolImage failed to load image \"%s\"", url.ToCStr());
+                plog->LogScriptWarning("ImageCreator is not installed, failed to load image \"%s\"", url.ToCStr());
                 entry.mLoader->ExecuteErrorEvent(url.ToCStr());
-                return;
-            }
-        }
-        else if (plog)
-        {
-            plog->LogScriptWarning("ImageCreator is not installed, failed to load image \"%s\"", url.ToCStr());
-            entry.mLoader->ExecuteErrorEvent(url.ToCStr());
-        }
-    }
-    else
-    {
-        unsigned lf = loadFlags | GFx::Loader::LoadImageFiles | GFx::Loader::LoadWaitCompletion;
-        if (pentry->QuietOpen)
-            lf |= GFx::Loader::LoadQuietOpen;
-        if (!entry.mBytes)
-        {
-            String rootPath;
-            GetRootFilePath(&rootPath);
-            if (urlStrGfx.GetLength() > 0)
-            {
-                URLBuilder::LocationInfo loc(URLBuilder::File_LoadMovie, urlStrGfx, rootPath);
-                pmovieDef = *LoaderImpl::CreateMovie_LoadState(pls, loc, lf);
-            }
-            if (!pmovieDef)
-            {
-                URLBuilder::LocationInfo loc(URLBuilder::File_LoadMovie, url, rootPath);
-                pmovieDef = *LoaderImpl::CreateMovie_LoadState(pls, loc, lf);
             }
         }
         else
-            pmovieDef = *LoaderImpl::CreateMovie_LoadState(pls, *entry.mBytes, lf);
-
-        if (!pmovieDef)
         {
-            if (plog && !pentry->QuietOpen)
-                plog->LogScriptWarning("Failed loading URL \"%s\"", url.ToCStr());
-            entry.mLoader->ExecuteErrorEvent(url.ToCStr());
-            if (entry.NotifyLoadInitCInterface)
-                entry.NotifyLoadInitCInterface->ErrorEventCallback();
-            return;
-        }
-        if (pmovieDef->GetVersion() != ~0u &&
-            (pmovieDef->GetVersion() < 9 || !(pmovieDef->GetDataDef()->GetFileAttributes() & 8)))
-        {
-            if (plog && !pentry->QuietOpen)
-                plog->LogScriptWarning("Failed loading SWF \"%s\": ActionScript version mismatch", url.ToCStr());
-            entry.mLoader->ExecuteErrorEvent(url.ToCStr());
-            if (entry.NotifyLoadInitCInterface)
-                entry.NotifyLoadInitCInterface->ErrorEventCallback();
-            return;
-        }
-    }
-    if (pmovieDef)
-        AddLoadedMovieDef(pmovieDef);
+            unsigned lf = loadFlags | GFx::Loader::LoadImageFiles | GFx::Loader::LoadWaitCompletion;
+            if (pentry->QuietOpen)
+                lf |= GFx::Loader::LoadQuietOpen;
+            if (!entry.mBytes)
+            {
+                String rootPath;
+                GetRootFilePath(&rootPath);
+                if (urlStrGfx.GetLength() > 0)
+                {
+                    URLBuilder::LocationInfo loc(URLBuilder::File_LoadMovie, urlStrGfx, rootPath);
+                    pmovieDef = *LoaderImpl::CreateMovie_LoadState(pls, loc, lf);
+                }
+                if (!pmovieDef)
+                {
+                    URLBuilder::LocationInfo loc(URLBuilder::File_LoadMovie, url, rootPath);
+                    pmovieDef = *LoaderImpl::CreateMovie_LoadState(pls, loc, lf);
+                }
+            }
+            else
+                pmovieDef = *LoaderImpl::CreateMovie_LoadState(pls, *entry.mBytes, lf);
 
-    entry.mLoader->ExecuteOpenEvent();
-    if (entry.NotifyLoadInitCInterface)
-        entry.NotifyLoadInitCInterface->OpenEventCallback();
-
-    GFx::DisplayObject*     pparent = entry.mLoader->pDispObj;
-    Ptr<DisplayObjectBase>  pnewChar;
-    if (pmovieDef && pmovieDef->GetDataDef()->MovieType == MovieDataDef::MT_Image)
-    {
-        CharacterCreateInfo    ccinfo      = { pmovieDef->GetDataDef(), pmovieDef, NULL };
-        Ptr<DisplayObjectBase> pnewBmpChar = *pASSupport->CreateCharacterInstance(
-            pMovieImpl, ccinfo, NULL, ResourceId(), CharacterDef::Bitmap);
-        ResourceHandle rh;
-        if (pmovieDef->GetDataDef()->GetResourceHandle(&rh, ResourceId(0)))
-        {
-            Resource* pres = rh.GetResource(&pmovieDef->GetResourceBinding());
-            if (pres && pres->GetResourceType() == Resource::RT_Image)
-                FUN_1425274b0(pnewBmpChar, pres);
+            if (!pmovieDef)
+            {
+                if (plog && !pentry->QuietOpen)
+                    plog->LogScriptWarning("Failed loading URL \"%s\"", url.ToCStr());
+                entry.mLoader->ExecuteErrorEvent(url.ToCStr());
+                if (entry.NotifyLoadInitCInterface)
+                    entry.NotifyLoadInitCInterface->ErrorEventCallback();
+                return;
+            }
+            if (pmovieDef->GetVersion() != ~0u &&
+                (pmovieDef->GetVersion() < 9 || !(pmovieDef->GetDataDef()->GetFileAttributes() & 8)))
+            {
+                if (plog && !pentry->QuietOpen)
+                    plog->LogScriptWarning("Failed loading SWF \"%s\": ActionScript version mismatch", url.ToCStr());
+                entry.mLoader->ExecuteErrorEvent(url.ToCStr());
+                if (entry.NotifyLoadInitCInterface)
+                    entry.NotifyLoadInitCInterface->ErrorEventCallback();
+                return;
+            }
         }
-        Sfr34_ToAvmContainer(pparent)->AddChild(pnewBmpChar);
-        Sfr34_LoadedCtor(ToAvmDisplayObj(pnewBmpChar), entry.mLoader);
-        pnewChar = pnewBmpChar;
-    }
-    else if (pmovieDef)
-    {
-        if (pAVM)
-            FUN_142504630(&pAVM->GetGC(), pMovieImpl->pAdvanceStats);
-        const UPInt fileBytes = pmovieDef->GetDataDef()->GetFileBytes();
-        entry.mLoader->ExecuteProgressEvent(fileBytes, fileBytes);
-        CharacterCreateInfo ccinfo     = { pmovieDef->GetDataDef(), pmovieDef, NULL };
-        Ptr<Sprite>         pnewSprite = *static_cast<Sprite*>(pASSupport->CreateCharacterInstance(
-            pMovieImpl, ccinfo, NULL, ResourceId(0), CharacterDef::Sprite));
-        pnewSprite->SetLoadedSeparately(true);
-        pnewSprite->Flags |= DisplayObject::Mask_TimelineObject;
-        pnewSprite->OnEventLoad();
-        pnewSprite->AddToPlayList();
-        AvmSprite* avmSpr = static_cast<AvmSprite*>(ToAvmDisplayObj(pnewSprite));
-        avmSpr->ExecuteInitActionFrameTags(0);
-        pnewSprite->SetFOV(55.0);
-        Sfr34_LoadedCtor(avmSpr, entry.mLoader);
-        Sfr34_ToAvmContainer(pparent)->AddChild(pnewSprite);
-        ResolveStickyVariables(pnewSprite);
-        pnewSprite->ModifyOptimizedPlayListLocal<Sprite>();
-        DoActions();
-        pnewChar = pnewSprite;
-    }
+        if (pmovieDef)
+            AddLoadedMovieDef(pmovieDef);
 
-    GFx::DisplayObject* pchar = static_cast<GFx::DisplayObject*>(pnewChar.GetPtr());
-    if (!userImageProtocol)
-    {
-        entry.mLoader->QueueInitEvent(pchar, Ptr<RefCountImpl>(entry.NotifyLoadInitCInterface.GetPtr()));
-        entry.mLoader->QueueCompleteEvent();
-    }
-    else
-    {
-        entry.mLoader->ExecuteInitEvent(pchar);
+        entry.mLoader->ExecuteOpenEvent();
         if (entry.NotifyLoadInitCInterface)
-            entry.NotifyLoadInitCInterface->InitEventCallback();
-        entry.mLoader->ExecuteCompleteEvent();
+            entry.NotifyLoadInitCInterface->OpenEventCallback();
+
+        GFx::DisplayObject*     pparent = entry.mLoader->pDispObj;
+        Ptr<DisplayObjectBase>  pnewChar;
+        if (pmovieDef && pmovieDef->GetDataDef()->MovieType == MovieDataDef::MT_Image)
+        {
+            CharacterCreateInfo    ccinfo      = { pmovieDef->GetDataDef(), pmovieDef, NULL };
+            Ptr<DisplayObjectBase> pnewBmpChar = *pASSupport->CreateCharacterInstance(
+                pMovieImpl, ccinfo, NULL, ResourceId(), CharacterDef::Bitmap);
+            ResourceHandle rh;
+            if (pmovieDef->GetDataDef()->GetResourceHandle(&rh, ResourceId(0)))
+            {
+                Resource* pres = rh.GetResource(&pmovieDef->GetResourceBinding());
+                if (pres && pres->GetResourceType() == Resource::RT_Image)
+                    FUN_1425274b0(pnewBmpChar, pres);
+            }
+            Sfr34_ToAvmContainer(pparent)->AddChild(pnewBmpChar);
+            Sfr34_LoadedCtor(ToAvmDisplayObj(pnewBmpChar), entry.mLoader);
+            pnewChar = pnewBmpChar;
+        }
+        else if (pmovieDef)
+        {
+            if (pAVM)
+                FUN_142504630(&pAVM->GetGC(), pMovieImpl->pAdvanceStats);
+            const UPInt fileBytes = pmovieDef->GetDataDef()->GetFileBytes();
+            entry.mLoader->ExecuteProgressEvent(fileBytes, fileBytes);
+            CharacterCreateInfo ccinfo     = { pmovieDef->GetDataDef(), pmovieDef, NULL };
+            Ptr<Sprite>         pnewSprite = *static_cast<Sprite*>(pASSupport->CreateCharacterInstance(
+                pMovieImpl, ccinfo, NULL, ResourceId(0), CharacterDef::Sprite));
+            pnewSprite->SetLoadedSeparately(true);
+            pnewSprite->Flags |= DisplayObject::Mask_TimelineObject;
+            pnewSprite->OnEventLoad();
+            pnewSprite->AddToPlayList();
+            AvmSprite* avmSpr = static_cast<AvmSprite*>(ToAvmDisplayObj(pnewSprite));
+            avmSpr->ExecuteInitActionFrameTags(0);
+            pnewSprite->SetFOV(55.0);
+            Sfr34_LoadedCtor(avmSpr, entry.mLoader);
+            Sfr34_ToAvmContainer(pparent)->AddChild(pnewSprite);
+            ResolveStickyVariables(pnewSprite);
+            pnewSprite->ModifyOptimizedPlayListLocal<Sprite>();
+            DoActions();
+            pnewChar = pnewSprite;
+        }
+
+        GFx::DisplayObject* pchar = static_cast<GFx::DisplayObject*>(pnewChar.GetPtr());
+        if (!userImageProtocol)
+        {
+            entry.mLoader->QueueInitEvent(pchar, Ptr<RefCountImpl>(entry.NotifyLoadInitCInterface.GetPtr()));
+            entry.mLoader->QueueCompleteEvent();
+        }
+        else
+        {
+            entry.mLoader->ExecuteInitEvent(pchar);
+            if (entry.NotifyLoadInitCInterface)
+                entry.NotifyLoadInitCInterface->InitEventCallback();
+            entry.mLoader->ExecuteCompleteEvent();
+        }
     }
 }
 
