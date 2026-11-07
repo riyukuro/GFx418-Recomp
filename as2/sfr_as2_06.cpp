@@ -1655,12 +1655,146 @@ __forceinline GASLoadVarsLoaderCtorFunction::GASLoadVarsLoaderCtorFunction(ASStr
 {
 }
 
+// The filter objects, Protos and CtorFunctions (sfr_as2_03 and as2_bitmapfilter.h), inlined like the exe.
+__forceinline BitmapFilterObject::BitmapFilterObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
+    : Object(psc, ObjectInlineCtorTag())
+{
+    if (!pProto)
+        Object::SetMemberRaw(
+            psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
+            Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+    pProto = pprototype;
+}
+
+__forceinline BitmapFilterProto::BitmapFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+    : Prototype<BitmapFilterObject>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+}
+
+__forceinline BitmapFilterCtorFunction::BitmapFilterCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
+    : CFunctionObject(psc, (CFunctionPtr)0, t)
+{
+}
+
+__forceinline BevelFilterObject::BevelFilterObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag t)
+    : BitmapFilterObject(psc, pprototype, t)
+{
+}
+
+__forceinline BevelFilterProto::BevelFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+    : Prototype<BevelFilterObject>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags());
+}
+
+__forceinline BevelFilterCtorFunction::BevelFilterCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
+    : CFunctionObject(psc, GlobalCtor, t)
+{
+}
+
+__forceinline BlurFilterObject::BlurFilterObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag t)
+    : BitmapFilterObject(psc, pprototype, t)
+{
+}
+
+__forceinline BlurFilterProto::BlurFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+    : Prototype<BlurFilterObject>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags());
+}
+
+__forceinline BlurFilterCtorFunction::BlurFilterCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
+    : CFunctionObject(psc, GlobalCtor, t)
+{
+}
+
+__forceinline ColorMatrixFilterObject::ColorMatrixFilterObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag t)
+    : BitmapFilterObject(psc, pprototype, t)
+{
+}
+
+__forceinline ColorMatrixFilterProto::ColorMatrixFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+    : Prototype<ColorMatrixFilterObject>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags());
+}
+
+__forceinline ColorMatrixFilterCtorFunction::ColorMatrixFilterCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
+    : CFunctionObject(psc, GlobalCtor, t)
+{
+}
+
+__forceinline DropShadowFilterObject::DropShadowFilterObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag t)
+    : BitmapFilterObject(psc, pprototype, t)
+{
+}
+
+__forceinline DropShadowFilterProto::DropShadowFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+    : Prototype<DropShadowFilterObject>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags());
+}
+
+__forceinline DropShadowFilterCtorFunction::DropShadowFilterCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
+    : CFunctionObject(psc, GlobalCtor, t)
+{
+}
+
+__forceinline GlowFilterObject::GlowFilterObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag t)
+    : BitmapFilterObject(psc, pprototype, t)
+{
+}
+
+__forceinline GlowFilterProto::GlowFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+    : Prototype<GlowFilterObject>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags());
+}
+
+__forceinline GlowFilterCtorFunction::GlowFilterCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
+    : CFunctionObject(psc, GlobalCtor, t)
+{
+}
+
 // The filter classes derive from BitmapFilter: it is registered first unless the registry knows the name.
-static SF_FORCEINLINE void RegisterBitmapFilterBase(GlobalContext* pgc)
+}}} // namespace Scaleform::GFx::AS2
+// ASStringHash<GlobalContext::ClassRegEntry>::Get, defined with plain pointer parameters in sfr_video_04.
+__declspec(noalias) void* FUN_140001bd0(void* phash, void* pkey);
+namespace Scaleform { namespace GFx { namespace AS2 {
+
+// GlobalContext::GetBuiltinClassRegistrar as the exe has it inline (the name copied, the folded Hash::Get), as in sfr_as2_07g.
+static SF_FORCEINLINE GlobalContext::ClassRegEntry* Sfr06BuiltinRegistrarOf(GlobalContext* pgc, const ASString& name)
+{
+    // The by-value className copy: the exe keeps the old count in a register over the (LTCG-known) Hash::Get.
+    ASStringNode* pnode = reinterpret_cast<ASStringNode* const&>(name);
+    unsigned      rc    = pnode->RefCount;
+    pnode->RefCount     = rc + 1;
+    ASStringNode* key   = pnode;
+    void*         p     = ::FUN_140001bd0(&pgc->BuiltinClassesRegistry, (void*)&key);
+    pnode->RefCount     = rc;
+    if (p)
+    {
+        if (rc == 0)
+            pnode->ReleaseNode();
+        return static_cast<GlobalContext::ClassRegEntry*>(p);
+    }
+    if (rc == 0)
+        pnode->ReleaseNode();
+    return 0;
+}
+
+// A filter class with BitmapFilter registered first, on one ASStringContext, all inlined like the exe.
+template<class CtorFunctionType, class ProtoType>
+static SF_FORCEINLINE FunctionRef RegisterFilterClassInline(GlobalContext* pgc, ASBuiltinType type)
 {
     ASStringContext sc(pgc, 8);
-    if (!pgc->GetBuiltinClassRegistrar(sc.GetBuiltin(ASBuiltin_BitmapFilter)))
+    if (!Sfr06BuiltinRegistrarOf(pgc, sc.GetBuiltin(ASBuiltin_BitmapFilter)))
         BitmapFilterCtorFunction::Register(pgc);
+    FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) CtorFunctionType(&sc, ObjectInlineCtorTag()));
+    Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) ProtoType(&sc, pgc->GetPrototype(ASBuiltin_BitmapFilter), ctor, ObjectInlineCtorTag());
+    SetBuiltinPrototype(pgc, type, proto);
+    pgc->FlashFiltersPackage->SetMemberRaw(&sc, sc.GetBuiltin(type), Value(ctor));
+    return ctor;
 }
 
 // MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
@@ -1692,12 +1826,11 @@ FunctionRef AsBroadcasterCtorFunction::Register(GlobalContext* pgc)
     return RegisterBuiltinClassInline<AsBroadcasterCtorFunction, AsBroadcasterProto>(pgc, ASBuiltin_AsBroadcaster, ASBuiltin_Object, pgc->pGlobal);
 }
 
-// MS2-FUNCTIONAL the exe inlines the BevelFilterCtorFunction and BevelFilterProto ctors and GetBuiltinClassRegistrar (sfr_as2_03)
+// MS2-FUNCTIONAL ctors, proto ctors and the registrar lookup are inlined as in the exe; the frame is 0x10 larger and rdi/rsi are swapped
 // @0x142973f20
 FunctionRef BevelFilterCtorFunction::Register(GlobalContext* pgc)
 {
-    RegisterBitmapFilterBase(pgc);
-    return RegisterBuiltinClass<BevelFilterCtorFunction, BevelFilterProto>(pgc, ASBuiltin_BevelFilter, ASBuiltin_BitmapFilter, pgc->FlashFiltersPackage);
+    return RegisterFilterClassInline<BevelFilterCtorFunction, BevelFilterProto>(pgc, ASBuiltin_BevelFilter);
 }
 
 // MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
@@ -1708,27 +1841,25 @@ FunctionRef BitmapDataCtorFunction::Register(GlobalContext* pgc)
     return RegisterBuiltinClassInline<BitmapDataCtorFunction, BitmapDataProto>(pgc, ASBuiltin_BitmapData, ASBuiltin_Object, pgc->FlashDisplayPackage);
 }
 
-// MS2-FUNCTIONAL the exe inlines the BitmapFilterCtorFunction and BitmapFilterProto ctors (sfr_as2_03)
+// MS2-FUNCTIONAL ctors and proto ctors are inlined as in the exe; register allocation differs (zero kept in rdi/rsi)
 // @0x142974910
 FunctionRef BitmapFilterCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClass<BitmapFilterCtorFunction, BitmapFilterProto>(pgc, ASBuiltin_BitmapFilter, ASBuiltin_Object, pgc->FlashFiltersPackage);
+    return RegisterBuiltinClassInline<BitmapFilterCtorFunction, BitmapFilterProto>(pgc, ASBuiltin_BitmapFilter, ASBuiltin_Object, pgc->FlashFiltersPackage);
 }
 
-// MS2-FUNCTIONAL the exe inlines the BlurFilterCtorFunction and BlurFilterProto ctors and GetBuiltinClassRegistrar (sfr_as2_03)
+// MS2-FUNCTIONAL ctors, proto ctors and the registrar lookup are inlined as in the exe; the frame is 0x10 larger and rdi/rsi are swapped
 // @0x142974d70
 FunctionRef BlurFilterCtorFunction::Register(GlobalContext* pgc)
 {
-    RegisterBitmapFilterBase(pgc);
-    return RegisterBuiltinClass<BlurFilterCtorFunction, BlurFilterProto>(pgc, ASBuiltin_BlurFilter, ASBuiltin_BitmapFilter, pgc->FlashFiltersPackage);
+    return RegisterFilterClassInline<BlurFilterCtorFunction, BlurFilterProto>(pgc, ASBuiltin_BlurFilter);
 }
 
-// MS2-FUNCTIONAL the exe inlines the ColorMatrixFilterCtorFunction and ColorMatrixFilterProto ctors and GetBuiltinClassRegistrar (sfr_as2_03)
+// MS2-FUNCTIONAL ctors, proto ctors and the registrar lookup are inlined as in the exe; the frame is 0x10 larger and rdi/rsi are swapped
 // @0x1429763c0
 FunctionRef ColorMatrixFilterCtorFunction::Register(GlobalContext* pgc)
 {
-    RegisterBitmapFilterBase(pgc);
-    return RegisterBuiltinClass<ColorMatrixFilterCtorFunction, ColorMatrixFilterProto>(pgc, ASBuiltin_ColorMatrixFilter, ASBuiltin_BitmapFilter, pgc->FlashFiltersPackage);
+    return RegisterFilterClassInline<ColorMatrixFilterCtorFunction, ColorMatrixFilterProto>(pgc, ASBuiltin_ColorMatrixFilter);
 }
 
 // The exe inlines the DateCtorFunction and DateProto ctors down to Object(psc).
@@ -1746,12 +1877,11 @@ FunctionRef DateCtorFunction::Register(GlobalContext* pgc)
     return ctor;
 }
 
-// MS2-FUNCTIONAL the exe inlines the DropShadowFilterCtorFunction and DropShadowFilterProto ctors and GetBuiltinClassRegistrar (sfr_as2_03)
+// MS2-FUNCTIONAL ctors, proto ctors and the registrar lookup are inlined as in the exe; the frame is 0x10 larger and rdi/rsi are swapped
 // @0x142977070
 FunctionRef DropShadowFilterCtorFunction::Register(GlobalContext* pgc)
 {
-    RegisterBitmapFilterBase(pgc);
-    return RegisterBuiltinClass<DropShadowFilterCtorFunction, DropShadowFilterProto>(pgc, ASBuiltin_DropShadowFilter, ASBuiltin_BitmapFilter, pgc->FlashFiltersPackage);
+    return RegisterFilterClassInline<DropShadowFilterCtorFunction, DropShadowFilterProto>(pgc, ASBuiltin_DropShadowFilter);
 }
 
 // MS2-FUNCTIONAL regalloc floor: the CtorFunction ctor is inlined via its ObjectInlineCtorTag ctor, like the exe;
@@ -1768,12 +1898,11 @@ FunctionRef GASLoadVarsLoaderCtorFunction::Register(GlobalContext* pgc)
     return ctor;
 }
 
-// MS2-FUNCTIONAL the exe inlines the GlowFilterCtorFunction and GlowFilterProto ctors and GetBuiltinClassRegistrar (sfr_as2_03)
+// MS2-FUNCTIONAL ctors, proto ctors and the registrar lookup are inlined as in the exe; the frame is 0x10 larger and rdi/rsi are swapped
 // @0x142978240
 FunctionRef GlowFilterCtorFunction::Register(GlobalContext* pgc)
 {
-    RegisterBitmapFilterBase(pgc);
-    return RegisterBuiltinClass<GlowFilterCtorFunction, GlowFilterProto>(pgc, ASBuiltin_GlowFilter, ASBuiltin_BitmapFilter, pgc->FlashFiltersPackage);
+    return RegisterFilterClassInline<GlowFilterCtorFunction, GlowFilterProto>(pgc, ASBuiltin_GlowFilter);
 }
 
 // MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the

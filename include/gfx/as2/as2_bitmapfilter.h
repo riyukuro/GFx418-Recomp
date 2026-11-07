@@ -23,6 +23,7 @@ public:
     {
         Set__proto__(psc, pprototype);
     }
+    BitmapFilterObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
     // A new filter object holding a default render filter of the type (none for other types).
     BitmapFilterObject(Environment* penv, Render::FilterType ft); // exe 0x142919250
     // The filter is set by the subclass.
@@ -89,6 +90,7 @@ class BevelFilterObject : public BitmapFilterObject
 {
 public:
     BevelFilterObject(ASStringContext* psc, Object* pprototype) : BitmapFilterObject(psc, pprototype) {}
+    BevelFilterObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
     BevelFilterObject(Environment* penv); // exe 0x142918d90
     BevelFilterObject(Environment* penv, ObjectInlineCtorTag) : BitmapFilterObject(penv, Render::Filter_Bevel) {}
 
@@ -104,6 +106,7 @@ class BlurFilterObject : public BitmapFilterObject
 {
 public:
     BlurFilterObject(ASStringContext* psc, Object* pprototype) : BitmapFilterObject(psc, pprototype) {}
+    BlurFilterObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
     BlurFilterObject(Environment* penv); // exe 0x142919830
     BlurFilterObject(Environment* penv, ObjectInlineCtorTag) : BitmapFilterObject(penv, Render::Filter_Blur) {}
 
@@ -119,6 +122,7 @@ class ColorMatrixFilterObject : public BitmapFilterObject
 {
 public:
     ColorMatrixFilterObject(ASStringContext* psc, Object* pprototype) : BitmapFilterObject(psc, pprototype) {}
+    ColorMatrixFilterObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
     ColorMatrixFilterObject(Environment* penv); // exe 0x14291ab70
 
     virtual ObjectType GetObjectType() const; // exe 0x1429541f0
@@ -133,6 +137,7 @@ class DropShadowFilterObject : public BitmapFilterObject
 {
 public:
     DropShadowFilterObject(ASStringContext* psc, Object* pprototype) : BitmapFilterObject(psc, pprototype) {}
+    DropShadowFilterObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
     DropShadowFilterObject(Environment* penv); // exe 0x14291b7d0
     DropShadowFilterObject(Environment* penv, ObjectInlineCtorTag) : BitmapFilterObject(penv, Render::Filter_Shadow) {}
 
@@ -148,6 +153,7 @@ class GlowFilterObject : public BitmapFilterObject
 {
 public:
     GlowFilterObject(ASStringContext* psc, Object* pprototype) : BitmapFilterObject(psc, pprototype) {}
+    GlowFilterObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
     GlowFilterObject(Environment* penv); // exe 0x14291cde0
     GlowFilterObject(Environment* penv, ObjectInlineCtorTag) : BitmapFilterObject(penv, Render::Filter_Glow) {}
 
@@ -165,6 +171,7 @@ class BitmapFilterProto : public Prototype<BitmapFilterObject>
 {
 public:
     BitmapFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x1429196c0
+    BitmapFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 };
 
 // The BitmapFilter class: abstract, it has no global constructor.
@@ -172,6 +179,7 @@ class BitmapFilterCtorFunction : public CFunctionObject
 {
 public:
     BitmapFilterCtorFunction(ASStringContext* psc); // exe 0x142919220
+    BitmapFilterCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     // (appended for sfr_as2_06) Creates the class and its prototype and publishes "BitmapFilter" (exe 0x142974910).
     static FunctionRef Register(GlobalContext* pgc);
@@ -183,6 +191,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143213750
 
     BevelFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142918dd0
+    BevelFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     static void Clone(const FnCall& fn);
 };
@@ -193,6 +202,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143213730
 
     BlurFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142919860
+    BlurFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     static void Clone(const FnCall& fn);
 };
@@ -203,6 +213,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143213860
 
     ColorMatrixFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291ac10
+    ColorMatrixFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     static void Clone(const FnCall& fn);
 };
@@ -213,6 +224,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x1432136a0
 
     DropShadowFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291b810
+    DropShadowFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     static void Clone(const FnCall& fn);
 };
@@ -223,6 +235,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143213710
 
     GlowFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291ce20
+    GlowFilterProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     static void Clone(const FnCall& fn);
 };
@@ -232,6 +245,7 @@ class ColorMatrixFilterCtorFunction : public CFunctionObject
 {
 public:
     ColorMatrixFilterCtorFunction(ASStringContext* psc); // exe 0x14291aaf0
+    ColorMatrixFilterCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936bc0
 
@@ -246,6 +260,7 @@ class BevelFilterCtorFunction : public CFunctionObject
 {
 public:
     BevelFilterCtorFunction(ASStringContext* psc); // exe 0x142918d10
+    BevelFilterCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429368c0
 
@@ -259,6 +274,7 @@ class BlurFilterCtorFunction : public CFunctionObject
 {
 public:
     BlurFilterCtorFunction(ASStringContext* psc); // exe 0x1429197b0
+    BlurFilterCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936940
 
@@ -272,6 +288,7 @@ class DropShadowFilterCtorFunction : public CFunctionObject
 {
 public:
     DropShadowFilterCtorFunction(ASStringContext* psc); // exe 0x14291b750
+    DropShadowFilterCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936c80
 
@@ -285,6 +302,7 @@ class GlowFilterCtorFunction : public CFunctionObject
 {
 public:
     GlowFilterCtorFunction(ASStringContext* psc); // exe 0x14291cd60
+    GlowFilterCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936e90
 
