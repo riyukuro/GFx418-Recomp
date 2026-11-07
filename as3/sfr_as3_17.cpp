@@ -3240,8 +3240,9 @@ static __forceinline Scaleform::GFx::AS3::ClassTraits::Traits* Sfr17Resolve2CT(S
 }
 
 // The class traits for mn as seen from the scope traits t (SDK FindFixedTraits(vm, t, mn, appDomain)).
-// MS2-FUNCTIONAL 0x142501310: raw namespace-set and VM offsets; cl hoists the FindSlotValues call shared by both
-// branches above the IsQName test, where the exe calls it in each (971 vs 1010 bytes)
+// MS2-FUNCTIONAL 0x142501310: raw namespace-set and VM offsets; same calls per branch, but ours needs a 0x88 frame with an
+// rbp frame pointer and saves rbp/r12 by push where the exe has a 0x80 frame, pushes only r14 and schedules the
+// namespace-kind shift after the FindSlotValues call (971 vs 1010 bytes)
 // @0x142501310
 void* FUN_142501310(Scaleform::GFx::AS3::VM& vm, void* scope, const Scaleform::GFx::AS3::Multiname& mn)
 {

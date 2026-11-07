@@ -1717,8 +1717,8 @@ void Traits::Add2VT(const ClassInfo& ci, const ThunkInfo& func)
     }
 }
 
-// MS2-FUNCTIONAL: same operations; the SlotInfo bit-field build and the inlined release of the placeholder's
-// SPtrs are scheduled differently (as in AddSlot).
+// MS2-FUNCTIONAL: same calls (SDK AddSlot inlined in the append branch); ours has a 0x60 frame and saves rsi/rdi
+// by mov where the exe has 0x50 and pushes them, and the exe forms the slot index with a 64-bit add.
 // @0x1424e93b0
 SlotInfo& Traits::AddSetSlot(RelativeIndex ind, const ASString& name, Pickable<const Instances::Namespace> ns,
                              VMAbcFile& file, const Abc::TraitInfo& ti, bool const_)
@@ -1731,12 +1731,12 @@ SlotInfo& Traits::AddSetSlot(RelativeIndex ind, const ASString& name, Pickable<c
 
     AbsoluteIndex result(abs_ind);
     if (abs_ind == GetSlotInfoNum())
-        result = Add(name, SlotInfo(ns, file, ti, (const_ ? SlotInfo::aReadOnly : SlotInfo::aNone) |
-                                                      SlotInfo::aDontEnum, name.GetNode()));
+        result = AddSlot(name, ns, file, ti, const_);
     else
     {
-        GetOwnSlotInfo(result) = SlotInfo(ns, file, ti, (const_ ? SlotInfo::aReadOnly : SlotInfo::aNone) |
-                                                            SlotInfo::aDontEnum, name.GetNode());
+        const SlotInfo& v = SlotInfo(ns, file, ti, (const_ ? (SlotInfo::aDontEnum | SlotInfo::aReadOnly) : SlotInfo::aDontEnum),
+                                     name.GetNode());
+        GetOwnSlotInfo(result) = v;
         SetKey(result, name);
     }
 
