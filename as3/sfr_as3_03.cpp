@@ -14,14 +14,71 @@
 #include <windows.h>
 #include <sys/timeb.h>
 
-// ValueH's GetAlt is out of line in the exe (0x1423e87e0, instantiated in sfr_as3_01c).
+// ValueH's GetAlt is out of line in the exe (0x1423e87e0, instantiated in sfr_as3_01c). Both bodies are written out
+// here (noinline), so cl's same-TU mod-ref sees that GetAlt does not write the key: CutHash then keeps i in a
+// register across the call, as the exe (LTCG) does. At and the other non-const Hash::Get callers use the second.
 namespace Scaleform {
 template <> template <>
-const MS2_SparseValueNode*
+__declspec(noinline) inline const MS2_SparseValueNode*
 HashSetBase<MS2_SparseValueNode, MS2_SparseValueNode::NodeHashF, MS2_SparseValueNode::NodeAltHashF,
             AllocatorDH<MS2_SparseValueNode, Stat_Default_Mem>,
             HashsetCachedNodeEntry<MS2_SparseValueNode, MS2_SparseValueNode::NodeHashF>>::
-    GetAlt<UPInt>(const UPInt& key) const;
+    GetAlt<UPInt>(const UPInt& key) const
+{
+    // findIndexAlt and findIndexCore inline, as in the exe's leaf copy.
+    SPInt idx = [&]() -> SPInt {
+        if (pTable == 0)
+            return -1;
+        UPInt h = MS2_SparseValueNode::NodeAltHashF()(key) & pTable->SizeMask;
+        UPInt i = h;
+        const auto* e = &E(i);
+        if (e->IsEmpty() || (e->GetCachedHash(pTable->SizeMask) != i))
+            return -1;
+        while (1)
+        {
+            if (e->GetCachedHash(pTable->SizeMask) == h && e->Value == key)
+                return i;
+            i = e->NextInChain;
+            if (i == (UPInt)-1)
+                break;
+            e = &E(i);
+        }
+        return -1;
+    }();
+    if (idx >= 0)
+        return &E(idx).Value;
+    return 0;
+}
+template <> template <>
+__declspec(noinline) inline MS2_SparseValueNode*
+HashSetBase<MS2_SparseValueNode, MS2_SparseValueNode::NodeHashF, MS2_SparseValueNode::NodeAltHashF,
+            AllocatorDH<MS2_SparseValueNode, Stat_Default_Mem>,
+            HashsetCachedNodeEntry<MS2_SparseValueNode, MS2_SparseValueNode::NodeHashF>>::
+    GetAlt<UPInt>(const UPInt& key)
+{
+    SPInt idx = [&]() -> SPInt {
+        if (pTable == 0)
+            return -1;
+        UPInt h = MS2_SparseValueNode::NodeAltHashF()(key) & pTable->SizeMask;
+        UPInt i = h;
+        const auto* e = &E(i);
+        if (e->IsEmpty() || (e->GetCachedHash(pTable->SizeMask) != i))
+            return -1;
+        while (1)
+        {
+            if (e->GetCachedHash(pTable->SizeMask) == h && e->Value == key)
+                return i;
+            i = e->NextInChain;
+            if (i == (UPInt)-1)
+                break;
+            e = &E(i);
+        }
+        return -1;
+    }();
+    if (idx >= 0)
+        return &E(idx).Value;
+    return 0;
+}
 } // namespace Scaleform
 #undef GetObject
 
@@ -1643,16 +1700,14 @@ namespace Scaleform { namespace GFx { namespace AS3
 
     // The exe's index steps down from first_ind until it wraps past 0 (keys below first_ind then count as past the
     // cut and move down by offset); kept as is.
-    // MS2-FUNCTIONAL: register allocation and stack slots differ (exe keeps i in rsi and reuses its slot for the moved key)
     // @0x142407e30
     void SparseArray::CutHash(UPInt first_ind, UPInt cut_num, UPInt offset, SparseArray* deleted)
     {
         Value v;
         for (UPInt i = first_ind; i <= ValueHHighInd; --i)
         {
-            if (const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* n = ValueH.mHash.GetAlt(i))
+            if (ValueH.Get(i, &v))
             {
-                v = n->Second;
                 ValueH.Remove(i);
                 if (i - first_ind >= cut_num)
                     ValueH.Set(i - offset, v);
