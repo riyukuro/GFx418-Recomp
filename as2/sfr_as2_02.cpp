@@ -2278,7 +2278,54 @@ void ExternalInterfaceCtorFunction::Call(const FnCall& fn)
     }
 }
 
-// MS2-FUNCTIONAL the exe expands the FunctionRef copy (local frame flag) inline and orders the ToFunction blocks differently
+struct MS2_FuncValueAC : Value
+{
+    // Builds the reference in place in *r and hands its fields back from each case.
+    SF_FORCEINLINE void ToFunctionAC(const Environment* penv, FunctionRef* r, FunctionObject*& f, LocalFrame*& lf,
+                                     UByte& fl) const
+    {
+        switch (T.Type)
+        {
+        case FUNCTIONNAME:
+            ::new (r) FunctionRef(ResolveFunctionName(penv));
+            fl = r->Flags; lf = r->pLocalFrame; f = r->Function;
+            return;
+        case FUNCTION:
+        {
+            const FunctionRefBase& orig = V.FunctionValue;
+            f  = orig.Function;
+            fl = 0;
+            r->Flags    = fl;
+            r->Function = f;
+            if (f)
+                f->AddRef();
+            lf = 0;
+            r->pLocalFrame = lf;
+            if (orig.pLocalFrame)
+            {
+                lf = orig.pLocalFrame;
+                r->pLocalFrame = lf;
+                if (orig.Flags & FunctionRefBase::FuncRef_Weak)
+                    fl |= FunctionRefBase::FuncRef_Weak;
+                else
+                    fl &= ~FunctionRefBase::FuncRef_Weak;
+                r->Flags = fl;
+                if (!(fl & FunctionRefBase::FuncRef_Weak))
+                    lf->AddRef();
+            }
+            return;
+        }
+        default:
+            ::new (r) FunctionRef();
+            f = r->Function; lf = r->pLocalFrame; fl = r->Flags;
+            return;
+        }
+    }
+};
+
+// MS2-FUNCTIONAL the exe (LTCG) keeps func's fields in registers across AddInvokeAlias; modelled with a dtor-less holder.
+// Left: frame 0x78 vs 0x68 (aliasName in the rdx home, rsi/rdi/r12/r14/r15 saved in-frame), the default case re-reads
+// the zeroed fields, and the copy's frame flag is a setne bool (an LTCG bool argument of SetLocalFrame).
 // @0x1428ff660
 void ExternalInterfaceCtorFunction::AddCallback(const FnCall& fn)
 {
@@ -2287,19 +2334,30 @@ void ExternalInterfaceCtorFunction::AddCallback(const FnCall& fn)
         return;
     MovieImpl* pmovie = fn.Env->GetTarget()->GetMovieImpl();
     ASString aliasName(fn.Arg(0).ToString(fn.Env));
-    FunctionRef func = fn.Arg(2).ToFunction(fn.Env);
-    Ptr<CharacterHandle> thisChar;
-    Ptr<Object> thisObj;
-    if (fn.Arg(1).IsCharacter())
+    union FuncHolder { FunctionRef f; FuncHolder() {} ~FuncHolder() {} } holder;
+    FunctionObject* funcObj;
+    LocalFrame* funcFrame;
+    UByte funcFlags;
+    static_cast<const MS2_FuncValueAC&>(fn.Arg(2)).ToFunctionAC(fn.Env, &holder.f, funcObj, funcFrame, funcFlags);
+    const FunctionRef& func = holder.f;
     {
-        Ptr<InteractiveObject> pch = ResolveCharacterValue(fn.Arg(1), fn.Env);
-        if (pch)
-            thisChar = pch->GetCharacterHandle();
+        Ptr<CharacterHandle> thisChar;
+        Ptr<Object> thisObj;
+        if (fn.Arg(1).IsCharacter())
+        {
+            Ptr<InteractiveObject> pch = ResolveCharacterValue(fn.Arg(1), fn.Env);
+            if (pch)
+                thisChar = pch->GetCharacterHandle();
+        }
+        else
+            thisObj = fn.Arg(1).ToObject(fn.Env);
+        static_cast<MovieRoot*>(pmovie->pASMovieRoot)->AddInvokeAlias(aliasName, thisChar, thisObj, func);
+        fn.Result->SetBool(true);
     }
-    else
-        thisObj = fn.Arg(1).ToObject(fn.Env);
-    static_cast<MovieRoot*>(pmovie->pASMovieRoot)->AddInvokeAlias(aliasName, thisChar, thisObj, func);
-    fn.Result->SetBool(true);
+    if (!(funcFlags & FunctionRefBase::FuncRef_Internal) && funcObj)
+        funcObj->Release();
+    if (!(funcFlags & FunctionRefBase::FuncRef_Weak) && funcFrame)
+        funcFrame->Release();
 }
 
 // TextSnapshot.getTextRunInfo(start, end): an array with an info object per glyph in [start, end).
