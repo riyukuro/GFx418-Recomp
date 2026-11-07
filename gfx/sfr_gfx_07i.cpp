@@ -713,28 +713,22 @@ SPInt FUN_142622670(char* self, unsigned period)
 }
 
 // Snapshots the open scopes into a new stats record, optionally clearing the recorded scopes.
-// MS2-FUNCTIONAL: stack frame differs from the exe (418 of its 434 bytes); same calls and locking
 // @0x142622740
 void AMP::ViewStats::GetStats(StatBag* bag, bool clear)
 {
     char* self = reinterpret_cast<char*>(this);
-    char* target = reinterpret_cast<char*>(bag);
-    if (target)
+    if (bag != NULL)
     {
-        void* raw = Memory::AllocAutoHeap(self, 0x158, AllocInfo(0x242, 0, 0));
-        char* snap = raw ? (char*)::new (raw) AMP::ProfileFrame() : 0;
-        EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-        U ctx[2] = { (U)snap, (U)self };
-        for (U i = 0; i < RawField<U>(self, 0x50); i++)
+        Ptr<AMP::ProfileFrame> stats = *SF_HEAP_AUTO_NEW(this) AMP::ProfileFrame();
+        RawLocker locker(self + 0xe0);
+        AmpFuncStatsVisitor visitor((U)stats.GetPtr(), self);
+        for (UPInt i = 0; i < RawField<U>(self, 0x50); ++i)
         {
-            char* item = ((char**)RawField<U>(self, 0x48))[i];
-            FUN_142624700((U)self, RawField<U>(item, 0x10), RawField<int>(item, 0x20) - RawField<int>(item, 0x18), 1, (U)snap);
-            for (U j = 0; j < RawField<U>(item, 0x38); j++)
-                FUN_14261e730(((char**)RawField<U>(item, 0x30))[j], ctx);
+            AmpFuncTreeItem* rootItem = RawField<AmpFuncTreeItem**>(self, 0x48)[i];
+            visitor(rootItem);
+            for (UPInt j = 0; j < rootItem->ChildSize; ++j)
+                FUN_14261e730((char*)rootItem->ChildData[j], (U*)&visitor);
         }
-        LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-        if (snap)
-            FUN_14257dcb0(snap);
     }
     if (clear)
     {
