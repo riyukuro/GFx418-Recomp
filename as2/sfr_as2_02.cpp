@@ -97,6 +97,10 @@
 #include "../include/kernel/sf_std.h"
 #include "../include/render/text_core.h"
 #include "../include/gfx/text_editorkit.h"
+namespace Scaleform { namespace GFx { class ASSoundIntf; }
+// 0x1425dcaf0, a bare ret: the exe folds the empty body the callers below call out of line into this instance.
+// Declared as a specialization, so cl calls it by name instead of inlining the header's empty body.
+template<> void ConstructorMov<GFx::ASSoundIntf*>::Construct(void*); }
 
 void FUN_14000d250(Scaleform::GFx::AS2::Value* value, double number);         // Value::SetNumber, out of line (sfr_video_01)
 // The DocView / EditorKit fields the clipboard natives read.
@@ -1164,8 +1168,6 @@ void SelectionCtorFunction::GetEndIndex(const FnCall& fn)
         fn.Result->SetNumber(Number(ToTextField(focusedChar)->GetEndIndex()));
 }
 
-// Empty in this build (folded with other empty bodies); called on the parent after a depth swap.
-void FUN_1425dcaf0(DisplayObjectBase* p);
 
 // Environment::SetTarget, inlined.
 static inline void SetEnvTarget(Environment* penv, InteractiveObject* ptarget)
@@ -1231,7 +1233,7 @@ void AvmSprite::SpriteSwapDepths(const FnCall& fn)
     int                  depth1 = pchar->Depth;
     if (pcont->mDisplayList.SwapDepths(pcont, depth1, depth2, pcont->GetCurrentFrame()))
     {
-        FUN_1425dcaf0(pcont);
+        ::Scaleform::ConstructorMov<::Scaleform::GFx::ASSoundIntf*>::Construct(pcont);
         if (pother)
             pother->SetAcceptAnimMoves(false);
     }

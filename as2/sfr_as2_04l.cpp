@@ -26,6 +26,10 @@
 #include "../include/kernel/sf_std.h"
 #include "../include/render/text_core.h"
 #include "../include/gfx/as2/as2_valueobjectinterface.h"
+namespace Scaleform { namespace GFx { class ASSoundIntf; }
+// 0x1425dcaf0, a bare ret: the exe folds the empty body the callers below call out of line into this instance.
+// Declared as a specialization, so cl calls it by name instead of inlining the header's empty body.
+template<> void ConstructorMov<GFx::ASSoundIntf*>::Construct(void*); }
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // CreateObjectInterface inlines the AS2ValueObjectInterface constructor, so its vftable is emitted here:
@@ -71,7 +75,6 @@ void* FUN_142936510(TextField* ptf)
 
 // Stage / render bookkeeping after a character's target changed: the object at +0x20 runs its slot 77 and the four
 // callbacks on it and on the result.
-void FUN_1425dcaf0(void* pobj);
 
 // The target (+0x20) is re-read after every call, as the exe does.
 // @0x142936570
@@ -80,7 +83,7 @@ void FUN_142936570(void* self)
     void* const& ptarget = *reinterpret_cast<void**>(static_cast<UByte*>(self) + 0x20);
     typedef void* (*Slot77)(void*);
     void* presult = reinterpret_cast<Slot77>((*static_cast<void* const* const*>(ptarget))[0x268 / 8])(ptarget);
-    FUN_1425dcaf0(ptarget);
+    ::Scaleform::ConstructorMov<::Scaleform::GFx::ASSoundIntf*>::Construct(ptarget);
     static_cast<DisplayObjectBase*>(ptarget)->InvalidateHitResult();
     static_cast<DrawingContext*>(presult)->AcquirePath(true);
     static_cast<DrawingContext*>(presult)->CreateLineComplexFill();
@@ -185,8 +188,3 @@ Sprite* MovieRoot::CreateSprite(TimelineDef* ptimelineDef, MovieDefImpl* pdefImp
 
 // MS2-PIN: ??_7MovieDefRootNode@GFx@Scaleform@@6B@ 0x14317c9e0
 
-// AS2::FUN_1425dcaf0 is the exe's folded empty body (named ConstructorMov<ASSoundIntf*>::Construct); bound by
-// alternatename so the call stays out of line, as in the exe (see sfr_as3_16z).
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:?FUN_1425dcaf0@AS2@GFx@Scaleform@@YAXPEAX@Z=?Construct@?$ConstructorMov@PEAVASSoundIntf@GFx@Scaleform@@@Scaleform@@SAXPEAX@Z")
-#endif

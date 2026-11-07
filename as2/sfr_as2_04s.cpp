@@ -10,6 +10,10 @@
 #include "../include/gfx/gfx_movieimpl.h"
 #include "../include/gfx/gfx_placeobject.h"
 #include "../include/gfx/gfx_sprite.h"
+namespace Scaleform { namespace GFx { class ASSoundIntf; }
+// 0x1425dcaf0, a bare ret: the exe folds the empty body the callers below call out of line into this instance.
+// Declared as a specialization, so cl calls it by name instead of inlining the header's empty body.
+template<> void ConstructorMov<GFx::ASSoundIntf*>::Construct(void*); }
 
 namespace Scaleform { namespace GFx {
 namespace AS3 {
@@ -18,8 +22,6 @@ void Sfr34_ModifyOptimizedPlayList(InteractiveObject* p);
 }
 namespace AS2 {
 
-// The empty hook the exe calls on the clip after a new object was bound (exe 0x1425dcaf0, a bare ret).
-void FUN_1425dcaf0(void* pobj);
 
 // addFlags of AddDisplayObject (the same bits the Sprite entry forwards).
 enum
@@ -105,7 +107,7 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
     {
         replaceIfDepthIsOccupied = 1;
     }
-    FUN_1425dcaf0(GetSprite());
+    ::Scaleform::ConstructorMov<::Scaleform::GFx::ASSoundIntf*>::Construct(GetSprite());
 
     Ptr<DisplayObjectBase> ch = *GetSprite()->pASRoot->pASSupport->CreateCharacterInstance(
         GetSprite()->pASRoot->pMovieImpl, ccinfo, GetSprite(), pos.CharacterId);
@@ -177,8 +179,3 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
 
 }}} // namespace Scaleform::GFx::AS2
 
-// AS2::FUN_1425dcaf0 is the exe's folded empty body (named ConstructorMov<ASSoundIntf*>::Construct); bound by
-// alternatename so the call stays out of line, as in the exe (see sfr_as3_16z).
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:?FUN_1425dcaf0@AS2@GFx@Scaleform@@YAXPEAX@Z=?Construct@?$ConstructorMov@PEAVASSoundIntf@GFx@Scaleform@@@Scaleform@@SAXPEAX@Z")
-#endif

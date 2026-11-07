@@ -51,6 +51,10 @@
 #include "ms2/scaleform/include/gfx/as3/as3_userdefinedfunction.h"
 #include "ms2/scaleform/include/gfx/as3/as3_support.h"
 #include "ms2/scaleform/include/render/render_statebag.h"
+namespace Scaleform { namespace GFx { class ASSoundIntf; }
+// 0x1425dcaf0, a bare ret: the exe folds the empty body the callers below call out of line into this instance.
+// Declared as a specialization, so cl calls it by name instead of inlining the header's empty body.
+template<> void ConstructorMov<GFx::ASSoundIntf*>::Construct(void*); }
 #undef GetObject
 // VM: runs the queued code (unrecovered).
 
@@ -1408,14 +1412,8 @@ void* DeleteAs3_1424e4120(void* p, unsigned flags) { static_cast<Scaleform::GFx:
 // ==== AvmSprite::AddDisplayObject ====================================================================================
 
 extern "C" {
-void  FUN_1425dcaf0(void* sprite);                                            // Sprite::SetDirtyFlag (empty)
 void  FUN_1425f7f70(void* io);                                                // InteractiveObject::AddToPlayList
 }
-#ifndef MS2_HOOK_DLL
-// 0x1425dcaf0 is the folded empty body (named ConstructorMov<ASSoundIntf*>::Construct): called by that name it inlines
-// away and AddDisplayObject loses the exe's call.
-#pragma comment(linker, "/alternatename:FUN_1425dcaf0=?Construct@?$ConstructorMov@PEAVASSoundIntf@GFx@Scaleform@@@Scaleform@@SAXPEAX@Z")
-#endif
 }}} // namespace Scaleform::GFx::AS3
 // instantiated in sfr_as3_18 (0x142516210), called out of line
 namespace Scaleform { namespace GFx {
@@ -1638,7 +1636,7 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
     }
     else
         replaceIfDepthIsOccupied = true;
-    FUN_1425dcaf0(thisSpr);   // SetDirtyFlag
+    ::Scaleform::ConstructorMov<::Scaleform::GFx::ASSoundIntf*>::Construct(thisSpr);   // SetDirtyFlag
 
     void* asSupport = Sfr21Mem(Sfr21Mem(pDispObj, 0x20), 0x18);
     char* ch = (*reinterpret_cast<char* (**)(void*, void*, void*, void*, const unsigned*, int)>(
