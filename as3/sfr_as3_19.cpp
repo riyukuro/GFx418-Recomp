@@ -1333,8 +1333,15 @@ static inline void ExecRequireObject(VM& vm, const Value& v)
 
 // VM::Convert check used by astype/coerce handlers (returns whether value can be converted to the traits).
 
+// TypeError 1009 / 1010 for a null or undefined operand.
+static __forceinline void Sfr27ThrowNullOrUndefined(VM& vm, const Value& v)
+{
+    vm.ThrowTypeError(VM::Error(v.IsNull() ? static_cast<VM::ErrorID>(0x3f1) : static_cast<VM::ErrorID>(0x3f2), vm));
+}
+
 // The class operand popped: a value not convertible to its type becomes null.
-// MS2-FUNCTIONAL 0x142533300: same class test and error paths; the exe inlines the Value Release/AddRef paths where ours calls the out-of-line ReleaseInternal/ReleaseWeakRef (frame and size differ; same helper calls).
+// MS2-FUNCTIONAL 0x142533300: same branch layout; our cl tail-merges the two ThrowTypeError tails, the exe keeps them
+// separate (re-reading the kind for the y release) and holds below in r14.
 // @0x142533300
 void Sfr27ExecAsType(VM* vm)
 {
@@ -1342,19 +1349,15 @@ void Sfr27ExecAsType(VM* vm)
     Value* below = stk.GetTopPtr() - 1;
     Value y;
     y.Pick(stk);
-    if (y.GetKind() == Value::kClass)
+    if (y.GetKind() != Value::kClass)
     {
-        if (!FUN_1425146d0(vm, below, &y.AsClass().GetTraits()))
-            below->SetNull();
-    }
-    else
-    {
-        const UInt32 k = static_cast<UInt32>(y.GetKind());
-        if (k != 0 && (k - 0xc >= 4 || y.GetGASRefCountBase() != NULL))
+        if (!y.IsNullOrUndefined())
             vm->ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x411), *vm));
         else
-            ExecRequireObject(*vm, y);
+            Sfr27ThrowNullOrUndefined(*vm, y);
     }
+    else if (!FUN_1425146d0(vm, below, &y.AsClass().GetTraits()))
+        below->SetNull();
 }
 
 // call: function, receiver and argc arguments popped; the result is dropped.
@@ -3355,7 +3358,6 @@ bool AS3ValueObjectInterface::SetText(void* pdata, const char* text, bool html)
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // newarray: a new Array filled from the n values on the operand stack, pushed.
-// MS2-FUNCTIONAL 0x14253c0f0: behavior-equivalent recovery; codegen differs from exe
 // @0x14253c0f0
 void Sfr31ExecNewArray(UPInt vm, UInt32 n)
 {
@@ -3363,12 +3365,12 @@ void Sfr31ExecNewArray(UPInt vm, UInt32 n)
     UPInt arr;
     FUN_14241a500(traits, &arr, traits);
     FUN_14241d980(arr + 0x38, vm + 0x48, n);
-    Value v(Pickable<Object>(reinterpret_cast<Object*>(arr)));
+    Value v;
+    ValueAssignCopies::PickUnsafeObject19(v, reinterpret_cast<Object*>(arr));
     ExecPushCopy(reinterpret_cast<VM*>(vm), v);
 }
 
 // newcatch: a new Catch scope object for the exception handler (file a, exception info b), pushed on the operand stack.
-// MS2-FUNCTIONAL 0x14253c200: behavior-equivalent recovery; codegen differs from exe
 // @0x14253c200
 void Sfr31ExecPushInterfaceInstance(UPInt vm, UPInt a, UPInt b)
 {
@@ -3381,9 +3383,16 @@ void Sfr31ExecPushInterfaceInstance(UPInt vm, UPInt a, UPInt b)
         tbl = Sfr31Rd(owner, 0x80);
     }
     // Classes::fl::Catch::MakeInstanceTraits builds the catch scope's traits; the exe makes a Catch instance of them (0x14241a5b0)
-    SPtr<InstanceTraits::fl::Catch> tr = reinterpret_cast<Classes::fl::Catch*>(tbl)->MakeInstanceTraits(
-        *reinterpret_cast<VMAbcFile*>(a), *reinterpret_cast<const Abc::MethodBodyInfo::ExceptionInfo*>(b));
-    Value v(tr->MakeInstance(*tr));
+    // and drops the traits reference before the instance is pushed.
+    struct M { static __forceinline Pickable<Instances::fl::Catch> Make(UPInt cls, UPInt file, UPInt info)
+    {
+        SPtr<InstanceTraits::fl::Catch> tr = reinterpret_cast<Classes::fl::Catch*>(cls)->MakeInstanceTraits(
+            *reinterpret_cast<VMAbcFile*>(file), *reinterpret_cast<const Abc::MethodBodyInfo::ExceptionInfo*>(info));
+        return tr->MakeInstance(*tr);
+    } };
+    Pickable<Instances::fl::Catch> inst = M::Make(tbl, a, b);
+    Value v;
+    ValueAssignCopies::PickUnsafeObject19(v, inst.GetPtr());
     ExecPushCopy(reinterpret_cast<VM*>(vm), v);
 }
 
