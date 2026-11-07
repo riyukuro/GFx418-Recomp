@@ -958,20 +958,22 @@ static SF_INLINE const SlotInfo& Sfr18GetSlotInfo(const Slots& s, AbsoluteIndex 
     return s.VArray[static_cast<UInt32>(ind.Get()) - s.FirstOwnSlotNum].Value;
 }
 
-// MS2-FUNCTIONAL: the SDK Slots::CIterator loop (a local iterator struct, GetSlotInfo one level inline as in the exe);
-// the exe adds the slot count as VArray size + FirstOwnSlotNum, keeps the name node in rsi across the convert call and
-// loads the ~Value jump table base at its use (ours hoists it)
+// MS2-FUNCTIONAL: the SDK Slots::CIterator loop (a local iterator struct, GetSlotInfo one level inline as in the exe).
+// The exe releases the name from the register it was loaded into, not from the ASString temp (LTCG knows that
+// AddDynamicSlotValuePair leaves it alone). Here the name is a node copy viewed as an ASString, released in the same
+// full expression so that it still goes before the result Value's dtor. Left: the first slot-count test sums into
+// r9 where the exe uses r8.
 // @0x142511890
 void Class::InitPrototypeFromVTable(AS3::Object& obj, ConvertFunc f) const
 {
-    InstanceTraits::Traits& itr = GetInstanceTraits();
+    const InstanceTraits::Traits& itr = GetClassTraits().GetInstanceTraits();
     const VTable& vt = itr.GetVT();
     struct CIt
     {
         AbsoluteIndex Ind;
         const Slots*  Parent;
         SF_INLINE CIt(const Slots& p, AbsoluteIndex ind) : Ind(ind), Parent(&p) {}
-        SF_INLINE bool IsEnd() const { return static_cast<UInt32>(Ind.Get()) >= Parent->GetSlotInfoNum(); }
+        SF_INLINE bool IsEnd() const { return static_cast<UInt32>(Ind.Get()) >= Parent->VArray.GetSize() + Parent->FirstOwnSlotNum; }
         SF_INLINE void Next() { if (Ind < Parent->GetSlotInfoNum()) Ind = AbsoluteIndex(Ind.Get() + 1); }
         SF_INLINE const SlotInfo& GetSlotInfo() const { return Sfr18GetSlotInfo(*Parent, Ind); }
         SF_INLINE ASStringNode* GetSlotName() const { return Parent->GetSlotNameNode(Ind); }
@@ -982,8 +984,13 @@ void Class::InitPrototypeFromVTable(AS3::Object& obj, ConvertFunc f) const
         if (si.BindType == SlotInfo::BT_Code)
         {
             ASStringNode* sn = it.GetSlotName();
-            obj.AddDynamicSlotValuePair(ASString(sn), (this->*f)(vt.VTMethods[static_cast<UInt32>(si.ValueInd)], itr),
-                                        SlotInfo::aDontEnum);
+            const Value&  m = vt.VTMethods[static_cast<UInt32>(si.ValueInd)];
+            sn->AddRef();
+            ASStringNode* name = sn;
+            obj.AddDynamicSlotValuePair(reinterpret_cast<const ASString&>(name),
+                                        (this->*f)(m, itr),
+                                        SlotInfo::aDontEnum),
+                sn->Release();
         }
     }
 }
