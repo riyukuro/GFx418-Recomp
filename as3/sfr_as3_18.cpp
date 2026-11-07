@@ -3540,51 +3540,49 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // An object past its unload depth only drops its unload state. A timeline child (not named by an instance) is
 // taken off the parent's property of its name if that property still holds this object; the AS3 object is then
 // kept raw (no longer collectible).
-// MS2-FUNCTIONAL both Multiname constructions use the inline copy (InlineStr, InlineCtorTag) as the exe inlines them; left: the exe lays the early Depth < -1 return out of line, shrink-wraps on rdi, and register allocation
+// MS2-FUNCTIONAL SDK if/else structure (Depth test, then the name/timeline flag test); both Multiname constructions use the inline copy (InlineStr, InlineCtorTag) as the exe inlines them; left: the exe uses rdi as its zero register and saves r12-r15 later (shrink-wrap), tests the flags via movzx/shr, keeps the Multiname local in another slot, and register allocation (ours 114 B longer)
 // @0x142519200
 void AvmDisplayObj::OnEventUnload()
 {
-    DisplayObject* dobj = pDispObj;
-    if (dobj->Depth < -1)
+    if (!(pDispObj->Depth < -1))
     {
-        if (dobj->IsUnloaded())
+        if (!(pDispObj->DisplayObject::Flags & DisplayObject::Mask_InstanceBasedName) &&
+            (pDispObj->DisplayObject::Flags & DisplayObject::Mask_TimelineObject))
         {
-            dobj->pParent = NULL;
-            dobj = pDispObj;
-        }
-        dobj->DisplayObjectBase::Flags &= ~(DisplayObjectBase::Mask_Unloaded | DisplayObjectBase::Mask_Unloading);
-        return;
-    }
-    if (!(dobj->DisplayObject::Flags & DisplayObject::Mask_InstanceBasedName) &&
-        (dobj->DisplayObject::Flags & DisplayObject::Mask_TimelineObject) && GetAS3Parent())
-    {
-        AvmInteractiveObj*                    avmParent = GetAvmParent();
-        Instances::fl_display::DisplayObject* parentObj = avmParent->GetAS3Obj();
-        ASString                              name      = pDispObj->GetName();
-        Value                                 v;
-        {
-            Multiname mn(AS3RootOf(pDispObj)->pAVM->GetPublicNamespace(), Value(name, Value::InlineStr), Multiname::InlineCtorTag());
-            parentObj->GetProperty(mn, v);
-        }
-        VM* vm = AS3RootOf(pDispObj)->pAVM;
-        if (!vm->IsException())
-        {
-            if (!v.IsObject() || v.GetObject() != GetAS3Obj())
-                goto done;
+            if (GetAS3Parent())
             {
-                Multiname mn(AS3RootOf(pDispObj)->pAVM->GetPublicNamespace(), Value(name, Value::InlineStr), Multiname::InlineCtorTag());
-                parentObj->SetProperty(mn, Value::GetNull());
+                AvmInteractiveObj*                    p      = GetAvmParent();
+                Instances::fl_display::DisplayObject* as3par = p->GetAS3Obj();
+                ASString                              name   = pDispObj->GetName();
+                Value                                 v;
+                as3par->GetProperty(Multiname(AS3RootOf(pDispObj)->pAVM->GetPublicNamespace(), Value(name, Value::InlineStr),
+                                              Multiname::InlineCtorTag()), v);
+                if (AS3RootOf(pDispObj)->pAVM->IsException())
+                {
+                    AS3RootOf(pDispObj)->pAVM->OutputAndIgnoreException();
+                    p->pDispObj->DisplayObject::Flags |= DisplayObject::Mask_ExecutionAborted;
+                }
+                else if (v.IsObject() && v.GetObject() == GetAS3Obj())
+                {
+                    as3par->SetProperty(Multiname(AS3RootOf(pDispObj)->pAVM->GetPublicNamespace(), Value(name, Value::InlineStr),
+                                                  Multiname::InlineCtorTag()), Value::GetNull());
+                    if (AS3RootOf(pDispObj)->pAVM->IsException())
+                    {
+                        AS3RootOf(pDispObj)->pAVM->OutputAndIgnoreException();
+                        p->pDispObj->DisplayObject::Flags |= DisplayObject::Mask_ExecutionAborted;
+                    }
+                }
             }
-            vm = AS3RootOf(pDispObj)->pAVM;
-            if (!vm->IsException())
-                goto done;
         }
-        vm->OutputAndIgnoreException();
-        avmParent->pDispObj->DisplayObject::Flags |= DisplayObject::Mask_ExecutionAborted;
-    done:;
+        pAS3RawPtr = GetAS3Obj();
+        reinterpret_cast<SPtr<Instances::fl_display::DisplayObject>&>(pAS3CollectiblePtr) = NULL;
     }
-    pAS3RawPtr = GetAS3Obj();
-    reinterpret_cast<SPtr<Instances::fl_display::DisplayObject>&>(pAS3CollectiblePtr) = NULL;
+    else
+    {
+        if (pDispObj->IsUnloaded())
+            pDispObj->pParent = NULL;
+        pDispObj->DisplayObjectBase::Flags &= ~(DisplayObjectBase::Mask_Unloaded | DisplayObjectBase::Mask_Unloading);
+    }
 }
 
 
