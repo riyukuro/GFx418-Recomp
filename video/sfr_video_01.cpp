@@ -3109,9 +3109,15 @@ protected:
     Render::TextureManager* pTexManager;   // +0x18
 };
 
-// MS2-FUNCTIONAL: other scheduling; the movie heap
-// read directly where the exe calls the virtual Movie::GetHeap, the audio target taken from _level0 where the exe
-// asks the AS2 root for the root movie (the same object)
+// The virtual Movie::GetHeap (vftable slot 47); this unit has no Movie view, so the slot is called directly.
+static inline MemoryHeap* Video01MovieGetHeap(const MovieImpl* proot)
+{
+    typedef MemoryHeap* (*GetHeapFn)(const MovieImpl*);
+    return (*reinterpret_cast<GetHeapFn const* const*>(proot))[47](proot);
+}
+
+// MS2-FUNCTIONAL: regalloc and frame layout; the exe keeps this in r14 and the state bag in rbp (proot spilled to a
+// home slot), puts fileName at [rsp+0x30] instead of a home slot, and its frame is 0x10 larger
 // @0x14000c4b0
 void VideoProviderNetStream::OpenUrl(const char* url, Environment* penv)
 {
@@ -3130,9 +3136,9 @@ void VideoProviderNetStream::OpenUrl(const char* url, Environment* penv)
     VInfo.AudioTracks.Clear();
     pTextureImage = NULL;
     FrameIsReady  = false;
+    StateBag* pstates = proot->GetStateBag();
     if (!pVideoPlayer)
     {
-        StateBag* pstates = proot->GetStateBag();
         Ptr<GFx::Video::VideoBase> pvideo = *(GFx::Video::VideoBase*)pstates->GetStateAddRef(State::State_Video);
         if (pvideo)
         {
@@ -3145,7 +3151,7 @@ void VideoProviderNetStream::OpenUrl(const char* url, Environment* penv)
             Ptr<Log>            plog        = pstates->GetLog();
             Ptr<FileOpenerBase> pfileOpener = *(FileOpenerBase*)pstates->GetStateAddRef(State::State_FileOpener);
             Ptr<TaskManager>    ptaskMgr    = *(TaskManager*)pstates->GetStateAddRef(State::State_TaskManager);
-            pVideoPlayer = pvideo->CreateVideoPlayer(proot->GetMovieHeap(), ptaskMgr, pfileOpener, plog);
+            pVideoPlayer = pvideo->CreateVideoPlayer(Video01MovieGetHeap(proot), ptaskMgr, pfileOpener, plog);
         }
         if (pVideoPlayer)
         {
@@ -3160,7 +3166,13 @@ void VideoProviderNetStream::OpenUrl(const char* url, Environment* penv)
     if (pVideoPlayer)
     {
         pVideoPlayer->Open(fileName.ToCStr());
-        pTarget = penv->GetTarget()->GetCharacterHandle();
+        CharacterHandle* phandle = penv->GetTarget()->GetCharacterHandle();
+        if (phandle)
+            phandle->AddRef();
+        CharacterHandle* pprev = pTarget.GetPtr();
+        if (pprev)
+            pprev->Release();
+        *reinterpret_cast<CharacterHandle**>(&pTarget) = phandle;
         ((Scaleform::GFx::MovieImpl*)(void*)(proot))->AddVideoProvider(this);
         pVideoPlayer->SetLoopFlag(LoopFlag);
         StartNotificationSent    = false;
@@ -3177,7 +3189,15 @@ void VideoProviderNetStream::OpenUrl(const char* url, Environment* penv)
             pSubtitleMsg = NULL;
         }
         if (!pAudioTarget)
-            pAudioTarget = ((DisplayObject*)proot->pMainMovie)->GetCharacterHandle();
+        {
+            CharacterHandle* paudio = proot->pASMovieRoot->GetRootMovie()->GetCharacterHandle();
+            if (paudio)
+                paudio->AddRef();
+            CharacterHandle* pold = pAudioTarget.GetPtr();
+            if (pold)
+                pold->Release();
+            *reinterpret_cast<CharacterHandle**>(&pAudioTarget) = paudio;
+        }
     }
 }
 
