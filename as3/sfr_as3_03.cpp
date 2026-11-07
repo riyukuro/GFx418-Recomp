@@ -3834,12 +3834,15 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         Result.List.PushBack(child);
     }
 
-    // MS2-FUNCTIONAL: the namespace copy assignment and the PushBack growth are inlined differently
+    // The exe (LTCG) knows that MakeInstanceElement does not keep its result slot, so r lives in rdi. Copying the
+    // pointer out of the returned object into r gets the same here.
+    // MS2-FUNCTIONAL: stack slots differ (exe shares the MakeInstanceElement result slot with the loop temps; frame 0x10 larger here)
     // @0x142408960
     Pickable<XML> XMLElement::DeepCopy(XML* parent)
     {
         InstanceTraits::fl::XML& itr = static_cast<InstanceTraits::fl::XML&>(GetInstanceTraits());
-        Pickable<XMLElement> r = itr.MakeInstanceElement(itr, *Ns, Text, parent);
+        Pickable<XMLElement> made = itr.MakeInstanceElement(itr, *Ns, Text, parent);
+        Pickable<XMLElement> r(made.GetPtr());
 
         UPInt size = Attrs.GetSize();
         for (UPInt i = 0; i < size; ++i)
@@ -3863,9 +3866,10 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
 
         for (UPInt i = 0; i < Namespaces.Namespaces.GetSize(); ++i)
         {
-            SPtr<Instances::Namespace> nsCopy = GetVM().MakeNamespace(Abc::NS_Public,
-                                                                      GetVM().GetStringManager().CreateEmptyString(),
-                                                                      Value::GetUndefined());
+            VM& vm = GetVM();
+            SPtr<Instances::Namespace> nsCopy = vm.MakeNamespace(Abc::NS_Public,
+                                                                 vm.GetStringManager().CreateEmptyString(),
+                                                                 Value::GetUndefined());
             *nsCopy = *Namespaces.Namespaces[i];
             r->Namespaces.Namespaces.PushBack(nsCopy);
         }
