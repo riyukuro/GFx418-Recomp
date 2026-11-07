@@ -9,6 +9,9 @@
 // MS2-RANGE: 0x142685f00-0x142688b70 .text$mn
 // MS2-RANGE: 0x1426899e0-0x142690d10 .text$mn
 // MS2-RANGE: 0x142744560-0x142746480 .text$mn
+// MS2-PINS-BEGIN tplpin
+// MS2-PIN: ??$CreateEntry@VTreeContainer@Render@Scaleform@@@Context@ContextImpl@Render@Scaleform@@QEAAPEAVTreeContainer@23@XZ 0x142568620 ; unique
+// MS2-PINS-END tplpin
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_abc.h"
 #include "ms2/scaleform/include/kernel/sf_array.h"
@@ -67,6 +70,9 @@ extern Sd_1431bede8 DAT_1431bede8;
 #define AS3AudioEventVtable (*reinterpret_cast<void**>(&DAT_1431bede8))
 extern "C" char DAT_1431bcbb0[];   // the sound objects' outermost base
 #define AS3SoundObjectBaseVtable DAT_1431bcbb0
+extern unsigned char DAT_142dc9d48[];   // RefCountImplCore vftable (SwfSoundStreamer ctor chain); the name data_data_game.cpp declares
+#define DAT_142dc9d48_RefCountImplCore DAT_142dc9d48
+extern "C" char DAT_1431b80b8[];   // SoundRenderer::AuxStreamer vftable
 struct Sd_1431bec40;
 extern Sd_1431bec40 DAT_1431bec40;
 #define AS3AudioListNodeVtable (*reinterpret_cast<void**>(&DAT_1431bec40))
@@ -3869,7 +3875,120 @@ void ProfileFrame::Print(Log* log) const
 }
 }}
 
-// MS2-FUNCTIONAL: links either an ordinary sound request or callback-backed stream request, then configures the FMOD source and dispatches stream format metadata.
+// The SDK's file-local CreateSubSound(prenderer, AppendableSoundData*, FMOD::Sound**), inlined into CreateSampleFromData
+// (its out-of-line copy is CreateBufferedAudioStream above).
+static __forceinline FMOD_RESULT CreateBufferedAudioStreamInl(void* player, const char* path, FMOD::Sound** sound)
+{
+    FMOD_CREATESOUNDEXINFO info;
+    memset(&info, 0, sizeof(info));
+    const unsigned format = *reinterpret_cast<const unsigned*>(path + 0x10);
+    unsigned mode = 0x2002040;
+    info.cbsize = sizeof(info);
+    info.length = 0x0fffffff;
+    switch (format & 0x700) {
+    case 0x100:
+        info.format = ((format & 7) == 2) + 1;
+        info.defaultfrequency = *reinterpret_cast<const int*>(path + 0x14);
+        info.numchannels = (format & 8) ? 2 : 1;
+        mode = 0x2003040;
+        break;
+    case 0x200:
+        info.format = 0xb;
+        break;
+    default:
+        return static_cast<FMOD_RESULT>(0x19);
+    }
+    info.decodebuffersize = 0x2000;
+    info.useropen = reinterpret_cast<void*>(&OpenAudioStream);
+    info.userclose = reinterpret_cast<void*>(&CloseAudioStream);
+    info.userread = reinterpret_cast<void*>(&ReadAudioCallback);
+    info.userseek = reinterpret_cast<void*>(&ValidateAudioStream);
+    return reinterpret_cast<FMOD::System*>(*reinterpret_cast<void**>(static_cast<char*>(player) + 0x10))->createStream(path, mode, &info, sound);
+}
+
+// SwfSoundStreamer::CreateReader: pRenderer (+0x38), pSoundData (+0x28), pSound (+0x30).
+static __forceinline bool Sfr22StreamerCreateReader(unsigned char* streamer)
+{
+    if (void* player = *reinterpret_cast<void**>(streamer + 0x38))
+        return CreateBufferedAudioStreamInl(player, *reinterpret_cast<const char**>(streamer + 0x28),
+                                            reinterpret_cast<FMOD::Sound**>(streamer + 0x30)) == 0;
+    return false;
+}
+
+// SwfSoundStreamer::GetSoundFormat
+static __forceinline bool Sfr22StreamerGetSoundFormat(unsigned char* streamer, int* fmt, unsigned* channels, unsigned* samplerate)
+{
+    FMOD::Sound* sound = *reinterpret_cast<FMOD::Sound**>(streamer + 0x30);
+    if (!sound)
+        return false;
+    int format = 0;
+    int chans = 0;
+    int ret = FUN_1428d8eba(sound, nullptr, &format, &chans, nullptr);
+    if (ret != 0)
+        return false;
+    *channels = chans;
+    float frequency = 0.0f;
+    ret = FUN_1428d8eb4(*reinterpret_cast<FMOD::Sound**>(streamer + 0x30), &frequency, nullptr, nullptr, nullptr);
+    if (ret != 0)
+        return false;
+    *samplerate = static_cast<unsigned>(frequency);
+    if (format == 2)
+        *fmt = 0;
+    else if (format == 5)
+        *fmt = 1;
+    else
+        return false;
+    return true;
+}
+
+// SoundSampleFMODImpl::CreateSubSound(SoundFile*): pPlayer (+0x28) -> pDevice (+0x10).
+static __forceinline FMOD_RESULT Sfr22SampleCreateFileSound(unsigned char* sample, unsigned char* psd, FMOD::Sound** psound)
+{
+    unsigned flags = 0x40;
+    if (static_cast<UByte>(*reinterpret_cast<unsigned*>(psd + 0x10) >> 12) & 1)
+        flags |= 0x80;
+    else
+        flags |= 0x4000;
+    FMOD_RESULT result = (*reinterpret_cast<FMOD::System**>(*reinterpret_cast<unsigned char**>(sample + 0x28) + 0x10))->createSound(
+        *reinterpret_cast<const char**>(psd + 0x20), flags, nullptr, psound);
+    if (result != 0) {
+        *psound = nullptr;
+        return result;
+    }
+    return result;
+}
+
+// SoundSampleFMODImpl::CreateSubSound(SoundData*)
+static __forceinline FMOD_RESULT Sfr22SampleCreateDataSound(unsigned char* sample, unsigned char* psd, FMOD::Sound** psound)
+{
+    FMOD_CREATESOUNDEXINFO exinfo;
+    memset(&exinfo, 0, sizeof(exinfo));
+    exinfo.cbsize = sizeof(exinfo);
+    unsigned flags = 0x1a000040;
+    switch (*reinterpret_cast<unsigned*>(psd + 0x10) & 0x700) {
+    case 0x100:
+        exinfo.format = (*reinterpret_cast<unsigned*>(psd + 0x10) & 7) == 2 ? 2 : 1;
+        exinfo.defaultfrequency = *reinterpret_cast<int*>(psd + 0x14);
+        exinfo.numchannels = (*reinterpret_cast<unsigned*>(psd + 0x10) & 8) ? 2 : 1;
+        flags |= 0x1000;
+        break;
+    case 0x200:
+        flags |= 0x200;
+        exinfo.format = 0xb;
+        break;
+    default:
+        return static_cast<FMOD_RESULT>(0x19);
+    }
+    exinfo.length = *reinterpret_cast<unsigned*>(psd + 0x28);
+    return (*reinterpret_cast<FMOD::System**>(*reinterpret_cast<unsigned char**>(sample + 0x28) + 0x10))->createSound(
+        *reinterpret_cast<const char**>(psd + 0x20), flags, &exinfo, psound);
+}
+
+// MS2-FUNCTIONAL: SoundRendererFMODImpl::CreateSampleFromData (SDK 4.2): a callback-fed stream sample becomes a
+// SwfSoundStreamer handed to CreateSampleFromAuxStreamer (vtable[4]); any other sample is a SoundSampleFMODImpl
+// whose FMOD sound is created from the file name or from the in-memory data.
+// Left vs the exe (1199 bytes, ours 1194): cl drops the null test before the final Release (the exe keeps test rsi/je),
+// and the streamer's pSoundData store sits one instruction later. A Ptr-like holder keeps the test but moves every register.
 // The whole body runs under the manager lock (+0xc8), as in the exe: the request is linked into the list before its FMOD
 // sound exists, so leaving the lock early let the update thread see a half-built request.
 // @0x1427449f0
@@ -3879,116 +3998,89 @@ void* FUN_1427449f0(void* manager, void* requestData)
         return nullptr;
     auto* managerBytes = static_cast<unsigned char*>(manager);
     auto* request = static_cast<unsigned char*>(requestData);
-    auto* lock = reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8);
-    EnterCriticalSection(lock);
+    Lock::Locker locker(reinterpret_cast<Lock*>(managerBytes + 0xc8));
 
-    const unsigned options = *reinterpret_cast<unsigned*>(request + 0x10);
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    auto* object = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, std::size_t, const void*)>(heapVtable[10])(
-        DAT_143b15f60, 0x40, nullptr));
-    if (!object) {
-        LeaveCriticalSection(lock);
-        return nullptr;
-    }
-    const bool stream = (options & 0x1000) && !(options & 0x2000);
-    auto* node = object + 0x10;
-    auto* sentinel = managerBytes + 0xb0;
-    void* tail = *reinterpret_cast<void**>(managerBytes + 0xc0);
-    *reinterpret_cast<void***>(object) = stream ? &AS3StreamRequestVtable : &AS3SoundRequestVtable;
-    *reinterpret_cast<unsigned*>(object + 8) = 1;
-    *reinterpret_cast<void***>(node) = stream ? &AS3StreamRequestNodeVtable : &AS3SoundRequestNodeVtable;
-    *reinterpret_cast<void**>(node + 8) = sentinel;
-    *reinterpret_cast<void**>(node + 0x10) = tail;
-    *reinterpret_cast<void**>(static_cast<unsigned char*>(tail) + 8) = node;
-    *reinterpret_cast<void**>(managerBytes + 0xc0) = node;
-    *reinterpret_cast<unsigned*>(request + 8) += 1;
-    *reinterpret_cast<void**>(object + 0x28) = stream ? requestData : manager;
-    *reinterpret_cast<void**>(object + 0x30) = nullptr;
-    *reinterpret_cast<void**>(object + 0x38) = stream ? manager : requestData;
-
-    auto* system = *reinterpret_cast<FMOD::System**>(managerBytes + 0x10);
-    auto* sound = reinterpret_cast<FMOD::Sound**>(object + 0x30);
-    void* returned = nullptr;
-    if (stream) {
-        // Callback-fed stream: hand PCM16/float streams to the buffered-request factory (vtable[4]); every other
-        // outcome returns null. The request reference is dropped either way.
-        FMOD_RESULT result = static_cast<FMOD_RESULT>(0);
-        unsigned char info[0xd8] = {};
-        *reinterpret_cast<unsigned*>(info) = sizeof(info);
-        *reinterpret_cast<int*>(info + 4) = 0x0fffffff;
-        unsigned mode = 0x02002040;
-        if ((options & 0x700) == 0x100) {
-            mode = 0x02003040;
-            *reinterpret_cast<unsigned*>(info + 0x10) = *reinterpret_cast<unsigned*>(request + 0x14);
-            *reinterpret_cast<int*>(info + 0x14) = ((options & 7) == 2) + 1;
-            *reinterpret_cast<int*>(info + 0x0c) = ((options & 8) != 0) + 1;
-        } else if ((options & 0x700) == 0x200) {
-            *reinterpret_cast<int*>(info + 0x14) = 0xb;
+    const unsigned format = *reinterpret_cast<unsigned*>(request + 0x10);
+    if ((static_cast<UByte>(format >> 12) & 1) && !(static_cast<UByte>(format >> 13) & 1)) {
+        // Ptr<SwfSoundStreamer> pstreamer = *SF_NEW SwfSoundStreamer(this, pasd)
+        auto* mem = static_cast<unsigned char*>(Memory::Alloc(0x40));
+        unsigned char* streamer;
+        if (mem) {
+            *reinterpret_cast<void* volatile*>(mem) = DAT_142dc9d48_RefCountImplCore;
+            *reinterpret_cast<void* volatile*>(mem) = DAT_1431b80b8;
+            auto* node = mem + 0x10;
+            auto* sentinel = managerBytes + 0xb0;
+            *reinterpret_cast<volatile int*>(mem + 8) = 1;
+            *reinterpret_cast<void***>(node) = &AS3AudioListNodeVtable;
+            *reinterpret_cast<void**>(node + 0x10) = *reinterpret_cast<void**>(sentinel + 0x10);
+            *reinterpret_cast<void**>(node + 8) = sentinel;
+            *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(sentinel + 0x10) + 8) = node;
+            *reinterpret_cast<void**>(sentinel + 0x10) = node;
+            *reinterpret_cast<void***>(mem) = &AS3StreamRequestVtable;
+            *reinterpret_cast<void***>(node) = &AS3StreamRequestNodeVtable;
+            *reinterpret_cast<int*>(request + 8) += 1;
+            *reinterpret_cast<void**>(mem + 0x28) = requestData;
+            *reinterpret_cast<void**>(mem + 0x30) = nullptr;
+            *reinterpret_cast<void**>(mem + 0x38) = manager;
+            streamer = mem;
         } else {
-            result = static_cast<FMOD_RESULT>(0x19);
+            streamer = nullptr;
         }
-        if (result == 0) {
-            *reinterpret_cast<unsigned*>(info + 0x18) = 0x2000;
-            *reinterpret_cast<unsigned long long (**)(void*, void*, unsigned*, void*, void**)>(info + 0x78) = Scaleform::OpenAudioStream;
-            *reinterpret_cast<unsigned long long (**)(void*, void*)>(info + 0x80) = Scaleform::CloseAudioStream;
-            *reinterpret_cast<unsigned long long (**)(void*, void*, unsigned, unsigned*, void*)>(info + 0x88) = Scaleform::ReadAudioCallback;
-            *reinterpret_cast<unsigned long long (**)(void*, void*, void*)>(info + 0x90) = Scaleform::ValidateAudioStream;
-            result = system->createStream(*reinterpret_cast<const char**>(request + 0x20), mode,
-                                          reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), sound);
+        void* returned = nullptr;
+        int fmt;
+        unsigned channels;
+        unsigned samplerate;
+        if (Sfr22StreamerCreateReader(streamer) && Sfr22StreamerGetSoundFormat(streamer, &fmt, &channels, &samplerate)) {
+            auto** vtable = *reinterpret_cast<void***>(manager);
+            returned = reinterpret_cast<void* (*)(void*, void*, unsigned, unsigned, int)>(vtable[4])(
+                manager, streamer, channels, samplerate, fmt);
         }
-        if (result == 0 && *sound) {
-            int format = 0, channels = 0;
-            float frequency = 0.0f;
-            if (FUN_1428d8eba(*sound, nullptr, &format, &channels, nullptr) == 0
-                && FUN_1428d8eb4(*sound, &frequency, nullptr, nullptr, nullptr) == 0
-                && (format == 2 || format == 5)) {
-                auto** vtable = *reinterpret_cast<void***>(manager);
-                returned = reinterpret_cast<void* (*)(void*, void*, int, unsigned, void*)>(vtable[4])(
-                    manager, object, channels, static_cast<unsigned>(frequency),
-                    reinterpret_cast<void*>(format == 5 ? 1 : 0));
-            }
-        }
-        FUN_14257dcb0(object);
-        LeaveCriticalSection(lock);
+        FUN_14257dcb0(streamer);
         return returned;
     }
 
-    FMOD_RESULT result = static_cast<FMOD_RESULT>(0);
-    if (options & 0x2000) {
-        result = system->createSound(*reinterpret_cast<const char**>(request + 0x20), (options & 0x1000) ? 0xc0 : 0x4040,
-                                     nullptr, sound);
-        if (result != 0)
-            *sound = nullptr;
+    // Ptr<SoundSampleFMODImpl> psample = *SF_NEW SoundSampleFMODImpl(this)
+    auto* mem = static_cast<unsigned char*>(Memory::Alloc(0x40));
+    unsigned char* sample;
+    if (mem) {
+        *reinterpret_cast<void**>(mem) = AS3SoundObjectBaseVtable;
+        auto* node = mem + 0x10;
+        auto* sentinel = managerBytes + 0xb0;
+        *reinterpret_cast<volatile int*>(mem + 8) = 1;   // AtomicInt RefCount
+        *reinterpret_cast<void***>(node) = &AS3AudioListNodeVtable;
+        *reinterpret_cast<void**>(node + 0x10) = *reinterpret_cast<void**>(sentinel + 0x10);
+        *reinterpret_cast<void**>(node + 8) = sentinel;
+        *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(sentinel + 0x10) + 8) = node;
+        *reinterpret_cast<void**>(sentinel + 0x10) = node;
+        *reinterpret_cast<void***>(mem) = &AS3SoundRequestVtable;
+        *reinterpret_cast<void***>(node) = &AS3SoundRequestNodeVtable;
+        *reinterpret_cast<void**>(mem + 0x38) = nullptr;
+        *reinterpret_cast<void**>(mem + 0x28) = manager;
+        *reinterpret_cast<void**>(mem + 0x30) = nullptr;
+        sample = mem;
     } else {
-        unsigned mode = 0x1a001040;
-        unsigned char info[0xd8] = {};
-        *reinterpret_cast<unsigned*>(info) = sizeof(info);
-        if ((options & 0x700) == 0x100) {
-            *reinterpret_cast<unsigned*>(info + 0x10) = *reinterpret_cast<unsigned*>(request + 0x14);
-            *reinterpret_cast<int*>(info + 0x14) = ((options & 7) == 2) + 1;
-            *reinterpret_cast<int*>(info + 0x0c) = ((options & 8) != 0) + 1;
-        } else if ((options & 0x700) == 0x200) {
-            mode = 0x1a000240;
-            *reinterpret_cast<int*>(info + 0x14) = 0xb;
-        } else {
-            result = static_cast<FMOD_RESULT>(0x19);
-        }
-        if (result == 0) {
-            *reinterpret_cast<unsigned*>(info + 4) = *reinterpret_cast<unsigned*>(request + 0x28);
-            result = system->createSound(*reinterpret_cast<const char**>(request + 0x20), mode,
-                                         reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), sound);
-        }
+        sample = nullptr;
     }
-    // The returned request keeps one reference (the creation one); a failed one is released here.
-    if (result == 0) {
-        InterlockedIncrement(reinterpret_cast<volatile long*>(object + 8));
-        returned = object;
+    // psample->pSoundData = psd (Ptr<SoundDataBase>, NTS refcount)
+    *reinterpret_cast<int*>(request + 8) += 1;
+    if (*reinterpret_cast<void**>(sample + 0x38))
+        static_cast<Scaleform::RefCountNTSImpl*>(*reinterpret_cast<void**>(sample + 0x38))->Release();
+    *reinterpret_cast<void**>(sample + 0x38) = requestData;
+
+    bool created = false;
+    if (static_cast<UByte>(*reinterpret_cast<unsigned*>(request + 0x10) >> 13) & 1)
+        created = (Sfr22SampleCreateFileSound(sample, request, reinterpret_cast<FMOD::Sound**>(sample + 0x30)) == 0);
+    else
+        created = (Sfr22SampleCreateDataSound(sample, request, reinterpret_cast<FMOD::Sound**>(sample + 0x30)) == 0);
+    void* returned = nullptr;
+    if (created) {
+        InterlockedExchangeAdd(reinterpret_cast<volatile long*>(sample + 8), 1);
+        returned = sample;
     }
-    if (InterlockedExchangeAdd(reinterpret_cast<volatile long*>(object + 8), -1) == 1) {
-        auto** vtable = *reinterpret_cast<void***>(object);
-        reinterpret_cast<void (*)(void*, unsigned)>(vtable[0])(object, 1);
+    if (sample && InterlockedExchangeAdd(reinterpret_cast<volatile long*>(sample + 8), -1) == 1) {
+        auto** vtable = *reinterpret_cast<void***>(sample);
+        reinterpret_cast<void (*)(void*, unsigned)>(vtable[0])(sample, 1);
     }
-    LeaveCriticalSection(lock);
     return returned;
 }
 
