@@ -7319,8 +7319,8 @@ __forceinline Multiname::Multiname(Instances::Namespace& ns, const Value& name, 
 
 // The property prop_name of this object (its slot or dynamic value, getters run) swapped into value; false when
 // there is none or it could not be read.
-// MS2-FUNCTIONAL scheduling only: PropRef::GetSlotValueUnsafe written out (the exe inlines it); the case-1 Value copy
-// loads both halves before storing them, the exe stores the first half before loading the second
+// PropRef::GetSlotValueUnsafe is written out (the exe inlines it). The case-1 source Value is re-read from prop.pValue
+// (not the cached bits), which gives the exe's store-then-load order for the Value copy.
 // @0x14250cc60
 CheckResult Object::GetProperty(const Multiname& prop_name, Value& value)
 {
@@ -7344,7 +7344,7 @@ CheckResult Object::GetProperty(const Multiname& prop_name, Value& value)
             break;
         }
         case 1:
-            ValueAssignCopies::AssignUnsafeValueInline18(v, *reinterpret_cast<const Value*>(bits & ~UPInt(1)));
+            ValueAssignCopies::AssignUnsafeValueInline18(v, *reinterpret_cast<Value*>(reinterpret_cast<UPInt>(prop.pValue) & ~UPInt(1)));
             break;
         case 2:
             ValueAssignCopies::AssignUnsafeInline18(v, Value::kObject, reinterpret_cast<Object*>(bits & ~UPInt(2)));
