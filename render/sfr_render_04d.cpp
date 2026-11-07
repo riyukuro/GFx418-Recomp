@@ -475,7 +475,8 @@ static TextUnderlineStyle ConvertUnderlineStyle(HighlightInfo::UnderlineStyle st
 // Emits the records of every visible line: a new-line record at the first glyph drawn, colour / font switches,
 // images, and the underline and selection runs merged across glyphs of the same colour and style. Glyphs left
 // of the view are skipped and the line ends at the right edge; a clip box is set once something is cut.
-// MS2-FUNCTIONAL: same code; the exe loads VisibleRect.y1 later and keeps the selection offset (-x, -0) in registers
+// MS2-FUNCTIONAL: the inlined image GetYScale loads M[1][1] into xmm0 and M[0][1] into xmm1, ours the other way
+// round (cl orders the commutative sum the same whatever the source order; tried 6 forms)
 // @0x1426680e0
 void LineBuffer::CreateVisibleTextLayout(TextLayout::Builder& bld, const Highlighter* phighlighter,
                                          const TextFieldParam& textFieldParam)
@@ -630,7 +631,8 @@ void LineBuffer::CreateVisibleTextLayout(TextLayout::Builder& bld, const Highlig
                 {
                     if (prevSelectionColor != 0)
                     {
-                        RectF sr(selectionRect);
+                        // (built from the four edges: the copy constructor gives other code)
+                        RectF sr(selectionRect.x1, selectionRect.y1, selectionRect.x2, selectionRect.y2);
                         sr -= PointF(float(Geom.HScrollOffset), 0);
                         bld.AddSelection(sr, prevSelectionColor.ToColor32());
                     }
