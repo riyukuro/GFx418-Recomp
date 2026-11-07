@@ -928,7 +928,6 @@ GlyphNode* GlyphCache::getPrerasterizedGlyph(GlyphRunData& data, TextMeshProvide
 // Rasterizes one glyph into a free slot: prerasterized glyphs are copied, outlines are scaled to the font size (hinted
 // through the fitter when the font has its tops and is not natively hinted), swept row by row into the work raster
 // and uploaded. Stretched glyphs (x 2.5, for readability) are filtered horizontally.
-// MS2-FUNCTIONAL: same instruction stream; stretch and the floored top swap xmm7 / xmm8
 // @0x1426c6840
 GlyphNode* GlyphCache::RasterizeGlyph(GlyphRunData& data, TextMeshProvider* tm, const GlyphParam& gp)
 {
@@ -945,10 +944,12 @@ GlyphNode* GlyphCache::RasterizeGlyph(GlyphRunData& data, TextMeshProvider* tm, 
         return 0;
     }
 
-    unsigned lowerCaseTop = 0;
-    unsigned upperCaseTop = 0;
-    bool  autoFit      = Param.UseAutoFit && gp.IsAutoFit();
-    float stretch      = gp.GetStretch();
+    int   lowerCaseTop = 0;
+    int   upperCaseTop = 0;
+    bool  autoFit = Param.UseAutoFit && gp.IsAutoFit();
+
+    float stretch = gp.GetStretch();
+
     if (autoFit)
     {
         lowerCaseTop = gp.pFont->pFont->GetLowerCaseTop(this);
@@ -960,66 +961,86 @@ GlyphNode* GlyphCache::RasterizeGlyph(GlyphRunData& data, TextMeshProvider* tm, 
     float nomHeight = data.NomHeight;
     if (data.HintedNomHeight)
     {
-        nomHeight = float(data.HintedNomHeight);
-        autoFit   = false;
+        nomHeight = (float)data.HintedNomHeight;
+        autoFit = false;
     }
 
     float scale = gp.GetFontSize() / nomHeight;
-    float y1    = float(floor(data.GlyphBounds.y1 * scale));
-    float y2    = float(ceil(data.GlyphBounds.y2 * scale));
+    float y1 = float(floor(data.GlyphBounds.y1 * scale));
+    float y2 = float(ceil(data.GlyphBounds.y2 * scale));
+
     if (y1 >= y2)
         y1 = y2 = 0;
-    if (unsigned(y2 - y1) + 2 * SlotPadding >= MaxSlotHeight)
+
+    unsigned h = unsigned(y2 - y1) + 2*SlotPadding;
+
+    if (h >= MaxSlotHeight)
     {
         Result = Res_ShapeIsTooBig;
         return 0;
     }
 
+    GlyphNode* node = 0;
+
     Ras.Clear();
     if (autoFit)
-        addShapeAutoFit(data.pShape, unsigned(data.NomHeight), lowerCaseTop, upperCaseTop, gp.GetFontSize(), stretch);
+        addShapeAutoFit(data.pShape, (unsigned)data.NomHeight, lowerCaseTop, upperCaseTop, gp.GetFontSize(), stretch);
     else
-        addShapeToRasterizer(data.pShape, scale * stretch, scale);
+        addShapeToRasterizer(data.pShape, scale*stretch, scale);
 
-    int pad = SlotPadding;
-    int x1 = 0, x2 = 0, iy1 = 0, iy2 = 0;
+    int padX = SlotPadding;
+    int padY = SlotPadding;
+
+    int imgX1 = 0;
+    int imgX2 = 0;
+    int imgY1 = 0;
+    int imgY2 = 0;
+
     if (Ras.SortCells())
     {
-        x1  = Ras.GetMinX() - pad;
-        x2  = Ras.GetMaxX() + pad;
-        iy1 = Ras.GetMinY() - pad;
-        iy2 = Ras.GetMaxY() + pad;
+        imgX1 = Ras.GetMinX() - padX;
+        imgX2 = Ras.GetMaxX() + padX;
+        imgY1 = Ras.GetMinY() - padY;
+        imgY2 = Ras.GetMaxY() + padY;
     }
-    unsigned w = x2 - x1 + 1;
-    unsigned h = iy2 - iy1 + 1;
-    if (h > MaxSlotHeight)
-        h = MaxSlotHeight;
 
-    GlyphNode* node = allocateGlyph(tm, gp, w, h);
-    if (!node)
+    unsigned imgW  = imgX2 - imgX1 + 1;
+    unsigned imgH  = imgY2 - imgY1 + 1;
+
+    if (imgH > MaxSlotHeight)
+        imgH = MaxSlotHeight;
+
+    node = allocateGlyph(tm, gp, imgW, imgH);
+    if (node == 0)
     {
         Result = Res_CacheFull;
         cacheFullWarning();
         return 0;
     }
-    node->Origin.x = SInt16(x1 * 16);
-    node->Origin.y = SInt16(iy1 * 16);
-    node->Scale    = 1.0f;
 
-    RasterData.Resize(w * h);
-    RasterPitch = w;
-    memset(&RasterData[0], 0, w * h);
+    node->Origin.x = SInt16(imgX1 * 16);
+    node->Origin.y = SInt16(imgY1 * 16);
+    node->Scale = 1;
+
+    RasterData.Resize(imgW * imgH);
+    RasterPitch = imgW;
+
+    memset(&RasterData[0], 0, imgW * imgH);
 
     if (Ras.GetGamma1() != 1.0f)
         Ras.SetGamma1(1.0f);
 
-    bool filter = w >= 5 && stretch > 1.0f;
-    for (unsigned i = 0; i < Ras.GetNumScanlines() && pad + i < h; ++i)
+    bool filter = imgW >= 5 && stretch > 1;
+
+    unsigned i;
+    unsigned numSl = 0;
+    for(i = 0; i < Ras.GetNumScanlines() && (padY+i) < imgH; ++i)
     {
-        UByte* sl = &RasterData[(pad + i) * RasterPitch];
-        Ras.SweepScanline(i, sl + pad, 1, 0);
+        UByte* sl = &RasterData[(padY+i)*RasterPitch];
+        Ras.SweepScanline(i, sl+padX, 1, 0);
         if (filter)
-            filterScanline(sl, w);
+            filterScanline(sl, imgW);
+        ++numSl;
     }
 
     updateTextureGlyph(node);
