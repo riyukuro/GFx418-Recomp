@@ -3011,7 +3011,6 @@ namespace Instances { namespace fl_text
         result = parr;
     }
 
-    // MS2-FUNCTIONAL: 1 byte, the it->First.Type compare is cmp [rax+rsi+0x18] (table+offset) where the exe has [rsi+rax+0x18] (operand order only).
     // @0x1424b4710
     SF_NOINLINE void StyleSheet::styleNamesGet(SPtr<Instances::fl::Array>& result)
     {
@@ -3022,7 +3021,8 @@ namespace Instances { namespace fl_text
         for (StyleHash::ConstIterator it = CSS.GetStyles().Begin(); it != CSS.GetStyles().End(); ++it)
         {
             temp.Clear();
-            if (it->First.Type == GFx::Text::StyleManager::CSS_Class)
+            const GFx::Text::StyleKey& key = it->First;
+            if (key.Type == GFx::Text::StyleManager::CSS_Class)
                 temp.AppendChar('.');
             temp += it->First.Value;
             parr->SA.PushBack(sm.CreateString(temp));
