@@ -40,19 +40,19 @@ extern ExeDecl<void*>::type DAT_1431b5c00;
 #define AvmVideoCharacterInterfaceVtable DAT_1431b5c00
 extern ExeDecl<void*>::type DAT_1431b5b40;
 #define AvmVideoCharacterBaseVtable DAT_1431b5b40
-extern ExeDecl<void*>::type DAT_1431b5480;
-#define NetStreamProtoVtable DAT_1431b5480
-extern ExeDecl<void*>::type DAT_1431b54d0;
-#define NetStreamProtoInterfaceVtable DAT_1431b54d0
-extern ExeDecl<void*>::type DAT_1431b5478;
-#define NetStreamProtoBaseVtable DAT_1431b5478
+// The NetStreamProto vftables (0x1431b5480 / 0x1431b54d0 / 0x1431b5478) come from its ctor below (0x14000ae30),
+// which calls the out-of-line Prototype<NetStream> ctor (0x140009e20).
+namespace Scaleform { namespace GFx { namespace AS2 {
+template<> Prototype<NetStream>::Prototype(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor);   // exe 0x140009e20
+}}}
+//
 // NetStreamProto's ctor below (no exe row) emits the three ??_7NetStreamProto tables; the hand-inlined ctors
 // FUN_14000ae30 / FUN_14000cf20 store them through the DAT_ names, so bind those names to the tables here. The hook
 // DLL binds the DAT_ names to the exe by their symbols rows (a second /alternatename would conflict).
 #ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:?DAT_1431b5478@@3PEAXEA=??_7NetStreamProto@AS2@GFx@Scaleform@@6B@")
-#pragma comment(linker, "/alternatename:?DAT_1431b5480@@3PEAXEA=??_7NetStreamProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
-#pragma comment(linker, "/alternatename:?DAT_1431b54d0@@3PEAXEA=??_7NetStreamProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
+//
+//
+//
 // Same for the three ??_7AvmVideoCharacter tables, which sfr_video_02's AvmVideoCharacter model emits and
 // the ctor FUN_14000e2b0 stores.
 #pragma comment(linker, "/alternatename:?DAT_1431b5cb0@@3PEAXEA=??_7AvmVideoCharacter@AS2@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@")
@@ -4136,7 +4136,7 @@ void Video01EmitPrototypeVtables(void* netStream, void* video, ASStringContext* 
     ::new (netStream) Prototype<NetStream>(context, prototype, constructor);
     ::new (video) Prototype<VideoObject>(context, prototype, constructor);
 }
-NetStreamProto::NetStreamProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor) : Prototype<NetStream>(psc, pprototype, constructor) { InitFunctionMembers(this, psc, &NetStreamCloseFunctionTable, PropFlags(1)); }   // no exe row: FUN_14000ae30 is this ctor as the exe spells it; this one emits the NetStreamProto vftables (0x1431b5478..)
+// (NetStreamProto's ctor is 0x14000ae30 below.)
 // Lazily allocates and caches the script VideoObject for its display character. The exe calls GetGC()
 // before it reads the display object.
 // @0x14000e020
@@ -4226,63 +4226,63 @@ void VideoCtorFunction::GlobalCtor(const FnCall& fn)
 
 // constructs the NetStream prototype base and initializes its constructor links.
 // @0x140009e20
-__declspec(noinline) Object* FUN_140009e20(Object* object, ASStringContext* context, Object* prototype,
-                      const FunctionRef& constructor)
+template<> Prototype<NetStream>::Prototype(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : NetStream(psc, pprototype)
 {
-    // the inlined Prototype<NetStream> ctor: the NetStream part, then GASPrototypeBase() at +0xd8 and Init
-    static_cast<NetStream*>(object)->NetStream::NetStream(context, prototype);
-    unsigned char* bytes = reinterpret_cast<unsigned char*>(object);
-    unsigned char* base = bytes + 0xd8;
-    reinterpret_cast<FunctionRef*>(base + 0x08)->FunctionRef::FunctionRef();
-    reinterpret_cast<FunctionRef*>(base + 0x20)->FunctionRef::FunctionRef();
-    *reinterpret_cast<void**>(base + 0x38) = 0;
-    *reinterpret_cast<void***>(bytes) = &NetStreamPrototypeVtable;
-    *reinterpret_cast<void***>(bytes + 0x20) = &NetStreamPrototypeInterfaceVtable;
-    *reinterpret_cast<void***>(base) = &NetStreamPrototypeBaseVtable;
-    reinterpret_cast<NetStreamPrototypeInitAccess*>(base)->Init(object, context, constructor);
-    return object;
+    Init(this, psc, constructor);
 }
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 // adds the public close method and installs the NetStreamProto virtual tables.
 // @0x14000ae30
-Object* FUN_14000ae30(Object* object, ASStringContext* context, Object* prototype,
-                      const FunctionRef& constructor)
+NetStreamProto::NetStreamProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<NetStream>(psc, pprototype, constructor)
 {
-    FUN_140009e20(object, context, prototype, constructor);
-    unsigned char* bytes = reinterpret_cast<unsigned char*>(object);
-    *reinterpret_cast<void***>(bytes) = &NetStreamProtoVtable;
-    *reinterpret_cast<void***>(bytes + 0x20) = &NetStreamProtoInterfaceVtable;
-    *reinterpret_cast<void***>(bytes + 0xd8) = &NetStreamProtoBaseVtable;
-    NetStreamPrototypeInitAccess* access = reinterpret_cast<NetStreamPrototypeInitAccess*>(bytes + 0xd8);
-    access->InitFunctionMembers(object, context, &NetStreamCloseFunctionTable, PropFlags(1));
-    return object;
+    InitFunctionMembers(this, psc, &NetStreamCloseFunctionTable, PropFlags(1));
 }
+//
+//
+//
+//
+//
+//
+//
 
-// The NetStreamProto constructor as FUN_14000cf20 inlines it: Prototype<NetStream>, then the
-// NetStreamProto vtables and its close method.
-static __forceinline Object* NetStreamProtoConstruct(void* storage, ASStringContext* context, Object* prototype,
-                                                     const FunctionRef& constructor)
-{
-    // the inlined Prototype<NetStream> ctor, as in FUN_140009e20: the NetStream part, then GASPrototypeBase() at
-    // +0xd8 and Init
-    Object* baseProto = static_cast<Object*>(storage);
-    static_cast<NetStream*>(baseProto)->NetStream::NetStream(context, prototype);
-    unsigned char* bytes = static_cast<unsigned char*>(storage);
-    unsigned char* base = bytes + 0xd8;
-    reinterpret_cast<FunctionRef*>(base + 0x08)->FunctionRef::FunctionRef();
-    reinterpret_cast<FunctionRef*>(base + 0x20)->FunctionRef::FunctionRef();
-    *reinterpret_cast<void**>(base + 0x38) = 0;
-    *reinterpret_cast<void***>(bytes) = &NetStreamPrototypeVtable;
-    *reinterpret_cast<void***>(bytes + 0x20) = &NetStreamPrototypeInterfaceVtable;
-    *reinterpret_cast<void***>(base) = &NetStreamPrototypeBaseVtable;
-    reinterpret_cast<NetStreamPrototypeInitAccess*>(base)->Init(baseProto, context, constructor);
-    *reinterpret_cast<void***>(bytes) = &NetStreamProtoVtable;
-    *reinterpret_cast<void***>(bytes + 0x20) = &NetStreamProtoInterfaceVtable;
-    *reinterpret_cast<void***>(bytes + 0xd8) = &NetStreamProtoBaseVtable;
-    NetStreamPrototypeInitAccess* access = reinterpret_cast<NetStreamPrototypeInitAccess*>(bytes + 0xd8);
-    access->InitFunctionMembers(baseProto, context, &NetStreamCloseFunctionTable, PropFlags(1));
-    return baseProto;
-}
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 // creates the NetStream constructor/prototype pair, registers the prototype and publishes the class.
 // @0x14000cf20
@@ -4292,8 +4292,8 @@ FunctionRef FUN_14000cf20(GlobalContext* global)
     FunctionRef constructor(*SF_HEAP_NEW(global->pHeap) NetStreamCtorFunction(&context));
 
     void* storage = Scaleform::Memory::AllocInHeap(global->pHeap, 0x120);
-    Object* created = storage ? NetStreamProtoConstruct(storage, &context, global->GetPrototype(ASBuiltin_Object),
-                                                        constructor)
+    Object* created = storage ? ::new (storage) NetStreamProto(&context, global->GetPrototype(ASBuiltin_Object), constructor)
+//
                               : 0;
     Ptr<Object> proto(created);
 
