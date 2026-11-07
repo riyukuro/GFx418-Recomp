@@ -462,23 +462,22 @@ void FUN_140010a70(Scaleform::GFx::Video::VideoCharacter* pvideo)
     FUN_1400105b0(pvideo);
 }
 
-// MS2-FUNCTIONAL: updates the weak provider reference and detaches the old image before render refresh.
+// Updates the weak provider reference and detaches the old image before render refresh. The outer image test reads
+// the raw slot (exe: cmp qword [rdi+0x100],0, then Ptr::Clear reloads it), so cl does not fold it into Clear's test.
 // @0x140010b80
 void FUN_140010b80(Scaleform::GFx::Video::VideoCharacter* pvideo,
                    Scaleform::GFx::Video::VideoProvider* pprovider)
 {
     char* object = reinterpret_cast<char*>(pvideo);
-    Scaleform::WeakPtr<Scaleform::GFx::Video::VideoProvider>* provider =
-        reinterpret_cast<Scaleform::WeakPtr<Scaleform::GFx::Video::VideoProvider>*>(object + 0xf8);
-    Scaleform::Ptr<Scaleform::GFx::Video::VideoImage>* image =
-        reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::Video::VideoImage>*>(object + 0x100);
-    Scaleform::Ptr<Scaleform::GFx::Video::VideoProvider> current = *provider;
+    Scaleform::WeakPtr<Scaleform::GFx::Video::VideoProvider>& provider =
+        *reinterpret_cast<Scaleform::WeakPtr<Scaleform::GFx::Video::VideoProvider>*>(object + 0xf8);
+    Scaleform::Ptr<Scaleform::GFx::Video::VideoProvider> current = provider;
     if (pprovider != current.GetPtr())
     {
-        *provider = pprovider;
-        if (*image)
+        provider = pprovider;
+        if (*reinterpret_cast<void**>(object + 0x100))
         {
-            image->Clear();
+            reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::Video::VideoImage>*>(object + 0x100)->Clear();
             FUN_1400105b0(pvideo);
         }
     }
