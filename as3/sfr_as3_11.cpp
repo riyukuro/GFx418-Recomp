@@ -3,7 +3,15 @@
 // as3_marshalling.h; they call through ThunkFuncN<...>::Method, defined in the sfr_as3di_* units.
 // MS2-UNIT: sfr_as3_11
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1424837b0-0x142498890 .text$mn
+// MS2-RANGE: 0x1424837b0-0x1424843a0 .text$mn
+// MS2-RANGE: 0x1424843c0-0x1424843d0 .text$mn
+// MS2-RANGE: 0x1424843f0-0x142484400 .text$mn
+// MS2-RANGE: 0x142484420-0x142484430 .text$mn
+// MS2-RANGE: 0x142484450-0x142484460 .text$mn
+// MS2-RANGE: 0x142484490-0x1424844a0 .text$mn
+// MS2-RANGE: 0x1424844c0-0x1424844d0 .text$mn
+// MS2-RANGE: 0x1424844f0-0x142484500 .text$mn
+// MS2-RANGE: 0x142484530-0x142498890 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/gfx_displayobject.h"
 #include "ms2/scaleform/include/gfx/gfx_displayobjcontainer.h"

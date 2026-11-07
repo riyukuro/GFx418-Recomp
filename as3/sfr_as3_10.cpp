@@ -4,6 +4,14 @@
 // MS2-UNIT: sfr_as3_10
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142473710-0x1424837b0 .text$mn
+// MS2-RANGE: 0x1424843a0-0x1424843c0 .text$mn
+// MS2-RANGE: 0x1424843d0-0x1424843f0 .text$mn
+// MS2-RANGE: 0x142484400-0x142484420 .text$mn
+// MS2-RANGE: 0x142484430-0x142484450 .text$mn
+// MS2-RANGE: 0x142484460-0x142484490 .text$mn
+// MS2-RANGE: 0x1424844a0-0x1424844c0 .text$mn
+// MS2-RANGE: 0x1424844d0-0x1424844f0 .text$mn
+// MS2-RANGE: 0x142484500-0x142484530 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/render/render_filters.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
