@@ -11,7 +11,12 @@
 #include "../include/gfx/gfx_placeobject.h"
 #include "../include/gfx/gfx_sprite.h"
 
-namespace Scaleform { namespace GFx { namespace AS2 {
+namespace Scaleform { namespace GFx {
+namespace AS3 {
+// InteractiveObject::ModifyOptimizedPlayList, out of line in the exe (defined in sfr_as3_18).
+void Sfr34_ModifyOptimizedPlayList(InteractiveObject* p);
+}
+namespace AS2 {
 
 // The empty hook the exe calls on the clip after a new object was bound (exe 0x1425dcaf0, a bare ret).
 void FUN_1425dcaf0(void* pobj);
@@ -19,11 +24,11 @@ void FUN_1425dcaf0(void* pobj);
 // addFlags of AddDisplayObject (the same bits the Sprite entry forwards).
 enum
 {
-    AddFlag_NamedChild    = 0x01, // DisplayList::AddDisplayObject: the child has an instance name
-    AddFlag_PlaceObject   = 0x04  // placed by a tag (the child keeps accepting timeline moves)
+    AddFlag_ReplaceIfDepthIsOccupied = 0x01, // DisplayList::Flags_ReplaceIfDepthIsOccupied
+    AddFlag_PlaceObject              = 0x04  // placed by a tag (the child keeps accepting timeline moves)
 };
 
-// MS2-FUNCTIONAL: raw ASString node counting and the folded empty hook; behaviour follows the exe
+// MS2-FUNCTIONAL: SDK body (OnAddedDisplayObject inlined); addFlags/frame sit in r13/r12 against the exe r12/r13, the CharToInteractiveObject null is xor not mov 0 (4 bytes), and the CreateCharacterInstance arg loads are scheduled differently (regalloc)
 // @0x14292ea50
 DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASString& name,
                                                const ArrayLH<SwfEvent*, StatMD_Tags_Mem>* peventHandlers,
@@ -31,121 +36,143 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
                                                unsigned long addFlags, CharacterCreateInfo* pcharCreateOverride,
                                                InteractiveObject* origChar)
 {
-    Sprite* psprite = GetSprite();
-    bool    placeObject = (addFlags & AddFlag_PlaceObject) != 0;
+    MovieDefImpl* pdefImpl = GetSprite()->pDefImpl;
 
-    CharacterCreateInfo ccinfo;
-    if (pcharCreateOverride)
-        ccinfo = *pcharCreateOverride;
-    else
-        ccinfo = psprite->pDefImpl->GetCharacterCreateInfo(pos.CharacterId);
+    bool placeObject = (addFlags & AddFlag_PlaceObject) != 0;
+    bool replaceIfDepthIsOccupied = (addFlags & AddFlag_ReplaceIfDepthIsOccupied) != 0;
 
+    CharacterCreateInfo ccinfo = pcharCreateOverride ? *pcharCreateOverride :
+        pdefImpl->GetCharacterCreateInfo(pos.CharacterId);
     if (!ccinfo.pCharDef)
     {
-        psprite->LogError("Sprite::AddDisplayObject() - unknown cid = %d", (int)pos.CharacterId.GetIdIndex());
+        GetSprite()->LogError("Sprite::AddDisplayObject() - unknown cid = %d", (int)pos.CharacterId.GetIdIndex());
         return 0;
     }
 
-    bool               markedForRemove = false;
-    DisplayObjectBase* pexisting = psprite->mDisplayList.GetDisplayObjectAtDepth(pos.Depth, &markedForRemove);
-    if (createFrame == (unsigned)-1)
-        createFrame = psprite->GetCurrentFrame();
+    bool markedForRemove = false;
+    DisplayObjectBase* pexistingChar = GetSprite()->mDisplayList.GetDisplayObjectAtDepth(pos.Depth, &markedForRemove);
 
+    unsigned frame = ((createFrame == (unsigned)-1) ? GetSprite()->GetCurrentFrame() : createFrame);
     if (placeObject)
     {
-        if (pexisting && !pexisting->GetAcceptAnimMoves() && pexisting->GetContinueAnimationFlag())
-            pexisting->SetAcceptAnimMoves(true);
-        if (!markedForRemove && pexisting && !pexisting->GetAcceptAnimMoves())
-            return 0;
+        bool animatedByTimeline = true;
+        if (pexistingChar)
         {
-            if (pexisting && pexisting->Depth > -2 && pexisting->Id == pos.CharacterId.GetIdIndex())
+            animatedByTimeline = pexistingChar->GetAcceptAnimMoves();
+            if (!animatedByTimeline && pexistingChar->GetContinueAnimationFlag())
             {
-                // The same character again: it is moved instead of replaced when the instance name agrees.
-                bool    isChar   = pexisting->IsInteractiveObject();
-                ASString current = isChar ? static_cast<DisplayObject*>(pexisting)->GetOriginalName()
-                                          : static_cast<MovieRoot*>(psprite->pASRoot)->GetStringManager()->GetBuiltin(ASBuiltin_empty_);
-                bool sameName;
-                if (!isChar)
-                    sameName = true;
-                else if (name.IsEmpty())
-                    sameName = current.IsEmpty() || static_cast<DisplayObject*>(pexisting)->IsInstanceBasedNameFlagSet();
-                else
-                    sameName = current.GetNode() == name.GetNode();
+                pexistingChar->SetAcceptAnimMoves(true);
+                animatedByTimeline = true;
+            }
+        }
+        if (!markedForRemove && pexistingChar && !pexistingChar->GetAcceptAnimMoves())
+            return 0;
 
-                if (sameName && pexisting->CreateFrame == createFrame)
+        if (pexistingChar && pexistingChar->Depth >= -1 &&
+            (pexistingChar->Id == pos.CharacterId.GetIdValue()))
+        {
+            const ASString& originalName =
+                ((pexistingChar->IsInteractiveObject()) ? static_cast<DisplayObject*>(pexistingChar)->GetOriginalName() :
+                static_cast<MovieRoot*>(GetSprite()->pASRoot)->GetStringManager()->GetBuiltin(ASBuiltin_empty_));
+
+            if (!pexistingChar->IsInteractiveObject() ||
+                (name.IsEmpty() && originalName.IsEmpty()) ||
+                (name.IsEmpty() && static_cast<DisplayObject*>(pexistingChar)->IsInstanceBasedNameFlagSet()) ||
+                (!name.IsEmpty() && originalName.GetNode() == name.GetNode()))
+            {
+                if (pexistingChar->CreateFrame == frame)
                 {
-                    CharPosInfo move = pos;
-                    if (!move.Flags.HasBlendMode() && pexisting->GetBlendMode() != 0)
+                    CharPosInfo newPos = pos;
+                    if (!pos.Flags.HasBlendMode() && pexistingChar->GetBlendMode() != 0)
                     {
-                        move.BlendMode = 0;
-                        move.Flags.SetBlendModeFlag();
+                        newPos.Flags.SetBlendModeFlag();
+                        newPos.BlendMode = 0;
                     }
-                    if (!move.Flags.HasCxform() && !pexisting->GetCxform().IsIdentity())
+                    if (!pos.Flags.HasCxform() && !pexistingChar->GetCxform().IsIdentity())
                     {
-                        move.Flags.SetCxFormFlag();
-                        move.ColorTransform.SetIdentity();
+                        newPos.Flags.SetCxFormFlag();
+                        newPos.ColorTransform.SetIdentity();
                     }
-                    psprite->MoveDisplayObject(move);
+
+                    GetSprite()->MoveDisplayObject(newPos);
                     return 0;
                 }
+                replaceIfDepthIsOccupied = 1;
             }
         }
     }
-
-    FUN_1425dcaf0(psprite);
-    DisplayObjectBase* pch = psprite->pASRoot->pASSupport->CreateCharacterInstance(
-        psprite->pASRoot->pMovieImpl, ccinfo, psprite, pos.CharacterId);
-
-    InteractiveObject* pich = pch->IsInteractiveObject() ? static_cast<InteractiveObject*>(pch) : 0;
-    pch->Flags &= ~1;
-    bool hasName = false;
-    if (pich)
+    else
     {
-        hasName = !name.IsEmpty();
-        if (hasName)
-            static_cast<DisplayObject*>(pich)->SetOriginalName(name);
-        if (origChar)
-            pich->CloneInternalData(origChar);
-        if (!placeObject)
-            pich->SetAcceptAnimMoves(false);
-        else
-            static_cast<DisplayObject*>(pich)->Flags |= DisplayObject::Mask_TimelineObject;
+        replaceIfDepthIsOccupied = 1;
     }
-    pch->CreateFrame = createFrame;
+    FUN_1425dcaf0(GetSprite());
+
+    Ptr<DisplayObjectBase> ch = *GetSprite()->pASRoot->pASSupport->CreateCharacterInstance(
+        GetSprite()->pASRoot->pMovieImpl, ccinfo, GetSprite(), pos.CharacterId);
+    InteractiveObject* intObj = ch->IsInteractiveObject() ? static_cast<InteractiveObject*>(ch.GetPtr()) : 0;
+    bool               nameSet = 0;
+
+    ch->Flags &= ~1;
+
+    if (intObj)
+    {
+        if (!name.IsEmpty())
+        {
+            static_cast<DisplayObject*>(intObj)->SetOriginalName(name);
+            nameSet = 1;
+        }
+        if (origChar)
+            intObj->CloneInternalData(origChar);
+        if (!(addFlags & AddFlag_PlaceObject))
+            intObj->SetAcceptAnimMoves(false);
+        else
+            static_cast<DisplayObject*>(intObj)->Flags |= DisplayObject::Mask_TimelineObject;
+    }
+
+    ch->CreateFrame = frame;
 
     unsigned sessionId = 0;
-    if (pich)
-    {
-        sessionId = OnAddingDisplayObject(ccinfo, pich, peventHandlers, pinitSource, placeObject);
-        pich->AddToPlayList();
-        pich->ModifyOptimizedPlayList();
-    }
-    unsigned listFlags = (unsigned)addFlags & ~1u;
-    if (hasName)
-        listFlags |= AddFlag_NamedChild;
-    psprite->mDisplayList.AddDisplayObject(psprite, pos, pch, listFlags);
-    if (hasName)
-        psprite->pASRoot->ResolveStickyVariables(pich);
-    if (!pich)
-        return pch;
+    if (intObj)
+        sessionId = OnAddingDisplayObject(ccinfo, intObj, peventHandlers, pinitSource, placeObject);
 
-    Sprite* pspriteCh = pich->IsSprite() ? static_cast<Sprite*>(pich) : 0;
-    bool    needOnLoad;
-    if (!placeObject)
-    {
-        static_cast<MovieRoot*>(psprite->pASRoot)->DoActionsForSession(sessionId);
-        needOnLoad = pspriteCh && pspriteCh->HasEventHandler(EventId(EventId::Event_Load));
-    }
-    else
-        needOnLoad = pspriteCh != 0;
-    if (needOnLoad)
-        pspriteCh->Flags |= Sprite::Flags_OnLoadReqd;
+    addFlags &= ~AddFlag_ReplaceIfDepthIsOccupied;
+    if (replaceIfDepthIsOccupied)
+        addFlags |= AddFlag_ReplaceIfDepthIsOccupied;
 
-    if (hasName &&
-        name.GetNode() ==
-            static_cast<MovieRoot*>(psprite->pASRoot)->GetStringManager()->GetBuiltin(ASBuiltin_hitArea).GetNode())
-        psprite->SetHitArea(static_cast<Sprite*>(pich));
-    return pch;
+    if (intObj)
+    {
+        intObj->AddToPlayList();
+        AS3::Sfr34_ModifyOptimizedPlayList(intObj);
+    }
+
+    GetSprite()->mDisplayList.AddDisplayObject(GetSprite(), pos, ch.GetPtr(), (unsigned)addFlags);
+
+    if (nameSet)
+        GetSprite()->pASRoot->ResolveStickyVariables(intObj);
+
+    if (intObj)
+    {
+        Sprite* pspriteCh = intObj->IsSprite() ? static_cast<Sprite*>(intObj) : 0;
+        if (intObj && !placeObject)
+        {
+            static_cast<MovieRoot*>(GetSprite()->pASRoot)->DoActionsForSession(sessionId);
+            if (pspriteCh && pspriteCh->HasEventHandler(EventId(EventId::Event_Load)))
+                pspriteCh->Flags |= Sprite::Flags_OnLoadReqd;
+        }
+        else
+        {
+            if (pspriteCh)
+                pspriteCh->Flags |= Sprite::Flags_OnLoadReqd;
+        }
+    }
+
+    if (intObj && nameSet)
+    {
+        if (name.GetNode() ==
+            static_cast<MovieRoot*>(GetSprite()->pASRoot)->GetStringManager()->GetBuiltin(ASBuiltin_hitArea).GetNode())
+            GetSprite()->SetHitArea(static_cast<Sprite*>(intObj));
+    }
+    return ch.GetPtr();
 }
 
 }}} // namespace Scaleform::GFx::AS2
