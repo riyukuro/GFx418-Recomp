@@ -7132,40 +7132,99 @@ void Sfr31ExecConstructProp(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
         return vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x42d), vm, *reinterpret_cast<const Value*>(&args.ArgMN.w2), args.ArgObject));
 }
 // ---- batch 68
+// Storage for a Value whose dtor expands Value::ReleaseInternal in place (as sfr_as3_17's Sfr33InlineReleaseValue).
+struct Sfr19InlineReleaseValue
+{
+    union
+    {
+        UPInt Align;
+        UByte Buf[sizeof(Value)];
+    };
+    Value& Get() { return *reinterpret_cast<Value*>(Buf); }
+    static void ReleaseGC(Object* p)
+    {
+        if (!(reinterpret_cast<UPInt>(p) & 1) && p)
+            p->Release();
+    }
+    __forceinline ~Sfr19InlineReleaseValue()
+    {
+        Value& v = Get();
+        if (!v.IsRefCounted())
+            return;
+        if (v.IsWeakRef())
+        {
+            (*reinterpret_cast<WeakProxy**>(Buf + 0x08))->Release();
+            return;
+        }
+        switch (v.GetKind())
+        {
+        case Value::kString:
+            (*reinterpret_cast<ASStringNode**>(Buf + 0x10))->Release();
+            break;
+        case Value::kNamespace:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kObject:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kClass:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kFunction:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kThunkFunction:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kThunkClosure:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x18));
+            break;
+        case Value::kVTableIndClosure:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x18));
+            break;
+        default:
+            break;
+        }
+    }
+};
+
 // newfunction opcode: builds the closure scope (the running frame's saved scope followed by what the innermost frame pushed on the scope
 // stack), creates the Function of method methodInd on the Function class and pushes it.
-// MS2-FUNCTIONAL 0x14253c910: raw-offset model; codegen differs from the exe
+// MS2-FUNCTIONAL 0x14253c910: raw-offset model with the exe shape (ss = *saved, inlined Value release); the exe keeps the global object in rbx and the Function traits in rdi (ours swaps them) and the frame count in r9 (992 vs 1004 bytes)
 // @0x14253c910
 void Sfr31ExecNewFunction(UPInt vmAddr, UPInt frame, UInt32 methodInd)
 {
     VM& vm = *reinterpret_cast<VM*>(vmAddr);
-    ArrayDH<Value> ss(reinterpret_cast<MemoryHeap*>(Sfr31Rd(vmAddr, 0x38)));
     const ArrayDH<Value>* saved = reinterpret_cast<const ArrayDH<Value>*>(Sfr31Rd(frame, 0x38));
+    VMAbcFile& file = *reinterpret_cast<VMAbcFile*>(Sfr31Rd(frame, 0x28));
+    ArrayDH<Value> ss(reinterpret_cast<MemoryHeap*>(Sfr31Rd(vmAddr, 0x38)));
     if (saved != 0 && saved->GetSize() != 0)
-        for (UPInt i = 0; i < saved->GetSize(); ++i)
-            ss.PushBack((*saved)[i]);
+        ss = *saved;
     const UPInt nFrames = Sfr31Rd(vmAddr, 0x78);
-    UPInt base = 0;
-    if (nFrames != 0)
-        base = Sfr31Rd(Sfr31Rd(Sfr31Rd(vmAddr, 0x90), ((nFrames - 1) >> 6) * 8) + ((nFrames - 1) & 0x3f) * 0xa8, 8);
     const UPInt scopeEnd = Sfr31Rd(vmAddr, 0x168);
+    const UPInt base = nFrames == 0 ? 0
+        : Sfr31Rd(Sfr31Rd(Sfr31Rd(vmAddr, 0x90), ((nFrames - 1) >> 6) * 8) + ((nFrames - 1) & 0x3f) * 0xa8, 8);
     for (UPInt i = base; i < scopeEnd; ++i)
         ss.PushBack(*reinterpret_cast<const Value*>(Sfr31Rd(vmAddr, 0x160) + i * 0x20));
-    UPInt gos = 0;
-    if (nFrames != 0)
+    // GetGlobalObject: the frame count is read again
+    UPInt gos;
+    const UPInt nFrames2 = Sfr31Rd(vmAddr, 0x78);
+    if (nFrames2 == 0)
+        gos = 0;
+    else
     {
-        const UPInt top = Sfr31Rd(Sfr31Rd(vmAddr, 0x90), ((nFrames - 1) >> 6) * 8) + ((nFrames - 1) & 0x3f) * 0xa8;
+        const UPInt top = Sfr31Rd(Sfr31Rd(vmAddr, 0x90), ((nFrames2 - 1) >> 6) * 8) + ((nFrames2 - 1) & 0x3f) * 0xa8;
         const ArrayDH<Value>* sv = reinterpret_cast<const ArrayDH<Value>*>(Sfr31Rd(top, 0x38));
-        if (sv == 0 || sv->GetSize() == 0)
+        if (sv != 0 && sv->GetSize() != 0)
+            gos = Sfr31Rd(reinterpret_cast<UPInt>(&(*sv)[0]), 0x10);
+        else
         {
             const UPInt p = Sfr31Rd(Sfr31Rd(top, 0x18), 8);
-            if (*reinterpret_cast<const UInt32*>(p) - 0xc & 0x1f)
-                gos = 0;
-            if (((*reinterpret_cast<const UInt32*>(p) & 0x1f) - 0xc) < 4)
+            if (((*reinterpret_cast<const UInt32*>(p) & 0x1f) - 0xc) <= 3)
                 gos = Sfr31Rd(p, 0x10);
+            else
+                gos = 0;
         }
-        else
-            gos = Sfr31Rd(reinterpret_cast<UPInt>(&(*sv)[0]), 0x10);
     }
     const UPInt ftr = Sfr31Rd(Sfr31Rd(vmAddr, 0x208), 0xc0);
     UPInt cls = Sfr31Rd(ftr, 0x80);
@@ -7175,9 +7234,11 @@ void Sfr31ExecNewFunction(UPInt vmAddr, UPInt frame, UInt32 methodInd)
         reinterpret_cast<MakeFn>(Sfr31Rd(Sfr31Rd(ftr, 0), 0x68))(ftr);
         cls = Sfr31Rd(ftr, 0x80);
     }
-    Value v;
-    v.PickUnsafe(reinterpret_cast<const Classes::Function*>(cls)->FUN_14241a7d0(
-        *reinterpret_cast<VMAbcFile*>(Sfr31Rd(frame, 0x28)), methodInd, ss, *reinterpret_cast<Instances::fl::GlobalObjectScript*>(gos)));
+    Pickable<Instances::Function> funct = reinterpret_cast<const Classes::Function*>(cls)->FUN_14241a7d0(
+        file, methodInd, ss, *reinterpret_cast<Instances::fl::GlobalObjectScript*>(gos));
+    Sfr19InlineReleaseValue vs;
+    Value& v = *::new (vs.Buf) Value();
+    v.PickUnsafe(funct.GetPtr());
     ExecPushCopy(&vm, v);
 }
 }}} // namespace Scaleform::GFx::AS3
