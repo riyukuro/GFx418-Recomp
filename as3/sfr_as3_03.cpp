@@ -2283,105 +2283,118 @@ namespace Instances { namespace fl
 {
     // fieldName is a name or an array of names; options is one set of option bits for all of them or an array with
     // one per name (ignored unless the lengths agree). The first name's bits decide unique / indexed-array result.
-    // MS2-FUNCTIONAL: the exe inlines the collector, SparseArray::At and PushBack; stack layout differs
     // @0x142400500
     void Array::AS3sortOn(SPtr<Instances::fl::Array>& result, const Value& fieldName, const Value& options)
     {
-        VM& vm = GetVM();
-        ASString str = vm.GetStringManager().CreateEmptyString();
-        ArrayDH<Value> names(vm.GetMemoryHeap());
-        ArrayDH<UInt32> flags(vm.GetMemoryHeap());
+        MemoryHeap* heap = GetVM().GetMemoryHeap();
+        ASString tmp = GetVM().GetStringManager().CreateEmptyString();
+        ValueArrayDH fields(heap);
+        ArrayDH<UInt32> flags(heap);
 
-        const Traits& ntr = vm.GetValueTraits(fieldName);
-        if (ntr.GetTraitsType() == Traits_Array && ntr.IsInstanceTraits())
+        const Traits& tr = GetVM().GetValueTraits(fieldName);
+        if (tr.GetTraitsType() == Traits_Array && tr.IsInstanceTraits())
         {
-            const SparseArray& sa = static_cast<Array*>(fieldName.GetObject())->SA;
-            for (UPInt i = 0; i < sa.GetSize(); ++i)
+            Instances::fl::Array* arr = static_cast<Instances::fl::Array*>(fieldName.GetObject());
+
+            for (UPInt i = 0; i < arr->GetSize(); ++i)
             {
-                if (!saAt03(sa, i).Convert2String(str))
+                if (!saAt03(arr->SA, i).Convert2String(tmp))
                     return;
-                names.PushBack(Value(str));
+
+                fields.PushBack(tmp);
             }
         }
         else
         {
-            if (!fieldName.Convert2String(str))
+            if (!fieldName.Convert2String(tmp))
                 return;
-            names.PushBack(Value(str));
+
+            fields.PushBack(tmp);
         }
 
-        flags.Resize(names.GetSize());
+        flags.Resize(fields.GetSize());
         for (UPInt i = 0; i < flags.GetSize(); ++i)
             flags[i] = 0;
 
         if (!options.IsNullOrUndefined())
         {
-            const Traits& otr = vm.GetValueTraits(options);
-            if (otr.GetTraitsType() == Traits_Array && otr.IsInstanceTraits())
+            const Traits& tr = GetVM().GetValueTraits(options);
+            if (tr.GetTraitsType() == Traits_Array && tr.IsInstanceTraits())
             {
-                const SparseArray& sa = static_cast<Array*>(options.GetObject())->SA;
-                if (sa.GetSize() == names.GetSize())
+                Instances::fl::Array* arr = static_cast<Instances::fl::Array*>(options.GetObject());
+
+                if (arr->GetSize() == fields.GetSize())
                 {
-                    for (UPInt i = 0; i < sa.GetSize() && i < flags.GetSize(); ++i)
+                    for (UPInt i = 0; i < arr->GetSize() && i < flags.GetSize(); ++i)
                     {
-                        UInt32 f;
-                        if (!saAt03(sa, i).Convert2UInt32(f))
+                        UInt32 num;
+
+                        if (!saAt03(arr->SA, i).Convert2UInt32(num))
                             return;
-                        flags[i] = f;
+
+                        flags[i] = num;
                     }
                 }
             }
             else
             {
-                UInt32 f;
-                if (!options.Convert2UInt32(f))
+                UInt32 flag_set;
+                if (!options.Convert2UInt32(flag_set))
                     return;
+
                 for (UPInt i = 0; i < flags.GetSize(); ++i)
-                    flags[i] = f;
+                    flags[i] = flag_set;
             }
         }
 
-        SparseArray newSA(vm.GetMemoryHeap());
-        ArrayDH<ValuePtrPair> pairs(vm.GetMemoryHeap());
-        ValuePtrCollector vc(pairs);
-        SA.ForEach(vc);
-
-        CompareOn functor(vm, names, flags);
-        Alg::QuickSortSafe(pairs, functor);
-        const UPInt size = pairs.GetSize();
-        const UInt32 first = flags[0];
-
-        if (first & SortFlags_UniqueSort)
         {
-            for (UInt32 i = 1; i < size; ++i)
+            SparseArray newSA(heap);
+
+            ArrayDH<ValuePtrPair> pairs(GetVM().GetMemoryHeap());
+            ValuePtrCollector vc(pairs);
+            SA.ForEach(vc);
+
+            CompareOn functor(GetVM(), fields, flags);
+            Alg::QuickSortSafe(pairs, functor);
+
+            const UInt32 cur_flags = flags[0];
+            const UPInt size = pairs.GetSize();
+
+            if (cur_flags & SortFlags_UniqueSort)
             {
-                if (functor.Equal(pairs[i - 1], pairs[i]))
+                for (UInt32 i = 1; i < size; ++i)
                 {
-                    result = NULL;
-                    return;
+                    if (functor.Equal(pairs[i - 1], pairs[i]))
+                    {
+                        result = NULL;
+                        return;
+                    }
                 }
             }
-        }
 
-        if (first & SortFlags_ReturnIndexedArray)
-            for (UPInt i = 0; i < size; ++i)
-                saPushBack03(newSA, Value(pairs[i].Second));
-        else
-            for (UPInt i = 0; i < size; ++i)
-                saPushBack03(newSA, *pairs[i].First);
+            {
+                if (cur_flags & SortFlags_ReturnIndexedArray)
+                    for (UPInt i = 0; i < size; ++i)
+                        saPushBack03(newSA, Value(pairs[i].Second));
+                else
+                    for (UPInt i = 0; i < size; ++i)
+                        saPushBack03(newSA, *pairs[i].First);
 
-        if (size < GetSize())
-            newSA.Resize(GetSize());
+                if (size < GetSize())
+                    newSA.Resize(GetSize());
+            }
 
-        if (first & SortFlags_ReturnIndexedArray)
-        {
-            result = vm.MakeArray();
-            result->SA.Assign(newSA);
-        }
-        else
-        {
-            SA.Assign(newSA);
-            result = this;
+            if (cur_flags & SortFlags_ReturnIndexedArray)
+            {
+                Pickable<Instances::fl::Array> newArr = GetVM().MakeArray();
+                result = newArr;
+                newArr->SA.Assign(newSA);
+            }
+            else
+            {
+                SA.Assign(newSA);
+                result = this;
+            }
         }
     }
 }}
