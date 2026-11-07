@@ -204,6 +204,7 @@ inline bool FUN_1425150c0(Scaleform::UPInt tracer, const void* v) { return reint
 inline bool FUN_142514510(Scaleform::UPInt tracer, void* traits) { return reinterpret_cast<const Scaleform::GFx::AS3::Tracer*>(tracer)->IsNumericType(static_cast<const Scaleform::GFx::AS3::Traits*>(traits)); }   // Tracer::IsNumericType
 inline bool FUN_142514a80(Scaleform::UPInt tracer, void* traits) { return reinterpret_cast<const Scaleform::GFx::AS3::Tracer*>(tracer)->IsPrimitiveType(static_cast<const Scaleform::GFx::AS3::Traits*>(traits)); }   // Tracer::IsPrimitiveType
 // TR::State::GetValueTraits (0x14250fe80, private) is Sfr33TRStateAccess19::ValueTraits below
+Scaleform::GFx::AS3::Instances::Namespace* FUN_142415c20(Scaleform::GFx::AS3::InstanceTraits::fl::Namespace* self, Scaleform::GFx::AS3::Abc::NamespaceKind kind, const Scaleform::GFx::ASString& uri, const Scaleform::GFx::AS3::Value& prefix);   // GetInternedInstance (lookup only)
 namespace Scaleform { namespace GFx { namespace AS3 { void Sfr31VMRaiseError(unsigned long long, const unsigned long*, unsigned long long); } } }
 inline void FUN_14252ecb0(void* vm, const void* error, const void* classInfo) { Scaleform::GFx::AS3::Sfr31VMRaiseError(reinterpret_cast<unsigned long long>(vm), static_cast<const unsigned long*>(error), reinterpret_cast<unsigned long long>(classInfo)); }
 inline char* FUN_1424f1a30(void* v, void* ok, unsigned long* out) { ::new (ok) Scaleform::GFx::AS3::CheckResult(static_cast<const Scaleform::GFx::AS3::Value*>(v)->Convert2UInt32(*out)); return static_cast<char*>(ok); }   // Value::Convert2UInt32
@@ -6283,34 +6284,33 @@ void Sfr31ButtonSwitchStateIntl(UPInt self, int state)
     if (cont != 0 && --*reinterpret_cast<UPInt*>(cont + 8) == 0)
         reinterpret_cast<Sfr31EntryAccess*>(cont)->destroyHelper();
 }
+// VM::GetInternedNamespace(NS_Public, pkg): a reference, no AddRef (the URI string dies here).
+static __forceinline Instances::Namespace& Sfr31PublicNsRef(VM* vm, const char* pkg)
+{
+    if (!pkg) pkg = "";
+    const ASString uri = vm->GetStringManager().CreateString(pkg);
+    if (uri.IsEmpty())
+        return *vm->PublicNamespace.GetPtr();
+    return *FUN_142415c20(&static_cast<InstanceTraits::fl::Namespace&>(vm->GetClassTraitsNamespace().GetInstanceTraits()), Abc::NS_Public, uri, Value::GetUndefined());
+}
 // ---- batch 55
 // Raises an error: instantiates the error class named by the ClassInfo (resolved through the class traits cache), constructs it
 // with the message and error id, stores it as the pending exception and sets the halt flag.
-// MS2-FUNCTIONAL 0x14252ecb0: raw-offset model; the class lookup is shared with the class-description resolver
+// VM::ThrowErrorInternal(e, ti): Resolve2ClassTraits inlined (GetInternedNamespace, CreateConstString, GetClassTraits).
 // @0x14252ecb0
 void Sfr31VMRaiseError(UPInt vmAddr, const UInt32* err, UPInt classInfo)
 {
-    UPInt fake[4] = {0, 0, 0, classInfo };
-    // the resolver reads the type description through +0x18; point it at the ClassInfo itself
-    ClassTraits::Traits* ct = Sfr31GetClassTraitsByInfo(reinterpret_cast<VM*>(vmAddr), reinterpret_cast<UPInt>(fake));
-    Value inst;
-    const UPInt it = Sfr31Rd(reinterpret_cast<UPInt>(ct), 0xc0);
-    typedef void (*MakeFn)(UPInt, Value*, UPInt);
-    reinterpret_cast<MakeFn>(Sfr31Rd(Sfr31Rd(it, 0), 0x70))(it, &inst, it);
-    const UPInt msg = Sfr31Rd(reinterpret_cast<UPInt>(err), 8);
-    UPInt args[8] = {10, 0, msg, 0, 2, 0, 0, 0};
-    if (msg == Sfr31Rd(msg, 8) + 0x68)
-        args[0] = 0xc, args[2] = 0;
-    else
-        ++*reinterpret_cast<int*>(msg + 0x18);
-    *reinterpret_cast<UInt32*>(reinterpret_cast<char*>(&args[6])) = err[0];
-    const UPInt obj = Sfr31Rd(reinterpret_cast<UPInt>(&inst), 0x10);
-    typedef void (*CtorFn)(UPInt, int, void*);
-    reinterpret_cast<CtorFn>(Sfr31Rd(Sfr31Rd(obj, 0), 0x58))(obj, 2, args);
-    *reinterpret_cast<UInt8*>(vmAddr + 0x180) = 1;
-    reinterpret_cast<Value*>(vmAddr + 0x188)->Assign(inst);
-    reinterpret_cast<Value*>(&args[4])->~Value();
-    reinterpret_cast<Value*>(&args[0])->~Value();
+    VM* const vm = reinterpret_cast<VM*>(vmAddr);
+    const UPInt ti = classInfo;   // const TypeInfo& ti
+    const Instances::Namespace& ns = Sfr31PublicNsRef(vm, reinterpret_cast<const char*>(Sfr31Rd(ti, 0x10)));
+    //
+    const ClassTraits::Traits* ctr = Sfr31GetClassTraitsInl(vm, vm->GetStringManager().CreateConstString(reinterpret_cast<const char*>(Sfr31Rd(ti, 8))), ns);
+    Value obj;
+    InstanceTraits::Traits& itr = ctr->GetInstanceTraits();
+    itr.MakeObject(obj, itr);
+    const Value argv[2] = {Value(*reinterpret_cast<const ASString*>(err + 2), Value::InlineStr), Value(static_cast<SInt32>(err[0]))};
+    obj.GetObject()->AS3Constructor(2, argv);
+    vm->Throw(obj);
 }
 // ---- batch 56
 // Checks that a value converts to a string: null-ish operands convert directly; otherwise the object's public toString is invoked
