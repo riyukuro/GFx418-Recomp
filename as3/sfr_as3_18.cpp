@@ -1810,8 +1810,9 @@ __declspec(noinline) __declspec(safebuffers) void Tracer::JoinSNodesUpdateType(V
 // The lists are picked by two NULL-start switches (the exe's sub/cmp/lea prologue). The common-base search is a
 // lambda so the found flag is set once before the class/instance join, as in the exe. The exe indexes the
 // register-changed bits with a 32-bit register number.
-// MS2-FUNCTIONAL 0x1425178e0: register naming (r12/r15 swapped); the exe keeps ind in r12 (qword load) in the
-// register-file blocks where ours reloads it as a dword; ops and layout otherwise match (1413 vs 1414 bytes)
+// The register bits are tested through an SDK `const unsigned i` local in each block (BitSet::IsSet form).
+// MS2-FUNCTIONAL 0x1425178e0: register allocation only: r12/r15 swapped, and in the register-file blocks the exe
+// keeps ind in r12 and from in rsi where ours keeps ind in rsi and reloads from (1413 vs 1414 bytes)
 // @0x1425178e0
 __declspec(safebuffers) CheckResult Tracer::MergeValues(UPInt ind, TR::State& to, const TR::State& from, TR::MergeSet ms)
 {
@@ -1841,9 +1842,10 @@ __declspec(safebuffers) CheckResult Tracer::MergeValues(UPInt ind, TR::State& to
     }
     else if (ms == TR::msRegisterFile)
     {
-        if (!from.IsRegChanged(static_cast<UInt32>(ind)))
+        const unsigned i = static_cast<unsigned>(ind);
+        if (!from.IsRegChanged(i))
             goto update;
-        if (!to.IsRegChanged(static_cast<UInt32>(ind)))
+        if (!to.IsRegChanged(i))
         {
             tv.Assign(fv);
             goto update;
@@ -1916,8 +1918,9 @@ __declspec(safebuffers) CheckResult Tracer::MergeValues(UPInt ind, TR::State& to
     if (ms == TR::msRegisterFile)
     {
     update:
-        to.SetRegChanged(static_cast<UInt32>(ind),
-                         from.IsRegChanged(static_cast<UInt32>(ind)) || to.IsRegChanged(static_cast<UInt32>(ind)));
+        const unsigned i = static_cast<unsigned>(ind);
+        const bool isAlive = from.IsRegChanged(i) || to.IsRegChanged(i);
+        to.SetRegChanged(i, isAlive);
     }
     return true;
 
@@ -4251,7 +4254,7 @@ void FUN_14251c1c0(const Scaleform::GFx::AS3::MovieRoot* self, Scaleform::Array<
 {
     using namespace Scaleform;
     using namespace Scaleform::GFx::AS3;
-    GFx::LogState* plog = self->GetMovieImpl()->GetLogState();
+    GFx::LogState* plog = self->GetMovieImpl()->GetStateBag()->GetLogState();
     arr.Clear();
     if (!pargFmt)
         return;

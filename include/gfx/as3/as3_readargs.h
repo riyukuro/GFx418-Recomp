@@ -165,7 +165,7 @@ public:
     ArrayDH<Value>& GetRegisters()              { return Registers; }
     const ArrayDH<Value>& GetRegisters() const  { return Registers; }
     // (appended, sfb) the register-changed bit of register ind (Tracer::MergeValues joins them).
-    bool IsRegChanged(UPInt ind) const { return (RegChanged[ind >> 3] & (1u << (ind & 7))) != 0; }
+    bool IsRegChanged(unsigned ind) const { return (RegChanged[ind >> 3] & (1 << (ind & 7))) != 0; }   // SDK BitSet::IsSet
     void SetRegChanged(UPInt ind, bool v)
     {
         UInt8& bits = RegChanged[ind >> 3];
