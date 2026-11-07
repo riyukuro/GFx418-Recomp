@@ -457,7 +457,6 @@ char  Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt stat
 void  Sfr31StateTraceOp(UPInt state, unsigned char op, UPInt* pos);
 UPInt Sfr31ResolveClassTraits(UPInt vmAddr, UPInt link, UPInt entry);
 //void  FUN_142524af0(UPInt* a, const void* addr, UPInt n);   // = Sfr19TraitsArr::ResizeNoConstruct
-UPInt Sfr31FindClassTraitsByMn(UPInt vm, UPInt mn);
 //
 }}} // namespace Scaleform::GFx::AS3
 
@@ -5275,9 +5274,9 @@ void Sfr31TraceClassTraitsFromIndex(State* st, UInt32 idx)
     s.OpStack().PushBack(Value(*ctr, notNull ? Value::NotNull : Value::NullOrNot));
 }
 
-// Finds the class traits for a multiname; unregistered ones are looked up on the global object by name and cached in the hash.
-// @0x142525270
-UPInt Sfr31FindClassTraitsByMn(UPInt vm, UPInt mn)
+// VM::Resolve2ClassTraits' body over raw addresses. Written straight into the member, cl pushes rbx/rsi in the prolog
+// where the exe saves them to the home slots; through this forceinline helper the member matches.
+static SF_FORCEINLINE UPInt Sfr31FindClassTraitsByMn(UPInt vm, UPInt mn)
 {
     UPInt found = FUN_14250d760(vm, mn);
     if (found == 0)
@@ -5292,6 +5291,13 @@ UPInt Sfr31FindClassTraitsByMn(UPInt vm, UPInt mn)
             reinterpret_cast<TClassTraitsCache*>(vm + 0x1c8)->Add(str, *reinterpret_cast<const Instances::Namespace*>(Sfr31Rd(mn, 8)), ct);
     }
     return found;
+}
+
+// Finds the class traits for a multiname; unregistered ones are looked up on the global object by name and cached in the hash.
+// @0x142525270
+const ClassTraits::Traits* VM::Resolve2ClassTraits(const Multiname& mn)
+{
+    return reinterpret_cast<const ClassTraits::Traits*>(Sfr31FindClassTraitsByMn(reinterpret_cast<UPInt>(this), reinterpret_cast<UPInt>(&mn)));
 }
 
 // Tracer op: pops the call arguments and two operands and pushes the instance traits of the second one; the int, uint,
@@ -7533,7 +7539,7 @@ void Sfr31ExecConstructProp(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
     struct KindBits { UInt32 ns : 2; };
     if (reinterpret_cast<const KindBits*>(&args.ArgMN.Get())->ns <= 1)
     {
-        const ClassTraits::Traits* ctr = reinterpret_cast<const ClassTraits::Traits*>(Sfr31FindClassTraitsByMn(vmAddr, reinterpret_cast<UPInt>(&args.ArgMN.Get())));
+        const ClassTraits::Traits* ctr = reinterpret_cast<VM*>(vmAddr)->Resolve2ClassTraits(args.ArgMN.Get());
         if (ctr)
         {
             InstanceTraits::Traits& itr = ctr->GetInstanceTraits();

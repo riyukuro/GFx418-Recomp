@@ -96,7 +96,6 @@ template<> SF_NOINLINE ArrayDataBase<WeakPtr<GFx::DisplayObject>, AllocatorLH<We
 // The definitions (here and in sfr_as3_19) of exe functions called through FUN_ forwarders, by their real names.
 namespace Scaleform { namespace GFx { namespace AS3 {
 UPInt Sfr31ResolveClassTraits(UPInt vm, UPInt file, UPInt mn);                                    // 0x142524f60
-UPInt Sfr31FindClassTraitsByMn(UPInt vm, UPInt mn);                                               // 0x142525270
 SInt64 Sfr31NumberToChars(char* buffer, int bufflen, double val);                                 // 0x142525f20
 void Sfr31VMRaiseError(UPInt vm, const unsigned long* error, UPInt classInfo);                    // 0x14252ecb0
 void Sfr31TraceBlock(UPInt tracer, UPInt pos, UPInt block);                                       // 0x142530220
@@ -1461,7 +1460,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { __declspec(noinline) const
 Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142415520(Scaleform::GFx::AS3::Instances::fl::GlobalObjectCPP* self, const Scaleform::GFx::ASString& name,
                                                      const Scaleform::GFx::AS3::Instances::Namespace& ns);   // GlobalObjectCPP: builtin class traits by name
 static inline const Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142525270(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Multiname& mn)
-{ return reinterpret_cast<const Scaleform::GFx::AS3::ClassTraits::Traits*>(::Scaleform::GFx::AS3::Sfr31FindClassTraitsByMn(reinterpret_cast<Scaleform::UPInt>(&vm), reinterpret_cast<Scaleform::UPInt>(&mn))); }  // VM::Resolve2ClassTraits
+{ return vm.Resolve2ClassTraits(mn); }  // VM::Resolve2ClassTraits
 extern "C" Scaleform::StringDataPtr DAT_143a2dd50;   // "Vector.<", the generic Vector prefix
 
 namespace Scaleform { namespace GFx { namespace AS3 {

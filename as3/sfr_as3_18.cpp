@@ -62,7 +62,6 @@ void* Sfr33IdWordHashGet(const UByte* self, const UPInt& key);                  
 ClassTraits::Traits** Sfr33ClassTraitsCacheGet(TClassTraitsCache* cache, const Multiname& mn);    // 0x142505aa0
 ClassTraits::Traits* Sfr33SlotDataType(const SlotInfo* psi, VM* pvm);                             // 0x1425085b0
 UPInt Sfr31ResolveClassTraits(UPInt vm, UPInt file, UPInt mn);                                    // 0x142524f60
-UPInt Sfr31FindClassTraitsByMn(UPInt vm, UPInt mn);                                               // 0x142525270
 Value* Sfr31ResolveInvokeAlias(UPInt proot, const char* pname);                                   // 0x142525400
 ClassTraits::Traits* Sfr31GetClassTraitsByInfo(VM* vm, UPInt info);                               // 0x142525ca0
 // noalias: the exe (LTCG) keeps FUN_14250dd20's name Value in registers across this call.
@@ -5646,7 +5645,7 @@ bool FUN_1425146d0(VM& vm, const Value& v, const ClassTraits::Traits& ctr)
 } } } // namespace Scaleform::GFx::AS3
 
 static inline const Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142525270(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Multiname& mn)
-{ return reinterpret_cast<const Scaleform::GFx::AS3::ClassTraits::Traits*>(::Scaleform::GFx::AS3::Sfr31FindClassTraitsByMn(reinterpret_cast<Scaleform::UPInt>(&vm), reinterpret_cast<Scaleform::UPInt>(&mn))); }  // Resolve2ClassTraits
+{ return vm.Resolve2ClassTraits(mn); }  // Resolve2ClassTraits
 
 // Whether v is of the class named className (a qualified name, "a.b::C" or "a.b.C").
 // @0x1425145d0
