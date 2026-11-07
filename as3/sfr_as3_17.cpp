@@ -29,6 +29,7 @@
 #define SF_AS3_AVMBUTTON_MODEL
 #define SF_AS3_SHAPEOBJECT_MODEL   // ShapeObject / AvmBitmap from the SDK MI layout (as3_avm.h)
 #define MS2_AS3_ASSIGN_NOALIAS
+#define MS2_AS3_ADDFRAME_RAISE   // AddFrame's overflow throw inlined to ThrowErrorInternal (as3_callframe.h)
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp/AS3_Value.cpp AddRef bodies inline (as3_value.h)
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/kernel/sf_simd.h"
@@ -6506,8 +6507,9 @@ void FUN_1424ffc10(Scaleform::UPInt self, Scaleform::UPInt name, Scaleform::UPIn
 // Calls the method in slot ind of tr's VTable on _this with the result on the operand stack: a method body gets a
 // call frame for the interpreter, a thunk is called at once (its result pushed).
 // VM::ExecuteVTableIndUnsafe: the VTable-index case of ExecuteInternalUnsafe with the result left on the stack.
-// MS2-FUNCTIONAL 0x142500260: AddFrame and the thunk call inlined as the exe does (946 vs 950 bytes); register
-// allocation differs, and AddFrame's stack-overflow throw goes through ThrowError rather than FUN_14252ecb0
+// MS2-FUNCTIONAL 0x142500260: AddFrame and the thunk call inlined as the exe does, with the overflow throw going to
+// FUN_14252ecb0 (MS2_AS3_ADDFRAME_RAISE); register allocation differs (ours pushes rbx/r13 and keeps the VTable
+// slot in rbx, the exe saves rbx by mov and keeps the body index in r13), 966 vs 950 bytes
 // @0x142500260
 void FUN_142500260(Scaleform::UPInt vmp, unsigned int ind, Scaleform::UPInt traits, void* value, unsigned int argc, void* args)
 {

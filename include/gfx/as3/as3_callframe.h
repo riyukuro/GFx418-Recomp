@@ -118,13 +118,30 @@ SF_INLINE CallFrame::CallFrame(bool discard_result, VMAbcFile& file, SInt32 mbi_
     static_cast<ValueRegisterFile*>(pRegisterFile)->Reserve(static_cast<UInt16>(mbi.local_reg_count));
 }
 
+#ifdef MS2_AS3_ADDFRAME_RAISE
+// (sfm) MS2_AS3_ADDFRAME_RAISE: in some exe copies of the inlined AddFrame the stack-overflow throw is ThrowError
+// inlined too, i.e. ThrowErrorInternal(e, fl::ErrorCI) (0x14252ecb0), not a call to VM::ThrowError (0x14252eca0).
+void Sfr31VMRaiseError(UPInt vm, const unsigned long* error, UPInt classInfo);   // 0x14252ecb0
+namespace fl { extern const ClassInfo ErrorCI; }
+// VM::ThrowError(e) inlined: ThrowErrorInternal(e, fl::ErrorCI).
+static __forceinline void Ms2AddFrameRaise(VM& vm, const VM::Error& e)
+{
+    Sfr31VMRaiseError(reinterpret_cast<UPInt>(&vm), reinterpret_cast<const unsigned long*>(&e),
+                      reinterpret_cast<UPInt>(&fl::ErrorCI));
+}
+#endif
+
 SF_INLINE void VM::AddFrame(const Value& invoker, VMAbcFile& file, SInt32 mbi_ind, const Value& _this, unsigned argc,
                             const Value* argv, bool discard_result, const ScopeStackType& saved_scope, const Traits& ot,
                             const ASString& name)
 {
     if (Unk070[1] == 128)
     {
+#ifdef MS2_AS3_ADDFRAME_RAISE
+        Ms2AddFrameRaise(*this, Error(eStackOverflowError, *this));
+#else
         ThrowError(Error(eStackOverflowError, *this));
+#endif
         return;
     }
 
