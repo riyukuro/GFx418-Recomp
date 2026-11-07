@@ -4179,8 +4179,9 @@ bool FUN_142513210(Scaleform::GFx::AS3::MovieRoot* self, const char* pmethodName
 // MovieRoot::Invoke with host values: the invoke alias of pmethodName, else the function at that AS3 path, is
 // called with pargs as AS3 values and its result goes to presult. False when there is none or the call throws
 // (the exception is printed and dropped).
-// MS2-FUNCTIONAL a slot of the exe's MovieRoot vftable, defined as a free function; the exe inlines the
-// undefined value's static and the exception output
+// MS2-FUNCTIONAL a slot of the exe's MovieRoot vftable, defined as a free function; left: cl sets up an rbp frame
+// (the exe addresses off rsp), so the pargArray spill and the Values sit in other slots, the Value dtors' weak-ref
+// bit test reads memory where the exe tests the loaded word, register allocation
 // @0x142513240
 bool FUN_142513240(Scaleform::GFx::AS3::MovieRoot* self, const char* pmethodName, Scaleform::GFx::Value* presult,
                    const Scaleform::GFx::Value* pargs, unsigned numArgs)
@@ -4189,6 +4190,7 @@ bool FUN_142513240(Scaleform::GFx::AS3::MovieRoot* self, const char* pmethodName
     using namespace Scaleform::GFx::AS3;
     enum { NumValuesOnStack = 10 };
     void*  argArrayOnStack[NumValuesOnStack * ((sizeof(GFx::Value) + sizeof(void*)) / sizeof(void*))];
+    bool   retVal = true;
     Value* pargArray;
     if (numArgs > NumValuesOnStack)
         pargArray = static_cast<Value*>(SF_HEAP_AUTO_ALLOC(self, sizeof(Value) * numArgs));
@@ -4197,7 +4199,6 @@ bool FUN_142513240(Scaleform::GFx::AS3::MovieRoot* self, const char* pmethodName
     for (unsigned i = 0, n = numArgs; i < n; ++i)
         self->GFxValue2ASValue(pargs[i], ::new (&pargArray[i]) Value());
 
-    bool   retVal = true;
     Value* paliasFunc;
     Value  resultVal;
     if (self->pInvokeAliases && (paliasFunc = FUN_142525400(self, pmethodName)) != NULL)
@@ -4212,12 +4213,13 @@ bool FUN_142513240(Scaleform::GFx::AS3::MovieRoot* self, const char* pmethodName
     }
     if (retVal)
     {
-        retVal = !self->pAVM->IsException();
-        if (self->pAVM->IsException())
+        ASVM* vm = self->pAVM;
+        retVal   = !vm->IsException();
+        if (vm->IsException())
         {
-            self->pAVM->HandleException = false;
-            self->pAVM->OutputError(self->pAVM->ExceptionObj);
-            self->pAVM->ExceptionObj.SetUndefined();
+            vm->HandleException = false;
+            vm->OutputError(vm->ExceptionObj);
+            vm->ExceptionObj.SetUndefined();
         }
         else if (presult)
             self->ASValue2GFxValue(resultVal, presult);
