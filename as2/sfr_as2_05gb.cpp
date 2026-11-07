@@ -688,17 +688,78 @@ enum
     Sfr05gb_NoLogOutput      = 0x4
 };
 
+}}} // namespace Scaleform::GFx::AS2
+// The out-of-line CompareBuiltIn_CaseCheck the exe calls (sfr_video_01).
+bool FUN_14000a090(Scaleform::GFx::ASStringNode** left, Scaleform::GFx::ASStringNode** right, bool caseSensitive);
+namespace Scaleform { namespace GFx { namespace AS2 {
+
+static SF_FORCEINLINE bool Sfr05gb_CompareBuiltIn_CaseCheck(const ASString& builtin, const ASString& str,
+                                                            bool caseSensitive)
+{
+    return ::FUN_14000a090(reinterpret_cast<ASStringNode**>(const_cast<ASString*>(&builtin)),
+                           reinterpret_cast<ASStringNode**>(const_cast<ASString*>(&str)), caseSensitive);
+}
+
+// Environment::GetTopLocalFrame (0x142956740, sfr_as2_05), inlined here in the exe.
+static SF_FORCEINLINE LocalFrame* Sfr05gb_GetTopLocalFrame(const Environment* penv, int off)
+{
+    if (penv->LocalFrames.GetSize() - off > 0)
+        return penv->LocalFrames[penv->LocalFrames.GetSize() - off - 1];
+    return 0;
+}
+
+// Value::ToObjectInterface with Value::ToAvmCharacter and Value::ToCharacter (sfr_as2_07)
+// inlined, as the exe has them here (penv is this, so no null test).
+static SF_FORCEINLINE ObjectInterface* Sfr05gb_ToObjectInterface(const Value& v, const Environment* penv)
+{
+    if (v.GetType() == Value::CHARACTER)
+    {
+        InteractiveObject* pchar = 0;
+        if (v.V.pCharHandle)
+        {
+            DisplayObject* pdisp = v.V.pCharHandle->ResolveCharacter(penv->GetTarget()->GetMovieImpl());
+            if (pdisp)
+                pchar = pdisp->IsInteractiveObject() ? static_cast<InteractiveObject*>(pdisp) : 0;
+        }
+        AvmCharacter* pavm = pchar ? AS2::ToAvmCharacter(pchar) : 0;
+        return pavm;
+    }
+    return v.ToObject(penv);
+}
+
+// WithStackEntry::GetObjectInterface (0x1429540c0, sfr_as2_05), inlined here in the exe.
+static SF_FORCEINLINE ObjectInterface* Sfr05gb_GetObjectInterface(const WithStackEntry& e)
+{
+    bool               isObject = e.IsObject != 0;
+    InteractiveObject* pch      = e.pCharacter;
+    if (isObject)
+        return e.pObject;
+    if (!pch)
+        return 0;
+    return AS2::ToAvmCharacter(pch);
+}
+
+// Environment::FindLocal(name, pvalue) (SDK inline): copies a found local out.
+static SF_FORCEINLINE bool Sfr05gb_FindLocal(const Environment* penv, const ASString& varname, Value* pvalue)
+{
+    const Value* pval = penv->FindLocal(varname);
+    if (pval && pvalue)
+    {
+        *pvalue = *pval;
+        return true;
+    }
+    return (pval != NULL);
+}
+
 // A plain name through the scope chain: the with stack (innermost first; a dead entry ends the lookup), the locals
 // ("arguments" made on first use from SWF5, "super" from SWF6, cached as a local), "this", the target's members,
 // _global/_root/_levelN and the members of _global. The owner, when asked for, is 0 until something is found.
-// MS2-FUNCTIONAL a 4.1.18 member of the environment; register allocation and block order differ
+// MS2-FUNCTIONAL 1910 vs 1907 bytes: at the "arguments" and "super" checks the exe sets r8b (version > 6) before building the builtin's address and reuses the version compare; cl here sets it after and compares again (3 bytes). No source form found
 // @0x142957b10
 bool Environment::GetVariableRaw(const GetVarParams& params) const
 {
     if (!params.pResult)
         return false;
-    Environment*     penv = const_cast<Environment*>(this);
-    ASStringContext* psc  = penv->GetSC();
 
     if (params.pOwnerValue)
         *params.pOwnerValue = Value(0);
@@ -706,15 +767,17 @@ bool Environment::GetVariableRaw(const GetVarParams& params) const
     {
         for (int i = (int)params.pWithStack->GetSize() - 1; i >= 0; i--)
         {
-            ObjectInterface* obj = (*params.pWithStack)[i].GetObjectInterface();
-            if (!obj)
+            ObjectInterface* obj = Sfr05gb_GetObjectInterface((*params.pWithStack)[i]);
+
+            if (obj == NULL)
                 return false;
-            if (obj->GetMember(penv, params.VarName, params.pResult))
+
+            if (obj && obj->GetMember(const_cast<Environment*>(this), params.VarName, params.pResult))
             {
                 if (params.pOwnerValue)
                 {
                     if (obj->IsASCharacter())
-                        params.pOwnerValue->SetAsCharacter(obj->ToCharacter());
+                        params.pOwnerValue->SetAsCharacter(obj->ToCharacter_Call());
                     else
                         params.pOwnerValue->SetAsObject(obj->ToASObject());
                 }
@@ -725,50 +788,65 @@ bool Environment::GetVariableRaw(const GetVarParams& params) const
 
     if (!(params.ExcludeFlags & Sfr05gb_IgnoreLocals))
     {
-        if (const Value* plocal = FindLocal(params.VarName))
+        if (Sfr05gb_FindLocal(this, params.VarName, params.pResult))
         {
-            *params.pResult = *plocal;
             return true;
         }
-        if (GetVersion() >= 5)
+        else if (GetVersion() >= 5)
         {
-            if (GetBuiltin(ASBuiltin_arguments).CompareBuiltIn_CaseCheck(params.VarName, IsCaseSensitive()))
+            if (Sfr05gb_CompareBuiltIn_CaseCheck(GetBuiltin(ASBuiltin_arguments), params.VarName, IsCaseSensitive()))
             {
-                if (LocalFrame* plocFr = GetTopLocalFrame(0))
+                LocalFrame* pLocFr = Sfr05gb_GetTopLocalFrame(this, 0);
+                if (pLocFr)
                 {
+                    Environment*     penv = const_cast<Environment*>(this);
+                    ASStringContext* psc  = penv->GetSC();
+
                     Ptr<ArrayObject> pargArray = *SF_HEAP_NEW(GetHeap()) ArrayObject(penv);
-                    pargArray->Resize(plocFr->NArgs);
-                    for (int i = 0; i < plocFr->NArgs; i++)
-                        pargArray->SetElement(i, *plocFr->Env->Bottom(plocFr->FirstArgBottomIndex - i));
+                    pargArray->Resize(pLocFr->NArgs);
+                    for (int i = 0; i < pLocFr->NArgs; i++)
+                        pargArray->SetElement(i, *pLocFr->Env->Bottom(pLocFr->FirstArgBottomIndex - i));
+
                     penv->AddLocal(psc->GetBuiltin(ASBuiltin_arguments), Value(pargArray.GetPtr()));
-                    const PropFlags flags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete |
-                                          PropFlags::PropFlag_ReadOnly);
-                    pargArray->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_callee), plocFr->Callee, flags);
-                    pargArray->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_caller), plocFr->Caller, flags);
+                    pargArray->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_callee), pLocFr->Callee,
+                                            PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete |
+                                                PropFlags::PropFlag_ReadOnly);
+                    pargArray->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_caller), pLocFr->Caller,
+                                            PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete |
+                                                PropFlags::PropFlag_ReadOnly);
                     params.pResult->SetAsObject(pargArray);
                     return true;
                 }
             }
-            else if (GetVersion() >= 6 &&
-                     GetBuiltin(ASBuiltin_super).CompareBuiltIn_CaseCheck(params.VarName, IsCaseSensitive()))
+            else if (GetVersion() >= 6)
             {
-                LocalFrame* plocFr = GetTopLocalFrame(0);
-                if (plocFr && plocFr->SuperThis)
+                if (Sfr05gb_CompareBuiltIn_CaseCheck(GetBuiltin(ASBuiltin_super), params.VarName, IsCaseSensitive()))
                 {
-                    if (Ptr<Object> proto = plocFr->SuperThis->Get__proto__())
+                    LocalFrame* pLocFr = Sfr05gb_GetTopLocalFrame(this, 0);
+                    if (pLocFr && pLocFr->SuperThis)
                     {
-                        Value thisVal;
-                        FindAndGetVariableRaw(GetVarParams(GetBuiltin(ASBuiltin_this), &thisVal, params.pWithStack));
-                        FunctionRef ctor     = proto->Get__constructor__(psc);
-                        Ptr<Object> superObj = *SF_HEAP_NEW(GetHeap())
-                            SuperObject(proto->Get__proto__(), thisVal.ToObjectInterface(this), ctor);
-                        params.pResult->SetAsObject(superObj);
-                        penv->SetLocal(GetBuiltin(ASBuiltin_super), *params.pResult);
-                        return true;
+                        ObjectInterface* const iobj = pLocFr->SuperThis;
+                        Ptr<Object>            superObj;
+                        Ptr<Object>            proto = iobj->Get__proto__();
+
+                        if (proto)
+                        {
+                            Value thisVal;
+                            FindAndGetVariableRaw(GetVarParams(GetBuiltin(ASBuiltin_this), &thisVal, params.pWithStack));
+
+                            FunctionRef __ctor__ = proto->Get__constructor__(const_cast<Environment*>(this)->GetSC());
+                            superObj = *SF_HEAP_NEW(GetHeap())
+                                SuperObject(proto->Get__proto__(), Sfr05gb_ToObjectInterface(thisVal, this), __ctor__);
+
+                            params.pResult->SetAsObject(superObj);
+                            const_cast<Environment*>(this)->SetLocal(GetBuiltin(ASBuiltin_super), *params.pResult);
+                            return true;
+                        }
                     }
                 }
             }
         }
+
         if (GetBuiltin(ASBuiltin_this).CompareBuiltIn_CaseCheck(params.VarName, IsCaseSensitive()))
         {
             params.pResult->SetAsCharacter(Target);
@@ -778,26 +856,31 @@ bool Environment::GetVariableRaw(const GetVarParams& params) const
 
     if (!Target)
         return false;
-    if (GetAvmTarget()->GetMemberRaw(psc, params.VarName, params.pResult))
+    if (AS2::ToAvmCharacter(Target)->GetMemberRaw(const_cast<Environment*>(this)->GetSC(), params.VarName, params.pResult))
     {
         if (params.pOwnerValue)
-            *params.pOwnerValue = Value(Target);
+            *params.pOwnerValue = Target;
         return true;
     }
+
     Object* pglobal = StringContext.pContext->pGlobal;
-    if (!(params.ExcludeFlags & Sfr05gb_IgnoreContainers) && params.VarName.GetLength() > 0 &&
-        params.VarName.ToCStr()[0] == '_')
+    if (!(params.ExcludeFlags & Sfr05gb_IgnoreContainers))
     {
-        Bool3W rv = CheckGlobalAndLevels(params);
-        if (rv.IsDefined())
-            return rv.IsTrue();
+        if (params.VarName.GetLength() > 0 && params.VarName[0] == '_')
+        {
+            Bool3W rv = CheckGlobalAndLevels(params);
+            if (rv.IsDefined())
+                return rv.IsTrue();
+        }
     }
-    if (pglobal && pglobal->GetMember(penv, params.VarName, params.pResult))
+
+    if (pglobal && pglobal->GetMember(const_cast<Environment*>(this), params.VarName, params.pResult))
     {
         if (params.pOwnerValue)
-            *params.pOwnerValue = Value(pglobal);
+            *params.pOwnerValue = pglobal;
         return true;
     }
+
     if (!(params.ExcludeFlags & Sfr05gb_NoLogOutput))
         LogAction("GetVariableRaw(\"%s\") failed, returning UNDEFINED.\n", params.VarName.ToCStr());
     return false;
