@@ -27,10 +27,28 @@ public:
     { return false; } // exe 0x142988b50: read-only
 };
 
-// MS2-FUNCTIONAL register allocation (exe keeps a fourth callee-saved value live across the member-set calls)
+// The exe inlines CFunctionObject(psc) here (Object(psc) call, then pFunction = 0).
+inline FunctionObject::FunctionObject(ASStringContext* psc, ObjectInlineCtorTag)
+    : Object(psc)
+{
+}
+
+inline CFunctionObject::CFunctionObject(ASStringContext* psc, ObjectInlineCtorTag)
+    : FunctionObject(psc, ObjectInlineCtorTag()), pFunction(0)
+{
+}
+
+// SDK AS2_Capabilities.cpp header inlines (SF_OS_WIN32 branches).
+inline ASString CapsManufacturer(ASStringContext* psc) { return psc->CreateConstString("Scaleform Windows"); }
+inline ASString CapsOS(ASStringContext* psc) { return psc->CreateConstString("Windows"); }
+inline ASString CapsVersion(ASStringContext* psc) { return psc->CreateConstString("WIN 8,0,0,0"); }
+
+// MS2-FUNCTIONAL: LTCG alias floor. At the six Value(ASString temp) sites the exe sinks the ASString AddRef past the
+// Value stores and merges it with the Value AddRef (add [node+0x18],2; we emit two incs, 2 bytes each = the 12-byte gap).
+// A __declspec(restrict) CreateConstStringNode does not reproduce it. The vptr/flags store order at entry also differs.
 // @0x142919ee0
 CapabilitiesCtorFunction::CapabilitiesCtorFunction(ASStringContext* psc)
-    : CFunctionObject(psc)
+    : CFunctionObject(psc, ObjectInlineCtorTag())
 {
     PropFlags flags(6);
     Value no(false);
@@ -49,47 +67,24 @@ CapabilitiesCtorFunction::CapabilitiesCtorFunction(ASStringContext* psc)
     Object::SetMemberRaw(psc, psc->CreateConstString("hasVideoEncoder"), no, flags);
     Object::SetMemberRaw(psc, psc->CreateConstString("isDebugger"), no, flags);
     Object::SetMemberRaw(psc, psc->CreateConstString("localFileReadDisable"), no, flags);
-    {
-        Value v(psc->CreateConstString("en"));
-        Object::SetMemberRaw(psc, psc->CreateConstString("language"), v, flags);
-    }
-    {
-        Value v(psc->CreateConstString("Scaleform Windows"));
-        Object::SetMemberRaw(psc, psc->CreateConstString("manufacturer"), v, flags);
-    }
-    {
-        Value v(psc->CreateConstString("Windows"));
-        Object::SetMemberRaw(psc, psc->CreateConstString("os"), v, flags);
-    }
-    {
-        Value v(1);
-        Object::SetMemberRaw(psc, psc->CreateConstString("pixelAspectRatio"), v, flags);
-    }
-    {
-        Value v(psc->CreateConstString("External"));
-        Object::SetMemberRaw(psc, psc->CreateConstString("playerType"), v, flags);
-    }
-    {
-        Value v(psc->CreateConstString("color"));
-        Object::SetMemberRaw(psc, psc->CreateConstString("screenColor"), v, flags);
-    }
-    {
-        Value v(0x48);
-        Object::SetMemberRaw(psc, psc->CreateConstString("screenDPI"), v, flags);
-    }
-    {
-        Value v(psc->CreateConstString("WIN 8,0,0,0"));
-        Object::SetMemberRaw(psc, psc->CreateConstString("version"), v, flags);
-    }
+    Object::SetMemberRaw(psc, psc->CreateConstString("language"), psc->CreateConstString("en"), flags);
+    Object::SetMemberRaw(psc, psc->CreateConstString("manufacturer"), CapsManufacturer(psc), flags);
+    Object::SetMemberRaw(psc, psc->CreateConstString("os"), CapsOS(psc), flags);
+    Object::SetMemberRaw(psc, psc->CreateConstString("pixelAspectRatio"), Value(1), flags);
+    Object::SetMemberRaw(psc, psc->CreateConstString("playerType"), psc->CreateConstString("External"), flags);
+    Object::SetMemberRaw(psc, psc->CreateConstString("screenColor"), psc->CreateConstString("color"), flags);
+    Object::SetMemberRaw(psc, psc->CreateConstString("screenDPI"), Value(72), flags);
+    Object::SetMemberRaw(psc, psc->CreateConstString("version"), CapsVersion(psc), flags);
     Object::SetMemberRaw(psc, psc->CreateConstString("windowlessDisable"), no, flags);
-    {
-        Value unset(Value::UNSET);
-        Object::SetMemberRaw(psc, psc->CreateConstString("screenResolutionX"), unset, flags);
-        Object::SetMemberRaw(psc, psc->CreateConstString("screenResolutionY"), unset, flags);
-        Object::SetMemberRaw(psc, psc->CreateConstString("serverString"), unset, flags);
-    }
+    Object::SetMemberRaw(psc, psc->CreateConstString("screenResolutionX"), Value(Value::UNSET), flags);
+    Object::SetMemberRaw(psc, psc->CreateConstString("screenResolutionY"), Value(Value::UNSET), flags);
+    Object::SetMemberRaw(psc, psc->CreateConstString("serverString"), Value(Value::UNSET), flags);
 }
 
 }}} // namespace Scaleform::GFx::AS2
 // MS2-PIN: ??_7CapabilitiesCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321e6d8
 // MS2-PIN: ??_7CapabilitiesCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321e760
+// MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432156f0
+// MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215778
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432155c0
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215648
