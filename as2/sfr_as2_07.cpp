@@ -154,7 +154,7 @@ void         ClassHash_RemoveCaseCheck(ASStringHash<FunctionRef>* phash, const A
 SPInt MemberHash_FindIndexNoCase(const ASStringHash_GC<Member>* phash, const ASStringNoCaseKey& key);
 typedef ASStringHash_GC<Member>::SetType MemberSet;
 
-// Find / FindCaseInsensitive / FindCaseCheck of the member table.
+// Find of the member table.
 inline MemberSet::Iterator MemberHash_Find(ASStringHash_GC<Member>* phash, const ASString& key)
 {
     SPInt index = MemberHash_FindIndex(phash, key);
@@ -162,18 +162,24 @@ inline MemberSet::Iterator MemberHash_Find(ASStringHash_GC<Member>* phash, const
         return MemberSet::Iterator(reinterpret_cast<MemberSet*>(phash), index);
     return MemberSet::Iterator(0, 0);
 }
-inline MemberSet::Iterator MemberHash_FindNoCase(ASStringHash_GC<Member>* phash, const ASString& key)
+// FindAlt / FindCaseInsensitive / FindCaseCheck in the SDK's nesting: Object::SetMember inlines it with both lookups
+// sharing one iterator slot (a flat FindNoCase gives each lookup its own slot and tail).
+inline MemberSet::Iterator MemberHash_FindAlt(ASStringHash_GC<Member>* phash, const ASStringNoCaseKey& key)
 {
-    ASStringNoCaseKey ikey(key);
-    SPInt index = MemberHash_FindIndexNoCase(phash, ikey);
+    SPInt index = MemberHash_FindIndexNoCase(phash, key);
     if (index >= 0)
         return MemberSet::Iterator(reinterpret_cast<MemberSet*>(phash), index);
     return MemberSet::Iterator(0, 0);
 }
+inline MemberSet::Iterator MemberHash_FindCaseInsensitive(ASStringHash_GC<Member>* phash, const ASString& key)
+{
+    ASStringNoCaseKey ikey(key);
+    return MemberHash_FindAlt(phash, ikey);
+}
 inline MemberSet::Iterator MemberHash_FindCaseCheck(ASStringHash_GC<Member>* phash, const ASString& key,
                                                     bool caseSensitive)
 {
-    return caseSensitive ? MemberHash_Find(phash, key) : MemberHash_FindNoCase(phash, key);
+    return caseSensitive ? MemberHash_Find(phash, key) : MemberHash_FindCaseInsensitive(phash, key);
 }
 
 // The value SetMemberRaw stores for __proto__ / __resolve (they live outside the member table); exe 0x143a51b50.
@@ -762,8 +768,6 @@ bool MovieClipObject::SetMemberRaw(ASStringContext* psc, const ASString& name, c
     return Object::SetMemberRaw(psc, name, val, flags);
 }
 
-// MS2-FUNCTIONAL the exe merges both case lookups into one iterator slot and converts this back from the
-// object pointer with a null test (cmove); the rest differs in register choice only
 // @0x1429867f0
 bool Object::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
 {
