@@ -5338,7 +5338,7 @@ static inline ClassTraits::Traits* FUN_142524f60(VM& vm, VMAbcFile& file, const 
 // MS2-FUNCTIONAL SDK GetUserDefinedTraits form; register allocation only (the VM, the namespace and the result swap
 // callee-saved registers)
 // @0x14250f9a0
-ClassTraits::Traits* FUN_14250f9a0(VM& vm, VMAbcFile& file, const Abc::ClassInfo& ci)
+__declspec(noinline) ClassTraits::Traits* FUN_14250f9a0(VM& vm, VMAbcFile& file, const Abc::ClassInfo& ci)
 {
     const Abc::Multiname&  mn   = file.GetAbcFile().Const_Pool.GetMultiname(ci.inst_info.name_ind);
     const ASString         name = file.GetInternedString(mn.NameIndex);
@@ -6824,11 +6824,21 @@ bool VMAbcFile::RegisterScrips(bool to_execute)
 
 static inline void FUN_142530de0(VMAbcFile* file) { ::Scaleform::GFx::AS3::Sfr31UnregisterClassTraits(reinterpret_cast<Scaleform::UPInt>(file)); }   // VMAbcFile: the loaded classes' traits unregistered (a failed load)
 
+// ArrayData::PushBack with the exe's out-of-line ResizeNoConstruct (a member pointer call; cl otherwise inlines it).
+template <class T, class Alloc>
+static __forceinline void Sfr18PushBackOutResize(Scaleform::ArrayBase<Scaleform::ArrayData<T, Alloc, ArrayDefaultPolicy> >& a, const T& val)
+{
+    typedef ArrayDataBase<T, Alloc, ArrayDefaultPolicy> Base;
+    Base& d = reinterpret_cast<Base&>(a);
+    (d.*&Base::ResizeNoConstruct)(&d, d.Size + 1);
+    Alloc::Construct(d.Data + d.Size - 1, val);
+}
+
 // VMAbcFile::RegisterUserDefinedClassTraits: the class traits of the file's classes (except the scaleform.gfx
 // package's): ones known to the VM (cached, or from the global object, then cached) only add their file to the
 // children; the others are made, cached and kept as loaded classes. Then the new ones are initialized; on a failure
 // the error is output, the class uncached, the loaded classes unregistered and false returned.
-// MS2-FUNCTIONAL the scaleform.gfx test and the class traits cache are reached through the shared helpers
+// MS2-FUNCTIONAL regalloc and layout: the exe branches out after the scaleform.gfx strncmp for the continue (ours falls through), plus register numbering. FUN_14250f9a0 is noinline, and Hash::Remove / ResizeNoConstruct are called out of line as in the exe
 // @0x142521780
 bool VMAbcFile::RegisterUserDefinedClassTraits()
 {
@@ -6846,20 +6856,21 @@ bool VMAbcFile::RegisterUserDefinedClassTraits()
             strncmp(uri.ToCStr(), DAT_143a2dd40.ToCStr(), DAT_143a2dd40.GetSize()) == 0)
             continue;
         ClassTraits::Traits** p   = FUN_142414ac0(&vm.ClassTraitsSet, name, ns);
-        ClassTraits::Traits*  ctr = p ? *p : NULL;
-        if (!ctr)
+        ClassTraits::Traits*  ctr;
+        if (p == NULL || (ctr = *p) == NULL)
         {
             ctr = FUN_142415520(vm.GlobalObject.GetPtr(), name, ns);
-            if (!ctr)
+            if (ctr)
+                vm.ClassTraitsSet.Add(name, ns, ctr);
+            else
             {
                 SPtr<ClassTraits::Traits> ud = Pickable<ClassTraits::Traits>(
                     SF_HEAP_NEW(vm.GetMemoryHeap()) ClassTraits::UserDefined(*this, vm, ci));
                 vm.ClassTraitsSet.Add(name, ns, ud.GetPtr());
                 ++made;
-                LoadedClasses.PushBack(ud);
+                Sfr18PushBackOutResize(LoadedClasses, ud);
                 continue;
             }
-            vm.ClassTraitsSet.Add(name, ns, ctr);
         }
         if (VMAbcFile* f = ctr->GetFilePtr())
         {
@@ -6867,7 +6878,7 @@ bool VMAbcFile::RegisterUserDefinedClassTraits()
             while (j < Children.GetSize() && Children[j].GetPtr() != f)
                 ++j;
             if (j == Children.GetSize())
-                Children.PushBack(SPtr<VMAbcFile>(f));
+                Sfr18PushBackOutResize(Children, SPtr<VMAbcFile>(f));
         }
     }
     if (made == 0)
@@ -6891,7 +6902,8 @@ bool VMAbcFile::RegisterUserDefinedClassTraits()
             vm.OutputError(vm.ExceptionObj);
             vm.ExceptionObj.SetUndefined();
         }
-        vm.ClassTraitsSet.Entries.RemoveAlt(TClassTraitsCache::Key(name, &ns));
+        typedef HashDH<TClassTraitsCache::Key, ClassTraits::Traits*, TClassTraitsCache::Key::HashFunctor, 329>::BaseType CacheHash;
+        (reinterpret_cast<CacheHash&>(vm.ClassTraitsSet.Entries).*&CacheHash::Remove)(TClassTraitsCache::Key(name, &ns));
         FUN_142530de0(this);
         return false;
     }
