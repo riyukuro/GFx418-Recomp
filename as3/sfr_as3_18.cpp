@@ -7337,11 +7337,19 @@ struct Sfr34_GfxValueView : GFx::Value
     }
 };
 
+} } } // namespace Scaleform::GFx::AS3
+
+// The path lookup does not keep the value's address (the exe has it in this TU)
+__declspec(noalias) bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::AS3::Value* pval,
+                                       const char* ppathToVar);
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
 // count elements of the AS3 array at the path from index on, into the host's array of ints, floats, doubles,
 // strings (kept alive by the movie's return value holder), wide strings (in its character buffer) or values.
 // Undefined elements give 0 (NULL for strings). False when the path is not an array.
-// MS2-FUNCTIONAL a 4.1.18 virtual of the root; the exe keeps the resolved value's flags in a stack copy for its
-// destructor (its path lookup is known not to keep the pointer), so the locals sit 8 bytes higher
+// A 4.1.18 virtual of the root. The path lookup is declared noalias just above, as the exe knows it does not keep
+// the value's address, so the resolved value's flags are kept in a stack copy for its destructor.
 // @0x142510240
 bool MovieRoot::GetVariableArray(SetArrayTypeArg type, const char* ppathToVar, unsigned index, void* pdata,
                                  unsigned count)
