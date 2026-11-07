@@ -3279,7 +3279,6 @@ void AvmTextField::SetNewTextFormat(const FnCall& fn)
     }
 }
 
-void ParagraphFormat_Destruct(Render::Text::ParagraphFormat* p); // exe 0x142606690 (~ParagraphFormat)
 // The formats of the Text library: this TU calls their destructors out of line.
 struct TextFormatLocal02
 {
@@ -3291,7 +3290,7 @@ struct ParagraphFormatLocal02
 {
     union { Render::Text::ParagraphFormat F; };
     SF_FORCEINLINE ParagraphFormatLocal02() : F() {}
-    SF_FORCEINLINE ~ParagraphFormatLocal02() { ParagraphFormat_Destruct(&F); }
+    SF_FORCEINLINE ~ParagraphFormatLocal02() { F.Render::Text::ParagraphFormat::~ParagraphFormat(); }
 };
 
 // getTextFormat([beginIndex, [endIndex]]): a TextFormat with what the characters of the range have in common.

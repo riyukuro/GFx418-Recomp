@@ -13,6 +13,7 @@
 #include "../gfx_textsnapshot.h"
 #include "../../kernel/sf_stringhash.h"
 #include "../gfx_sharedobject.h"
+#include "../../render/text_core.h"   // ~ParagraphFormat, called by ParagraphFormatMember
 
 namespace Scaleform { namespace Render { namespace Text { class TextFormat; class ParagraphFormat; } } }
 void FUN_1424aa0f0(void* p); // Render::Text::TextFormat's out-of-line destructor (exe 0x1424aa0f0; defined in sfr_as3_12)
@@ -739,8 +740,8 @@ public:
 };
 
 // The out-of-line destructors the exe calls (text_core.h's ~TextFormat is an empty inline, so ~TextFormat is
-// the global FUN_1424aa0f0; ~ParagraphFormat is FreeTabStops, folded with it).
-void ParagraphFormat_Destruct(Render::Text::ParagraphFormat* p); // exe 0x142606690 (~ParagraphFormat)
+// the global FUN_1424aa0f0; ~ParagraphFormat (exe 0x142606690) is FreeTabStops, folded with it, so the
+// inline header dtor gives the same call).
 
 // The storage of TextFormatObject's formats, destroyed by those.
 struct TextFormatMember
@@ -751,7 +752,10 @@ struct TextFormatMember
 struct ParagraphFormatMember
 {
     void* Data[4];
-    ~ParagraphFormatMember() { ParagraphFormat_Destruct((Render::Text::ParagraphFormat*)Data); }
+    ~ParagraphFormatMember()
+    {
+        reinterpret_cast<Render::Text::ParagraphFormat*>(Data)->Render::Text::ParagraphFormat::~ParagraphFormat();
+    }
 };
 
 // The style sheet's Text::StyleManager, whose layout this header does not give. Its destructor is the
