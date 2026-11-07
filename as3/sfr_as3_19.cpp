@@ -1934,56 +1934,59 @@ CheckResult Object::SetProperty(const Multiname& prop_name, const Value& value)
     return CheckResult(true);
 }
 
-// setproperty on any value: objects with special property handling take it themselves, the rest go through
-// the property lookup.
+// MS2-FUNCTIONAL 0x142528810: regalloc: exe holds ret in rbx and _this in rdi, uses other home slots and re-reads the traits Flags byte
+// setproperty on any value: special-property objects take it themselves, the rest go through the property lookup.
+static __forceinline CheckResult Sfr31SetPropertyInl(VM& vm, const Value& _this, const Multiname& prop_name, const Value& value)
+{
+    if (static_cast<UInt32>(_this.GetKind()) - 0xc <= 3)
+    {
+        Object* o = reinterpret_cast<Object*>(_this.GetGASRefCountBase());
+        const Traits& tr = o->GetTraits();
+        if ((tr.Flags & 1) != 0 ||
+            (static_cast<UInt32>(tr.TraitsType - 0xd) <= 1 && ((~(static_cast<UInt8>(tr.Flags) >> 5)) & 1) != 0))
+            return o->SetProperty(prop_name, value);
+    }
+    PropRef prop;
+    FUN_142501b00(&prop, &vm, &_this, &prop_name, 1);
+    if (prop.This.GetKind() != Value::kUndefined && reinterpret_cast<UPInt>(prop.pValue) != 1 &&
+        !((static_cast<UInt8>(reinterpret_cast<UPInt>(prop.pValue) >> 1) & 1) != 0 && (reinterpret_cast<UPInt>(prop.pValue) & ~static_cast<UPInt>(2)) == 0))
+    {
+        bool result = true;
+        switch (reinterpret_cast<UPInt>(prop.pValue) & 3)
+        {
+        case 0:
+        {
+            char r;
+            result = *reinterpret_cast<const CheckResult*>(Sfr27SlotSetValueThis(prop.pSI, &r, &vm, &value, &prop.This, NULL));
+        }
+            break;
+        case 1:
+            reinterpret_cast<Value*>(reinterpret_cast<UPInt>(prop.pValue) & ~static_cast<UPInt>(1))->Assign(value);
+            break;
+        case 2:
+            result = false;
+            break;
+        default:
+            break;
+        }
+        return CheckResult(result);
+    }
+    if (static_cast<UInt32>(_this.GetKind()) - 0xc <= 3)
+    {
+        Object* o = reinterpret_cast<Object*>(_this.GetGASRefCountBase());
+        if ((static_cast<UInt8>(static_cast<UPInt>(o->GetTraits().Flags) >> 1) & 1) != 0 && prop_name.ContainsNamespace(vm.GetPublicNamespace()))
+        {
+            o->AddDynamicSlotValuePair(prop_name.Name, value);
+            return CheckResult(true);
+        }
+    }
+    vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x420), vm, prop_name.Name, vm.GetValueTraits(_this).GetName().ToCStr()));
+    return CheckResult(false);
+}
 // @0x142528810
 char* Sfr27SetPropertyOfValue(char* ret, VM* vm, const Value* obj, const Multiname* mn, const Value* v)
 {
-    if (static_cast<UInt32>(obj->GetKind()) - 0xc < 4)
-    {
-        Object* o = reinterpret_cast<Object*>(obj->GetGASRefCountBase());
-        Traits& tr = o->GetTraits();
-        const UPInt flags = static_cast<UPInt>(tr.Flags);
-        const int type = static_cast<int>(tr.TraitsType);
-        if ((flags & 1) != 0 || (static_cast<UInt32>(type - 0xd) < 2 && ((~(flags >> 5)) & 1) != 0))
-        {
-            *ret = o->SetProperty(*mn, *v) ? 1 : 0;
-            return ret;
-        }
-    }
-    PropRef prop;
-    FUN_142501b00(&prop, vm, obj, mn, 1);
-    if (PropRefNotFound(prop))
-    {
-        if (static_cast<UInt32>(obj->GetKind()) - 0xc < 4 &&
-            (reinterpret_cast<Object*>(obj->GetGASRefCountBase())->GetTraits().Flags >> 1 & 1) != 0 &&
-            mn->ContainsNamespace(vm->GetPublicNamespace()))
-        {
-            reinterpret_cast<Object*>(obj->GetGASRefCountBase())->AddDynamicSlotValuePair(mn->Name, *v);
-            *ret = 1;
-        }
-        else
-        {
-            Traits* tr = const_cast<Traits*>(&vm->GetValueTraits(*obj));
-            vm->ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x420), *vm, mn->Name, tr->GetName().ToCStr()));
-            *ret = 0;
-        }
-        return ret;
-    }
-    char r = 1;
-    switch (reinterpret_cast<UPInt>(prop.pValue) & 3)
-    {
-    case 0:
-        Sfr27SlotSetValueThis(prop.pSI, &r, vm, v, &prop.This, NULL);
-        break;
-    case 1:
-        reinterpret_cast<Value*>(reinterpret_cast<UPInt>(prop.pValue) & ~static_cast<UPInt>(1))->Assign(*v);
-        break;
-    case 2:
-        r = 0;
-        break;
-    }
-    *ret = r;
+    new (ret) CheckResult(Sfr31SetPropertyInl(*vm, *obj, *mn, *v));
     return ret;
 }
 
