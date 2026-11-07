@@ -70,6 +70,11 @@ struct ToStringAssignAccess : ASString
         t.pNode->Release();
         t.pNode = pnode;
     }
+    // ASString::operator=, inlined.
+    static SF_FORCEINLINE void AssignFrom(ASString& s, const ASString& src)
+    {
+        AssignNode(s, static_cast<const ToStringAssignAccess&>(src).pNode);
+    }
 };
 // Value::ToFunction (exe 0x142991190), inlined.
 struct ToNumberValueAccess : Value
@@ -267,7 +272,6 @@ Value Value::ToPrimitive(Environment* penv, hint h) const
 
 // The string of a value: numbers with the given precision (-1 for the default), an object its toString's result (not
 // asked in debug mode), else its text value, a clip its target path.
-// MS2-FUNCTIONAL: the exe inlines the assign of the toString result (its temp in the lowest stack slot), ours calls ASString::operator=; same behavior
 // @0x142991e70
 ASString Value::ToStringImpl(Environment* penv, int precision, bool debug) const
 {
@@ -313,6 +317,7 @@ ASString Value::ToStringImpl(Environment* penv, int precision, bool debug) const
     case OBJECT:
     case CHARACTER:
     {
+        union StrHolder { ASString s; StrHolder() {} ~StrHolder() {} } resultStr;
         Value            toStringFunc;
         ObjectInterface* piobj = ToObjectInterface_Call(penv);
 
@@ -327,7 +332,9 @@ ASString Value::ToStringImpl(Environment* penv, int precision, bool debug) const
                     FnCall fnCall(&result, piobj, penv, 0, 0);
                     func.Function->Invoke(fnCall, func.pLocalFrame, NULL);
                 }
-                stringVal = result.ToStringImpl(penv, -1, false);
+                ::new (&resultStr.s) ASString(result.ToStringImpl(penv, -1, false));
+                ToStringAssignAccess::AssignFrom(stringVal, resultStr.s);
+                resultStr.s.~ASString();
             }
             else
             {
