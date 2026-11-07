@@ -6202,8 +6202,8 @@ static SF_FORCEINLINE void Sfr18AddClassTraitsInline(TClassTraitsCache& set, con
     set.Entries.Add(TClassTraitsCache::Key(name, &ns), v);
 }
 
-// MS2-FUNCTIONAL free function (not declared in the shared VM class); the name and the traits-pointer temporary
-// take each other's home slots (0x60/0x68)
+// A free function (not declared in the shared VM class). The name lives in its own block, so it shares the uri's
+// slot (0x60) and the traits-pointer temporary goes to 0x68, as in the exe.
 // @0x142521150
 void FUN_142521150(VM& vm, ClassTraits::Traits& tr)
 {
@@ -6217,8 +6217,10 @@ void FUN_142521150(VM& vm, ClassTraits::Traits& tr)
                                    vm.GetClassTraitsNamespace().GetInstanceTraits()),
                                Abc::NS_Public, uri, Value::GetUndefined());
     }
-    ASString name = tr.GetInstanceTraits().GetConstructor().GetTraits().GetName();
-    Sfr18AddClassTraitsInline(vm.ClassTraitsSet, name, *ns, &tr);
+    {
+        ASString name = tr.GetInstanceTraits().GetConstructor().GetTraits().GetName();
+        Sfr18AddClassTraitsInline(vm.ClassTraitsSet, name, *ns, &tr);
+    }
 }
 
 } } } // namespace Scaleform::GFx::AS3
