@@ -1080,18 +1080,18 @@ void FUN_142729ee0(unsigned char* dst, const unsigned char* src, size_t n)
     }
 }
 
-// MS2-FUNCTIONAL: the second byte of each pair.
+// The second byte of each pair.
 // @0x142729f10
 void FUN_142729f10(unsigned char* dst, const unsigned char* src, size_t n)
 {
-    for (src += 1; n; --n, src += 2)
-        *dst++ = *src;
+    for (size_t i = 0; i < n; ++i)
+        *dst++ = src[i * 2 + 1];
 }
 
-// MS2-FUNCTIONAL: the second byte of each pair, low nibble cleared.
+// The second byte of each pair, low nibble cleared.
 // @0x142729f40
 void FUN_142729f40(unsigned char* dst, const unsigned char* src, size_t n)
 {
-    for (src += 1; n; --n, src += 2)
-        *dst++ = (unsigned char)(*src & 0xf0);
+    for (size_t i = 0; i < n; ++i)
+        *dst++ = (unsigned char)(src[i * 2 + 1] & 0xf0);
 }
