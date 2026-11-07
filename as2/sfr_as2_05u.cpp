@@ -18,6 +18,18 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 
 namespace {
 
+// MovieRoot::GetLevelMovie, inlined in the exe.
+SF_FORCEINLINE InteractiveObject* GmLevelMovie(const MovieRoot* proot, int level)
+{
+    MovieImpl* pmovie = proot->pMovieImpl;
+    for (unsigned i = 0; i < pmovie->MovieLevelsSize; i++)
+    {
+        if (pmovie->pMovieLevels[i].Level == level)
+            return pmovie->pMovieLevels[i].pSprite;
+    }
+    return 0;
+}
+
 // MovieImpl::GetMouseState: the states of the four mice (the movie is the layout mirror here).
 inline MouseState* GmMouseState(MovieImpl* pmovie, unsigned mouseIndex)
 {
@@ -27,15 +39,15 @@ inline MouseState* GmMouseState(MovieImpl* pmovie, unsigned mouseIndex)
 }
 
 // InteractiveObject::IncrementRollOverCnt: the count before.
-inline UByte GmIncrementRollOverCnt(InteractiveObject* pch)
+inline unsigned GmIncrementRollOverCnt(InteractiveObject* pch)
 {
     return pch->RollOverCnt++;
 }
 
 // InteractiveObject::DecrementRollOverCnt: the count after, 0xff when it was already 0.
-inline UByte GmDecrementRollOverCnt(InteractiveObject* pch)
+inline unsigned GmDecrementRollOverCnt(InteractiveObject* pch)
 {
-    return (pch->RollOverCnt == 0) ? UByte(0xff) : --pch->RollOverCnt;
+    return (pch->RollOverCnt != 0) ? --pch->RollOverCnt : ~0u;
 }
 
 // A button event (ButtonEventId) of the mouse with its roll-over count and button.
@@ -53,12 +65,14 @@ inline EventId GmButtonEvent(UInt32 id, unsigned mouseIndex, UByte rollOverCnt =
 // The buttons that changed give press / release (outside), the held ones drag over / out (and the trackAsMenu
 // transfer); with no button down before, a change of the entity under the mouse gives roll out / over. With the
 // GFx extensions all 16 buttons count, the others as Aux events.
-// MS2-FUNCTIONAL: the roll out / over test takes all the previous buttons (the exe compares the whole state to 0);
-// the mouse state lookup, the WeakPtr locks and the level list search are inlined in the exe
+// The roll out / over test takes all the previous buttons (the exe compares the whole state to 0).
+// MS2-FUNCTIONAL: SDK body; only the changeMask xor differs: the exe loads CurButtonsState and xors PrevButtonsState,
+// ours the other way round whatever the source order (commutative operand order, 2 lines)
 // @0x1429488b0
 void MovieRoot::GenerateMouseEvents(unsigned mouseIndex)
 {
-    Environment* penv       = ToAvmCharacter(GetLevelMovie(0))->GetASEnvironment();
+    Environment* penv       = static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(
+                            GmLevelMovie(this, 0)->GetAvmObjImpl()))->GetASEnvironment();
     UByte        checkCount = penv->CheckExtensions() ? 16 : 1;
 
     MouseState& ms = *GmMouseState(pMovieImpl, mouseIndex);
@@ -71,7 +85,7 @@ void MovieRoot::GenerateMouseEvents(unsigned mouseIndex)
         TopmostEntity = NULL;
     Ptr<InteractiveObject> newActiveEntity = ActiveEntity;
 
-    unsigned changeMask      = ms.GetPrevButtonsState() ^ ms.GetButtonsState();
+    unsigned changeMask      = ms.GetButtonsState() ^ ms.GetPrevButtonsState();
     bool     suppressRollOut = false;
     bool     miel            = ms.IsMouseInsideEntityLast();
     for (UByte buttonIdx = 0; buttonIdx < checkCount; ++buttonIdx)
@@ -82,31 +96,41 @@ void MovieRoot::GenerateMouseEvents(unsigned mouseIndex)
         if (((changeMask >> buttonIdx) & 1) != 0)
         {
             // down before, up now: release, or release outside
-            if ((ms.GetPrevButtonsState() & buttonMask) && (ms.GetButtonsState() & buttonMask) == 0 && ActiveEntity)
+            if (ms.GetPrevButtonsState() & buttonMask)
             {
-                if (ms.IsMouseInsideEntityLast())
+                if ((ms.GetButtonsState() & buttonMask) == 0)
                 {
-                    ActiveEntity->OnMouseEvent(GmButtonEvent(
-                        genAuxEvent ? EventId::Event_ReleaseAux : EventId::Event_Release, mouseIndex, 0, buttonIdx));
-                }
-                else
-                {
-                    if (!ActiveEntity->GetTrackAsMenu())
-                        ActiveEntity->OnMouseEvent(GmButtonEvent(
-                            genAuxEvent ? EventId::Event_ReleaseOutsideAux : EventId::Event_ReleaseOutside,
-                            mouseIndex, 0, buttonIdx));
-                    // no roll out below
-                    suppressRollOut = true;
+                    if (ActiveEntity)
+                    {
+                        if (ms.IsMouseInsideEntityLast())
+                        {
+                            ActiveEntity->OnMouseEvent(GmButtonEvent(
+                                genAuxEvent ? EventId::Event_ReleaseAux : EventId::Event_Release, mouseIndex, 0,
+                                buttonIdx));
+                        }
+                        else
+                        {
+                            if (!ActiveEntity->GetTrackAsMenu())
+                                ActiveEntity->OnMouseEvent(GmButtonEvent(
+                                    genAuxEvent ? EventId::Event_ReleaseOutsideAux : EventId::Event_ReleaseOutside,
+                                    mouseIndex, 0, buttonIdx));
+                            // no roll out below
+                            suppressRollOut = true;
+                        }
+                    }
                 }
             }
             // up before, down now: press
-            if ((ms.GetPrevButtonsState() & buttonMask) == 0 && (ms.GetButtonsState() & buttonMask))
+            if ((ms.GetPrevButtonsState() & buttonMask) == 0)
             {
-                newActiveEntity = TopmostEntity;
-                if (newActiveEntity)
-                    newActiveEntity->OnMouseEvent(GmButtonEvent(
-                        genAuxEvent ? EventId::Event_PressAux : EventId::Event_Press, mouseIndex, 0, buttonIdx));
-                miel = true;
+                if ((ms.GetButtonsState() & buttonMask))
+                {
+                    newActiveEntity = TopmostEntity;
+                    if (newActiveEntity)
+                        newActiveEntity->OnMouseEvent(GmButtonEvent(
+                            genAuxEvent ? EventId::Event_PressAux : EventId::Event_Press, mouseIndex, 0, buttonIdx));
+                    miel = true;
+                }
             }
         }
         else if (ms.GetButtonsState() & buttonMask)
