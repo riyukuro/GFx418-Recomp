@@ -4,7 +4,7 @@
 // its original sources.
 // MS2-UNIT: sfr_kernel_03
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1426ce850-0x1426cf7b0 .text$mn
+// MS2-RANGE: 0x1426ce850-0x1426cf7a0 .text$mn
 #include <new>
 #include <string.h>
 #include "ms2/scaleform/kernel/sf_types.h"

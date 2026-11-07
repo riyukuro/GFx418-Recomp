@@ -164,7 +164,7 @@
 // MS2-RANGE: 0x14293fcd0-0x14293fdee .text$mn
 // MS2-RANGE: 0x14293fdf0-0x14293ff0e .text$mn
 // MS2-RANGE: 0x142946d10-0x142946fc0 .text$mn
-// MS2-RANGE: 0x142941160-0x1429411c0 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142941160-0x142941190 .text$mn   (sfr24: full-exe outside-unit row)
 // MS2-RANGE: 0x142941220-0x142941250 .text$mn   (sfr24: full-exe outside-unit row)
 // MS2-RANGE: 0x142941280-0x1429412b0 .text$mn   (sfr24: full-exe outside-unit row)
 // MS2-RANGE: 0x1429431f0-0x142943200 .text$mn   (sfr24: full-exe outside-unit row)
