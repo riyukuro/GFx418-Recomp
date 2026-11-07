@@ -4387,34 +4387,6 @@ static inline void Sfr31TakeTop(UPInt vmAddr, Sfr31RawTraitsVal& out)
     Sfr31Wr(vmAddr, 0x50, top - 0x20);
 }
 
-// setproperty: pops the value and the object, resolves the multiname and stores the value.
-// MS2-FUNCTIONAL 0x14253b790: raw-offset model; codegen differs from the exe
-// @0x14253b790
-void Sfr31ExecSetProperty(UPInt vmAddr, UPInt file, UInt32 idx)
-{
-    const UPInt cvm = Sfr31Rd(file, 0x20);
-    Sfr31ExecMnCtx ctx = {cvm, cvm + 0x48, file};
-    Sfr31RawTraitsVal val;
-    Sfr31TakeTop(cvm, val);
-    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
-    FUN_1425201f0(&ctx, &mn);
-    const UPInt st = Sfr31Rd(ctx.stack, 8);
-    Sfr31RawTraitsVal obj;
-    for (int i = 0; i < 8; ++i)
-        reinterpret_cast<UInt32*>(&obj)[i] = reinterpret_cast<const UInt32*>(st)[i];
-    Sfr31Wr(ctx.stack, 8, st - 0x20);
-    Sfr31ThrowIfNullOperand(cvm, reinterpret_cast<const UInt32*>(&obj));
-    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
-    {
-        UInt8 ret[16];
-        *reinterpret_cast<UInt32*>(vmAddr + 0x30) += 1;
-        Sfr27SetPropertyOfValue(reinterpret_cast<char*>(ret), reinterpret_cast<VM*>(vmAddr), reinterpret_cast<const Value*>(&obj), &mn, reinterpret_cast<const Value*>(&val));
-        *reinterpret_cast<UInt32*>(vmAddr + 0x30) -= 1;
-    }
-    reinterpret_cast<Value*>(&obj)->~Value();
-    reinterpret_cast<Value*>(&val)->~Value();
-}
-
 // getsuper: reads the named property of the object on top of the stack through the current frame's super traits.
 // MS2-FUNCTIONAL 0x14253a430: raw-offset model; codegen differs from the exe
 // @0x14253a430
@@ -4586,6 +4558,23 @@ void Sfr31ExecInitProperty(UPInt vmAddr, UPInt file, UInt32 idx)
     char result;    // the setter's CheckResult return slot, not read
     Sfr27SetPropertyOfValue(&result, &vm, &args.ArgObject, &args.ArgMN.Get(), &args.ArgValue);
 }
+
+// setproperty: pops the value and the object, resolves the multiname and stores the value (with the VM's counter at +0x30 raised
+// around the store).
+// @0x14253b790
+void Sfr31ExecSetProperty(UPInt vmAddr, UPInt file, UInt32 idx)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    Sfr31ExecReadValueMnObject args(file, idx);
+    if (vm.IsException())
+        return;
+    int& inInitializer = *reinterpret_cast<int*>(vmAddr + 0x30);
+    ++inInitializer;
+    char result;    // the setter's CheckResult return slot, not read
+    Sfr27SetPropertyOfValue(&result, &vm, &args.ArgObject, &args.ArgMN.Get(), &args.ArgValue);
+    --inInitializer;
+}
+
 // ---- batch 30
 // Tracer op: the popped operand becomes the traits describing its class: the Object traits for a null value, otherwise the
 // traits of its dynamic class (or its instance traits when it is a class/function traits holder).
