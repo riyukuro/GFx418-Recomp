@@ -698,43 +698,6 @@ void FUN_14001a3c0(void* self, void*, uint8_t flag)
     void* data = reinterpret_cast<void*(*)(void*)>((*reinterpret_cast<void***>(slot))[0xc])(slot);
     *(static_cast<unsigned char*>(data) + 0x14) = flag;
 }
-// The Video display object's leaf slots; external, the vtable copies of data_rdata_sf_video take their addresses.
-// @0x14001b000
-__declspec(noinline) uint64_t FUN_14001b000(void*) { return 0; }
-// @0x14001b010
-__declspec(noinline) uint64_t FUN_14001b010(void*) { return 0; }
-// @0x14001b020
-__declspec(noinline) uint64_t FUN_14001b020(void*) { return 0; }
-// @0x14001b030
-__declspec(noinline) uint64_t FUN_14001b030(void*) { return 0; }
-// @0x14001b070
-__declspec(noinline) uint8_t FUN_14001b070(void*) { return 1; }
-// AvmInteractiveObj::HasEventHandler
-// @0x14001b080
-__declspec(noinline) bool thunk_FUN_142510dc0(const void* object, const void* id) { return FUN_142510dc0(object, id); }
-// @0x14001b090
-__declspec(noinline) uint8_t FUN_14001b090(void*) { return 1; }
-// @0x14001b0b0
-__declspec(noinline) uint64_t FUN_14001b0b0(void*) { return 0; }
-// AvmInteractiveObj::CloneInternalData. These three overrides come from AvmInteractiveObjBase, so their this is that base
-// (+0x30) and `object` already points at it; the -0x30 cancels the compiler's adjustment (a downcast would add a null test).
-// @0x14001b0c0
-__declspec(noinline) void thunk_FUN_1424efe00(void* object, const void* source) { reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(static_cast<unsigned char*>(object) - 0x30)->Scaleform::GFx::AS3::AvmInteractiveObj::CloneInternalData(static_cast<const Scaleform::GFx::InteractiveObject*>(source)); }
-// AvmInteractiveObj::CopyPhysicalProperties
-// @0x14001b0d0
-__declspec(noinline) void thunk_FUN_1424f1f70(void* object, const void* source) { reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(static_cast<unsigned char*>(object) - 0x30)->Scaleform::GFx::AS3::AvmInteractiveObj::CopyPhysicalProperties(static_cast<const Scaleform::GFx::InteractiveObject*>(source)); }
-// 0x1431b7ea0 [18..22]
-// @0x14001b100
-__declspec(noinline) void FUN_14001b100(void*) {}
-// @0x14001b110
-__declspec(noinline) bool FUN_14001b110(void*) { return false; }
-// @0x14001b120
-__declspec(noinline) bool FUN_14001b120(void*) { return true; }
-// @0x14001b130
-__declspec(noinline) bool FUN_14001b130(void*) { return true; }
-// AvmInteractiveObj::IsTabable
-// @0x14001b140
-__declspec(noinline) bool FUN_14001b140(const void* object) { return reinterpret_cast<const Scaleform::GFx::AS3::AvmInteractiveObj*>(static_cast<const unsigned char*>(object) - 0x30)->Scaleform::GFx::AS3::AvmInteractiveObj::IsTabable(); }
 // The traits' debug class names (slot 2 of each traits vtable; 0x1431b7f60 [16] for the display object).
 // @0x140019af0
 const char* FUN_140019af0(const void*) { return "ClassTraits::NetStream"; }
@@ -744,8 +707,6 @@ const char* FUN_14001a040(const void*) { return "Instances::fl_media::Video"; }
 const char* FUN_14001a0b0(const void*) { return "InstanceTraits::Video"; }
 // @0x14001ae30
 const char* FUN_14001ae30(const void*) { return "ClassTraits::Video"; }
-// @0x14001aff0
-const char* FUN_14001aff0(const void*) { return "flash.media.Video"; }
 
 // releases the retained atom field and runs the inherited AS3 cleanup.
 // @0x140019060
@@ -1113,10 +1074,6 @@ void* FUN_14001aea0(void* object, unsigned flags)
 {
     return VideoAtomHolderDestroy(object, flags);
 }
-// @0x14001afd0
-__declspec(noinline) void* FUN_14001afd0(void* object) { return object ? static_cast<unsigned char*>(object) + 0x40 : 0; }
-// @0x14001afe0
-__declspec(noinline) void* FUN_14001afe0(void* object) { return object ? static_cast<unsigned char*>(object) + 0x30 : 0; }
 
 // releases the retained pointer stored in the holder.
 // @0x14001b980
@@ -1202,24 +1159,6 @@ uint64_t* FUN_14001be50(uint64_t* holder, uint64_t replacement)
     if (*holder) FUN_14257dcb0(reinterpret_cast<void*>(*holder)); *holder = replacement; return holder;
 }
 
-// forwards event dispatch to the common AS3 interactive object handler.
-// @0x14001b040
-__declspec(noinline) bool thunk_FUN_142518c70(void* object, void* event) { return reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(object)->Scaleform::GFx::AS3::AvmInteractiveObj::OnEvent(*static_cast<const Scaleform::GFx::EventId*>(event)); }
-// AvmInteractiveObj::OnEventLoad.
-// @0x14001b050
-__declspec(noinline) void thunk_FUN_142519080(void* object) { reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(object)->Scaleform::GFx::AS3::AvmInteractiveObj::OnEventLoad(); }
-// AvmInteractiveObj::OnEventUnload.
-// @0x14001b060
-__declspec(noinline) void thunk_FUN_142519860(void* object) { reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(object)->Scaleform::GFx::AS3::AvmInteractiveObj::OnEventUnload(); }
-// forwards absolute path formatting to the AS3 display object helper.
-// @0x14001b0a0
-__declspec(noinline) const char* thunk_FUN_142506e10(void* object, void* path) { return reinterpret_cast<Scaleform::GFx::AS3::AvmDisplayObj*>(object)->Scaleform::GFx::AS3::AvmDisplayObj::GetAbsolutePath(static_cast<Scaleform::String*>(path)); }
-// forwards focus changes to the shared AS3 interactive object handler.
-// @0x14001b0e0
-__declspec(noinline) void FUN_14001b0e0(void* object, uint32_t event, void* target, uint32_t controller, uint32_t moved)
-{
-    reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(static_cast<unsigned char*>(object) - 0x30)->Scaleform::GFx::AS3::AvmInteractiveObj::OnFocus(static_cast<Scaleform::GFx::InteractiveObject::FocusEventType>(event), static_cast<Scaleform::GFx::InteractiveObject*>(target), controller, static_cast<Scaleform::GFx::FocusMovedType>(moved));
-}
 // replaces the pointer only after releasing the previously stored value.
 // @0x14001bac0
 uint64_t* FUN_14001bac0(uint64_t* holder, uint64_t replacement)
@@ -2007,6 +1946,61 @@ void Sfr03EmitAvmVideoVftables(void* p, const AvmVideoCharacter* pvideo)
 {
     new (p) AvmVideoCharacter(*pvideo);
 }
+
+// AvmVideoCharacter's own leaves and its forwards to the AvmInteractiveObj / AvmDisplayObj versions.
+// @0x14001afd0
+AvmVideoCharacterBase* AvmVideoCharacter::ToAvmVideoCharacterBase() { return this; }
+// @0x14001afe0
+AvmInteractiveObjBase* AvmVideoCharacter::ToAvmInteractiveObjBase() { return static_cast<AvmInteractiveObj*>(this); }
+// @0x14001aff0
+const char* AvmVideoCharacter::GetDefaultASClassName() const { return "flash.media.Video"; }
+// @0x14001b000
+AvmSpriteBase* AvmVideoCharacter::ToAvmSpriteBase() { return NULL; }
+// @0x14001b010
+AvmButtonBase* AvmVideoCharacter::ToAvmButttonBase() { return NULL; }
+// @0x14001b020
+AvmTextFieldBase* AvmVideoCharacter::ToAvmTextFieldBase() { return NULL; }
+// @0x14001b030
+AvmDisplayObjContainerBase* AvmVideoCharacter::ToAvmDispContainerBase() { return NULL; }
+// @0x14001b040
+bool AvmVideoCharacter::OnEvent(const EventId& id) { return AvmInteractiveObj::OnEvent(id); }
+// @0x14001b050
+void AvmVideoCharacter::OnEventLoad() { AvmInteractiveObj::OnEventLoad(); }
+// @0x14001b060
+void AvmVideoCharacter::OnEventUnload() { AvmInteractiveObj::OnEventUnload(); }
+// @0x14001b070
+bool AvmVideoCharacter::OnUnloading(bool) { return true; }
+// @0x14001b080
+bool AvmVideoCharacter::HasEventHandler(const EventId& id) const { return AvmInteractiveObj::HasEventHandler(id); }
+// @0x14001b090
+bool AvmVideoCharacter::ActsAsButton() const { return true; }
+// @0x14001b0a0
+const char* AvmVideoCharacter::GetAbsolutePath(String* ppath) const { return AvmDisplayObj::GetAbsolutePath(ppath); }
+// @0x14001b0b0
+unsigned AvmVideoCharacter::GetCursorType() const { return 0; }
+// @0x14001b0c0
+void AvmVideoCharacter::CloneInternalData(const InteractiveObject* src) { AvmInteractiveObj::CloneInternalData(src); }
+// @0x14001b0d0
+void AvmVideoCharacter::CopyPhysicalProperties(const InteractiveObject* poldChar)
+{
+    AvmInteractiveObj::CopyPhysicalProperties(poldChar);
+}
+// @0x14001b0e0
+void AvmVideoCharacter::OnFocus(InteractiveObject::FocusEventType event, InteractiveObject* oldOrNewFocusCh,
+                                unsigned controllerIdx, FocusMovedType fmt)
+{
+    AvmInteractiveObj::OnFocus(event, oldOrNewFocusCh, controllerIdx, fmt);
+}
+// @0x14001b100
+void AvmVideoCharacter::OnGettingKeyboardFocus(unsigned, FocusMovedType) {}
+// @0x14001b110
+bool AvmVideoCharacter::OnKeyEvent(const EventId&, int*) { return false; }
+// @0x14001b120
+bool AvmVideoCharacter::OnLosingKeyboardFocus(InteractiveObject*, unsigned, FocusMovedType) { return true; }
+// @0x14001b130
+bool AvmVideoCharacter::IsFocusEnabled(FocusMovedType) const { return true; }
+// @0x14001b140
+bool AvmVideoCharacter::IsTabable() const { return AvmInteractiveObj::IsTabable(); }
 }}} // namespace Scaleform::GFx::AS3
 
 // The AvmVideoCharacter model's vftables and its bases' (pinned as in sfr_as3_17; Scaleform has no RTTI), its
