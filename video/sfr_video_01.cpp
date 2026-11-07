@@ -3181,7 +3181,6 @@ void VideoProviderNetStream::OpenUrl(const char* url, Environment* penv)
     }
 }
 
-// MS2-FUNCTIONAL: still differs under cl 15
 // @0x14000c4a0
 float VideoProviderNetStream::GetFrameTime()
 {
@@ -4341,7 +4340,7 @@ void Object::CheckAndResetCtorRef(FunctionObject*) {}
 ObjectInterface::ObjectType FunctionObject::GetObjectType() const { return static_cast<ObjectType>(0x17); }
 // @0x14000ce80
 bool FunctionObject::IsAsFunction() const { return false; }
-// MS2-FUNCTIONAL 0x14000ce90: the executable tests the native callback pointer at object offset 0x68 for null.
+// The executable tests the native callback pointer at object offset 0x68 for null.
 // @0x14000ce90
 bool CFunctionObject::IsNull() const
 {
@@ -4349,7 +4348,7 @@ bool CFunctionObject::IsNull() const
 }
 // @0x14000cea0
 bool CFunctionObject::IsCFunction() const { return true; }
-// MS2-FUNCTIONAL 0x14000ceb0: the native function wrapper uses -1 as its variable-argument count sentinel.
+// The native function wrapper uses -1 as its variable-argument count sentinel.
 // @0x14000ceb0
 int CFunctionObject::GetNumArgs() const { return -1; }
 // @0x14000e370

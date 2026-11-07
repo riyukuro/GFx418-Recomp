@@ -1310,7 +1310,7 @@ void FUN_140017320(uint64_t* table, const uint64_t* key)
     EraseVideoAtomHashEntry(table, key);
 }
 
-// MS2-FUNCTIONAL: reference-counts CRI movie startup and allocates its eight-handle work area on first use.
+// Reference-counts CRI movie startup and allocates its eight-handle work area on first use.
 // @0x14001b460
 void FUN_14001b460(uint8_t optional)
 {
@@ -1589,7 +1589,7 @@ struct VideoStringDefaults3
     VideoStringDefaults3(const Scaleform::GFx::ASString& x, const Scaleform::GFx::ASString& y, const Scaleform::GFx::ASString& z) : a(x), b(y), c(z) {}
 };
 }
-// MS2-FUNCTIONAL: dispatches the subtitle callback with converted AS3 string parameters.
+// Dispatches the subtitle callback with converted AS3 string parameters.
 // @0x140017670
 void FUN_140017670(void*, void* vm, void* frame, uint64_t property, unsigned count, const uint64_t* args)
 {
@@ -1627,7 +1627,7 @@ namespace {
 
 
 } // namespace (sfr36: the natives below have external linkage, other units take their addresses)
-// MS2-FUNCTIONAL: creates the video metadata object, adds its standard fields, and returns a retained object atom.
+// Creates the video metadata object, adds its standard fields, and returns a retained object atom.
 // @0x1400192e0
 void FUN_1400192e0(void* callback, uint64_t* output)
 {
@@ -1669,10 +1669,10 @@ __forceinline void GetVideoSoundTransform(void* self, uint64_t* output, size_t f
 }
 }
 } // namespace (sfr36: the natives below have external linkage, other units take their addresses)
-// MS2-FUNCTIONAL: resolves flash.media.SoundTransform and applies the instance's current transform value.
+// Resolves flash.media.SoundTransform and applies the instance's current transform value.
 // @0x140019470
 void FUN_140019470(void* self, uint64_t* output) { GetVideoSoundTransform(self, output, 0x88); }
-// MS2-FUNCTIONAL: resolves flash.media.SoundTransform and applies the instance's default transform value.
+// Resolves flash.media.SoundTransform and applies the instance's default transform value.
 // @0x140019660
 void FUN_140019660(void* self, uint64_t* output) { GetVideoSoundTransform(self, output, 0x90); }
 namespace {
@@ -1682,7 +1682,7 @@ __forceinline unsigned char* VideoSelfVM(void* self)
     return *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x20) + 0x78);
 }
 }
-// MS2-FUNCTIONAL: reads the three event handler properties from the attached AS3 stream object.
+// Reads the three event handler properties from the attached AS3 stream object.
 // @0x140017f20
 void FUN_140017f20(void* self, void*, void* frame)
 {

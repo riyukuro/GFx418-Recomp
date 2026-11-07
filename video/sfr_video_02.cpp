@@ -1313,7 +1313,7 @@ UInt16 FUN_14000efc0(Stream* stream) { return stream->ReadU16(); }
 
 }}} // namespace Scaleform::GFx::AS2
 namespace Scaleform { namespace GFx { namespace Video {
-// MS2-FUNCTIONAL: reads the tag fields at the executable offsets (the LoadProcess stream: the alternate one at
+// Reads the tag fields at the executable offsets (the LoadProcess stream: the alternate one at
 // +0x418, else the one at +0x50).
 // @0x14000f2d0
 void VideoCharacterDef::Read(LoadProcess* p, int)
@@ -1577,7 +1577,7 @@ void FUN_140011410(void* path)
         Video02LineTo(path, *reinterpret_cast<float*>(bytes + 0x54), *reinterpret_cast<float*>(bytes + 0x58));
 }
 
-// MS2-FUNCTIONAL: rebuilds a path from its control points, closes it at the current endpoint, and finalizes it.
+// Rebuilds a path from its control points, closes it at the current endpoint, and finalizes it.
 // @0x140011500
 void FUN_140011500(void* object, float x1, float y1, float x2, float y2)
 {
@@ -1621,7 +1621,7 @@ Scaleform::GFx::AS2::Object* FUN_140011d50(void*, Scaleform::GFx::AS2::Environme
     return 0;
 }
 
-// MS2-FUNCTIONAL: releases the interface array storage and runs the executable prototype finalizer.
+// Releases the interface array storage and runs the executable prototype finalizer.
 // @0x140011d90
 void FUN_140011d90(void* object)
 {
@@ -1886,7 +1886,7 @@ void FUN_14000e840(void* object)
 }
 
 
-// MS2-FUNCTIONAL: returns the next paged AS2 collector slot, allocating its 1024-entry page when needed.
+// Returns the next paged AS2 collector slot, allocating its 1024-entry page when needed.
 // @0x140015250
 void* FUN_140015250(void* array)
 {
@@ -2265,7 +2265,7 @@ void FUN_140011de0(Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASS
         ->Scaleform::GFx::AS2::Object::GetMemberRaw(context, *name, value);
 }
 
-// MS2-FUNCTIONAL: the NetConnection constructor: reuses a NetConnection `this` that is not the builtin prototype
+// The NetConnection constructor: reuses a NetConnection `this` that is not the builtin prototype
 // (exe: type 0x21, slot 0x80 IsBuiltinPrototype, AddRef on this-0x20), otherwise allocates a plain Object.
 // @0x140012340
 void FUN_140012340(const Scaleform::GFx::AS2::FnCall& call)
@@ -2784,7 +2784,7 @@ void FUN_1400169b0(void*, void* instance, void* traits, unsigned* output)
     Video02TraitGet<double>(instance, traits, output, DAT_143b274e8, DAT_143b274f0);
 }
 
-// MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
+// Converts the optional trait value and forwards it to the executable setter.
 // @0x140015e20
 void FUN_140015e20(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
@@ -2820,7 +2820,7 @@ void FUN_1400163b0(void*, void* instance, void* traits, void* context, int hasVa
     Video02TraitSet<bool>(instance, traits, context, hasValue, value, DAT_143b27538, DAT_143b27540);
 }
 
-// MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
+// Converts the optional trait value and forwards it to the executable setter.
 // @0x140016410
 void FUN_140016410(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
@@ -2828,7 +2828,7 @@ void FUN_140016410(void*, void* instance, void* traits, void* context, int hasVa
     Video02TraitSet<double>(instance, traits, context, hasValue, value, DAT_143b27618, DAT_143b27620);
 }
 
-// MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
+// Converts the optional trait value and forwards it to the executable setter.
 // @0x1400164a0
 void FUN_1400164a0(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
@@ -2843,7 +2843,7 @@ void FUN_1400165a0(void*, void* instance, void* traits, void* context, int hasVa
     Video02TraitSet<bool>(instance, traits, context, hasValue, value, DAT_143b276b8, DAT_143b276c0);
 }
 
-// MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
+// Converts the optional trait value and forwards it to the executable setter.
 // @0x140016700
 void FUN_140016700(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
@@ -2851,7 +2851,7 @@ void FUN_140016700(void*, void* instance, void* traits, void* context, int hasVa
     Video02TraitSet<double>(instance, traits, context, hasValue, value, DAT_143b275c8, DAT_143b275d0);
 }
 
-// MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
+// Converts the optional trait value and forwards it to the executable setter.
 // @0x140016810
 void FUN_140016810(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
@@ -2859,7 +2859,7 @@ void FUN_140016810(void*, void* instance, void* traits, void* context, int hasVa
     Video02TraitSet<double>(instance, traits, context, hasValue, value, DAT_143b275a8, DAT_143b275b0);
 }
 
-// MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
+// Converts the optional trait value and forwards it to the executable setter.
 // @0x140016920
 void FUN_140016920(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
@@ -2867,7 +2867,7 @@ void FUN_140016920(void*, void* instance, void* traits, void* context, int hasVa
     Video02TraitSet<double>(instance, traits, context, hasValue, value, DAT_143b27658, DAT_143b27660);
 }
 
-// MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
+// Converts the optional trait value and forwards it to the executable setter.
 // @0x140016a30
 void FUN_140016a30(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
@@ -2875,7 +2875,7 @@ void FUN_140016a30(void*, void* instance, void* traits, void* context, int hasVa
     Video02TraitSet<double>(instance, traits, context, hasValue, value, DAT_143b27438, DAT_143b27440);
 }
 
-// MS2-FUNCTIONAL: stores either the supplied AS3 Value or an undefined Value in the active trait slot.
+// Stores either the supplied AS3 Value or an undefined Value in the active trait slot.
 // @0x140016060
 void FUN_140016060(void*, void* instance, void* traits, void* context, int hasValue,
                    Scaleform::GFx::AS3::Value* value)
@@ -2893,7 +2893,7 @@ void FUN_140016060(void*, void* instance, void* traits, void* context, int hasVa
         *reinterpret_cast<int*>(&DAT_143b27680) + reinterpret_cast<char*>(offset), context, stored);
 }
 
-// MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
+// Converts the optional trait value and forwards it to the executable setter.
 // @0x140016ac0
 void FUN_140016ac0(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
