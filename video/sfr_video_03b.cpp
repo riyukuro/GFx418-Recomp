@@ -155,9 +155,9 @@ uint64_t* FUN_142743050(uint64_t* object, void* player, void* streamState, void*
     return object;
 }
 
-// MS2-FUNCTIONAL: initializes the FMOD streaming sound, computes its PCM format, and creates the sound handle.
-// Left: two stores are scheduled one slot later than the exe's: object[8] = 0 lands after the channels argument load, and
-// object[8] = stream lands after the stereo test. Store order, store types and the placement of the format cmoves were all tried.
+// Initializes the FMOD streaming sound, computes its PCM format, and creates the sound handle.
+// The stream slot (object[8]) is cleared through a volatile view and reassigned through a void*& reference;
+// both pin the exe's store schedule.
 // @0x142743240
 uint64_t* FUN_142743240(uint64_t* object, void* owner, void* stream, int stereo, uint32_t rate, uint32_t channels)
 {
@@ -175,14 +175,15 @@ uint64_t* FUN_142743240(uint64_t* object, void* owner, void* stream, int stereo,
     *reinterpret_cast<void***>(object) = &VideoSoundVtable;
     *reinterpret_cast<void***>(node) = &VideoSoundSubVtable;
     object[5] = reinterpret_cast<uintptr_t>(owner);
-    *sound = 0; object[8] = 0;
+    *sound = 0; *reinterpret_cast<void* volatile*>(object + 8) = 0;
     reinterpret_cast<uint32_t*>(object)[18] = rate;
     *reinterpret_cast<uint32_t*>(reinterpret_cast<unsigned char*>(object) + 0x4c) = channels;
     object[0xb] = 0; reinterpret_cast<uint32_t*>(object)[0x18] = 0;
     *reinterpret_cast<uint64_t*>(reinterpret_cast<unsigned char*>(object) + 0x6c) = 0;
     if (stream) FUN_14257dc30(stream);
-    if (object[8]) FUN_14257dcb0(reinterpret_cast<void*>(object[8]));
-    object[8] = reinterpret_cast<uintptr_t>(stream);
+    void*& slot = *reinterpret_cast<void**>(object + 8);
+    if (slot) FUN_14257dcb0(slot);
+    slot = stream;
     const uint32_t format = stereo == 0 ? 2 : 5;
     const uint32_t sampleBits = stereo == 0 ? 0x10 : 0x20;
     const uint32_t soundChannels = *reinterpret_cast<uint32_t*>(reinterpret_cast<unsigned char*>(object) + 0x4c);
