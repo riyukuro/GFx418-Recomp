@@ -3372,71 +3372,66 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // of the loader (the scripts of the last one run). The XML hooks start disabled and the E4X support replaces them
 // once the base classes exist. The exe inlines the Prototype, ValueStack and ValueRegisterFile constructors; ours
 // calls them, and builds the stacks in place over the VM's opaque members.
-// MS2-FUNCTIONAL: out-of-line constructors and a different exception-unwind layout
-// @0x1424dae90
+// the VM's paged call stack, set up ahead of ScopeStack
+template <class U, class C>
+static SF_FORCEINLINE void MS2_VMCallStack(U& Unk070, C& CallStack, MemoryHeap* heap)
+{
+    // the paged call stack: no pages yet, and a default frame on the VM's heap
+    UInt64 def[0xa8 / 8];
+    memset(def, 0, sizeof(def));
+    reinterpret_cast<CallFrame*>(def)->pHeap = heap;
+    for (unsigned i = 1; i < 5; ++i)
+        Unk070[i] = 0;
+    new (CallStack) CallFrame(*reinterpret_cast<CallFrame*>(def));
+    reinterpret_cast<CallFrame*>(def)->~CallFrame();
+}
+
+// The members are built in declaration order, in the initializer list: the exe stores each namespace and traits
+// pointer straight into its member, with no default construction and no release of an old value before the store.
+// The paged stacks are set up first, in ScopeStack's initializer (OpStack, the call stack, then the register file).
+// MS2-FUNCTIONAL: the exe fills the default CallFrame field by field (an inlined constructor; ours zeroes it with
+// memset) and keeps it 16 bytes higher in a larger frame; the rest follows the same call sequence, with small
+// register and store-order differences in the Function/Activation/GlobalObject allocations and the loader loop.
+// Each allocation through MS2_VMNEW runs its constructor only on a non-null block, as a new-expression does.
+#define MS2_VMNEW(T, size, init) [this] { void* pmem = MS2_VMAlloc(MHeap, size); return static_cast<T*>(init); }()
+#define MS2_VMCT(C) MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) C(*this))
 VM::VM(FlashUI& ui, FileLoader& loader, StringManager& string_manager, ASRefCountCollector& gc)
     : Initialized(false), InDestructor(false), StringManagerRef(string_manager), GC(&gc), UI(ui), Loader(loader),
       InInitializer(0), MHeap(Memory::GetHeapByAddress(this)), XMLSupport_(Pickable<XMLSupport>(SF_HEAP_NEW(MHeap)
-      XMLSupport(*this))), ScopeStack(MHeap), HandleException(false), SystemDomain(NULL)
+      XMLSupport(*this))), ScopeStack((new (OpStack) ValueStack(),
+      MS2_VMCallStack(Unk070, CallStack, MHeap), new (RegisterFile) ValueRegisterFile(), MHeap)),
+      HandleException(false), SystemDomain(NULL),
+      PublicNamespace(Pickable<Instances::Namespace>(SF_HEAP_NEW(MHeap) Instances::Namespace(*this, Abc::NS_Public, ""))),
+      AS3Namespace(Pickable<Instances::Namespace>(SF_HEAP_NEW(MHeap) Instances::Namespace(*this, Abc::NS_Public, fl::NS_AS3))),
+      VectorNamespace(Pickable<Instances::Namespace>(
+          SF_HEAP_NEW(MHeap) Instances::Namespace(*this, Abc::NS_Public, fl_vec::NS_Vector))),
+      XMLNamespace(Pickable<Instances::Namespace>(SF_HEAP_NEW(MHeap) Instances::Namespace(*this, Abc::NS_Public, fl::NS_XML))),
+      TraitsClassClass(MS2_VMCT(ClassTraits::ClassClass)), TraitsObject(MS2_VMCT(ClassTraits::fl::Object)),
+      TraitsNamespace(MS2_VMCT(ClassTraits::fl::Namespace)),
+      // the five constructors called through their addresses run only on a non-null allocation (new-expression)
+      TraitsFunction(MS2_PrepareClassTraits(*this, MS2_VMNEW(ClassTraits::Traits, 0xe8,
+          pmem ? ::new (pmem) ClassTraits::Function(*this, fl::FunctionCI) : 0))),
+      TraitsBoolean(MS2_VMCT(ClassTraits::fl::Boolean)), TraitsNumber(MS2_VMCT(ClassTraits::fl::Number)),
+      TraitsInt(MS2_VMCT(ClassTraits::fl::int_)), TraitsUint(MS2_VMCT(ClassTraits::fl::uint)),
+      TraitsString(MS2_VMCT(ClassTraits::fl::String)), TraitsArray(MS2_VMCT(ClassTraits::fl::Array)),
+      Traits240(MS2_VMCT(ClassTraits::fl::Catch)), TraitsVector(MS2_VMCT(ClassTraits::fl_vec::Vector)),
+      TraitsVector_int(MS2_VMCT(ClassTraits::fl_vec::Vector_int)), TraitsVector_uint(MS2_VMCT(ClassTraits::fl_vec::Vector_uint)),
+      TraitsVector_double(MS2_VMCT(ClassTraits::fl_vec::Vector_double)),
+      TraitsVector_String(MS2_VMCT(ClassTraits::fl_vec::Vector_String)),
+      TraitsNull(Pickable<ClassTraits::Traits>(
+          reinterpret_cast<ClassTraits::Traits*>(SF_HEAP_NEW(MHeap) InstanceTraits::Anonimous(*this)))),
+      TraitsVoid(Pickable<ClassTraits::Traits>(
+          reinterpret_cast<ClassTraits::Traits*>(SF_HEAP_NEW(MHeap) InstanceTraits::Void(*this)))),
+      NoFunctionTraits(Pickable<InstanceTraits::Traits>(MS2_VMNEW(InstanceTraits::Traits, 0x100,
+          pmem ? ::new (pmem) InstanceTraits::Function(*this, DAT_14313dc60) : 0))),
+      ActivationTraits(Pickable<InstanceTraits::Traits>(MS2_VMNEW(InstanceTraits::Traits, 0xd0,
+          reinterpret_cast<InstanceTraits::Traits*>(pmem ? ::new (pmem) InstanceTraits::Activation(*this) : 0)))),
+      TraitaGlobalObject(Pickable<InstanceTraits::fl::GlobalObject>(MS2_VMNEW(InstanceTraits::fl::GlobalObject, 0xe8,
+          pmem ? ::new (pmem) InstanceTraits::fl::GlobalObject(*this) : 0))),
+      GlobalObject(Pickable<Instances::fl::GlobalObjectCPP>(MS2_VMNEW(Instances::fl::GlobalObjectCPP, 0xd8,
+          pmem ? ::new (pmem) Instances::fl::GlobalObjectCPP(*this, *TraitaGlobalObject) : 0))),
+      GlobalObjectValue(reinterpret_cast<Object*>(GlobalObject.GetPtr()))
 {
-    new (OpStack) ValueStack();
-    reinterpret_cast<ValueStack*>(&OpStack)->Reserve(1);
-    {
-        // the paged call stack: no pages yet, and a default frame on the VM's heap
-        for (unsigned i = 1; i < 5; ++i)
-            Unk070[i] = 0;
-        UInt64 def[0xa8 / 8];
-        memset(def, 0, sizeof(def));
-        reinterpret_cast<CallFrame*>(def)->pHeap = MHeap;
-        new (CallStack) CallFrame(*reinterpret_cast<CallFrame*>(def));
-        reinterpret_cast<CallFrame*>(def)->~CallFrame();
-    }
-    new (RegisterFile) ValueRegisterFile();
-
-    PublicNamespace = Pickable<Instances::Namespace>(SF_HEAP_NEW(MHeap) Instances::Namespace(*this, Abc::NS_Public, ""));
-    AS3Namespace = Pickable<Instances::Namespace>(SF_HEAP_NEW(MHeap) Instances::Namespace(*this, Abc::NS_Public, fl::NS_AS3));
-    VectorNamespace = Pickable<Instances::Namespace>(
-        SF_HEAP_NEW(MHeap) Instances::Namespace(*this, Abc::NS_Public, fl_vec::NS_Vector));
-    XMLNamespace = Pickable<Instances::Namespace>(SF_HEAP_NEW(MHeap) Instances::Namespace(*this, Abc::NS_Public, fl::NS_XML));
-
-    TraitsClassClass = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::ClassClass(*this));
-    TraitsObject = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::Object(*this));
-    TraitsNamespace = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::Namespace(*this));
-    // the five constructors called through their addresses run only on a non-null allocation (new-expression)
-    void* pmem = MS2_VMAlloc(MHeap, 0xe8);
-    TraitsFunction = MS2_PrepareClassTraits(*this, static_cast<ClassTraits::Traits*>(
-        pmem ? ::new (pmem) ClassTraits::Function(*this, fl::FunctionCI) : 0));
-    TraitsBoolean = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::Boolean(*this));
-    TraitsNumber = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::Number(*this));
-    TraitsInt = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::int_(*this));
-    TraitsUint = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::uint(*this));
-    TraitsString = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::String(*this));
-    TraitsArray = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::Array(*this));
-    Traits240 = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::Catch(*this));
-    TraitsVector = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl_vec::Vector(*this));
-    TraitsVector_int = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl_vec::Vector_int(*this));
-    TraitsVector_uint = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl_vec::Vector_uint(*this));
-    TraitsVector_double = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl_vec::Vector_double(*this));
-    TraitsVector_String = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl_vec::Vector_String(*this));
-
-    TraitsNull = Pickable<ClassTraits::Traits>(
-        reinterpret_cast<ClassTraits::Traits*>(SF_HEAP_NEW(MHeap) InstanceTraits::Anonimous(*this)));
-    TraitsVoid = Pickable<ClassTraits::Traits>(
-        reinterpret_cast<ClassTraits::Traits*>(SF_HEAP_NEW(MHeap) InstanceTraits::Void(*this)));
-    pmem = MS2_VMAlloc(MHeap, 0x100);
-    NoFunctionTraits = Pickable<InstanceTraits::Traits>(
-        static_cast<InstanceTraits::Traits*>(pmem ? ::new (pmem) InstanceTraits::Function(*this, DAT_14313dc60) : 0));
-    pmem = MS2_VMAlloc(MHeap, 0xd0);
-    ActivationTraits = Pickable<InstanceTraits::Traits>(
-        reinterpret_cast<InstanceTraits::Traits*>(pmem ? ::new (pmem) InstanceTraits::Activation(*this) : 0));
-    pmem = MS2_VMAlloc(MHeap, 0xe8);
-    TraitaGlobalObject = Pickable<InstanceTraits::fl::GlobalObject>(
-        static_cast<InstanceTraits::fl::GlobalObject*>(pmem ? ::new (pmem) InstanceTraits::fl::GlobalObject(*this) : 0));
-    pmem = MS2_VMAlloc(MHeap, 0xd8);
-    GlobalObject = Pickable<Instances::fl::GlobalObjectCPP>(static_cast<Instances::fl::GlobalObjectCPP*>(
-        pmem ? ::new (pmem) Instances::fl::GlobalObjectCPP(*this, *TraitaGlobalObject) : 0));
-    GlobalObjectValue = Value(reinterpret_cast<Object*>(GlobalObject.GetPtr()));
-
     XMLSupport_ = Pickable<XMLSupport>(SF_HEAP_NEW(MHeap) XMLSupportImpl(*this));
 
     // functions without traits of their own are constructed by the class Function
@@ -3478,6 +3473,10 @@ VM::VM(FlashUI& ui, FileLoader& loader, StringManager& string_manager, ASRefCoun
     TraitsObject->RegisterSlots();
     TraitsNamespace->RegisterSlots();
 }
+
+// (the two VM-constructor helpers above end here)
+#undef MS2_VMNEW
+#undef MS2_VMCT
 
 // The movie's VM: the classes the movie root makes its display, geometry and event objects from, looked up once.
 // @0x1424d5600
@@ -4772,3 +4771,4 @@ void SoundTransform::panSet(const Value& result, Value::Number v) { SF_UNUSED(re
 // MS2-PIN: ??_7AvmTextFieldBase@GFx@Scaleform@@6B@ 0x14317e508
 // MS2-PIN: ??_7AvmStaticText@AS3@GFx@Scaleform@@6B@ 0x14317e9b8
 // MS2-PIN: ??_7LoadQueueEntryMT_LoadMovie@AS3@GFx@Scaleform@@6B@ 0x14317d890
+// MS2-PIN: ??0VM@AS3@GFx@Scaleform@@QEAA@AEAVFlashUI@123@AEAVFileLoader@123@AEAVStringManager@123@AEAVASRefCountCollector@123@@Z 0x1424dae90
