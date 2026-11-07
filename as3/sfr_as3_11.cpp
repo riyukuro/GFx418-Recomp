@@ -2041,9 +2041,60 @@ namespace Instances { namespace fl_geom
         }
     }
 
+    // The SDK's Matrix4x4<T>::ViewRH / View and Matrix3x4<T>::View with the Point3 Normalize / Cross / Dot they use
+    // (the local Point3 view has none of them). The exe writes the rows straight into the 4x4 (no Matrix3x4 view: its
+    // values stay in registers for the Matrix3F copy) and sets only M[3][3], the rest of row 3 coming from the Clear
+    // (memset of 0x78 bytes).
+    static SF_INLINE void Sfr11Normalize(Render::Point3<double>& v)
+    {
+        double length = sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+        v.x = v.x / length;
+        v.y = v.y / length;
+        v.z = v.z / length;
+    }
+    static SF_INLINE void Sfr11Cross(Render::Point3<double>& v, const Render::Point3<double>& a, const Render::Point3<double>& b)
+    {
+        v.x = a.y * b.z - a.z * b.y;
+        v.y = a.z * b.x - a.x * b.z;
+        v.z = a.x * b.y - a.y * b.x;
+    }
+    static SF_INLINE double Sfr11Dot(const Render::Point3<double>& v, const Render::Point3<double>& pt)
+    {
+        return v.x * pt.x + v.y * pt.y + v.z * pt.z;
+    }
+    static SF_INLINE void Sfr11View3x4(Render::Matrix4x4<double>* m, const Render::Point3<double>& eyePt,
+                                       const Render::Point3<double>& zAxis, const Render::Point3<double>& upVec)
+    {
+        Render::Point3<double> xAxis;
+        Sfr11Cross(xAxis, upVec, zAxis);
+        Sfr11Normalize(xAxis);
+        Render::Point3<double> yAxis;
+        Sfr11Cross(yAxis, zAxis, xAxis);
+        m->M[0][0] = xAxis.x;
+        m->M[0][1] = xAxis.y;
+        m->M[0][2] = xAxis.z;
+        m->M[0][3] = -Sfr11Dot(xAxis, eyePt);
+        m->M[1][0] = yAxis.x;
+        m->M[1][1] = yAxis.y;
+        m->M[1][2] = yAxis.z;
+        m->M[1][3] = -Sfr11Dot(yAxis, eyePt);
+        m->M[2][0] = zAxis.x;
+        m->M[2][1] = zAxis.y;
+        m->M[2][2] = zAxis.z;
+        m->M[2][3] = -Sfr11Dot(zAxis, eyePt);
+    }
+    static SF_INLINE void Sfr11ViewRH(Render::Matrix4x4<double>& m, const Render::Point3<double>& eyePt,
+                                      const Render::Point3<double>& lookAtPt, const Render::Point3<double>& upVec)
+    {
+        Render::Point3<double> zAxis(eyePt.x - lookAtPt.x, eyePt.y - lookAtPt.y, eyePt.z - lookAtPt.z);
+        Sfr11Normalize(zAxis);
+        Sfr11View3x4(&m, eyePt, zAxis, upVec);
+        m.M[3][3] = 1;
+    }
+
     // A view matrix at pos looking along pos - at: the rows are the right, up and look axes, the translation each
     // axis's negated dot with pos. at defaults to (0, 1, 0), up to (0, 0, 1).
-    // MS2-FUNCTIONAL: frame 0x140 vs the exe's 0x150 (the exe spills the up axis and pos.x around the view-row stores)
+    // SDK form: Clear, then ViewRH(pos, at, up).
     // @0x14248c5f0
     void Matrix3D::pointAt(const Value& result, Instances::fl_geom::Vector3D* pos, Instances::fl_geom::Vector3D* at,
                            Instances::fl_geom::Vector3D* up)
@@ -2055,20 +2106,7 @@ namespace Instances { namespace fl_geom
         Render::Point3<double> a = at ? Render::Point3<double>(at->x, at->y, at->z) : Render::Point3<double>(0, 1, 0);
         Render::Point3<double> u = up ? Render::Point3<double>(up->x, up->y, up->z) : Render::Point3<double>(0, 0, 1);
         mat4.Clear();
-        Render::Point3<double> z(p.x - a.x, p.y - a.y, p.z - a.z);
-        double len = sqrt(z.y * z.y + z.x * z.x + z.z * z.z);
-        z.SetPoint(z.x / len, z.y / len, z.z / len);
-        Render::Point3<double> x(u.y * z.z - z.y * u.z, u.z * z.x - z.z * u.x, z.y * u.x - z.x * u.y);
-        len = sqrt(x.y * x.y + x.x * x.x + x.z * x.z);
-        x.SetPoint(x.x / len, x.y / len, x.z / len);
-        Render::Point3<double> y(x.z * z.y - x.y * z.z, x.x * z.z - x.z * z.x, x.y * z.x - x.x * z.y);
-        mat4.M[0][0] = x.x; mat4.M[0][1] = x.y; mat4.M[0][2] = x.z;
-        mat4.M[0][3] = -(x.y * p.y + x.x * p.x + x.z * p.z);
-        mat4.M[1][0] = y.x; mat4.M[1][1] = y.y; mat4.M[1][2] = y.z;
-        mat4.M[1][3] = -(y.y * p.y + y.x * p.x + y.z * p.z);
-        mat4.M[2][0] = z.x; mat4.M[2][1] = z.y; mat4.M[2][2] = z.z;
-        mat4.M[2][3] = -(z.y * p.y + z.x * p.x + z.z * p.z);
-        mat4.M[3][3] = 1.0;
+        Sfr11ViewRH(mat4, p, a, u);
         if (pDispObj)
         {
             Render::Matrix3F m(mat4);
