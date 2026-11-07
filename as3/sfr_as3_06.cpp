@@ -1868,10 +1868,17 @@ namespace Instances { namespace fl_display
         }
     }
 
+    // Ptr::operator=(C&) on *SF_NEW: release the old image and adopt the new one, no self test.
+    static SF_FORCEINLINE void Sfr06PickImage(Ptr<Render::ImageBase>& dst, Render::ImageBase* p)
+    {
+        if (dst.GetPtr())
+            dst->Release();
+        *reinterpret_cast<Render::ImageBase**>(&dst) = p;
+    }
+
     // BitmapData(width, height, transparent = true, fillColor = 0xFFFFFFFF): a drawable image of that size, or a
     // drawable copy of the library bitmap the class is bound to.
     // @0x142440a20
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void BitmapData::AS3Constructor(unsigned argc, const Value* argv)
     {
         if (argc < 2)
@@ -1899,23 +1906,23 @@ namespace Instances { namespace fl_display
         Render::Interfaces ifs;
         typedef void (*GetRenderInterfacesFn)(void*, Render::Interfaces*);
         (*reinterpret_cast<GetRenderInterfacesFn* const*>(pqueue))[2](pqueue, &ifs);
-        Render::ImageBase* pnew = NULL;
+        void* ptm = ifs.pTextureManager;
+        // TextureManager::GetDrawableImageFormat.
+        typedef UInt32 (*GetFormatFn)(void*);
         if (!pImageResource)
         {
-            if (void* pmem = SF_ALLOC(0xc8, Stat_Default_Mem))
-            {
-                // TextureManager::GetDrawableImageFormat.
-                typedef UInt32 (*GetFormatFn)(void*);
-                UInt32 format = (*reinterpret_cast<GetFormatFn* const*>(ifs.pTextureManager))[12](ifs.pTextureManager);
-                pnew = reinterpret_cast<Render::ImageBase*>(new(pmem) Render::DrawableImage(static_cast<Render::ImageFormat>(format),
-                    Render::ImageSize((UInt32)Width, (UInt32)Height), Transparent, Render::Color(fillColor),
-                    reinterpret_cast<Render::DrawableImageContext*>(pcontext)));
-            }
+            void* pmem = SF_ALLOC(0xc8, Stat_Default_Mem);
+            Sfr06PickImage(pImage, pmem ? reinterpret_cast<Render::ImageBase*>(new(pmem) Render::DrawableImage(
+                static_cast<Render::ImageFormat>((*reinterpret_cast<GetFormatFn* const*>(ptm))[12](ptm)),
+                Render::ImageSize((UInt32)Width, (UInt32)Height), Transparent, Render::Color(fillColor),
+                reinterpret_cast<Render::DrawableImageContext*>(pcontext))) : NULL);
         }
-        else if (void* pmem = SF_ALLOC(0xc8, Stat_Default_Mem))
-            pnew = reinterpret_cast<Render::ImageBase*>(new(pmem) Render::DrawableImage(true, pImageResource->GetImage(),
-                reinterpret_cast<Render::DrawableImageContext*>(pcontext)));
-        pImage = Pickable<Render::ImageBase>(pnew);
+        else
+        {
+            void* pmem = SF_ALLOC(0xc8, Stat_Default_Mem);
+            Sfr06PickImage(pImage, pmem ? reinterpret_cast<Render::ImageBase*>(new(pmem) Render::DrawableImage(true,
+                pImageResource->GetImage(), reinterpret_cast<Render::DrawableImageContext*>(pcontext))) : NULL);
+        }
     }
 
     // The optional up, over, down and hit test state objects.
