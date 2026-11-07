@@ -8762,14 +8762,39 @@ void FUN_1400597b0(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
     for (int j = 0; j < 16; ++j) dst[i * stride + j] = cri06_avg(src[i * stride + j], src[i * stride + j + 1]);
 }
 
-// MS2-FUNCTIONAL: 8-wide bidirectional average into dst (8 rows when h == 8, else 4).
+// SSE2 8-wide average of src into dst (8 rows when h == 8, else 4): one pavgb per row, unrolled as in the exe.
+// The exe keeps src in rax throughout (mov rax,rcx at entry), so the leaf returns the advanced src. The table callers
+// ignore it. The last row sits in each branch and reads src + stride, which gives the exe's [s + src] address order.
 // @0x140059ac0
-void FUN_140059ac0(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
+const cri_u1* FUN_140059ac0(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
 {
   (void)off;
-  int rows = h == 8 ? 8 : 4;
-  for (int i = 0; i < rows; ++i)
-    for (int j = 0; j < 8; ++j) dst[i * stride + j] = cri06_avg(src[i * stride + j], dst[i * stride + j]);
+  _mm_storel_epi64((__m128i*)(dst), _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(src)), _mm_loadl_epi64((const __m128i*)(dst))));
+  __int64 s = stride;
+  src += s;
+  dst += s;
+  _mm_storel_epi64((__m128i*)(dst), _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(src)), _mm_loadl_epi64((const __m128i*)(dst))));
+  src += s;
+  dst += s;
+  _mm_storel_epi64((__m128i*)(dst), _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(src)), _mm_loadl_epi64((const __m128i*)(dst))));
+  if (h == 8) {
+    src += s;
+    dst += s;
+    _mm_storel_epi64((__m128i*)(dst), _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(src)), _mm_loadl_epi64((const __m128i*)(dst))));
+    src += s;
+    dst += s;
+    _mm_storel_epi64((__m128i*)(dst), _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(src)), _mm_loadl_epi64((const __m128i*)(dst))));
+    src += s;
+    dst += s;
+    _mm_storel_epi64((__m128i*)(dst), _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(src)), _mm_loadl_epi64((const __m128i*)(dst))));
+    src += s;
+    dst += s;
+    _mm_storel_epi64((__m128i*)(dst), _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(src)), _mm_loadl_epi64((const __m128i*)(dst))));
+    _mm_storel_epi64((__m128i*)(dst + s), _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(src + stride)), _mm_loadl_epi64((const __m128i*)(dst + s))));
+  } else {
+    _mm_storel_epi64((__m128i*)(dst + s), _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(src + stride)), _mm_loadl_epi64((const __m128i*)(dst + s))));
+  }
+  return src;
 }
 
 // MS2-FUNCTIONAL: 8-wide vertical half-pel average, then averaged into dst.

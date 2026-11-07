@@ -1069,7 +1069,7 @@ void FUN_140059700(const cri_u1* src, cri_u1* dst, int off, int stride, int h);
 
 void FUN_1400597b0(const cri_u1* src, cri_u1* dst, int off, int stride, int h);
 
-void FUN_140059ac0(const cri_u1* src, cri_u1* dst, int off, int stride, int h);
+const cri_u1* FUN_140059ac0(const cri_u1* src, cri_u1* dst, int off, int stride, int h);
 
 void FUN_140059b80(const cri_u1* src, cri_u1* dst, int off, int stride, int h);
 
