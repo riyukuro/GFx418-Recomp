@@ -290,18 +290,20 @@ Log* FUN_1423c94e0(MovieImpl* movie)
 
 namespace Scaleform { namespace GFx { namespace IME {
 
-// MS2-FUNCTIONAL: HandleIMEEvent (0 = not handled, 1 = handled, 2 = handled and eaten); the exe tail-calls
-// the composition-start slot.
+// HandleIMEEvent (0 = not handled, 1 = handled, 2 = handled and eaten). The -1 args are written 0xffffffffu so
+// cl does not hoist a shared -1 into a fourth callee-saved register (that blocks the exe's tail call).
 // @0x1423c9780
 unsigned GFxIMEManagerWin32::HandleIMEEvent(Movie* pmovie, const IMEEvent& imeEvent)
 {
     void* self = this;
-    MovieImpl* movie = reinterpret_cast<MovieImpl*>(pmovie);
     const IMEEventView* ev = reinterpret_cast<const IMEEventView*>(&imeEvent);
     if (!At<unsigned char>(self, 0xb9))
     {
-        if (movie)
-            FUN_1423c94e0(movie)->LogWarning("Failure in obtaining list of installed IMEs! IME is disabled");
+        if (pmovie)
+        {
+            Log* plog = FUN_1423c94e0(reinterpret_cast<MovieImpl*>(pmovie));
+            plog->LogWarning("Failure in obtaining list of installed IMEs! IME is disabled");
+        }
         return 0;
     }
     void* bar = At<void*>(self, 0x70);
@@ -330,9 +332,9 @@ unsigned GFxIMEManagerWin32::HandleIMEEvent(Movie* pmovie, const IMEEvent& imeEv
             VCall<void>(At<void*>(self, 0x70), 0x78);
     }
     if (ev->Message == WM_IME_NOTIFY && ev->WParam == IMN_SETCONVERSIONMODE)
-        VCall<void>(At<void*>(self, 0x78), 0x50, -1);
+        VCall<void>(At<void*>(self, 0x78), 0x50, 0xffffffffu);
 
-    if (!VCall<bool>(At<void*>(self, 0x70), 0x30, movie))
+    if (!VCall<bool>(At<void*>(self, 0x70), 0x30, reinterpret_cast<MovieImpl*>(pmovie)))
         return 0;
 
     if (ev->Type == 1)
@@ -341,62 +343,76 @@ unsigned GFxIMEManagerWin32::HandleIMEEvent(Movie* pmovie, const IMEEvent& imeEv
             return 0;
         UINT m = ev->Message;
         BOOL ui = ImmIsUIMessageW(0, m, (WPARAM)ev->WParam, (LPARAM)ev->LParam);
-        if ((m - WM_KEYDOWN < 2 || ui || m == WM_LBUTTONUP) && At<void*>(self, 0x70))
+        if ((m == WM_KEYDOWN || m == WM_KEYUP || ui || m == WM_LBUTTONUP) && At<void*>(self, 0x70))
             VCall<void>(At<void*>(self, 0x70), 0xa8, ev);
         return 2;
     }
     if (At<unsigned>(self, 0x84) == 0x1000000)
         return 0;
 
-    msg = ev->Message;
-    if (msg == WM_IME_ENDCOMPOSITION)
+    switch (ev->Message)
     {
+    case WM_IME_ENDCOMPOSITION:
         VCall<void>(At<void*>(self, 0x70), 0x60, ev->WParam, ev->LParam, ev->Flag != 0);
-        return 1;
-    }
-    if (msg == WM_IME_COMPOSITION)
-    {
+        break;
+    case WM_IME_COMPOSITION:
         VCall<void>(At<void*>(self, 0x70), 0x50, ev->WParam, ev->LParam, ev->Flag);
         return 2;
-    }
-    if (msg != WM_IME_NOTIFY)
-        return msg == WM_IME_CHAR ? 2 : 0;
-
-    UPInt cmd = ev->WParam;
-    if (cmd - IMN_CHANGECANDIDATE > 2 && cmd != 0xe)
+    case WM_IME_CHAR:
+        return 2;
+    case WM_IME_NOTIFY:
     {
-        if (cmd == IMN_SETCONVERSIONMODE)
-            VCall<void>(At<void*>(self, 0x78), 0x50, -1);
-        else if (cmd == IMN_SETOPENSTATUS)
+        UPInt cmd = ev->WParam;
+        if (cmd - IMN_CHANGECANDIDATE > 2 && cmd != 0xe)
         {
-            HIMC context = ImmGetContext(ev->hWnd);
-            BOOL open = ImmGetOpenStatus(context);
-            void* b = At<void*>(self, 0x70);
-            At<unsigned char>(self, 0xb8) = open ? 1 : 0;
-            VCall<void>(b, 0xd0, open ? 1 : 0);
-            if (strcmp(At<String>(self, 0xb0).ToCStr(), "Japanese") == 0)
-                VCall<void>(At<void*>(self, 0x78), 0x50, -1);
-            ImmReleaseContext(ev->hWnd, context);
+            if (cmd == IMN_SETCONVERSIONMODE)
+                VCall<void>(At<void*>(self, 0x78), 0x50, 0xffffffffu);
+            else if (cmd == IMN_SETOPENSTATUS)
+            {
+                HIMC context = ImmGetContext(ev->hWnd);
+                BOOL open = ImmGetOpenStatus(context);
+                void* b = At<void*>(self, 0x70);
+                if (!open)
+                {
+                    At<bool>(self, 0xb8) = false;
+                    VCall<void>(b, 0xd0, false);
+                }
+                else
+                {
+                    At<bool>(self, 0xb8) = true;
+                    VCall<void>(b, 0xd0, true);
+                }
+                if (strcmp(At<String>(self, 0xb0).ToCStr(), "Japanese") == 0)
+                    VCall<void>(At<void*>(self, 0x78), 0x50, 0xffffffffu);
+                ImmReleaseContext(ev->hWnd, context);
+            }
+            else if (cmd == IMN_OPENSTATUSWINDOW)
+            {
+                VCall<void>(At<void*>(self, 0x70), 0xd8, false);
+                VCall<void>(At<void*>(self, 0x70), 0xd8, true);
+                return 0;
+            }
+            VCall<void>(At<void*>(self, 0x70), 0x70, (unsigned)WM_IME_NOTIFY, ev->WParam, ev->LParam);
+            break;
         }
-        else if (cmd == IMN_OPENSTATUSWINDOW)
+        if (!At<unsigned char>(self, 0x80))
         {
-            VCall<void>(At<void*>(self, 0x70), 0xd8, 0);
-            VCall<void>(At<void*>(self, 0x70), 0xd8, 1);
-            return 0;
+            String error;
+            if (static_cast<IMEManagerBase*>(self)->GetCandidateListErrorMsg(&error))
+            {
+                Log* plog = FUN_1423c94e0(reinterpret_cast<MovieImpl*>(pmovie));
+                plog->LogWarning(error.ToCStr());
+            }
+            At<unsigned char>(self, 0x80) = 1;
         }
-        VCall<void>(At<void*>(self, 0x70), 0x70, (unsigned)WM_IME_NOTIFY, ev->WParam, ev->LParam);
-        return 1;
-    }
-    if (!At<unsigned char>(self, 0x80))
-    {
-        String error;
-        if (static_cast<IMEManagerBase*>(self)->GetCandidateListErrorMsg(&error))
-            FUN_1423c94e0(movie)->LogWarning(error.ToCStr());
-        At<unsigned char>(self, 0x80) = 1;
-    }
-    if (!VCall<void*>(At<void*>(self, 0x70), 0x68, (unsigned)WM_IME_NOTIFY, ev->WParam, ev->LParam, 1))
+        if (VCall<void*>(At<void*>(self, 0x70), 0x68, (unsigned)WM_IME_NOTIFY, ev->WParam, ev->LParam, true))
+            return 2;
         return 0;
-    return 2;
+    }
+    default:
+        return 0;
+    }
+    return 1;
 }
 
 // MS2-FUNCTIONAL: Init: picks the XP or Vista candidate/language-bar objects, loads the IME list XML (relative
