@@ -44,18 +44,10 @@ inline Sound::SoundRenderer* GetSoundRenderer(MovieImpl* pmovie)
     return paudio->GetRenderer();
 }
 
-// Runs this.onLoad(success) if the object has a handler.
-inline void InvokeOnLoad(const FnCall& fn, SoundObject* pobj, bool success)
+// Environment::GetGC() const (SDK header inline): StringContext.pContext.
+static __forceinline GlobalContext* EnvGC(const Environment* penv)
 {
-    Value callback;
-    if (pobj->GetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("onLoad"), &callback))
-    {
-        FunctionRef method = callback.ToFunction(fn.Env);
-        Value       result;
-        fn.Env->Push(success);
-        method.Invoke(FnCall(&result, pobj, fn.Env, 1, fn.Env->GetTopIndex()));
-        fn.Env->Drop(1);
-    }
+    return penv->StringContext.pContext;
 }
 
 // Ptr<CharacterHandle> = phandle with the handle's release written out (the exe inlines it; ours does not).
@@ -173,7 +165,6 @@ void SoundProto::GetVolume(const FnCall& fn)
         fn.Result->SetInt(psprite->GetSoundVolume());
 }
 
-// MS2-FUNCTIONAL: other register allocation and frame layout; same URL resolution, sample creation and onLoad calls
 // @0x142996c30
 void SoundProto::LoadSound(const FnCall& fn)
 {
@@ -187,13 +178,16 @@ void SoundProto::LoadSound(const FnCall& fn)
     Sprite*      psprite = pobj->GetSprite();
     if (!psprite)
         return;
+    Environment* penv = fn.Env;
     if (fn.NArgs < 1)
     {
-        fn.Env->LogScriptError("Sound.AttachSound requires one argument (file name)");
+        penv->LogScriptError("Sound.AttachSound requires one argument (file name)");
         return;
     }
-    ASString url       = SoundArg(fn, 0).ToString(fn.Env);
-    bool     streaming = fn.NArgs > 1 ? SoundArg(fn, 1).ToBool(fn.Env) : false;
+    ASString url       = SoundArg(fn, 0).ToString(penv);
+    bool     streaming = false;
+    if (fn.NArgs > 1)
+        streaming = SoundArg(fn, 1).ToBool(fn.Env);
 
     Ptr<LoadStates> pls = *SF_NEW LoadStates(proot->pMainMovieDef->pLoaderImpl, proot->pStateBag);
     String level0Path;
@@ -205,14 +199,23 @@ void SoundProto::LoadSound(const FnCall& fn)
     Ptr<Sound::SoundSample> psample = *pplayer->CreateSampleFromFile(fileName.ToCStr(), streaming);
     if (!psample)
     {
-        InvokeOnLoad(fn, pobj, false);
+        Value callback;
+        if (pobj->GetMemberRaw(fn.Env->GetSC(), EnvGC(fn.Env)->GetStringManager()->CreateConstString("onLoad"), &callback))
+        {
+            FunctionRef method = callback.ToFunction_Call(fn.Env);
+            Value       result;
+            fn.Env->Push(false);
+            method.Invoke(FnCall(&result, pobj, fn.Env, 1, fn.Env->GetTopIndex()));
+            fn.Env->Drop(1);
+        }
         return;
     }
     pobj->pResource = NULL;
     pobj->pSample   = psample;
     if (streaming)
     {
-        Ptr<Sound::SoundChannel> pchan = *pplayer->PlaySample(psample, true);
+        Ptr<Sound::SoundChannel> pchan;
+        pchan = *pplayer->PlaySample(pobj->pSample, true);
         if (pchan)
         {
             pchan->SetVolume(psprite->GetRealSoundVolume());
@@ -221,7 +224,15 @@ void SoundProto::LoadSound(const FnCall& fn)
             psprite->AddActiveSound(pchan, pobj, pobj->pResource);
         }
     }
-    InvokeOnLoad(fn, pobj, true);
+    Value callback;
+    if (pobj->GetMemberRaw(fn.Env->GetSC(), EnvGC(fn.Env)->GetStringManager()->CreateConstString("onLoad"), &callback))
+    {
+        FunctionRef method = callback.ToFunction_Call(fn.Env);
+        Value       result;
+        fn.Env->Push(true);
+        method.Invoke(FnCall(&result, pobj, fn.Env, 1, fn.Env->GetTopIndex()));
+        fn.Env->Drop(1);
+    }
     fn.Env->Drop(1);
 }
 
