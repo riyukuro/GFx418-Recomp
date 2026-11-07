@@ -342,67 +342,88 @@ void FUN_142620b50(char* self, char* snap)
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
 
-// Snapshots each histogram of the per-type table (non-empty bins scaled to microseconds) into a new object.
-// @0x1426214b0
-void FUN_1426214b0(char* self, char* snap)
+// ViewStats::BufferInstructionTimes: one counted array of per-offset times.
+struct AmpBufferInstructionTimes : public RefCountBase<AmpBufferInstructionTimes, 0x246>
 {
-    if (!reinterpret_cast<Mutex*>(self + 0xa8)->TryLock())
-        return;
-    U* table = RawField<U*>(self, 0xa0);
-    if (table)
+    AmpBufferInstructionTimes(UInt32 size) : Times(size)
     {
-        for (U i = 0; i <= table[1]; i++)
-        {
-            char* e = RawEntry(table, i, 0x20);
-            if (*(SPInt*)e == -2)
-                continue;
-            char* hist = RawField<char*>(e, 0x18);
-            U bins = RawField<U>(hist, 0x18);
-            unsigned used = 0;
-            for (U j = 0; j < bins; j++)
-                if (((U*)RawField<U>(hist, 0x10))[j])
-                    used++;
-            if (!used)
-                continue;
-            char* obj = (char*)Memory::AllocAutoHeap(snap, 0x38, AllocInfo(0x242, 0, 0));
-            if (obj)
-            {
-                memset(obj + 8, 0, 0x30);
-                *(int*)(obj + 8) = 1;
-                *(void**)obj = DAT_14318f020;
-            }
-            U key = RawField<U>(e, 0x10);
-            RawField<int>(obj, 0x10) = (int)(key >> 32);
-            RawField<int>(obj, 0x14) = (int)key;
-            RawField<int>(obj, 0x18) = (int)bins;
-            U* recs = RawFieldPtr<U>(obj, 0x20);
-            if (recs[2] <= used)
-                reinterpret_cast<Sfr07iFillArr*>(recs)->Reserve(recs, used + (used >> 2));
-            recs[1] = used;
-            U n = 0;
-            for (U j = 0; j < RawField<U>(hist, 0x18); j++)
-            {
-                U v = ((U*)RawField<U>(hist, 0x10))[j];
-                if (v)
-                {
-                    char* rec = (char*)recs[0] + n * 0x10;
-                    *(int*)rec = (int)j;
-                    n++;
-                    *(U*)(rec + 8) = (v * 1000000) / Timer::GetRawFrequency();
-                }
-            }
-            char* list = RawField<char*>(snap, 0x58);
-            U* array = RawFieldPtr<U>(list, 0x10);
-            U count = array[1] + 1;
-            if (array[2] <= count)
-                FUN_142623e40(array, array, count + (count >> 2));
-            array[1] = count;
-            FUN_14257dc30(obj);
-            ((void**)array[0])[count - 1] = obj;
-            FUN_14257dcb0(obj);
-        }
+        memset(&Times[0], 0, size * sizeof(Times[0]));
     }
-    reinterpret_cast<Mutex*>(self + 0xa8)->Unlock();
+    ArrayLH<UInt64, 0x246> Times;
+};
+
+// ViewStats::CollectAmpInstructionStats: copies each buffer's non-zero instruction times (in microseconds) into a new ScriptBufferStats and appends it to the movie profile.
+// @0x1426214b0
+// MS2-FUNCTIONAL: same size and instruction sequence as the exe (871 B). Only the registers in the inlined BufferStatsArray PushBack resize differ: exe rsi/r15/rdi/rbp = array/newSize/p/count, ours r15/rbp/rsi/rdi (regalloc). Tried a Ptr local + copy-construct, an SDK DestructArray helper and a ResizeNoConstruct helper.
+void FUN_1426214b0(char* self, AMP::MovieProfile* movieProfile)
+{
+    typedef HashLH<UInt64, Ptr<AmpBufferInstructionTimes> > InstructionTimingMap;
+    typedef AMP::MovieInstructionStats::ScriptBufferStats ScriptBufferStats;
+    // SDK ConstructorMov<T>::DestructArray: destroys count elements from the last one down.
+    struct DestructArray { static void Run(Ptr<ScriptBufferStats>* first, UPInt count) { first += count - 1; for (; count; --count, --first) first->~Ptr<ScriptBufferStats>(); } };
+    Mutex& instructionTimingMutex = *reinterpret_cast<Mutex*>(self + 0xa8);
+    if (instructionTimingMutex.TryLock())
+    {
+        InstructionTimingMap& instructionTimingsMap = *reinterpret_cast<InstructionTimingMap*>(self + 0xa0);
+        InstructionTimingMap::Iterator it;
+        for (it = instructionTimingsMap.Begin(); it != instructionTimingsMap.End(); ++it)
+        {
+            Ptr<AmpBufferInstructionTimes>& buffer = it->Second;
+
+            unsigned nonZeroTimes = 0;
+            for (UPInt i = 0; i < buffer->Times.GetSize(); i++)
+            {
+                if (buffer->Times[i] != 0)
+                    ++nonZeroTimes;
+            }
+
+            if (nonZeroTimes > 0)
+            {
+                Ptr<ScriptBufferStats> nonZeroValues = *SF_HEAP_AUTO_NEW(movieProfile) ScriptBufferStats();
+
+                nonZeroValues->SwdHandle = static_cast<UInt32>(it->First >> 32);
+                nonZeroValues->BufferOffset = static_cast<UInt32>(it->First);
+                nonZeroValues->BufferLength = static_cast<UInt32>(buffer->Times.GetSize());
+                U* recs = reinterpret_cast<U*>(&nonZeroValues->InstructionTimesArray);
+                UPInt newSize = nonZeroTimes;
+                if (newSize < recs[1])
+                {
+                    if (newSize < (recs[2] >> 1))
+                        reinterpret_cast<Sfr07iFillArr*>(recs)->Reserve(recs, newSize);
+                }
+                else if (newSize >= recs[2])
+                    reinterpret_cast<Sfr07iFillArr*>(recs)->Reserve(recs, newSize + (newSize >> 2));
+                recs[1] = newSize;
+
+                unsigned nonZeroCount = 0;
+                for (UPInt i = 0; i < buffer->Times.GetSize(); i++)
+                {
+                    if (buffer->Times[i] != 0)
+                    {
+                        AMP::MovieInstructionStats::InstructionTimePair& pair = nonZeroValues->InstructionTimesArray[nonZeroCount];
+                        pair.Offset = static_cast<UInt32>(i);
+                        pair.Time = buffer->Times[i] * 1000000 / Timer::GetRawFrequency();
+                        ++nonZeroCount;
+                    }
+                }
+
+                U* array = reinterpret_cast<U*>(&movieProfile->InstructionStats->BufferStatsArray);
+                UPInt oldSize = array[1];
+                UPInt newSize2 = oldSize + 1;
+                if (newSize2 < oldSize)
+                {
+                    DestructArray::Run((Ptr<ScriptBufferStats>*)array[0] + newSize2, oldSize - newSize2);
+                    if (newSize2 < (array[2] >> 1))
+                        FUN_142623e40(array, array, newSize2);
+                }
+                else if (newSize2 >= array[2])
+                    FUN_142623e40(array, array, newSize2 + (newSize2 >> 2));
+                array[1] = newSize2;
+                new ((Ptr<ScriptBufferStats>*)array[0] + newSize2 - 1) Ptr<ScriptBufferStats>(nonZeroValues);
+            }
+        }
+        instructionTimingMutex.Unlock();
+    }
 }
 
 // Copies the running per-name values (scaled to microseconds) into the snapshot.
@@ -746,16 +767,6 @@ bool FUN_1426229d0(char* self)
     typedef char (*Fn)(void*);
     return ((Fn*)RawField<void**>(self, 0x178))[1](self + 0x178) == 0;
 }
-
-// ViewStats::BufferInstructionTimes: one counted array of per-offset times.
-struct AmpBufferInstructionTimes : public RefCountBase<AmpBufferInstructionTimes, 0x246>
-{
-    AmpBufferInstructionTimes(UInt32 size) : Times(size)
-    {
-        memset(&Times[0], 0, size * sizeof(Times[0]));
-    }
-    ArrayLH<UInt64, 0x246> Times;
-};
 
 // ViewStats::LockBufferInstructionTimes: returns the per-key record array for (a, b), creating it with `count` zeroed words on first use.
 // MS2-FUNCTIONAL: the unrolled SDBM key hash sums its bytes in another order (exe 6,7,4,5, ours 4,5,7,6 after 3,2,1); same size and blocks
@@ -1249,3 +1260,5 @@ template void Scaleform::ArrayDataBase<Scaleform::GFx::AmpCallInfoSlot, Scalefor
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0CEG@@Scaleform@@6B@ 0x14318f060
 // MS2-PIN: ??_7FunctionDesc@AMP@GFx@Scaleform@@6B@ 0x14318f030
 // MS2-PIN: ??_7?$RefCountBase@UFunctionDesc@AMP@GFx@Scaleform@@$0CEC@@Scaleform@@6B@ 0x14318f030
+// MS2-PIN: ??_7ScriptBufferStats@MovieInstructionStats@AMP@GFx@Scaleform@@6B@ 0x14318f020
+// MS2-PIN: ??_7?$RefCountBase@UScriptBufferStats@MovieInstructionStats@AMP@GFx@Scaleform@@$0CEC@@Scaleform@@6B@ 0x14318f020
