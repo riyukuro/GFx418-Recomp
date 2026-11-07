@@ -2519,7 +2519,8 @@ void Sfr31ShutdownRegistered(UPInt self)
 
 // Runs the slot (kind bits 5..9 are not a getter unless the caller asked for one) through the invoke helper.
 // The store stays the free Sfr31StoreSlotValue (VTable::SetMethod): with SetMethod's const ASString& parameter this
-// caller reloads the name node after the call, where the exe keeps it in rbx.
+// caller reloads the name node after the call, where the exe keeps it in rbx. The ASString copy is written as a node
+// pointer whose copy is passed, because the callee chain makes an indirect call (String dtor) and an escaped local is reloaded.
 // @0x1425311c0
 __declspec(noinline) void Traits::UpdateVT(const SlotInfo& si, const Value& v, SlotInfo::BindingType argc)
 {
@@ -2528,8 +2529,9 @@ __declspec(noinline) void Traits::UpdateVT(const SlotInfo& si, const Value& v, S
     const SInt32 bt = si.BindType;
     if (bt != SlotInfo::BT_Code || argc == bt)
     {
-        ASString name(si.Name.GetPtr());
-        Sfr31StoreSlotValue(traits, index, &v, argc, reinterpret_cast<const UPInt*>(&name));
+        ASStringNode* const node = si.Name.GetPtr();   // ASString name(node): the copy below holds it, node stays in a register
+        ASStringNode* name = node; node->AddRef();
+        Sfr31StoreSlotValue(traits, index, &v, argc, reinterpret_cast<const UPInt*>(&name)); node->Release();
     }
 }
 
@@ -5931,42 +5933,40 @@ void Sfr31ExecCallSuperArgsA(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc) 
 void Sfr31ExecCallSuperArgsB(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc) { Sfr31CallSuperBody(vmAddr, file, idx, argc, false); }
 // ---- batch 49
 // Stores the accessor-prefixed name for a slot: kind 0xb keeps the name, 0xc stores "get " + name at idx, 0xd stores "set " + name at idx + 1.
-// MS2-FUNCTIONAL 0x1425283c0: raw-offset model; the string concatenation goes through the string manager directly
+// MS2-FUNCTIONAL 0x1425283c0: regalloc and CSE: the exe recomputes idx + 1 in the set case (ours keeps it in edi from the first Resize), so the registers and the set-path String slot differ
 // @0x1425283c0
+struct Sfr31VTNamesView { UPInt Pad[4]; Scaleform::Sfr19NamesData Names; };
 __declspec(noinline) void Sfr31StoreSlotName(UPInt vt, UInt32 idx, int kind, const UPInt* name)
 {
-    UPInt* names = reinterpret_cast<UPInt*>(vt + 0x20);
-    if (names[1] <= idx)
-        reinterpret_cast<Scaleform::Sfr19NamesData*>(names)->Resize(idx + 1);
-    UPInt slotIdx = idx;
-    const char* prefix = 0;
-    if (kind == 0xc)
-        prefix = "get ";
-    else if (kind == 0xd)
+#define Names (reinterpret_cast<Sfr31VTNamesView*>(vt)->Names)
+    const ASString& nm = *reinterpret_cast<const ASString*>(name);
+    if (idx >= Names.Size)
+        Names.Resize(idx + 1);
+    switch (kind)
     {
-        slotIdx = idx + 1;
-        if (names[1] <= slotIdx)
-            reinterpret_cast<Scaleform::Sfr19NamesData*>(names)->Resize(idx + 2);
-        prefix = "set ";
-    }
-    else if (kind != 0xb)
-        return;
-    UPInt* slot = reinterpret_cast<UPInt*>(names[0]) + slotIdx;
-    UPInt node = *name;
-    if (prefix == 0)
+    case 0xb:
+        Names.Data[idx] = nm;
+        break;
+    case 0xc:
     {
-        ++*reinterpret_cast<int*>(node + 0x18);
+        String s = String("get ") + String(nm.ToCStr(), nm.GetSize());
+        ASString& d = Names.Data[idx];
+        d.AssignNode(d.GetManager()->CreateStringNode(s.ToCStr(), s.GetSize()));
+        break;
     }
-    else
+    case 0xd:
     {
-        ASStringManager* mgr = reinterpret_cast<ASStringManager*>(Sfr31Rd(*slot, 8));
-        ASStringNode* n = mgr->CreateStringNode(prefix, 4, reinterpret_cast<const char*>(Sfr31Rd(node, 0)),
-                                                *reinterpret_cast<const UInt32*>(node + 0x20));
-        node = reinterpret_cast<UPInt>(n);
-        ++*reinterpret_cast<int*>(node + 0x18);
+        if (idx + 1 >= Names.Size)
+            Names.Resize(idx + 1 + 1);
+        String s = String("set ") + String(nm.ToCStr(), nm.GetSize());
+        ASString& d = Names.Data[idx + 1];
+        d.AssignNode(d.GetManager()->CreateStringNode(s.ToCStr(), s.GetSize()));
+        break;
     }
-    Sfr31ReleaseStr(*slot);
-    *slot = node;
+    default:
+        break;
+    }
+#undef Names
 }
 
 // Records a value in the slot table: the name goes in through the accessor-name store, then the value cell at the slot (or slot + 1 for setters) is assigned.
