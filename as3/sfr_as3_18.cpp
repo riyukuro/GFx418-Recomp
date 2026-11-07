@@ -9436,12 +9436,7 @@ void FUN_14251bda0(UPInt self, FlashUI::OutputMessageType type, const char* msg)
 #define SFR21_THUNK(name, off, target) \
     void name(UPInt self) { target(self - off); }
 
-// MS2-FUNCTIONAL: adjustor thunk; the exe has the compiler-generated sub rcx,N, a hand-written one gives add rcx,-N
-// @0x1425190d4
-SFR21_THUNK(FUN_1425190d4, 0x30, FUN_1425190d0)
-// MS2-FUNCTIONAL: adjustor thunk; the exe has the compiler-generated sub rcx,N, a hand-written one gives add rcx,-N
-// @0x1425190e0
-SFR21_THUNK(FUN_1425190e0, 0x40, FUN_1425190d0)
+// (0x1425190d4 / 0x1425190e0 are cl's AvmStage::OnEventLoad adjustor thunks, emitted by Sfr18EmitAvmStageVftables)
 // MS2-FUNCTIONAL: adjustor thunk
 // @0x142519898
 SFR21_THUNK(FUN_142519898, 0x30, FUN_142519890)
@@ -9489,6 +9484,13 @@ void Sfr18EmitAvmVftables(void* p, const AvmButton* pbtn, void* q, const AvmText
 {
     new (p) AvmButton(*pbtn);
     new (q) AvmTextField(*ptxt);
+}
+
+// AvmStage (as3_avm.h) likewise: its OnEventLoad thunks for the +0x30 / +0x40 parts are the exe's 0x1425190d4 /
+// 0x1425190e0 (sub rcx,N; jmp OnEventLoad).
+void Sfr18EmitAvmStageVftables(void* p, const AvmStage* pstage)
+{
+    new (p) AvmStage(*pstage);
 }
 }}} // namespace Scaleform::GFx::AS3
 
@@ -9539,3 +9541,12 @@ void Sfr18EmitAvmVftables(void* p, const AvmButton* pbtn, void* q, const AvmText
 // MS2-PIN: ?OnUnloading@AvmButton@AS3@GFx@Scaleform@@WEA@EAA_N_N@Z 0x14251af30
 // MS2-PIN: ?OnUnloading@AvmTextField@AS3@GFx@Scaleform@@WDA@EAA_N_N@Z 0x14251b0f4
 // MS2-PIN: ?OnUnloading@AvmTextField@AS3@GFx@Scaleform@@WEA@EAA_N_N@Z 0x14251b100
+// MS2-PIN: ?OnEventLoad@AvmStage@AS3@GFx@Scaleform@@WDA@EAAXXZ 0x1425190d4
+// MS2-PIN: ?OnEventLoad@AvmStage@AS3@GFx@Scaleform@@WEA@EAAXXZ 0x1425190e0
+// MS2-PIN: ??_7AvmStage@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317d600
+// MS2-PIN: ??_7AvmStage@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317d6f8
+// MS2-PIN: ??_7AvmStage@AS3@GFx@Scaleform@@6B@ 0x14317d7b0
+// MS2-PIN: ??_7AvmDisplayObjContainerBase@GFx@Scaleform@@6B@ 0x14317c0a0
+// MS2-PIN: ??_7AvmDisplayObjContainer@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317cbe8
+// MS2-PIN: ??_7AvmDisplayObjContainer@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317cce0
+// MS2-PIN: ??_7AvmDisplayObjContainer@AS3@GFx@Scaleform@@6B@ 0x14317cd98
