@@ -1633,13 +1633,19 @@ inline MemberSet::Iterator MemberHash_Find(ASStringHash_GC<Member>* phash, const
         return MemberSet::Iterator(reinterpret_cast<MemberSet*>(phash), index);
     return MemberSet::Iterator(0, 0);
 }
-inline MemberSet::Iterator MemberHash_FindNoCase(ASStringHash_GC<Member>* phash, const ASString& key)
+// FindAlt / FindCaseInsensitive / FindCaseCheck in the SDK's nesting: DeleteMember inlines it with both lookups
+// sharing one index test (a flat FindNoCase gives each lookup its own).
+inline MemberSet::Iterator MemberHash_FindAlt(ASStringHash_GC<Member>* phash, const ASStringNoCaseKey& key)
 {
-    ASStringNoCaseKey ikey(key);
-    SPInt index = HashFindIndex(phash, ikey);
+    SPInt index = HashFindIndex(phash, key);
     if (index >= 0)
         return MemberSet::Iterator(reinterpret_cast<MemberSet*>(phash), index);
     return MemberSet::Iterator(0, 0);
+}
+inline MemberSet::Iterator MemberHash_FindCaseInsensitive(ASStringHash_GC<Member>* phash, const ASString& key)
+{
+    ASStringNoCaseKey ikey(key);
+    return MemberHash_FindAlt(phash, ikey);
 }
 static SF_FORCEINLINE MemberSet::Iterator MemberHash_FindOut(ASStringHash_GC<Member>* phash, const ASString& key)
 {
@@ -1651,7 +1657,7 @@ static SF_FORCEINLINE MemberSet::Iterator MemberHash_FindOut(ASStringHash_GC<Mem
 inline MemberSet::Iterator MemberHash_FindCaseCheck(ASStringHash_GC<Member>* phash, const ASString& key,
                                                     bool caseSensitive)
 {
-    return caseSensitive ? MemberHash_FindOut(phash, key) : MemberHash_FindNoCase(phash, key);
+    return caseSensitive ? MemberHash_FindOut(phash, key) : MemberHash_FindCaseInsensitive(phash, key);
 }
 
 // Hash::Remove of the member table: unlinks the slot of key (the chain successor moves into a freed head slot).
@@ -1701,7 +1707,6 @@ static SF_FORCEINLINE void MemberHash_Remove(ASStringHash_GC<Member>* phash, con
     pTable->EntryCount--;
 }
 
-// MS2-FUNCTIONAL block layout only: the exe jumps from the case-sensitive findIndexAlt call to a shared index test placed after the no-case call; ours places it after the case-sensitive call
 // @0x1429388e0
 bool Object::DeleteMember(ASStringContext* psc, const ASString& name)
 {
