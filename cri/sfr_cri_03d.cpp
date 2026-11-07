@@ -273,11 +273,6 @@ CRI_C_LINKAGE CriSint32 createMpvHn(void* handle, void* heap, CriUint32 width, C
 CRI_C_LINKAGE CriSint32 decideInternalFramePoolNum(CriSint32 count);
 CRI_C_LINKAGE unsigned __int64 SJRBF_Create(unsigned __int64 source, unsigned int first, unsigned int second);
 CRI_C_LINKAGE void FUN_140041110(void* owner, const char* message, CriUint32 value);
-// the C names bind to sfr_cri_03's C++ definitions, and its C++ caller's name to the C definition below
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:criVmpv_Destroy=?criVmpv_Destroy@@YAXPEAX@Z")
-#pragma comment(linker, "/alternatename:?criVmpv_Create@@YAPEAXPEAXPEBK@Z=criVmpv_Create")
-#endif
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 typedef struct VmpvFields
