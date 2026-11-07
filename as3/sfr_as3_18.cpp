@@ -64,7 +64,8 @@ UPInt Sfr31ResolveClassTraits(UPInt vm, UPInt file, UPInt mn);                  
 UPInt Sfr31FindClassTraitsByMn(UPInt vm, UPInt mn);                                               // 0x142525270
 Value* Sfr31ResolveInvokeAlias(UPInt proot, const char* pname);                                   // 0x142525400
 ClassTraits::Traits* Sfr31GetClassTraitsByInfo(VM* vm, UPInt info);                               // 0x142525ca0
-void Sfr27MultinameFromQName(Multiname* mn, const Value* qname);                                  // 0x1425273b0
+// noalias: the exe (LTCG) keeps FUN_14250dd20's name Value in registers across this call.
+__declspec(noalias) void Sfr27MultinameFromQName(Multiname* mn, const Value* qname);              // 0x1425273b0
 void Sfr31SetResource(UPInt bitmap, Resource* pimage);                                            // 0x1425274b0
 void Sfr31SetGcRefClearFlags(unsigned long* mn, UPInt ns);                                        // 0x142528d20
 void Sfr31VMRaiseError(UPInt vm, const unsigned long* error, UPInt classInfo);                    // 0x14252ecb0
@@ -617,6 +618,23 @@ struct ValueAssignCopies
     }
     // The release of a Value known to hold a strong object (no kind or weak-ref test).
     static SF_INLINE void ReleaseStrongInline18(Value& v) { v.ReleaseInternal(); }
+    // Value(Object*) built in place, with its null test.
+    static SF_INLINE void InitObjectNullInline18(Value& v, Object* p)
+    {
+        v.Flags            = Value::kObject;
+        v.Bonus.pWeakProxy = NULL;
+        v.value.VS._1.VObj = p;
+        if (p)
+            p->AddRef();
+    }
+    // Value::AssignUnsafe(const Value&) without the self test, as the Multiname ctor inlines it.
+    static SF_FORCEINLINE void AssignFreshInline18(Value& v, const Value& other)
+    {
+        v.Release();
+        SIMD::PrefetchObj(&other);
+        memcpy(&v, &other, sizeof(Value));
+        v.AddRef();
+    }
 };
 
 // The value of a traced pointer: a null object when it is empty.
@@ -7043,8 +7061,52 @@ struct Sfr18SelfValue
 {
     union { Value V; };
     explicit Sfr18SelfValue(Object* p) { ValueAssignCopies::InitObjectInline18(V, p); }
+    // Value(Object*) with its null test (the exe's FUN_14250dd20).
+    struct NullTested {};
+    Sfr18SelfValue(Object* p, NullTested)
+    { ValueAssignCopies::InitObjectNullInline18(V, p); }
     ~Sfr18SelfValue() { ValueAssignCopies::ReleaseStrongInline18(V); }
 };
+
+// Multiname::PostProcessName(false) (0x14251cef0) as the exe inlines it into FUN_14250dd20.
+static __forceinline void Sfr18PostProcessName(Multiname& mn)
+{
+    if (!mn.Name.IsString())
+        return;
+    ASString n = mn.Name.AsString();
+    if (n.GetSize() == 0)
+        return;
+    if (n[0] == '*')
+        FUN_1424e0d40(mn.Name, ASString(n.GetManager()->GetEmptyStringNode()));
+    else if (n[0] == '@')
+    {
+        mn.Kind = static_cast<Abc::MultinameKind>(mn.Kind | 8);
+        if (n.GetSize() == 2 && n[1] == '*')
+            FUN_1424e0d40(mn.Name, ASString(n.GetManager()->GetEmptyStringNode()));
+        else
+            FUN_1424e0d40(mn.Name, ASString(n.SubstringNode(1, n.GetSize())));
+    }
+}
+
+// Multiname(Namespace&, const Value&) (0x1424d8a90) with Value::AssignUnsafe inlined, as FUN_14250dd20 has it
+// (the same declaration sfr_as3_17d defines for FireEvent; this unit's copy inlines its own PostProcessName).
+__forceinline Multiname::Multiname(Instances::Namespace& ns, const Value& name, InlineAssignTag)
+    : Kind(static_cast<Abc::MultinameKind>(0))
+    , Obj(&ns)
+{
+    const UInt32 k = static_cast<UInt32>(name.GetKind());
+    if (k - 0xc <= 3 && name.GetGASRefCountBase() != NULL)
+    {
+        const Traits& tr = reinterpret_cast<Object*>(name.GetGASRefCountBase())->GetTraits();
+        if (static_cast<int>(tr.TraitsType) == 0xc && (static_cast<UInt8>(~static_cast<UInt8>(static_cast<UInt8>(tr.Flags) >> 5)) & 1) != 0)
+        {
+            Sfr27MultinameFromQName(this, &name);
+            return;
+        }
+    }
+    ValueAssignCopies::AssignFreshInline18(Name, name);
+    Sfr18PostProcessName(*this);
+}
 
 // The property prop_name of this object (its slot or dynamic value, getters run) swapped into value; false when
 // there is none or it could not be read.
@@ -7094,7 +7156,10 @@ CheckResult Object::GetProperty(const Multiname& prop_name, Value& value)
 
 // Object::GetProperty(name, ns, value): the property name of namespace ns (FindObjProperty, then its value read
 // into value, getters run); false when there is none or it could not be read.
-// MS2-FUNCTIONAL free function returning its CheckResult through ret, as sfr_as3_17 declares it
+// MS2-FUNCTIONAL free function returning its CheckResult through ret, as sfr_as3_17 declares it. The Multiname ctor,
+// Value(ASString), PostProcessName and the slot read are inlined as in the exe; left: regalloc (the exe keeps the
+// name Value's flags and bonus in registers to its release, saves r12/r15 and shrink-wraps rbx) and PostProcessName's
+// tail layout (the exe keeps the new node in rbx across Value::operator=)
 // @0x14250dd20
 Scaleform::UByte* FUN_14250dd20(Scaleform::GFx::AS3::Object* self, Scaleform::UByte* ret,
                                 const Scaleform::GFx::ASString* name, Scaleform::GFx::AS3::Instances::Namespace* ns,
@@ -7102,23 +7167,25 @@ Scaleform::UByte* FUN_14250dd20(Scaleform::GFx::AS3::Object* self, Scaleform::UB
 {
     using namespace Scaleform;
     using namespace Scaleform::GFx::AS3;
-    VM&     vm = self->GetVM();
     PropRef prop;
     {
-        const Multiname mn(*ns, Value(*name));
-        FUN_142501b00(prop, vm, Value(self), mn, 0);
+        const Value     nv(*name, Value::InlineStr);
+        const Multiname mn(*ns, nv, Multiname::InlineAssignTag());
+        Sfr18SelfValue  sv(self, Sfr18SelfValue::NullTested());
+        FUN_142501b00(prop, self->GetVM(), sv.V, mn, 0);
     }
     const UPInt bits = reinterpret_cast<UPInt>(prop.pValue);
-    if (prop.This.IsUndefined() || bits == 1 || ((bits & 2) != 0 && (bits & ~UPInt(2)) == 0))
+    if (prop.This.IsUndefined() || bits == 1 || (((UByte)(bits >> 1) & 1) && (bits & ~UPInt(2)) == 0))
     {
         *ret = false;
         return ret;
     }
+    VM& vm = self->GetVM();
     switch (bits & 3)
     {
     case 0:
     {
-        CheckResult r(false);
+        UByte r;   // written by the slot reader
         if (!*FUN_14250e2d0(prop.pSI, &r, &vm, value, &prop.This, NULL, 0))
         {
             *ret = false;
@@ -7130,7 +7197,7 @@ Scaleform::UByte* FUN_14250dd20(Scaleform::GFx::AS3::Object* self, Scaleform::UB
         value->AssignUnsafe(*reinterpret_cast<const Value*>(bits & ~UPInt(1)));
         break;
     case 2:
-        value->AssignUnsafe(reinterpret_cast<Object*>(bits & ~UPInt(2)));
+        ValueAssignCopies::AssignUnsafeInline18(*value, Value::kObject, reinterpret_cast<Object*>(bits & ~UPInt(2)));
         break;
     }
     *ret = true;
