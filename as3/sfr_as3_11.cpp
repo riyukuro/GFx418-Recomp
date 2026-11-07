@@ -367,9 +367,11 @@ namespace Instances { namespace fl_geom
         }
     }
 
+    // the SDK's Object::GetName(), inlined in the exe
+    static __forceinline ASString Matrix3DObjName(const AS3::Object* o) { return o->GetTraits().GetName(); }
+
     // AS3: new Matrix3D(v) with v a Vector.<Number> in column-major order (16 Numbers read as they are, no
     // conversion); the native code also passes the 16 elements row-major as separate arguments.
-    // MS2-FUNCTIONAL: written to the exe's shape; the type-name test and Value temporaries scheduled differently
     // @0x1424838e0
     void Matrix3D::AS3Constructor(unsigned argc, const Value* argv)
     {
@@ -380,7 +382,7 @@ namespace Instances { namespace fl_geom
         }
         else if (argc == 1)
         {
-            if (!argv[0].IsObject() || strcmp(argv[0].GetObject()->GetTraits().GetName().ToCStr(), "Vector$double") != 0)
+            if (!argv[0].IsObject() || !(Matrix3DObjName(argv[0].GetObject()) == "Vector$double"))
                 return;
             Instances::fl_vec::Vector_double* v = static_cast<Instances::fl_vec::Vector_double*>(argv[0].GetObject());
             for (int i = 0; i < 16; i++)
