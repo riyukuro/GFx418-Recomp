@@ -1996,8 +1996,9 @@ static __forceinline void VectorSort(VectorBase<T>& self, Value& result, unsigne
             compareFunction.Assign(argv[0]);
         else if (!argv[0].Convert2Int32(flags))
         {
-            self.VMRef.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, self.VMRef,
-                self.VMRef.GetValueTraits(argv[0]).GetName().ToCStr(), MapClassTraits(owner).GetName().ToCStr()));
+            VM& vm = self.VMRef;
+            vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm,
+                vm.GetValueTraits(argv[0]).GetName().ToCStr(), MapClassTraits(owner).GetName().ToCStr()));
             return;
         }
     }
@@ -2081,24 +2082,24 @@ static __forceinline void VectorSort(VectorBase<T>& self, Value& result, unsigne
             newSA.PushBack(*ptrs[i]);
     }
 
-    if ((flags & ReturnIndexedArray) == 0)
+    if (flags & ReturnIndexedArray)
     {
-        // the exe inlines the array assignment
-        self.V.Resize(newSA.GetSize());
-        for (UPInt i = 0; i < self.V.GetSize(); i++)
-            *(self.V.GetDataPtr() + i) = newSA[i];
-        result.Assign(&owner);
+        Pickable<I> pr = TR::MakeInstance(static_cast<TR&>(owner.GetTraits()));
+        I& r = *pr.GetPtr();
+        if (r.V.CheckFixed())
+        {
+            for (UPInt i = 0; i < newSA.GetSize(); ++i)
+                r.V.V.PushBack(newSA[i]);
+        }
+        result.Pick(pr);
         return;
     }
 
-    Pickable<I> pr = TR::MakeInstance(static_cast<TR&>(owner.GetTraits()));
-    I& r = *pr.GetPtr();
-    if (r.V.CheckFixed())
-    {
-        for (UPInt i = 0; i < newSA.GetSize(); ++i)
-            r.V.V.PushBack(newSA[i]);
-    }
-    result.Pick(pr);
+    // the exe inlines the array assignment
+    self.V.Resize(newSA.GetSize());
+    for (UPInt i = 0; i < self.V.GetSize(); i++)
+        *(self.V.GetDataPtr() + i) = newSA[i];
+    result.Assign(&owner);
 }
 
 }}}}} // namespace Scaleform::GFx::AS3::Instances::fl_vec
