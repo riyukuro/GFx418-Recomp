@@ -80,17 +80,6 @@ static inline void StringRelease(void* node)
         reinterpret_cast<ASStringNode*>(node)->ReleaseNode();
 }
 
-// A {key, Register, Ptr} payload copied into a blank slot.
-static inline void CopyPayload(char* d, const char* s)
-{
-    RawField<void*>(d, 0) = RawField<void*>(s, 0);
-    StringAddRef(RawField<void*>(d, 0));
-    RawField<U>(d, 8) = RawField<U>(s, 8);
-    if (RawField<void*>(s, 0x10))
-        GCAddRef(RawField<void*>(s, 0x10));
-    RawField<void*>(d, 0x10) = RawField<void*>(s, 0x10);
-}
-
 static __forceinline void AssignNode(void* self, const void* src)
 {
     void* key = RawField<void*>(src, 0);
@@ -137,98 +126,13 @@ void FUN_142591d80(void* self, const void* ref)
     AssignRef(self, ref);
 }
 
-// the two key forms of the hash add: a HashNode {key, Register, Ptr} and a NodeRef {&key, &{Register, Ptr}}; the add
-// reads the source when it builds the entry and calls the node assignments out of line
-struct NodeSrc
-{
-    static __forceinline void* Key(const void* s) { return RawField<void*>(s, 0); }
-    static __forceinline const U* Val(const void* s) { return &RawField<U>(s, 8); }
-    static __forceinline void Assign(void* self, const void* s) { FUN_142591cf0(self, s); }
-};
-struct RefSrc
-{
-    static __forceinline void* Key(const void* s) { return *RawField<void**>(s, 0); }
-    static __forceinline const U* Val(const void* s) { return RawField<U*>(s, 8); }
-    static __forceinline void Assign(void* self, const void* s) { FUN_142591d80(self, s); }
-};
-
-// The entry at index i of a table {count, mask, entries}; the payload is at +8.
-static inline char* ClassEntry(U* table, U i) { return (char*)table + 0x10 + i * 0x20; }
-
-// HashSetBase::add after the table has room: the entry goes to its home slot, a squatter is moved out first.
-template<class Src>
-static __forceinline void ClassAdd(U** self, const void* src, U hash)
-{
-    hash &= (*self)[1];
-    (*self)[0]++;
-    SPInt index = hash;
-    char* e = ClassEntry(*self, index);
-    if (*(SPInt*)e == -2)
-    {
-        *(SPInt*)e = -1;
-        RawField<void*>(e, 8) = Src::Key(src);
-        StringAddRef(RawField<void*>(e, 8));
-        const U* v = Src::Val(src);
-        RawField<U>(e, 0x10) = v[0];
-        if (v[1])
-            GCAddRef((void*)v[1]);
-        RawField<void*>(e, 0x18) = (void*)v[1];
-    }
-    else
-    {
-        SPInt blank = index;
-        do
-            blank = (blank + 1) & (*self)[1];
-        while (*(SPInt*)ClassEntry(*self, blank) != -2);
-        char* b = ClassEntry(*self, blank);
-        if ((SPInt)(NodeHash(RawField<void*>(e, 8)) & (*self)[1]) == index)
-        {
-            *(SPInt*)b = *(SPInt*)e;
-            CopyPayload(b + 8, e + 8);
-            Src::Assign(e + 8, src);
-            *(SPInt*)e = blank;
-        }
-        else
-        {
-            SPInt collided = NodeHash(RawField<void*>(e, 8)) & (*self)[1];
-            for (;;)
-            {
-                SPInt* link = (SPInt*)ClassEntry(*self, collided);
-                if (*link == index)
-                {
-                    *(SPInt*)b = *(SPInt*)e;
-                    CopyPayload(b + 8, e + 8);
-                    *link = blank;
-                    break;
-                }
-                collided = *link;
-            }
-            Src::Assign(e + 8, src);
-            *(SPInt*)e = -1;
-        }
-    }
-}
-
-// HashSetBase<HashNode<ASString, ClassRegEntry>>::add<HashNode>
-// MS2-FUNCTIONAL 0x142591860: register allocation only (the exe keeps the hash in rdi and the source in r14); the
-// same loads, stores and calls in the same order.
-// @0x142591860
-#pragma inline_depth(0)
-void FUN_142591860(U** self, void* ctx, const void* node, U hash)
-{
-    reinterpret_cast<ClassRegSet*>(self)->CheckExpand(ctx);
-    ClassAdd<NodeSrc>(self, node, hash);
-}
-#pragma inline_depth()
-
-// The same for a NodeRef {&key, &{Register, Ptr}}, with the table growth inline.
-// MS2-FUNCTIONAL 0x142591a00: register allocation only, as 0x142591860.
-// @0x142591a00
-void FUN_142591a00(U** self, void* ctx, const void* ref, U hash)
-{
-    reinterpret_cast<ClassRegSet*>(self)->CheckExpand(ctx);
-    ClassAdd<RefSrc>(self, ref, hash);
-}
+// HashSetBase<HashNode<ASString, ClassRegEntry>>::add for the two key forms, a HashNode (0x142591860) and a NodeRef
+// {&key, &{Register, Ptr}} (0x142591a00): the SDK template bodies (CheckExpand, then the home-slot insert that calls
+// the node assignments 0x142591cf0 / 0x142591d80 out of line), bound by the pins at the end.
+} // namespace GFx
+template void GFx::ClassRegSet::add<GFx::ClassRegNode>(void*, const GFx::ClassRegNode&, UPInt);
+template void GFx::ClassRegSet::add<GFx::ClassRegNode::NodeRef>(void*, const GFx::ClassRegNode::NodeRef&, UPInt);
+namespace GFx {
 
 // The builtin class registry entry of "Sound": registered on first use, then the class is published as a member.
 // MS2-FUNCTIONAL: SDK registry lookup and SetMemberRaw; left: Value type store order around GetStringManager and
@@ -247,7 +151,8 @@ void FUN_1425916c0(void* self, void* psc, void* object)
             entry[1] = 0;
             ref.Key = &RawField<void*>(reinterpret_cast<AS2::GlobalContext*>(self)->GetStringManager(), 0x40);
             ref.Value = entry;
-            FUN_142591a00(RawFieldPtr<U*>(self, 0x20), RawFieldPtr<void>(self, 0x20), &ref, NodeHash(*(void**)ref.Key));
+            reinterpret_cast<ClassRegSet*>(RawFieldPtr<void>(self, 0x20))
+                ->Add(RawFieldPtr<void>(self, 0x20), reinterpret_cast<const ClassRegNode::NodeRef&>(ref));
             GCRelease((void*)entry[1]);
         }
 
@@ -311,3 +216,5 @@ const char* FUN_14259d950(FontResource* resource) { return RawField<RawFontIntf*
 bool XML::Support::ParseFile(const char* pfilename, FileOpenerBase* pfo, XML::ParserHandler* pdb) { return pParser->ParseFile(pfilename, pfo, pdb); }
 
 }} // namespace Scaleform::GFx
+// MS2-PIN: ??$add@U?$HashNode@VASString@GFx@Scaleform@@UClassRegEntry@GlobalContext@AS2@23@UASStringHashFunctor@23@@Scaleform@@@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@UClassRegEntry@GlobalContext@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@UClassRegEntry@GlobalContext@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBU?$HashNode@VASString@GFx@Scaleform@@UClassRegEntry@GlobalContext@AS2@23@UASStringHashFunctor@23@@1@_K@Z 0x142591860
+// MS2-PIN: ??$add@UNodeRef@?$HashNode@VASString@GFx@Scaleform@@UClassRegEntry@GlobalContext@AS2@23@UASStringHashFunctor@23@@Scaleform@@@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@UClassRegEntry@GlobalContext@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@UClassRegEntry@GlobalContext@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBUNodeRef@?$HashNode@VASString@GFx@Scaleform@@UClassRegEntry@GlobalContext@AS2@23@UASStringHashFunctor@23@@1@_K@Z 0x142591a00
