@@ -4796,8 +4796,10 @@ static inline void Sfr34_OutputTraitsName(FlashUI* ui, const Traits& tr)
 }
 
 // One value: its kind's text form, references with their addresses.
+// The VTableIndClosure and ThunkClosure cases end in break, as the exe's jumps to its end show (they fell into the
+// next case before).
 // MS2-FUNCTIONAL the literal Output tails are merged through "goto out" as in the exe;
-// left: the exe's rbp frame (larger locals area), its hoisted Output vptr in r9, scheduling
+// left: the exe's rbp frame (larger locals area), its hoisted Output vptr in r9, more of the cases' code kept apart, scheduling
 // @0x14251b350
 void FUN_14251b350(const VM* vm, FlashUI* ui, const Value* v)
 {
@@ -4888,6 +4890,7 @@ void FUN_14251b350(const VM* vm, FlashUI* ui, const Value* v)
         }
         else
             { s = "null"; goto out; }
+        break;
     case Value::kFunction:
         if (value.IsNull())
             ui->Output(FlashUI::Output_Action, "null");
@@ -4968,6 +4971,7 @@ void FUN_14251b350(const VM* vm, FlashUI* ui, const Value* v)
         }
         else
             { s = "null"; goto out; }
+        break;
     case Value::kInstanceTraits:
     {
         InstanceTraits::Traits& itr = value.GetInstanceTraits();
