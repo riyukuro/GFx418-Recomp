@@ -45,59 +45,94 @@ SF_FORCEINLINE Value& LzTop1(Environment* penv)
     return *((penv->Stack.pCurrent > penv->Stack.pPageStart) ? (penv->Stack.pCurrent - 1) : penv->Stack.pPrevPageTop);
 }
 
+// Value::ToStringVersioned (exe 0x1429923c0), inlined: undefined is "" up to SWF 6.
+SF_FORCEINLINE ASString ToStringVersionedInline(const Value& val, Environment* penv, unsigned version)
+{
+    if (val.IsUndefined())
+    {
+        if (version > 0 && version <= 6)
+            return penv->GetBuiltin(ASBuiltin_empty_);
+        return penv->GetBuiltin(ASBuiltin_undefined);
+    }
+    return val.ToStringImpl(penv, -1, 0);
+}
+
+// Value::ToCharacter (exe 0x1429910b0), inlined.
+SF_FORCEINLINE InteractiveObject* ToCharacterInline(const Value& val, const Environment* penv)
+{
+    if (val.T.Type == Value::CHARACTER && penv && val.V.pCharHandle)
+    {
+        DisplayObject* pdisp = val.V.pCharHandle->ResolveCharacter(penv->GetTarget()->GetMovieImpl());
+        if (pdisp)
+            return pdisp->IsInteractiveObject() ? static_cast<InteractiveObject*>(pdisp) : 0;
+    }
+    return 0;
+}
+
+// Environment::SetTarget / SetInvalidTarget, inlined.
+SF_FORCEINLINE void SetTargetInline(Environment* penv, InteractiveObject* ptarget)
+{
+    penv->IsInvalidTarget = false;
+    penv->Target          = ptarget;
+    penv->StringContext.UpdateVersion(ptarget->GetVersion());
+}
+SF_FORCEINLINE void SetInvalidTargetInline(Environment* penv, InteractiveObject* ptarget)
+{
+    penv->IsInvalidTarget = true;
+    penv->Target          = ptarget;
+}
+
 // Pixels to twips.
 const float PixelsToTwips = 20.0f;
 } // namespace
 
 // Pops a target (a character or a path) and makes it the current target; an empty path is the original target,
 // one that does not resolve leaves the original target marked invalid.
-// MS2-FUNCTIONAL: the exe inlines the character resolve, SetTarget/SetInvalidTarget and the stack pop
+// MS2-FUNCTIONAL: SDK body with the inlined resolve/SetTarget/pop, 758 vs 747; the exe falls from the convert
+// into the string branch without re-testing the type and swaps rsi/rdi (nested and comma forms placed it worse)
 // @0x14298bb90
 void FUN_14298bb90(void* pctx)
 {
-    ExecContextView&   ctx     = *static_cast<ExecContextView*>(pctx);
-    Environment*       penv    = ctx.pEnv;
-    InteractiveObject* ptarget = 0;
-    Value              target  = penv->Top(0);
+    ExecContextView&   ctx    = *static_cast<ExecContextView*>(pctx);
+    InteractiveObject* target = 0;
 
-    if (target.IsCharacter())
-        ptarget = penv->Top(0).ToCharacter(penv);
-    else
+    Value targetVal = LzTop0(ctx.pEnv);
+    if (!targetVal.IsString() && !targetVal.IsCharacter())
+        targetVal.SetString(ToStringVersionedInline(targetVal, ctx.pEnv, ctx.Version));
+
+    if (targetVal.IsString())
     {
-        if (!target.IsString())
-        {
-            if (target.IsUndefined())
-                target.ConvertToStringVersioned(penv, ctx.Version);
-            else
-                target.SetString(target.ToString(penv));
-        }
-        if (target.ToString(penv).IsEmpty())
-            ptarget = ctx.pOriginalTarget;
+        if (targetVal.ToString(ctx.pEnv).IsEmpty())
+            target = ctx.pOriginalTarget;
         else
         {
             Value val;
-            penv->GetVariable(penv->Top(0).ToString(penv), &val, ctx.pWithStack, &ptarget);
+            ctx.pEnv->GetVariable(LzTop0(ctx.pEnv).ToString(ctx.pEnv), &val, ctx.pWithStack, &target);
             if (ctx.IsVerboseAction())
             {
-                ASString name = penv->Top(0).ToStringImpl(penv, -1, true);
-                if (ptarget)
-                    ctx.LogF.LogAction("-- ActionSetTarget2: %s (%d)\n", name.ToCStr(), (UInt16)ptarget->Id);
+                ASString s1(LzTop0(ctx.pEnv).ToStringImpl(ctx.pEnv, -1, true));
+                if (target)
+                    ctx.LogF.LogAction("-- ActionSetTarget2: %s (%d)\n", s1.ToCStr(), (UInt16)target->Id);
                 else
-                    ctx.LogF.LogAction("-- ActionSetTarget2: %s - no target found\n", name.ToCStr());
+                    ctx.LogF.LogAction("-- ActionSetTarget2: %s - no target found\n", s1.ToCStr());
             }
         }
     }
+    else if (targetVal.IsCharacter())
+        target = ToCharacterInline(LzTop0(ctx.pEnv), ctx.pEnv);
 
-    if (ptarget)
-        penv->SetTarget(ptarget);
-    else
+    if (!target)
     {
         if (ctx.IsVerboseActionErrors())
-            ctx.LogF.LogScriptError("SetTarget2(tellTarget) with invalid target '%s'.",
-                                    target.ToStringImpl(penv, -1, true).ToCStr());
-        penv->SetInvalidTarget(ctx.pOriginalTarget);
+        {
+            ASString sv(targetVal.ToStringImpl(ctx.pEnv, -1, true));
+            ctx.LogF.LogScriptError("SetTarget2(tellTarget) with invalid target '%s'.", sv.ToCStr());
+        }
+        SetInvalidTargetInline(ctx.pEnv, ctx.pOriginalTarget);
     }
-    penv->Drop1();
+    else
+        SetTargetInline(ctx.pEnv, target);
+    ctx.pEnv->Drop1();
 }
 
 // Stack: target, lockCenter, constrain [, x1, y1, x2, y2 when constrained]. The bounds are in pixels.
