@@ -2307,7 +2307,9 @@ void* FUN_14000fe50(void* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: runs the executable base constructor and initializes the recovered application fields.
+// MS2-FUNCTIONAL: runs the executable base constructor and initializes the recovered application fields. The 1.0 store at +0x88
+// is volatile so it stays ahead of the float stores, as in the exe; the exe still stores the vptr before the init-list
+// stores and sets rax mid-body (a real ctor of unknown layout).
 // @0x1400140e0
 void* FUN_1400140e0(void* object, void* traits)
 {
@@ -2324,7 +2326,7 @@ void* FUN_1400140e0(void* object, void* traits)
     *reinterpret_cast<void**>(bytes + 0xc0) = 0;
     *reinterpret_cast<unsigned*>(bytes + 0xd8) = 0;
     *reinterpret_cast<void**>(bytes + 0xe0) = 0;
-    *reinterpret_cast<double*>(bytes + 0x88) = 1.0;
+    *reinterpret_cast<volatile double*>(bytes + 0x88) = 1.0;
     bytes[0x60] = 0;
     bytes[0x74] = 0;
     *reinterpret_cast<float*>(bytes + 0x64) = 0.1f;
