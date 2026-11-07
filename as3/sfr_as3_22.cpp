@@ -29,6 +29,7 @@
 #include "ms2/scaleform/include/render/render_cxform.h"
 #include "ms2/scaleform/include/render/render_image.h"
 #include "ms2/scaleform/include/sound/sound_sound.h"
+#include "ms2/scaleform/include/sound/sound_soundrendererfmod.h"
 #include "ms2/scaleform/include/kernel/sf_memory.h"
 #include "hook/ms2hook.h"
 #include <cstdint>
@@ -3821,7 +3822,7 @@ void FuncTreeItem::ResetTreeIds(FuncTreeItem* other)
 
 // MS2-FUNCTIONAL: allocates the audio event manager and constructs its event, locks, and circular list sentinel.
 // @0x142744fe0
-void* CreateAudioEventManager()
+Sound::SoundRendererFMOD* Sound::SoundRendererFMOD::CreateSoundRenderer()
 {
     auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
     // The exe allocates it with no AllocInfo (r8 = 0), so it lands in the default memory stat.
@@ -3844,12 +3845,8 @@ void* CreateAudioEventManager()
         *reinterpret_cast<unsigned*>(object + 0xf4) = 0;
         object[0x78] = 0;
     }
-    return object;
+    return reinterpret_cast<Sound::SoundRendererFMOD*>(object);
 }
-// 0x142744fe0 is SoundRendererFMOD::CreateSoundRenderer (gfxsoundfmod's caller names it so); bound to the body above.
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:?CreateSoundRenderer@SoundRendererFMOD@Sound@Scaleform@@SAPEAV123@XZ=?CreateAudioEventManager@Scaleform@@YAPEAXXZ")
-#endif
 
 namespace GFx { namespace AMP {
 // @0x14268c080
