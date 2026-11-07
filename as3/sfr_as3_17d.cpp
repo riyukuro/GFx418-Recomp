@@ -1124,7 +1124,7 @@ void FUN_142502e70(void* pavm, const Scaleform::GFx::EventId& id)
                 if (static_cast<MovieRoot*>(self->pDispObj->pASRoot)->pAVM->HandleException)
                 {
                     static_cast<MovieRoot*>(self->pDispObj->pASRoot)->pAVM->OutputAndIgnoreException();
-                    self->pDispObj->pParent->Flags |= DisplayObject::Mask_ExecutionAborted;
+                    self->pDispObj->pParent->DisplayObject::Flags |= DisplayObject::Mask_ExecutionAborted;   // DisplayObject::Flags (+0x88), not InteractiveObject::Flags, as in the exe
                 }
             }
         }
