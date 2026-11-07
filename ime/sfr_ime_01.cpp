@@ -883,7 +883,7 @@ struct ImeSinkOwner : ImeSinkOwnerHead, ImeSinkFirst, ImeSinkSecond {};
 // The QueryInterface of the sink embedded at +0x1a0 of its owner: IUnknown (DAT_1431c4828) and the interface at
 // DAT_14313b400 answer with the owner's +0x1a8 view, DAT_1431c5018 with the +0x1a0 view.
 // @0x1423d72a0
-HRESULT FUN_1423d72a0(void* object, const unsigned long long* iid, void** output)
+__declspec(noinline) HRESULT FUN_1423d72a0(void* object, const unsigned long long* iid, void** output)
 {
     if (!output) return E_INVALIDARG;
     *output = nullptr;
@@ -1660,7 +1660,7 @@ __declspec(noinline) void FUN_1423d97d0(void* self, const char* enabled)
 }
 
 // @0x1423daeb0
-int FUN_1423daeb0(long long* self)
+__declspec(noinline) int FUN_1423daeb0(long long* self)
 {
     int count = *reinterpret_cast<int*>(reinterpret_cast<unsigned char*>(self) + 0x3c) - 1;
     *reinterpret_cast<int*>(reinterpret_cast<unsigned char*>(self) + 0x3c) = count;
@@ -2221,7 +2221,7 @@ struct ImeQiObject : ImeQiFirst, ImeQiSecond {};
 // The QueryInterface of an object with two interface views: IUnknown (DAT_1431c4828), DAT_1431c4d58, DAT_1431c4e08
 // and DAT_1431c4ee8 answer with the object itself, DAT_14313b8b8 with its +8 view.
 // @0x1423dadd0
-HRESULT FUN_1423dadd0(long long* object, const unsigned long long* iid, void** output)
+__declspec(noinline) HRESULT FUN_1423dadd0(long long* object, const unsigned long long* iid, void** output)
 {
     if (!output) return E_INVALIDARG;
     *output = nullptr;
@@ -3274,7 +3274,7 @@ selected_entry:
 // The object lives inside its owner's allocation: the class operator delete is empty, so only the global-delete
 // path (flags 5) reaches the exe's empty global delete; a plain delete frees nothing.
 // @0x1423dbb60
-void* FUN_1423dbb60(void* object, unsigned flags)
+__declspec(noinline) void* FUN_1423dbb60(void* object, unsigned flags)
 {
     static_cast<AS3::AvmMovieClip*>(object)->AS3::AvmMovieClip::~AvmMovieClip();
     if ((flags & 5) == 5)
@@ -6847,12 +6847,12 @@ void FUN_1423d1890(void* self)
 
 // MS2-FUNCTIONAL: AddRef on the refcount at +0x14.
 // @0x1423d5ae0
-int FUN_1423d5ae0(void* self)
+__declspec(noinline) int FUN_1423d5ae0(void* self)
 {
     return ++*(int*)((UByte*)self + 0x14);
 }
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the AddRef at 0x1423d5ae0.
+// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the AddRef at 0x1423d5ae0. The exe has a compiler-generated thunk (sub rcx,N); a hand-written one gives add rcx,-N. The target is noinline so the thunk stays a jmp.
 // @0x1423d5aec
 int FUN_1423d5aec(void* self)
 {
@@ -6879,19 +6879,19 @@ unsigned FUN_1423d7dc0(void* self, const char* name)
 
 // MS2-FUNCTIONAL: Release on the refcount at +0x14.
 // @0x1423d7350
-int FUN_1423d7350(void* self)
+__declspec(noinline) int FUN_1423d7350(void* self)
 {
     return --*(int*)((UByte*)self + 0x14);
 }
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the QueryInterface at 0x1423d72a0.
+// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the QueryInterface at 0x1423d72a0. The exe has a compiler-generated thunk (sub rcx,N); a hand-written one gives add rcx,-N. The target is noinline so the thunk stays a jmp.
 // @0x1423d7344
 HRESULT FUN_1423d7344(void* self, const unsigned long long* iid, void** output)
 {
     return FUN_1423d72a0((UByte*)self - 8, iid, output);
 }
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the Release at 0x1423d7350.
+// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the Release at 0x1423d7350. The exe has a compiler-generated thunk (sub rcx,N); a hand-written one gives add rcx,-N. The target is noinline so the thunk stays a jmp.
 // @0x1423d735c
 int FUN_1423d735c(void* self)
 {
@@ -6914,47 +6914,47 @@ const void* FUN_1423da240(void*)
 
 // MS2-FUNCTIONAL: AddRef on the refcount at +0x3c.
 // @0x1423da420
-int FUN_1423da420(void* self)
+__declspec(noinline) int FUN_1423da420(void* self)
 {
     return ++*(int*)((UByte*)self + 0x3c);
 }
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the AddRef at 0x1423da420.
+// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the AddRef at 0x1423da420. The exe has a compiler-generated thunk (sub rcx,N); a hand-written one gives add rcx,-N. The target is noinline so the thunk stays a jmp.
 // @0x1423da42c
 int FUN_1423da42c(void* self)
 {
     return FUN_1423da420((UByte*)self - 8);
 }
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the QueryInterface at 0x1423dadd0.
+// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the QueryInterface at 0x1423dadd0. The exe has a compiler-generated thunk (sub rcx,N); a hand-written one gives add rcx,-N. The target is noinline so the thunk stays a jmp.
 // @0x1423dae98
 HRESULT FUN_1423dae98(void* self, const unsigned long long* iid, void** output)
 {
     return FUN_1423dadd0((long long*)((UByte*)self - 8), iid, output);
 }
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the Release at 0x1423daeb0.
+// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the Release at 0x1423daeb0. The exe has a compiler-generated thunk (sub rcx,N); a hand-written one gives add rcx,-N. The target is noinline so the thunk stays a jmp.
 // @0x1423daed8
 int FUN_1423daed8(void* self)
 {
     return FUN_1423daeb0((long long*)((UByte*)self - 8));
 }
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 0x30) to the sized-delete destructor at 0x1423dbb60.
+// MS2-FUNCTIONAL: adjustor thunk (this - 0x30) to the sized-delete destructor at 0x1423dbb60. The exe has a compiler-generated thunk (sub rcx,N); a hand-written one gives add rcx,-N. The target is noinline so the thunk stays a jmp.
 // @0x1423db880
 void* FUN_1423db880(void* self, unsigned flags)
 {
     return FUN_1423dbb60((UByte*)self - 0x30, flags);
 }
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 0x40) to the sized-delete destructor at 0x1423dbb60.
+// MS2-FUNCTIONAL: adjustor thunk (this - 0x40) to the sized-delete destructor at 0x1423dbb60. The exe has a compiler-generated thunk (sub rcx,N); a hand-written one gives add rcx,-N. The target is noinline so the thunk stays a jmp.
 // @0x1423db88c
 void* FUN_1423db88c(void* self, unsigned flags)
 {
     return FUN_1423dbb60((UByte*)self - 0x40, flags);
 }
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 0x48) to the sized-delete destructor at 0x1423dbb60.
+// MS2-FUNCTIONAL: adjustor thunk (this - 0x48) to the sized-delete destructor at 0x1423dbb60. The exe has a compiler-generated thunk (sub rcx,N); a hand-written one gives add rcx,-N. The target is noinline so the thunk stays a jmp.
 // @0x1423db898
 void* FUN_1423db898(void* self, unsigned flags)
 {
