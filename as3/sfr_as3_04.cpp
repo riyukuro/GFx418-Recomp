@@ -332,7 +332,14 @@ CheckResult ClassTraits::UserDefined::SetupSlotValues(AS3::Object& for_obj) cons
     return AS3::Traits::SetupSlotValues(*File, class_info.stat_info, for_obj);
 }
 
-// MS2-FUNCTIONAL: the exe builds the class Value after the name call (argument evaluation order)
+// SDK Class::GetName (inline): the name of the class traits.
+static SF_FORCEINLINE ASString Sfr04ClassName(Class& cl) { return cl.GetClassTraits().GetName(); }
+// SDK GlobalObjectCPP::AddFixedSlot(Class&, Pickable<const Namespace>, UPInt&) (inline in AS3_Obj_Global.h).
+static SF_FORCEINLINE const SlotInfo& Sfr04AddFixedSlot(Instances::fl::GlobalObjectCPP& g, Class& cl,
+                                                        Pickable<const Instances::Namespace> ns, UPInt& index)
+{
+    return g.AddFixedSlotValuePair(Sfr04ClassName(cl), ns, &cl.GetClassTraits(), Value(&cl), index);
+}
 // @0x142418be0
 const SlotInfo* Instances::fl::GlobalObjectCPP::InitializeOnDemand(const SlotInfo* si, const ASString& name,
                                                                    const Instances::Namespace& ns, UPInt& index)
@@ -343,8 +350,7 @@ const SlotInfo* Instances::fl::GlobalObjectCPP::InitializeOnDemand(const SlotInf
         if (ctr)
         {
             Class& cl = FUN_142508460(&ctr->GetInstanceTraits());
-            si = &AddFixedSlotValuePair(cl.GetClassTraits().GetName(),
-                Pickable<const Instances::Namespace>(&ns, PickValue), &cl.GetClassTraits(), Value(&cl), index);
+            si = &Sfr04AddFixedSlot(*this, cl, Pickable<const Instances::Namespace>(&ns, PickValue), index);
         }
     }
     return si;
