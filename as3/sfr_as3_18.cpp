@@ -6731,8 +6731,8 @@ static inline void FUN_142528d20(Scaleform::GFx::AS3::Multiname* mn, const Scale
 // StackReader::Read(Multiname&): the run-time parts of a multiname off the operand stack: the name (of the late
 // kinds), then the namespace (of the run-time qualified ones; an error unless it is an object). ctx is the reader
 // {VM*, operand stack*}.
-// MS2-FUNCTIONAL free function in the callers' (sfr_as3_19) form; StackReader is not in the shared headers. In the inlined
-// weak release of the popped value, the exe clears the flags after the three zero stores, ours before them
+// Free function in the callers' (sfr_as3_19) form; StackReader is not in the shared headers. The popped value's release is
+// written out so the weak branch clears the flags after the three zero stores, as the exe does.
 // @0x1425201f0
 void FUN_1425201f0(void* ctx, void* multiname)
 {
@@ -6756,7 +6756,21 @@ void FUN_1425201f0(void* ctx, void* multiname)
                 return;
             FUN_142528d20(&mn, &r->stack->GetTopPtr()->AsNamespace());
             ValueStack* st = r->stack;
-            st->GetTopPtr()->~Value();
+            Value& v = *st->GetTopPtr();
+            if (v.IsRefCounted())
+            {
+                if (v.IsWeakRef())
+                {
+                    Scaleform::UPInt* q = reinterpret_cast<Scaleform::UPInt*>(&v);
+                    reinterpret_cast<WeakProxy*>(q[1])->Release();
+                    q[1] = 0;
+                    q[2] = 0;
+                    q[3] = 0;
+                    *reinterpret_cast<Scaleform::UInt32*>(&v) &= ~0x21fu;
+                }
+                else
+                    ValueAssignCopies::ReleaseStrongInline18(v);
+            }
             st->Release(1);
             return;
         }
