@@ -2074,12 +2074,8 @@ SF_FORCEINLINE bool TrIsClassTypeSlot(const SlotInfo& si)
         const Abc::Multiname&     mn = TrGetTypeName(*si.TI, si.File->GetAbcFile());
         const Abc::ConstPool&     cp = si.File->GetAbcFile().Const_Pool;
         const Abc::NamespaceInfo& ns = mn.Ind == 0 ? cp.any_namespace : cp.ConstNamespace[mn.Ind];
-        const StringDataPtr       tn = cp.GetString(mn.NameIndex);
         // NamespaceInfo::IsPublic (public or explicit) with an empty URI
-        const char* const cls = "Class";
-        if (((tn.ToCStr() == cls && tn.GetSize() == 5) || (tn.ToCStr() && strncmp(tn.ToCStr(), cls, 5) == 0)) &&
-            (static_cast<UInt32>(ns.Kind) & ~4u) == 0 &&
-            ns.NameURI.GetSize() == 0)
+        if (cp.GetString(mn.NameIndex) == "Class" && (static_cast<UInt32>(ns.Kind) & ~4u) == 0 && ns.NameURI.GetSize() == 0)
             result = true;
     }
     return result;
@@ -2096,20 +2092,21 @@ namespace TR {
 // The traced type of a property read through the slot si of obj_traits, into type: the function type of a method
 // slot, the return type of a getter, else the slot's declared type (its class for a Class-typed or class-bound slot).
 // An unknown declared type raises VerifyError 1014 (false).
-// MS2-FUNCTIONAL 0x14250cf20: the exe duplicates the slot-trait GetMultiname branch and computes the slot
-// index into rbx before the first call (ours keeps the binding word in edi); left: entry register allocation,
-// the NameIndex load width and some slot offsets
+// MS2-FUNCTIONAL 0x14250cf20: the exe tests the slot index sign with bt on the raw word (ours folds it into
+// the shared index computation) and re-tests the slot-trait multiname index before the shared GetMultiname
+// tail; left: entry register allocation (exe keeps the raw word in r9d), the NameIndex load width
 // @0x14250cf20
 __declspec(safebuffers) CheckResult State::GetPropertyType(const Traits* obj_traits, const SlotInfo& si, Value& type) const
 {
     if (si.BindType > SlotInfo::BT_Code - 1 && si.ValueInd >= 0)
     {
+        const SPInt ind = si.ValueInd;
         if (si.BindType == SlotInfo::BT_Code)
         {
             // Retrieve function type.
             InstanceTraits::Traits* ptr;
             {
-                const Value f = obj_traits->GetVT().GetValue(AbsoluteIndex(si.ValueInd));
+                const Value f = obj_traits->GetVT().GetValue(AbsoluteIndex(ind));
                 ptr = &GetFunctType(f);
             }
             InstanceTraits::Traits& tr = *ptr;
@@ -2119,7 +2116,7 @@ __declspec(safebuffers) CheckResult State::GetPropertyType(const Traits* obj_tra
         {
             // Retrieve function return type.
             InstanceTraits::Traits& tr =
-                FUN_14250a060(static_cast<const Tracer*>(pTracer)->GetVM(), obj_traits->GetVT().VTMethods[static_cast<UInt32>(si.ValueInd)]);
+                FUN_14250a060(static_cast<const Tracer*>(pTracer)->GetVM(), obj_traits->GetVT().VTMethods[static_cast<UInt32>(ind)]);
             type = Value(tr, CanBeNull(tr));
         }
         return true;
