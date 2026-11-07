@@ -56,6 +56,22 @@ public:
         SetImageSource(pimageSrc);
         UseType = use;
     }
+    // (sfr_as3_06) any image: a plain Image goes behind the delegate, any other image source is held directly
+    ImageResource(Render::ImageBase* pimage, ResourceUse use = Use_Bitmap) : pImage(0)
+    {
+        UseType = use;
+        if (pimage)
+        {
+            if (pimage->GetImageType() != Render::ImageBase::Type_ImageBase)
+                SetImageSource(static_cast<Render::ImageSource*>(pimage));
+            else
+            {
+                // the exe calls SetImage out of line here (0x142446c50)
+                void (ImageResource::*const setImage)(Render::Image*) = &ImageResource::SetImage;
+                (this->*setImage)(static_cast<Render::Image*>(pimage));
+            }
+        }
+    }
     ~ImageResource(); // exe 0x14243d330, out of line (sfr_as3_06): both deleting dtors call it
 
     const Render::ImageBase* GetImage() const { return pImage; }

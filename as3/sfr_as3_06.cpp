@@ -2301,21 +2301,17 @@ namespace Instances { namespace fl_display
     }
 
     // @0x142443e50
-    // MS2-FUNCTIONAL: written from the exe's control flow
-    ImageResource* BitmapData::GetImageResource()
+    // noinline: Bitmap::GetImageResource (0x142443e40) falls through into it in the exe
+    __declspec(noinline) ImageResource* BitmapData::GetImageResource()
     {
-        if (!pImageResource && pImage)
+        if (pImageResource)
+            return pImageResource;
+        if (pImage)
         {
-            Render::ImageBase* pimg = pImage;
-            ImageResource* pres = SF_HEAP_AUTO_NEW(pimg) ImageResource((Render::Image*)NULL);
-            // A plain image goes behind the resource's delegate, any other image source is held directly.
-            if (pimg->GetImageType() == Render::ImageBase::Type_ImageBase)
-                pres->SetImage(static_cast<Render::Image*>(pimg));
-            else
-                pres->SetImageSource(static_cast<Render::ImageSource*>(pimg));
-            pImageResource = Pickable<ImageResource>(pres);
+            pImageResource = *SF_HEAP_AUTO_NEW(pImage) ImageResource(pImage);
+            return pImageResource;
         }
-        return pImageResource;
+        return NULL;
     }
 
     // @0x142446bd0
