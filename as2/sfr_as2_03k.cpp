@@ -3,6 +3,7 @@
 // MS2-UNIT: sfr_as2_03k
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14291d1e0-0x14291dbe0 .text$mn
+// MS2-RANGE: 0x142942da0-0x142942db0 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
