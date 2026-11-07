@@ -127,8 +127,8 @@ uint64_t* FUN_142743130(uint64_t* object)
     return object;
 }
 
-// MS2-FUNCTIONAL: initializes an FMOD stream callback, snapshots its start time, and records pause state.
-// Left: the exe schedules the Lock ctor's lea rcx,[rdi+0x70] one store earlier (lock local / placement-new / bytes forms tried).
+// Initializes an FMOD stream callback, snapshots its start time, and records pause state.
+// The +0x69 flag is cleared through a subscripted byte view; the deref-of-cast form makes cl schedule the Lock ctor's lea after the time store.
 // @0x142743050
 uint64_t* FUN_142743050(uint64_t* object, void* player, void* streamState, void* channel)
 {
@@ -136,7 +136,7 @@ uint64_t* FUN_142743050(uint64_t* object, void* player, void* streamState, void*
     *reinterpret_cast<void***>(object) = &VideoAudioStreamVtable;
     *reinterpret_cast<void***>(object + 2) = &VideoAudioStreamSubVtable;
     object[9] = FUN_1425e3480();
-    *reinterpret_cast<uint8_t*>(reinterpret_cast<unsigned char*>(object) + 0x69) = 0;
+    reinterpret_cast<unsigned char*>(object)[0x69] = 0;
     reinterpret_cast<Scaleform::Lock*>(reinterpret_cast<unsigned char*>(object) + 0x70)->Scaleform::Lock::Lock(0);
     *reinterpret_cast<uint32_t*>(reinterpret_cast<unsigned char*>(object) + 0x98) = 0;
     Scaleform::AtomicOps<int>::ExchangeAdd_NoSync(reinterpret_cast<volatile int*>(static_cast<unsigned char*>(streamState) + 8), 1);
