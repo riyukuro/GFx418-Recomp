@@ -135,18 +135,37 @@ void FUN_14298bb90(void* pctx)
     ctx.pEnv->Drop1();
 }
 
+namespace {
+// A DragState whose points the ctor body zeroes again, field by field: the exe zeroes them with three qword stores.
+struct ZeroedDragState : MovieImpl::DragState
+{
+    SF_FORCEINLINE ZeroedDragState()
+    {
+        BoundLT.x = BoundLT.y = 0;
+        BoundRB.x = BoundRB.y = 0;
+        CenterDelta.x = CenterDelta.y = 0;
+    }
+};
+} // namespace
+
 // Stack: target, lockCenter, constrain [, x1, y1, x2, y2 when constrained]. The bounds are in pixels.
-// MS2-FUNCTIONAL: LTCG store-merge/regalloc: the exe zeroes the DragState points with three qword stores (ours one movups), orders the pEnv load in the error path differently and has no loop-alignment nop before the Drop(4) loop
 // @0x14298fea0
 void FUN_14298fea0(void* pctx)
 {
     ExecContextView&     ctx  = *static_cast<ExecContextView*>(pctx);
-    MovieImpl::DragState st;
+    ZeroedDragState      st;
 
     bool lockCenter = LzTop1(ctx.pEnv).ToBool(ctx.pEnv);
     st.pCharacter   = ctx.pEnv->FindTargetByValue(LzTop0(ctx.pEnv));
     if (!st.pCharacter && ctx.IsVerboseActionErrors())
-        ctx.LogF.LogScriptError("StartDrag of invalid target '%s'.", LzTop0(ctx.pEnv).ToStringImpl(ctx.pEnv, -1, true).ToCStr());
+    {
+        Environment* penv = ctx.pEnv;
+        // The exe reads the string back from its slot for ToCStr and the release, so it lives in a dtor-less holder.
+        union StrHolder { ASString s; StrHolder() {} ~StrHolder() {} } h;
+        ::new (&h.s) ASString(LzTop0(penv).ToStringImpl(penv, -1, true));
+        ctx.LogF.LogScriptError("StartDrag of invalid target '%s'.", h.s.ToCStr());
+        h.s.~ASString();
+    }
 
     st.Bound = ctx.pEnv->Top(2).ToBool(ctx.pEnv);
     if (st.Bound)
