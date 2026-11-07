@@ -6512,20 +6512,27 @@ namespace Classes { namespace fl
 namespace Instances { namespace fl
 {
     // The index of this element in its parent's children.
-    // MS2-FUNCTIONAL 0x1424152b0: same loop and results as the exe; the exe reuses the zero index register for the empty-parent false return where the compiler emits a separate store, and the exe has no .pdata size for this leaf
     // @0x1424152b0
     CheckResult XMLElement::GetChildIndex(UPInt& ind) const
     {
-        const XMLElement* parent = static_cast<const XMLElement*>(Parent.GetPtr());
-        if (parent == NULL)
-            return false;
-        const UPInt size = parent->Children.GetSize();
-        for (ind = 0; ind < size; ++ind)
+        bool result = false;
+
+        if (Parent)
         {
-            if (parent->Children[ind].GetPtr() == this)
-                return true;
+            const XMLElement* parent = static_cast<const XMLElement*>(Parent.GetPtr());
+            const UPInt size = parent->Children.GetSize();
+
+            for (ind = 0; ind < size; ++ind)
+            {
+                if (parent->Children[ind].GetPtr() == this)
+                {
+                    result = true;
+                    break;
+                }
+            }
         }
-        return false;
+
+        return result;
     }
 
     // @0x142415700
