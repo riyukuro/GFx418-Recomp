@@ -6840,13 +6840,13 @@ static SF_FORCEINLINE Sfr33MouseStateAccess* Sfr33GetMouseState(MovieImpl* pmovi
 }
 
 // ButtonEventId(id, mouseIndex, rollOverCnt, buttonIdx).
-static SF_FORCEINLINE GFx::EventId Sfr33ButtonEventId(UInt32 id, unsigned mouseIndex, UByte rollOverCnt = 0,
-                                                     UByte buttonIdx = 0)
+static SF_FORCEINLINE GFx::EventId Sfr33ButtonEventId(UInt32 id, int mouseIndex = -1, unsigned rollOverCnt = 0,
+                                                     UInt8 buttonIdx = 0)
 {
     GFx::EventId evt(id);
     evt.ButtonId    = buttonIdx;
-    evt.RollOverCnt = rollOverCnt;
-    evt.MouseIndex  = SByte(mouseIndex);
+    evt.MouseIndex  = (SInt8)mouseIndex;
+    evt.RollOverCnt = (UInt8)rollOverCnt;
     return evt;
 }
 
