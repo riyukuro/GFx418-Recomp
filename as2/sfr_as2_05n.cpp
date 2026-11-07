@@ -39,8 +39,8 @@ static __forceinline InteractiveObject* FfToCharacter(const Value& v, const Envi
 // the character the key would focus from startFrom (or the controller's focused character), kept within
 // parentMovie (null: the modal clip). With loop, when the key leads nowhere the first / last tabable character
 // (Tab) or the one at the far edge (arrows) is returned instead; otherwise null.
-// MS2-FUNCTIONAL: register allocation and stack layout differ (the exe keeps the parentMovie Value type in r15b
-// and spills fn; its frame is 0x10 smaller, which shifts every rbp/rsp slot).
+// MS2-FUNCTIONAL: register allocation differs (the exe keeps keycode in r13d through the direction compares, where
+// ours stores it to a frame slot, and the strcmp loops are laid out in another order).
 // @0x142943ce0
 void SelectionCtorFunction::FindFocus(const FnCall& fn)
 {
@@ -85,11 +85,17 @@ void SelectionCtorFunction::FindFocus(const FnCall& fn)
     Ptr<InteractiveObject> panelChar;
     if (fn.NArgs >= 2)
     {
-        Value context = fn.Arg(1);
-        if (!context.IsNull() && !context.IsUndefined())
-            panelChar = FfToCharacter(context, fn.Env);
+        // Value context = fn.Arg(1): the exe's LTCG keeps the copy's type byte in a register across the calls
+        // (its dtor test included), which a hand-run Value lifetime with the type cached reproduces.
+        union { UInt64 Align; char Buf[sizeof(Value)]; } contextBuf;
+        Value& context = *::new (static_cast<void*>(contextBuf.Buf)) Value(fn.Arg(1));
+        const UByte contextType = context.T.Type;
+        if (contextType != Value::NULLTYPE && contextType != Value::UNDEFINED)
+            panelChar = (contextType == Value::CHARACTER && fn.Env) ? FfToCharacter(context, fn.Env) : NULL;
         else
             panelChar = proot->GetModalClip(controllerIdx);
+        if (contextType >= Value::STRING)
+            context.DropRefs();
     }
 
     bool looping = (fn.NArgs >= 3) ? fn.Arg(2).ToBool(fn.Env) : false;
