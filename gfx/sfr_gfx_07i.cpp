@@ -526,7 +526,7 @@ void FUN_142621c80(char* self, char* snap)
     {
         Ptr<AMP::MovieProfile::MarkerInfo> info = *SF_HEAP_AUTO_NEW(snap) AMP::MovieProfile::MarkerInfo();
         info->Name = RawField<String>(it.Entry(), 0x10);
-        info->Number = RawField<UInt32>(it.Entry(), 0x18);
+        info->Number = RawField<UInt32>((char*)(*it.pHash + 2) + it.Index * 0x20, 0x18);
         RawPushMarker(RawFieldPtr<U>(snap, 0x40), info);
     }
 }
