@@ -42,6 +42,7 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_utils.h"
 #include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
 #include "ms2/scaleform/include/gfx/gfx_imageresource.h"
+#include "ms2/scaleform/include/gfx/gfx_rendertree.h"
 #include "ms2/scaleform/include/gfx/gfx_imagecreator.h"
 #include "ms2/scaleform/include/gfx/gfx_spritedef.h"
 #undef GetObject   // windows.h
@@ -5661,24 +5662,62 @@ bool FUN_142514100(const SlotInfo& si)
     return result;
 }
 
+// VM::IsPrimitiveType (4.1 AS3_VM.h): one of the cached primitive class traits.
+static SF_FORCEINLINE bool Sfr18IsPrimitiveType(const VM& vm, const ClassTraits::Traits& tr)
+{
+    const ClassTraits::Traits* p = &tr;
+    return p == vm.TraitsBoolean || p == vm.TraitsNumber || p == vm.TraitsInt || p == vm.TraitsUint ||
+           p == vm.TraitsString;
+}
+
+// The InstanceTraits overload.
+static SF_FORCEINLINE bool Sfr18IsPrimitiveType(const VM& vm, const InstanceTraits::Traits& tr)
+{
+    const InstanceTraits::Traits* p = &tr;
+    return p == &vm.TraitsBoolean->GetInstanceTraits() || p == &vm.TraitsNumber->GetInstanceTraits() ||
+           p == &vm.TraitsInt->GetInstanceTraits() || p == &vm.TraitsUint->GetInstanceTraits() ||
+           p == &vm.TraitsString->GetInstanceTraits();
+}
+
 // VM::IsVMCachedType: whether tr is one of the class traits the VM caches (and XML's, when it is enabled).
-// MS2-FUNCTIONAL free function (not declared in the shared VM class)
+// A free function (not declared in the shared VM class).
 // @0x142515460
 bool FUN_142515460(const VM& vm, const ClassTraits::Traits* tr)
 {
+    const ClassTraits::Traits* p = tr;
     bool result = false;
-    if (tr == vm.TraitsBoolean || tr == vm.TraitsNumber || tr == vm.TraitsInt || tr == vm.TraitsUint ||
-        tr == vm.TraitsString || tr == vm.TraitsClassClass || tr == vm.TraitsObject || tr == vm.TraitsNamespace ||
-        tr == vm.TraitsFunction || tr == vm.TraitsArray || tr == vm.TraitsVector_int || tr == vm.TraitsVector_uint ||
-        tr == vm.TraitsVector_double || tr == vm.TraitsVector_String)
+
+    if (Sfr18IsPrimitiveType(vm, *p))
         result = true;
-    else
+    else if (p == vm.TraitsClassClass)
+        result = true;
+    else if (p == vm.TraitsObject)
+        result = true;
+    else if (p == vm.TraitsNamespace)
+        result = true;
+    else if (p == vm.TraitsFunction)
+        result = true;
+    else if (p == vm.TraitsArray)
+        result = true;
+    else if (p == vm.TraitsVector_int)
+        result = true;
+    else if (p == vm.TraitsVector_uint)
+        result = true;
+    else if (p == vm.TraitsVector_double)
+        result = true;
+    else if (p == vm.TraitsVector_String)
+        result = true;
+    else if (vm.GetXMLSupport().IsEnabled())
     {
-        const XMLSupport& xml = vm.GetXMLSupport();
-        if (xml.IsEnabled() && (tr == xml.GetClassTraitsQName() || tr == xml.GetClassTraitsXML() ||
-                                tr == xml.GetClassTraitsXMLList()))
+        const XMLSupport& xmls = vm.GetXMLSupport();
+        if (p == xmls.GetClassTraitsQName())
+            result = true;
+        else if (p == xmls.GetClassTraitsXML())
+            result = true;
+        else if (p == xmls.GetClassTraitsXMLList())
             result = true;
     }
+
     return result;
 }
 
@@ -5902,26 +5941,44 @@ bool FUN_142522920(MovieRoot* self, MovieDefImpl* def)
 
 // VM::IsVMCachedType: whether itr is the instance traits of one of the class traits the VM caches (and XML's,
 // when it is enabled).
-// MS2-FUNCTIONAL free function (not declared in the shared VM class)
+// A free function (not declared in the shared VM class).
 // @0x142515580
 bool FUN_142515580(const VM& vm, const InstanceTraits::Traits* itr)
 {
+    const InstanceTraits::Traits* p = itr;
     bool result = false;
-    if (itr == &vm.TraitsBoolean->GetInstanceTraits() || itr == &vm.TraitsNumber->GetInstanceTraits() ||
-        itr == &vm.TraitsInt->GetInstanceTraits() || itr == &vm.TraitsUint->GetInstanceTraits() ||
-        itr == &vm.TraitsString->GetInstanceTraits() || itr == &vm.TraitsClassClass->GetInstanceTraits() ||
-        itr == &vm.TraitsObject->GetInstanceTraits() || itr == &vm.TraitsNamespace->GetInstanceTraits() ||
-        itr == &vm.TraitsFunction->GetInstanceTraits() || itr == &vm.TraitsArray->GetInstanceTraits() ||
-        itr == &vm.TraitsVector_int->GetInstanceTraits() || itr == &vm.TraitsVector_uint->GetInstanceTraits() ||
-        itr == &vm.TraitsVector_double->GetInstanceTraits() || itr == &vm.TraitsVector_String->GetInstanceTraits())
+
+    if (Sfr18IsPrimitiveType(vm, *p))
         result = true;
-    else
+    else if (p == &vm.TraitsClassClass->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsObject->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsNamespace->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsFunction->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsArray->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsVector_int->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsVector_uint->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsVector_double->GetInstanceTraits())
+        result = true;
+    else if (p == &vm.TraitsVector_String->GetInstanceTraits())
+        result = true;
+    else if (vm.GetXMLSupport().IsEnabled())
     {
-        const XMLSupport& xml = vm.GetXMLSupport();
-        if (xml.IsEnabled() && (itr == xml.GetITraitsQName() || itr == xml.GetITraitsXML() ||
-                                itr == xml.GetITraitsXMLList()))
+        const XMLSupport& xmls = vm.GetXMLSupport();
+        if (p == xmls.GetITraitsQName())
+            result = true;
+        else if (p == xmls.GetITraitsXML())
+            result = true;
+        else if (p == xmls.GetITraitsXMLList())
             result = true;
     }
+
     return result;
 }
 
@@ -9168,20 +9225,40 @@ UPInt FUN_14250d960(UPInt self) { return AccRd(self, 0xc8); }
 // @0x14250eef0
 UPInt FUN_14250eef0(UPInt self) { return AccRd(AccRd(self, 0x40), 0x18); }
 
-// ShapeObject::GetRatio: a float of the render node the handle at +0x48 names (0x38-byte entries on 4K pages, the
-// page's entry table at +0x20), 0 for no handle or a node of another type than 3.
-// MS2-FUNCTIONAL: raw-layout page walk
+namespace {
+// The SDK's Render::ContextImpl::EntryRef (Render_Context.h): the page and index of an entry (as sfr_as2_03y).
+struct As3RatioEntryRef
+{
+    Render::ContextImpl::EntryPage* pPage;
+    unsigned                        Index;
+
+    SF_FORCEINLINE As3RatioEntryRef(const Render::ContextImpl::Entry* pentry)
+    {
+        pPage = (Render::ContextImpl::EntryPage*)(((UPInt)pentry) & ~(UPInt)0xFFF);
+        Index = unsigned(pentry - &pPage->Entries[0]);
+    }
+    SF_FORCEINLINE Render::ContextImpl::EntryData* GetData() const { return pPage->pSnapshotPage->pData[Index]; }
+};
+
+SF_FORCEINLINE const Render::ContextImpl::EntryData* As3RatioReadOnlyData(const Render::ContextImpl::Entry* pentry)
+{
+    return As3RatioEntryRef(pentry).GetData();
+}
+} // namespace
+
+// ShapeObject::GetRatio: the morph ratio of a shape render node, 0 for any other node (SDK form, as the AS2 twin).
 // @0x14250d630
 float ShapeObject::GetRatio() const
-{   const UPInt self = reinterpret_cast<UPInt>(this);
-    const UPInt h = AccRd(self, 0x48);
-    if (!h)
-        return 0.0f;
-    const UInt32 idx = (UInt32)((SPInt)((h & 0xfff) - 0x38) / 0x38);
-    const UPInt node = AccRd(AccRd(h & ~UPInt(0xfff), 0x20), 0x28 + (UPInt)idx * 8);
-    if (*reinterpret_cast<const UInt16*>(node + 8) != 3)
-        return 0.0f;
-    return *reinterpret_cast<const float*>(node + 0x98);
+{
+    if (pRenNode)
+    {
+        if (As3RatioReadOnlyData(pRenNode.GetPtr())->Type == Render::ContextImpl::EntryData::ET_Shape)
+        {
+            return ((const Render::TreeShape::NodeData*)As3RatioReadOnlyData(
+                static_cast<Render::TreeShape*>(pRenNode.GetPtr())))->MorphRatio;
+        }
+    }
+    return 0.f;
 }
 
 // -- tail calls into the shared bodies --
