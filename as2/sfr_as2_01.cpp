@@ -97,6 +97,7 @@
 #include "../include/gfx/gfx_imemanager.h"
 #include "../include/render/text_highlight.h"
 #include "../include/gfx/gfx_imecandidateliststyle.h"
+#include "../include/gfx/text_editorkit.h"
 #include "../include/gfx/gfx_button.h"
 
 // The progress table's lookup (exe 0x142917500, folded with another table's): the exe calls it out of line from
@@ -1483,23 +1484,38 @@ static SF_INLINE Ptr<TextFieldObject> GetThisTextFieldObject(const FnCall& fn)
 
 // TextField.setIMECompositionStringStyle(category, style)
 // @0x1428eb900
-// MS2-FUNCTIONAL same sequence; the exe copies the highlight records field by field and keeps the temporaries in different slots
+// MS2-FUNCTIONAL SDK body; the exe keeps PresenceMask in r15b across ParseStyle (LTCG mod-ref knows it does not write &imeStyles), ours reloads it; noalias on ParseStyle does not help
 void TextFieldProto::SetIMECompositionStringStyle(const FnCall& fn)
 {
-    Ptr<TextFieldObject> ptf = GetThisTextFieldObject(fn);
-    if (!ptf || fn.NArgs < 1)
-        return;
-    ASString                 name = fn.Arg(0).ToString(fn.Env);
-    int cat = GFx_StringToIMEStyleCategory(name);
-    if (cat < IMEStyleData::SC_MaxNum)
+    if (fn.ThisPtr)
     {
-        IMEStyleData  newStyle;
-        IMEStyleData* pold = (IMEStyleData*)ptf->GetIMECompositionStringStyles();
-        if (pold)
-            newStyle = *pold;
-        newStyle.HighlightStyles[cat] = ParseStyle(fn, 1, newStyle.HighlightStyles[cat]);
-        newStyle.PresenceMask |= (UByte)(1 << cat);
-        ptf->SetIMECompositionStringStyles(*(const Text::IMEStyle*)&newStyle);
+        Ptr<TextFieldObject> pasTextObj;
+        if (fn.ThisPtr->GetObjectType() == ObjectInterface::Object_TextField)
+        {
+            AvmTextField* pthis = static_cast<AvmTextField*>(fn.ThisPtr);
+            pasTextObj = pthis->GetTextFieldASObject();
+        }
+        else if (fn.ThisPtr->GetObjectType() == ObjectInterface::Object_TextFieldASObject)
+        {
+            pasTextObj = static_cast<TextFieldObject*>(fn.ThisPtr);
+        }
+        if (pasTextObj)
+        {
+            if (fn.NArgs >= 1)
+            {
+                ASString categoryStr(fn.Arg(0).ToString(fn.Env));
+                Text::IMEStyle::Category cat = (Text::IMEStyle::Category)GFx_StringToIMEStyleCategory(categoryStr);
+                if (cat >= Text::IMEStyle::SC_MaxNum)
+                    return;
+
+                Text::IMEStyle* pimeStyles = pasTextObj->GetIMECompositionStringStyles();
+                Text::IMEStyle  imeStyles;
+                if (pimeStyles)
+                    imeStyles = *pimeStyles;
+                imeStyles.SetElement(cat, ParseStyle(fn, 1, imeStyles.GetElement(cat)));
+                pasTextObj->SetIMECompositionStringStyles(imeStyles);
+            }
+        }
     }
 }
 
