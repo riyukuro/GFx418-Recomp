@@ -7781,11 +7781,26 @@ static inline void Sfr34_LoadedCtor(AvmDisplayObj* avm, Instances::fl_display::L
 }
 
 // The SDK's `if (!avm->HasAS3Obj()) { if (avm->CreateASInstanceNoCtor()) {...} }`, inline as in the exe.
-static SF_FORCEINLINE void Sfr18LoadedCtor(AvmDisplayObj* avm, Instances::fl_display::Loader* loader)
+// Ptr<RefCountImpl>'s converting ctor from the entry's Ptr<NotifyLoadInitC>, inline as in the exe.
+static SF_FORCEINLINE Pickable<RefCountImpl> Sfr18InitCRef(Ptr<NotifyLoadInitC>& src)
+{
+    if (src) src->AddRef();
+    return Pickable<RefCountImpl>(src);
+}
+
+// CreateASInstanceNoCtor ignores its bool, and the exe's LTCG calls it without one: called through the shorter
+// signature (the same symbol).
+static SF_FORCEINLINE bool Sfr18CreateNoCtor(AvmDisplayObj* avm)
+{
+    bool (AvmDisplayObj::*const pf)() = reinterpret_cast<bool (AvmDisplayObj::*)()>(&AvmDisplayObj::CreateASInstanceNoCtor);
+    return (avm->*pf)();
+}
+
+static SF_FORCEINLINE void Sfr18LoadedCtor(AvmDisplayObj* avm, const SPtr<Instances::fl_display::Loader>& loader)
 {
     if (!(avm->pAS3RawPtr || avm->pAS3CollectiblePtr.pObject))
     {
-        if (avm->CreateASInstanceNoCtor(true))
+        if (Sfr18CreateNoCtor(avm))
         {
             avm->GetAS3Obj()->SetLoaderInfo(*loader);
             avm->CallCtor(true);
@@ -7799,7 +7814,8 @@ static SF_FORCEINLINE LogState* Sfr18RootLogState(MovieRoot* root) { return root
 // The loaded movie handed to its Loader while the preload task runs: open (once, after the version check), the
 // progress of its bytes, its first frame's sprite made the Loader's child (init), and at the end the bitmap of an
 // image (init) and complete; an error event when nothing could be loaded. True when the entry is done.
-// MS2-FUNCTIONAL: the exe inlines the Ptr<RefCountImpl> conversion of the init callback, register allocation
+// MS2-FUNCTIONAL: the exe reads the LogState pointer through the returned sret address (rax) and tests it after
+// the release, where cl threads the test through the slot; it loads the vptr before the Flags or; register allocation
 // @0x142515c60
 bool LoadQueueEntryMT_LoadMovie::LoadFinished()
 {
@@ -7865,7 +7881,7 @@ bool LoadQueueEntryMT_LoadMovie::LoadFinished()
                         pnewChar = *static_cast<Sprite*>(root->pASSupport->CreateCharacterInstance(
                             pMovieImpl, ccinfo, NULL, ResourceId(0), CharacterDef::Sprite));
                         pnewChar->SetLoadedSeparately(true);
-                        pnewChar->Flags |= DisplayObject::Mask_TimelineObject;
+                        pnewChar->DisplayObject::Flags |= DisplayObject::Mask_TimelineObject;   // SetTimelineObjectFlag(true)
                         pnewChar->OnEventLoad();
                         pnewChar->AddToPlayList();
                         AvmSprite* avmSpr = static_cast<AvmSprite*>(ToAvmDisplayObj(pnewChar));
@@ -7877,7 +7893,7 @@ bool LoadQueueEntryMT_LoadMovie::LoadFinished()
                         pnewChar->ModifyOptimizedPlayListLocal<Sprite>();
                         root->DoActions();
                     }
-                    qe->mLoader->QueueInitEvent(pnewChar, qe->NotifyLoadInitCInterface);
+                    qe->mLoader->QueueInitEvent(pnewChar, Sfr18InitCRef(qe->NotifyLoadInitCInterface));
                 }
                 FirstFrameLoaded = true;
             }
@@ -7903,9 +7919,9 @@ bool LoadQueueEntryMT_LoadMovie::LoadFinished()
                         }
                     }
                     Sfr34_ToAvmStage(pparent)->AddChild(pnewChar);
-                    Sfr18LoadedCtor(ToAvmDisplayObj(pnewChar), qe->mLoader);
+                    Sfr18LoadedCtor(Sfr18ToAvmDisplayObj(pnewChar), qe->mLoader);
                     qe->mLoader->QueueInitEvent(static_cast<GFx::DisplayObject*>(pnewChar.GetPtr()),
-                                                qe->NotifyLoadInitCInterface);
+                                                Sfr18InitCRef(qe->NotifyLoadInitCInterface));
                 }
                 qe->mLoader->QueueCompleteEvent();
             }
