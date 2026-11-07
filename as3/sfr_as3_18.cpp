@@ -6953,7 +6953,7 @@ static SF_FORCEINLINE ClassTraits::Traits* Sfr18Resolve2CT(VM& vm, const ASStrin
 // package's): ones known to the VM (cached, or from the global object, then cached) only add their file to the
 // children; the others are made, cached and kept as loaded classes. Then the new ones are initialized; on a failure
 // the error is output, the class uncached, the loaded classes unregistered and false returned.
-// MS2-FUNCTIONAL SDK statement structure (resolve helper, if/else, uninitialize tail, SDK return: no class made with classes present = false); left: the exe frame is 0x10 smaller (mov rbp,rsp), it places the found-class Children block inline, and register numbering. FUN_14250f9a0 is noinline, and Hash::Remove / ResizeNoConstruct are called out of line as in the exe
+// MS2-FUNCTIONAL SDK statement structure (resolve helper, if/else, uninitialize tail, SDK return: no class made with classes present = false); left: the exe threads the inlined resolve's non-null result straight into the found-class block (we re-test ctr), keeps the Remove key's namespace in rdi with a plain release (ours a null-tested SPtr temp at rbp-0x38), and register numbering in the init loop. FUN_14250f9a0 is noinline, and Hash::Remove / ResizeNoConstruct are called out of line as in the exe
 // @0x142521780
 bool VMAbcFile::RegisterUserDefinedClassTraits()
 {
@@ -6969,7 +6969,18 @@ bool VMAbcFile::RegisterUserDefinedClassTraits()
         if (FUN_142514cd0(ns))
             continue;
         ClassTraits::Traits* ctr = Sfr18Resolve2CT(vm, name, ns);
-        if (ctr == NULL)
+        if (ctr)
+        {
+            VMAbcFile* f = ctr->GetFilePtr();
+            if (f)
+            {
+                for (UPInt j = 0; j < Children.GetSize(); ++j)
+                    if (Children[j].GetPtr() == f)
+                        goto sfr18_next;
+                Sfr18PushBackOutResize(Children, SPtr<VMAbcFile>(f));
+            }
+        }
+        else
         {
             SPtr<ClassTraits::Traits> ud = Pickable<ClassTraits::Traits>(
                 SF_HEAP_NEW(vm.GetMemoryHeap()) ClassTraits::UserDefined(*this, vm, ci));
@@ -6977,18 +6988,7 @@ bool VMAbcFile::RegisterUserDefinedClassTraits()
             ++made;
             Sfr18PushBackOutResize(LoadedClasses, ud);
         }
-        else
-        {
-            VMAbcFile* f = ctr->GetFilePtr();
-            if (f)
-            {
-                UPInt j = 0;
-                while (j < Children.GetSize() && Children[j].GetPtr() != f)
-                    ++j;
-                if (j == Children.GetSize())
-                    Sfr18PushBackOutResize(Children, SPtr<VMAbcFile>(f));
-            }
-        }
+    sfr18_next:;
     }
     if (made == 0 && classes.Info.GetSize() != 0)
         return false;
