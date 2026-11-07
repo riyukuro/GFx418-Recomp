@@ -213,6 +213,7 @@ extern "C" void FUN_1422fbf60(void*);
 #pragma comment(linker, "/alternatename:FUN_1422fbf60=??1?$ArrayLH@VString@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@QEAA@XZ")
 #endif
 typedef Scaleform::ArrayLH<Scaleform::String> Ime01StringArray; typedef Scaleform::ArrayDataBase<Scaleform::GFx::Video::VideoPlayer::CuePoint, Scaleform::AllocatorGH<Scaleform::GFx::Video::VideoPlayer::CuePoint, 2>, Scaleform::ArrayDefaultPolicy> Ime01CueArr; template<> void Ime01CueArr::Reserve(const void*, Scaleform::UPInt);   // PushBack 0x1422fd480 (Ime01StringArray)
+template<> void Scaleform::ArrayBase<Scaleform::ArrayData<Scaleform::String, Scaleform::AllocatorLH<Scaleform::String, 2>, Scaleform::ArrayDefaultPolicy> >::PushBack(const Scaleform::String&);   // out of line in the exe (0x1422fd480)
 
 struct HWND__;
 
@@ -3219,58 +3220,58 @@ unsigned long long* FUN_1423d54d0(unsigned long long* self, unsigned long long o
 }
 
 // MS2-FUNCTIONAL: selects the requested IME language entry, avoids duplicate active layouts, and updates the four mode strings.
+// The manager's entry array (+0xb8), count (+0xd0) and state array (+0x190) are re-read after every call, as in the exe.
 // @0x1423d7940
 unsigned long long FUN_1423d7940(long long* manager, const char* primary, const char* fallback)
 {
+#define cx40_Entry(i) (reinterpret_cast<unsigned char*>(manager[0x17]) + static_cast<unsigned long long>(i) * 0x30)
+#define cx40_Name(i)  (*reinterpret_cast<Scaleform::String*>(cx40_Entry(i) + 0x10))
+#define cx40_Lang(i)  (*reinterpret_cast<int*>(cx40_Entry(i) + 0x20))
+#define cx40_Count    (*reinterpret_cast<unsigned*>(manager + 0x1a))
+#define cx40_States   (reinterpret_cast<unsigned*>(manager[0x32]))
     Scaleform::String selected;
-    auto* entries = reinterpret_cast<unsigned char*>(manager[0x17]);
-    auto* states = reinterpret_cast<unsigned*>(manager[0x32]);
-    const unsigned count = static_cast<unsigned>(manager[0x1a]);
-    unsigned long long index = 0;
-    unsigned limit = 0;
-    bool fallbackSelected = false;
-    int language = 0x2000000;
-
-    for (; index < count; ++index) {
-        auto* entry = entries + index * 0x30;
-        auto* name = reinterpret_cast<Scaleform::String*>(entry + 0x10);
-        if (primary && _stricmp(primary, name->ToCStr()) == 0 && states[index] == 0) {
-            selected = *name;
-            states[index] = 1;
+    unsigned index;
+    for (index = 0; index < cx40_Count; ++index) {
+        if (primary && Scaleform::SFstricmp(primary, cx40_Name(index).ToCStr()) == 0 && cx40_States[index] == 0) {
+            selected = cx40_Name(index);
+            cx40_States[index] = 1;
             goto selected_entry;
         }
     }
-    limit = count;
-    for (index = 0; index < limit; ++index) {
-        auto* entry = entries + index * 0x30;
-        auto* name = reinterpret_cast<Scaleform::String*>(entry + 0x10);
-        if (fallback && _stricmp(fallback, name->ToCStr()) == 0) {
-            selected = *reinterpret_cast<Scaleform::String*>(entry + 0x18);
-            states[index] = 2;
-            fallbackSelected = true;
-            language = *reinterpret_cast<int*>(entry + 0x20);
-            break;
+    {
+        bool fallbackSelected = false;
+        int language = 0x2000000;
+        for (index = 0; index < cx40_Count; ++index) {
+            if (fallback && Scaleform::SFstricmp(fallback, cx40_Name(index).ToCStr()) == 0) {
+                selected = *reinterpret_cast<Scaleform::String*>(cx40_Entry(index) + 0x18);
+                cx40_States[index] = 2;
+                fallbackSelected = true;
+                language = cx40_Lang(index);
+                break;
+            }
         }
-    }
-    if (limit) {
-        for (unsigned i = 0; i < limit; ++i) {
-            if (states[i] == 1 && *reinterpret_cast<int*>(entries + i * 0x30 + 0x20) == language)
-                return 0xffffffffull;
+        for (unsigned i = 0; i < cx40_Count; ++i) {
+            if (cx40_States[i] == 1 && cx40_Lang(i) == language)
+                return 0xffffffffu;
         }
+        if (!fallbackSelected)
+            return 0xffffffffu;
     }
-    if (!fallbackSelected) return 0xffffffffull;
-
 selected_entry:
     {
         const unsigned mask = reinterpret_cast<unsigned(*)(void*, unsigned)>(
-            (*reinterpret_cast<void***>(manager))[3])(manager,
-                *reinterpret_cast<unsigned*>(entries + index * 0x30 + 0x20));
+            (*reinterpret_cast<void***>(manager))[3])(manager, cx40_Lang(index));
         if (mask & 0xf00) reinterpret_cast<Ime01StringArray*>(manager + 2)->PushBack(selected);
         if (mask & 0xf000) reinterpret_cast<Ime01StringArray*>(manager + 5)->PushBack(selected);
         if (mask & 0xf0000) reinterpret_cast<Ime01StringArray*>(manager + 8)->PushBack(selected);
         if (mask & 0xf) reinterpret_cast<Ime01StringArray*>(manager + 0xb)->PushBack(selected);
     }
     return index;
+#undef cx40_Entry
+#undef cx40_Name
+#undef cx40_Lang
+#undef cx40_Count
+#undef cx40_States
 }
 
 // The object lives inside its owner's allocation: the class operator delete is empty, so only the global-delete
