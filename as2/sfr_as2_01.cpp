@@ -737,9 +737,15 @@ void ColorProto::SetRGB(const FnCall& fn)
     pchar->SetAcceptAnimMoves(false);
 }
 
+// SetConstMemberRaw through the ObjectInterface reference, as in getIMECandidateListStyle below.
+static __forceinline bool Sfr01PutOI(ObjectInterface& obj, ASStringContext* psc, const char* name, const Value& val)
+{
+    return obj.SetMemberRaw(psc, psc->CreateConstString(name), val, PropFlags());
+}
+
 // Color.getTransform(): an object with the ra/ga/ba/aa multipliers in percent and rb/gb/bb/ab adds in 0..255.
 // @0x1428eccf0
-// MS2-FUNCTIONAL the exe keeps the null test of the new object's release at the end (cl drops it after the member calls here)
+// The members are set through the ObjectInterface reference, which keeps the null test of the release at the end.
 MS2_AS2_NOGS void ColorProto::GetTransform(const FnCall& fn)
 {
     MS2_AS2_CHECK_THIS(fn, Color);
@@ -753,7 +759,7 @@ MS2_AS2_NOGS void ColorProto::GetTransform(const FnCall& fn)
     Render::Cxform cx = pchar->GetCxform();
     Ptr<Object>    pobj = *SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);
     ASStringContext* psc = fn.Env->GetSC();
-#define MS2_AS2_PUT(name, expr) pobj->SetMemberRaw(psc, psc->CreateConstString(name), Number(expr))
+#define MS2_AS2_PUT(name, expr) Sfr01PutOI(*pobj, psc, name, Value(Number(expr)))
     MS2_AS2_PUT("ba", cx.M[0][2] * 100.0f);
     MS2_AS2_PUT("ga", cx.M[0][1] * 100.0f);
     MS2_AS2_PUT("ra", cx.M[0][0] * 100.0f);
