@@ -62,6 +62,7 @@
 // MS2-RANGE: 0x1424eb6b0-0x1424eb700 .text$mn
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp weak-ref bodies inline (as3_value.h)
 #define MS2_AS3_PROPREF_DTOR_OUTLINE   // PropRef::~PropRef 0x1424de8f0 is defined here (as3_obj.h)
+#define MS2_AS3_COLLECT_NOALIAS   // Collect keeps no pointer to the caller's Stats (as3_gc.h)
 #define MS2_AS3_ASSIGN_NOALIAS   // one SCU in the exe: Assign/ReleaseInternal/getNext touch no caller memory (as3_value.h, as3_asvm.h)
 #define SF_AS3_SHAPEOBJECT_MODEL   // ShapeObject / AvmBitmap from the SDK MI layout (as3_avm.h)
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
@@ -716,7 +717,6 @@ static __forceinline void Sfr16ForceCollect(Scaleform::GFx::AS3::ASRefCountColle
 }
 
 // ForceCollect through the movie root's collector pointer.
-// MS2-FUNCTIONAL 0x1424de240: same code, but the exe tail-calls the Stats observer release.
 // @0x1424de240
 void FUN_1424de240(long long* state)
 {

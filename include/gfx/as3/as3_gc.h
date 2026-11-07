@@ -221,6 +221,11 @@ public:
     UPInt GetRootsCount() const { return Roots.GetSize(); }
 
     void AddRoot(const BaseType* root);
+    // MS2_AS3_COLLECT_NOALIAS: in the exe's SCU cl sees that Collect keeps no pointer to the caller's Stats, so the
+    // inlined ForceCollect tail-calls the observer release; noalias tells cl the same. Opt-in per unit.
+#ifdef MS2_AS3_COLLECT_NOALIAS
+    __declspec(noalias)
+#endif
     bool Collect(Stats* pstat = 0);
 
     // Links p into the work list right after pLastPtr, which then points at p.
