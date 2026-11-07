@@ -6,12 +6,12 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142624020-0x142625920 .text$mn
 // MS2-FUNCTIONAL: raw-layout transcriptions of the exe's template instances; the algorithms and effects match.
-// MS2-FUNCTIONAL 0x142624840: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
-// MS2-FUNCTIONAL 0x142624af0: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
-// MS2-FUNCTIONAL 0x142624d70: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
-// MS2-FUNCTIONAL 0x142624f80: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
-// MS2-FUNCTIONAL 0x1426251d0: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
-// MS2-FUNCTIONAL 0x1426255e0: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
+// MS2-FUNCTIONAL 0x142624840: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); now inlines RawNewTable like the exe (re-reading through self was worse here); register allocation, loop counter form and the inlined RawHashAdd still differ
+// MS2-FUNCTIONAL 0x142624af0: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); now inlines RawNewTable like the exe (re-reading through self was worse here); register allocation, loop counter form and the inlined RawHashAdd still differ
+// MS2-FUNCTIONAL 0x142624d70: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); now inlines RawNewTable and re-reads the table through self like the exe; register allocation, loop counter form and the inlined RawHashAdd still differ
+// MS2-FUNCTIONAL 0x142624f80: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); now inlines RawNewTable and re-reads the table through self like the exe; register allocation, loop counter form and the inlined RawHashAdd still differ
+// MS2-FUNCTIONAL 0x1426251d0: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); now inlines RawNewTable like the exe (re-reading through self was worse here); register allocation, loop counter form and the inlined RawHashAdd still differ
+// MS2-FUNCTIONAL 0x1426255e0: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); now inlines RawNewTable and re-reads the table through self like the exe; register allocation, loop counter form and the inlined RawHashAdd still differ
 
 #define MS2_RAW_INLINE __forceinline
 #include "sfr_gfx_07raw.h"
@@ -394,17 +394,16 @@ void FUN_142624700(U self, U id, int delta, int count, U stats)
 
 // ---- hash set Grow (resize) instances: new power-of-two table, rehash every live entry, free the old table ----
 
-static inline U RawGrowSize(U n) { return n < 8 ? 8 : 1ULL << ((Alg::UpperBit(n - 1) + 1) & 0x3f); }
+static inline U RawGrowSize(U n) { return n < 8 ? 8 : 1ULL << (Alg::UpperBit(n - 1) + 1); }
 
 template<U Stride>
-static inline U* RawNewTable(void* owner, U size)
+static __forceinline void RawNewTable(U*& t, void* owner, U size)
 {
-    U* t = (U*)Memory::AllocAutoHeap(owner, size * Stride + 0x10, AllocInfo(2, 0, 0));
+    t = (U*)Memory::AllocAutoHeap(owner, size * Stride + 0x10, AllocInfo(2, 0, 0));
     t[0] = 0;
     t[1] = size - 1;
     for (U i = 0; i < size; i++)
         *(SPInt*)RawEntry(t, i, Stride) = -2;
-    return t;
 }
 
 // Plain payload words copied from an old entry.
@@ -428,7 +427,8 @@ void FUN_142624840(U** self, void* owner, U n)
         RawClearPlainSet((U*)self, 0x28);
         return;
     }
-    U* nt = RawNewTable<0x28>(owner, RawGrowSize(n));
+    U* nt;
+    RawNewTable<0x28>(nt, owner, RawGrowSize(n));
     if (U* old = *self)
     {
         for (U i = 0; i <= old[1]; i++)
@@ -453,7 +453,8 @@ void FUN_142624af0(U** self, void* owner, U n)
         FUN_1426207e0((U*)self);
         return;
     }
-    U* nt = RawNewTable<0x30>(owner, RawGrowSize(n));
+    U* nt;
+    RawNewTable<0x30>(nt, owner, RawGrowSize(n));
     if (U* old = *self)
     {
         for (U i = 0; i <= old[1]; i++)
@@ -471,20 +472,25 @@ void FUN_142624af0(U** self, void* owner, U n)
 }
 
 // Movie* -> counted pointer sets; the entries are re-added through the set's add and the old value released.
-template<void (*Add)(U**, void*, const char*, U)>
-static inline void RawGrowMoviePtr(U** self, void* owner, U n)
+// InlineClear: the exe inlines the clear into one instance and calls FUN_142620840 from the other.
+template<void (*Add)(U**, void*, const char*, U), bool InlineClear>
+static __forceinline void RawGrowMoviePtr(U** self, void* owner, U n)
 {
     if (n == 0)
     {
-        FUN_142620840((U*)self);
+        if (InlineClear)
+            RawClearPtrSet((U*)self);
+        else
+            FUN_142620840((U*)self);
         return;
     }
-    U* nt = RawNewTable<0x20>(owner, RawGrowSize(n));
-    if (U* old = *self)
+    U* nt;
+    RawNewTable<0x20>(nt, owner, RawGrowSize(n));
+    if (*self)
     {
-        for (U i = 0; i <= old[1]; i++)
+        for (U i = 0, cnt = (*self)[1]; i <= cnt; i++)
         {
-            char* e = RawEntry(old, i, 0x20);
+            char* e = RawEntry(*self, i, 0x20);
             if (*(SPInt*)e != -2)
             {
                 Add(&nt, owner, e + 0x10, RawKey8Hash(RawField<U>(e, 0x10)));
@@ -493,15 +499,15 @@ static inline void RawGrowMoviePtr(U** self, void* owner, U n)
                 *(SPInt*)e = -2;
             }
         }
-        Memory::Free(old);
+        Memory::Free(*self);
     }
     *self = nt;
 }
 
 // @0x142624d70
-void FUN_142624d70(U** self, void* owner, U n) { RawGrowMoviePtr<FUN_14261e7a0>(self, owner, n); }
+void FUN_142624d70(U** self, void* owner, U n) { RawGrowMoviePtr<FUN_14261e7a0, false>(self, owner, n); }
 // @0x142624f80
-void FUN_142624f80(U** self, void* owner, U n) { RawGrowMoviePtr<FUN_14261e940>(self, owner, n); }
+void FUN_142624f80(U** self, void* owner, U n) { RawGrowMoviePtr<FUN_14261e940, true>(self, owner, n); }
 
 // {key, String} entries.
 // @0x1426251d0
@@ -512,7 +518,8 @@ void FUN_1426251d0(U** self, void* owner, U n)
         RawClearStringSet((U*)self, 0x18);
         return;
     }
-    U* nt = RawNewTable<0x20>(owner, RawGrowSize(n));
+    U* nt;
+    RawNewTable<0x20>(nt, owner, RawGrowSize(n));
     if (U* old = *self)
     {
         for (U i = 0; i <= old[1]; i++)
@@ -540,12 +547,13 @@ void FUN_1426255e0(U** self, void* owner, U n)
         RawClearStringSet((U*)self, 0x10);
         return;
     }
-    U* nt = RawNewTable<0x20>(owner, RawGrowSize(n));
-    if (U* old = *self)
+    U* nt;
+    RawNewTable<0x20>(nt, owner, RawGrowSize(n));
+    if (*self)
     {
-        for (U i = 0; i <= old[1]; i++)
+        for (U i = 0, cnt = (*self)[1]; i <= cnt; i++)
         {
-            char* e = RawEntry(old, i, 0x20);
+            char* e = RawEntry(*self, i, 0x20);
             if (*(SPInt*)e != -2)
             {
                 const String* key = RawFieldPtr<const String>(e, 0x10);
@@ -556,7 +564,7 @@ void FUN_1426255e0(U** self, void* owner, U n)
                 *(SPInt*)e = -2;
             }
         }
-        Memory::Free(old);
+        Memory::Free(*self);
     }
     *self = nt;
 }
