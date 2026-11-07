@@ -5306,43 +5306,52 @@ void Sfr31ExecCheckScopeObject(UPInt vmAddr, UPInt file, UInt32 idx)
     }
 }
 
+// Value::Convert2PrimitiveValueUnsafe with hintNone, inlined here in the exe.
+static __forceinline bool Sfr31Convert2Primitive(const Value& self, Value& result)
+{
+    if (self.IsPrimitive() || (self.IsObject() && self.GetObject() == NULL))
+        result.Assign(self);
+    else
+    {
+        switch (self.GetKind())
+        {
+        case Value::kNamespace:
+            // The exe calls the out-of-line operator= (0x1424e0d40).
+            (result.*static_cast<Value& (Value::*)(const ASString&)>(&Value::operator=))(self.GetNamespace()->GetUri());
+            return true;
+        case Value::kThunk:
+        case Value::kThunkClosure:
+        case Value::kVTableInd:
+        case Value::kVTableIndClosure:
+            result.SetNumber(0.0);
+            return true;
+        default:
+            break;
+        }
+        FUN_142508bd0(reinterpret_cast<UPInt>(self.GetObject()), &result, 0);
+        if (self.GetObject()->GetVM().IsException())
+            return false;
+    }
+    return true;
+}
+
+
 // Converts a value in place to its primitive form (objects through their conversion hook); *ok tells whether it succeeded.
-// MS2-FUNCTIONAL 0x14252f790: raw-offset model; codegen differs from the exe
+// MS2-FUNCTIONAL 0x14252f790: SDK ToPrimitiveValue with Convert2PrimitiveValueUnsafe inlined; same calls, but &local
+// reaches out-of-TU callees here, so cl reloads the source and local Flags/Bonus where the exe keeps them in ebx/rdx
+// (and saves r14 for the result byte).
 // @0x14252f790
 UInt8* Sfr31ValueToPrimitive(Value* v, UInt8* ok)
 {
-    Value local;
-    UPInt* lw = reinterpret_cast<UPInt*>(&local);
-    const UPInt vp = reinterpret_cast<UPInt>(v);
-    const UInt32 k = *reinterpret_cast<const UInt32*>(vp) & 0x1f;
-    bool good = true;
-    if (k < 5 || k == 10 || (k - 0xc < 4 && Sfr31Rd(vp, 0x10) == 0))
-        local.Assign(*v);
-    else if (((k - 5) & 0xfffffffdu) == 0 || k - 0x10 < 2)
+    // SDK Value::ToPrimitiveValue.
+    Value local = Value::GetUndefined();
+    bool result = false;
+    if (Sfr31Convert2Primitive(*v, local))
     {
-        *reinterpret_cast<UInt32*>(lw) = 4;
-        lw[2] = 0;
-        lw[3] = 0;
+        v->Swap(local);
+        result = true;
     }
-    else if (k == 0xb)
-        local = *reinterpret_cast<const ASString*>(Sfr31Rd(vp, 0x10) + 0x30);
-    else
-    {
-        FUN_142508bd0(Sfr31Rd(vp, 0x10), &local, 0);
-        if (*reinterpret_cast<UInt8*>(Sfr31Rd(Sfr31Rd(Sfr31Rd(vp, 0x10), 0x20), 0x78) + 0x180) != 0)
-            good = false;
-    }
-    if (good)
-    {
-        UPInt* vw = reinterpret_cast<UPInt*>(v);
-        for (int i = 0; i < 4; ++i)
-        {
-            const UPInt t = vw[i];
-            vw[i] = lw[i];
-            lw[i] = t;
-        }
-    }
-    *ok = good ? 1 : 0;
+    *ok = result;
     return ok;
 }
 
