@@ -919,9 +919,15 @@ namespace InstanceTraits
     }
 }
 
+}}}
+// The ArrayDH<Value> copy in Instances::Function's ctor calls Append out of line (0x142404330, sfr_as3_03).
+namespace Scaleform {
+template<> SF_NOINLINE void ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy>::Append(
+    const GFx::AS3::Value other[], UPInt otherSize);
+}
+namespace Scaleform { namespace GFx { namespace AS3 {
 namespace Instances
 {
-    // MS2-FUNCTIONAL: the exe inlines the scope stack copy around an Append call; ours calls the copy out of line
     // @0x1423ed090
     Function::Function(InstanceTraits::Traits& t, const ScopeStackType& ss, const Value& stored_this,
                        const ASString& name)
@@ -976,7 +982,14 @@ namespace InstanceTraits { namespace fl
         : CTraits(vm, CInfo)
     {
         SetConstructor(FUN_142508460(&vm.GetClassTraitsObject().GetInstanceTraits()));
-        InitScope.Resize(0);
+        // InitScope.Resize(0): the exe inlines it down to the ResizeNoConstruct call (nothing is constructed at size 0).
+        // Spelled out: once ArrayDataDH<Value>::Append is specialized (before Instances::Function above), cl stops inlining
+        // the other ArrayDataDH<Value> members.
+        {
+            ArrayDataDH<Value, AllocatorDH<Value, 2>, ArrayDefaultPolicy>& d =
+                reinterpret_cast<ArrayDataDH<Value, AllocatorDH<Value, 2>, ArrayDefaultPolicy>&>(InitScope);
+            d.ResizeNoConstruct(d.pHeap, 0);
+        }
     }
 
     // Untracked by progress (0x14241bfc0, shared with other empty makers); the vftable slot comes from here.
