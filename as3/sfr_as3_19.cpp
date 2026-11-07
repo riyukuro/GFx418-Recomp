@@ -1637,118 +1637,6 @@ void Sfr27ExecSetSlot(VM* vm, SPInt slot)
 
 // ---- SlotInfo::SetSlotValue (two entry points: with the receiver's Value and VTable, or with the Object) ----
 
-// The out-of-line helpers write an ASString into raw storage they initialize themselves.
-struct RawASString
-{
-    ASString& Get() { return *reinterpret_cast<ASString*>(&node); }
-    ~RawASString() { Get().~ASString(); }
-    UPInt node;
-};
-
-// The value stored through a bound slot: one case per binding kind (the data lives at obj + ValueInd, or in the
-// global object's value array for BT_ValueArray). Returns false for unbound or read-only kinds.
-static __forceinline bool SlotStoreBound(const SlotInfo& si, Object* obj, const Value& v)
-{
-    const UPInt base = reinterpret_cast<UPInt>(obj);
-    const SInt32 ind = si.ValueInd;
-    // the payload words of the (already coerced) value
-    const UPInt* raw = reinterpret_cast<const UPInt*>(&v);
-    switch (si.BindType)
-    {
-    case SlotInfo::BT_ValueArray:
-        reinterpret_cast<Value*>(*reinterpret_cast<UPInt*>(base + 0xa8))[ind].Assign(v);
-        return true;
-    case SlotInfo::BT_Value:
-        reinterpret_cast<Value*>(base + ind)->Assign(v);
-        return true;
-    case SlotInfo::BT_ObjectAS:
-        reinterpret_cast<STPtr*>(base + ind)->SetValue(v);
-        return true;
-    case SlotInfo::BT_ObjectCpp:
-    {
-        UPInt* slot = reinterpret_cast<UPInt*>(base + ind);
-        const UPInt np = raw[2];
-        if (np != *slot)
-        {
-            const UPInt old = *slot;
-            if (old != 0)
-            {
-                if ((old & 1) == 0)
-                {
-                    UInt32* rc = reinterpret_cast<UInt32*>(old + 0x10);
-                    if ((*rc & 0x3fffff) != 0)
-                    {
-                        --*rc;
-                        FUN_1423dfa20(reinterpret_cast<void*>(old));
-                    }
-                }
-                else
-                    *slot = old - 1;
-            }
-            if (np != 0)
-            {
-                UInt32* rc = reinterpret_cast<UInt32*>(np + 0x10);
-                *rc = (*rc + 1) & 0x8fbfffff;
-            }
-            *slot = np;
-        }
-        return true;
-    }
-    case SlotInfo::BT_Boolean:
-        *reinterpret_cast<UInt8*>(base + ind) = static_cast<UInt8>(raw[2]);
-        return true;
-    case SlotInfo::BT_Int:
-    case SlotInfo::BT_UInt:
-        *reinterpret_cast<UInt32*>(base + ind) = static_cast<UInt32>(raw[2]);
-        return true;
-    case SlotInfo::BT_Number:
-        *reinterpret_cast<UPInt*>(base + ind) = raw[2];
-        return true;
-    case SlotInfo::BT_String:
-    {
-        ASStringNode** slot = reinterpret_cast<ASStringNode**>(base + ind);
-        ASStringNode* old = *slot;
-        ASStringNode* ns = reinterpret_cast<ASStringNode*>(raw[2]);
-        if (old != NULL)
-            old->Release();
-        *slot = ns;
-        if (ns != NULL)
-            ns->AddRef();
-        return true;
-    }
-    }
-    return false;
-}
-
-// The bound class's traits, coerce the value to the slot's declared type (unless it is a class).
-// Returns false (after throwing) when the type is unknown or the value does not fit.
-static __forceinline bool SlotCoerceForStore(const SlotInfo* si, VM* vm, const Value& v, Value& coerced)
-{
-    if (v.GetKind() != Value::kClass && si->BindType <= 10)
-    {
-        ClassTraits::Traits* ct = FUN_1425085b0(si, vm);
-        if (ct == NULL)
-        {
-            RawASString typeName;
-            FUN_142508720(si, &typeName.Get(), vm);
-            Value tv(typeName.Get());
-            vm->ThrowVerifyError(Sfr31Err(static_cast<VM::ErrorID>(0x3f6), *vm, tv));
-            return false;
-        }
-        if (!ct->Coerce(v, coerced))
-        {
-            RawASString typeName;
-            FUN_142508720(si, &typeName.Get(), vm);
-            Value tv(typeName.Get());
-            vm->ThrowTypeError(Sfr31Err(static_cast<VM::ErrorID>(0x40a), *vm, v, tv));
-            return false;
-        }
-        return true;
-    }
-    coerced.Assign(v);
-    return true;
-}
-
 // MS2-FUNCTIONAL 0x142529030: SDK SlotInfo::SetSlotValue shape (one switch, error temps in the throw); the exe frame is 0x10 larger (setter Value shares the 0x432 error slot), tests ReadOnly as a byte and reloads the BindType dword, so slots and registers differ
 // Store v into slot si of the object held by thisV (setters run with thisV as receiver).
 // @0x142529030
@@ -1884,63 +1772,131 @@ char* Sfr27SlotSetValueThis(const SlotInfo* si, char* ret, VM* vm, const Value* 
     return ret;
 }
 
+// MS2-FUNCTIONAL 0x142529720: SDK SlotInfo::SetSlotValue(Object*) shape; the exe cross-jumps the two coerce-error tails the other way, keeps the setter Value in another slot, and tests ReadOnly as a byte, so the layout and slots differ
 // The same for an Object receiver; the error texts name the object's traits.
 // @0x142529720
 char* Sfr27SlotSetValueObj(const SlotInfo* si, char* ret, VM* vm, const Value* v, Object* obj)
 {
-    if (si->ReadOnly && static_cast<int>(VmRd(vm, 0x30)) < 1)
+    if (si->ReadOnly && !(static_cast<int>(VmRd(vm, 0x30)) > 0))
     {
-        vm->ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x432), *vm, si->Name->pData,
-                                          obj->GetTraits().GetName().ToCStr()));
+        vm->ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x432), *vm, si->Name->pData, obj->GetTraits().GetName().ToCStr()));
         *ret = 0;
         return ret;
     }
     Value coerced;
-    if (!SlotCoerceForStore(si, vm, *v, coerced))
+    if (v->GetKind() == Value::kClass || si->BindType > 10)
+        coerced.Assign(*v);
+    else
     {
-        *ret = 0;
-        return ret;
+        ClassTraits::Traits* ct = FUN_1425085b0(si, vm);
+        if (ct == NULL)
+        {
+            vm->ThrowVerifyError(VM::Error(static_cast<VM::ErrorID>(0x3f6), *vm, Value(si->GetDataTypeName(*vm), Value::InlineStr)));
+            *ret = 0;
+            return ret;
+        }
+        if (!ct->Coerce(*v, coerced))
+        {
+            vm->ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x40a), *vm, *v, Value(si->GetDataTypeName(*vm), Value::InlineStr)));
+            *ret = 0;
+            return ret;
+        }
     }
+    const UInt32 ind = si->ValueInd;
     switch (si->BindType)
     {
-    case SlotInfo::BT_ValueArray: case SlotInfo::BT_Value: case SlotInfo::BT_ObjectAS: case SlotInfo::BT_ObjectCpp:
-    case SlotInfo::BT_Boolean: case SlotInfo::BT_Int: case SlotInfo::BT_UInt: case SlotInfo::BT_Number:
+    case SlotInfo::BT_ValueArray:
+        reinterpret_cast<Value*>(*reinterpret_cast<UPInt*>(reinterpret_cast<UPInt>(obj) + 0xa8))[ind].Assign(coerced);
+        break;
+    case SlotInfo::BT_Value:
+        reinterpret_cast<Value*>(reinterpret_cast<UPInt>(obj) + ind)->Assign(coerced);
+        break;
+    case SlotInfo::BT_ObjectAS:
+        reinterpret_cast<STPtr*>(reinterpret_cast<UPInt>(obj) + ind)->SetValue(coerced);
+        break;
+    case SlotInfo::BT_ObjectCpp:
+    {
+        UPInt* slot = reinterpret_cast<UPInt*>(reinterpret_cast<UPInt>(obj) + ind);
+        const UPInt np = reinterpret_cast<const UPInt*>(&coerced)[2];
+        if (np != *slot)
+        {
+            const UPInt old = *slot;
+            if (old != 0)
+            {
+                if (old & 1)
+                    *slot = old - 1;
+                else
+                {
+                    UInt32* rc = reinterpret_cast<UInt32*>(old + 0x10);
+                    if ((*rc & 0x3fffff) != 0)
+                    {
+                        --*rc;
+                        FUN_1423dfa20(reinterpret_cast<void*>(old));
+                    }
+                }
+            }
+            if (np != 0)
+            {
+                UInt32* rc = reinterpret_cast<UInt32*>(np + 0x10);
+                *rc = (*rc + 1) & 0x8fbfffff;
+            }
+            *slot = np;
+        }
+        break;
+    }
+    case SlotInfo::BT_Boolean:
+        *reinterpret_cast<UInt8*>(reinterpret_cast<UPInt>(obj) + ind) = static_cast<UInt8>(reinterpret_cast<const UPInt*>(&coerced)[2]);
+        break;
+    case SlotInfo::BT_Int:
+    case SlotInfo::BT_UInt:
+        *reinterpret_cast<UInt32*>(reinterpret_cast<UPInt>(obj) + ind) = static_cast<UInt32>(reinterpret_cast<const UPInt*>(&coerced)[2]);
+        break;
+    case SlotInfo::BT_Number:
+        *reinterpret_cast<double*>(reinterpret_cast<UPInt>(obj) + ind) = *reinterpret_cast<const double*>(&reinterpret_cast<const UPInt*>(&coerced)[2]);
+        break;
     case SlotInfo::BT_String:
-        *ret = SlotStoreBound(*si, obj, coerced);
+    {
+        ASStringNode** slot = reinterpret_cast<ASStringNode**>(reinterpret_cast<UPInt>(obj) + ind);
+        ASStringNode* old = *slot;
+        ASStringNode* ns = reinterpret_cast<ASStringNode*>(reinterpret_cast<const UPInt*>(&coerced)[2]);
+        if (old != NULL)
+            old->Release();
+        *slot = ns;
+        if (ns != NULL)
+            ns->AddRef();
         break;
+    }
     case 10: case SlotInfo::BT_Get:
-        vm->ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x432), *vm, si->Name->pData,
-                                          obj->GetTraits().GetName().ToCStr()));
-        *ret = 1;
-        break;
-    case SlotInfo::BT_Code:
-        vm->ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x40d), *vm, si->Name->pData,
-                                          obj->GetTraits().GetName().ToCStr()));
-        *ret = 0;
+        vm->ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x432), *vm, si->Name->pData, obj->GetTraits().GetName().ToCStr()));
         break;
     case SlotInfo::BT_Set: case SlotInfo::BT_GetSet:
     {
-        VTable* vt = reinterpret_cast<VTable*>(FUN_14250fa80(reinterpret_cast<UPInt>(&obj->GetTraits())));
-        Value setter = vt->GetValue(AbsoluteIndex(si->ValueInd + 1));
+        Value setter = reinterpret_cast<VTable*>(FUN_14250fa80(reinterpret_cast<UPInt>(&obj->GetTraits())))->GetValue(AbsoluteIndex(ind + 1));
         const UInt32 sk = static_cast<UInt32>(setter.GetKind());
         if (sk < 0xc && sk - 5 > 2)
         {
-            vm->ThrowTypeError(Sfr31Err(static_cast<VM::ErrorID>(0x3ee), *vm, setter));
+            vm->ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x3ee), *vm, setter));
             *ret = 0;
+            return ret;
         }
-        else
+        Value result(Value::GetUndefined());
+        vm->ExecuteInternalUnsafe(setter, Value(obj), result, 1, &coerced, false);
+        if (vm->IsException())
         {
-            Value result(Value::GetUndefined());
-            Value self(obj);
-            vm->ExecuteInternalUnsafe(setter, self, result, 1, &coerced, false);
-            *ret = vm->IsException() ? 0 : 1;
+            *ret = 0;
+            return ret;
         }
         break;
     }
+    case SlotInfo::BT_Code:
+        vm->ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x40d), *vm, si->Name->pData, obj->GetTraits().GetName().ToCStr()));
+        *ret = 0;
+        return ret;
     default:
         *ret = 0;
-        break;
+        return ret;
     }
+    *ret = 1;
     return ret;
 }
 
