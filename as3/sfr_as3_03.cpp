@@ -1365,8 +1365,6 @@ namespace InstanceTraits { namespace fl
         return m;
     }
 
-    // MS2-FUNCTIONAL: frame layout (the exe puts delimiter at the top and shares limit's spill slot with nlimit) and the
-    // loop registers for next/cnt
     // @0x142400e50
     void String::AS3split(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
@@ -1405,14 +1403,18 @@ namespace InstanceTraits { namespace fl
                 {
                     const SInt32 matchOffset = pre->MatchOffset;
                     const SInt32 matchLength = pre->MatchLength;
-                    ASString sub(str.SubstringNode(next, matchOffset));
-                    saSplitPushBack03(parr->SA, Value(sub));
+                    {
+                        ASString sub(str.SubstringNode(next, matchOffset));
+                        Value vsub(sub);
+                        saSplitPushBack03(parr->SA, vsub);
+                    }
                     next = matchOffset + matchLength;
                 }
                 if (cnt < limit)
                 {
                     ASString sub(str.SubstringNode(next, str.GetLength()));
-                    saSplitPushBack03(parr->SA, Value(sub));
+                    Value vsub(sub);
+                    saSplitPushBack03(parr->SA, vsub);
                 }
                 result = parr;
                 return;
