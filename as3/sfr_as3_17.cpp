@@ -4964,7 +4964,8 @@ void Sfr33FindGOProperty(PropRef& result, VM& vm, const ArrayLH<Instances::fl::G
 // Tracer State::FindProp: the fixed slot mn names, looked up statically through the traced scope stack (State +0x58,
 // innermost first; stype 0), then the function's saved scopes (stype 1), then the class or global object that
 // defines it (stype 2); scope_index is the stack index tried last. A run-time name or a with scope stops the search.
-// MS2-FUNCTIONAL 0x142501e80: SDK State::FindProp body over raw tracer state offsets; regalloc only, same length (1246): the exe keeps the VM in r12, the scope count in r13 and result in r15, ours rotates them; the exe tests kinds 8 and 9 with sub/je/cmp/je, ours with one range check
+// 0x142501e80: SDK State::FindProp body over raw tracer state offsets (the kind tests are SDK switches, the flag
+// bits are read through UByte casts of the shifted word, which keeps the exe's shr/test form).
 // The tracer's VM (Tracer::GetVM: CF -> file -> VM), as State::GetVM re-reads it.
 static SF_FORCEINLINE VM& Sfr17TrGetVM(UPInt tracer)
 {
@@ -4975,12 +4976,14 @@ static SF_FORCEINLINE VM& Sfr17TrGetVM(UPInt tracer)
 static SF_FORCEINLINE const Traits* Sfr17TrGetValueTraits(UPInt tracer, const Value& v, UInt32 vflags)
 {
     const Traits* result = NULL;
-    switch (vflags & 0x1f)
+    switch (v.GetKind())
     {
     case 0:
         result = *reinterpret_cast<Traits* const*>(reinterpret_cast<const UByte*>(&Sfr17TrGetVM(tracer)) + 0x278);
         break;
     case 8:
+        result = *reinterpret_cast<Traits* const*>(reinterpret_cast<const UByte*>(&v) + 0x10);
+        break;
     case 9:
         result = *reinterpret_cast<Traits* const*>(reinterpret_cast<const UByte*>(&v) + 0x10);
         break;
@@ -5013,7 +5016,7 @@ void FUN_142501e80(void* state, void* propRef, void* multiname, void* stypeOut, 
         const UInt32 vflags = *reinterpret_cast<const UInt32*>(&v);
         const Traits* tr = Sfr17TrGetValueTraits(st[0], v, vflags);
 
-        if ((vflags >> 8) & 1)
+        if (static_cast<UByte>(vflags >> 8) & 1)
             return;
 
         if (tr && !tr->IsGlobal())
@@ -5055,16 +5058,21 @@ void FUN_142501e80(void* state, void* propRef, void* multiname, void* stypeOut, 
         }
     }
 
-    const unsigned nameKind = mn.Name.GetKind();
-    if (nameKind == 8 || nameKind == 9)
+    switch (mn.Name.GetKind())
+    {
+    case 8:
+    case 9:
         return;
+    default:
+        break;
+    }
     const Traits* ctr = FUN_14250d760(vm, mn);
     if (ctr)
     {
         if (const UByte* itr = *reinterpret_cast<UByte* const*>(reinterpret_cast<const UByte*>(ctr) + 0xc0))
         {
             Object* obj = NULL;
-            if ((itr[0x68] >> 4) & 1)
+            if ((UByte)(*reinterpret_cast<const UPInt*>(itr + 0x68) >> 4) & 1)
                 obj = *reinterpret_cast<Object* const*>(itr + 0xd0);
             else
                 obj = *reinterpret_cast<Object* const*>(vmb + 0x298);
