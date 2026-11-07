@@ -5,7 +5,7 @@
 // font provider (FontResource, under a GFxSystemFontResourceKey library key).
 // MS2-UNIT: sfr_gfx_08j
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1426535f0-0x1426589f0 .text$mn
+// MS2-RANGE: 0x1426535c0-0x1426589f0 .text$mn
 
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_stream.h"

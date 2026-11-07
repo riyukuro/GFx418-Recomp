@@ -5,7 +5,7 @@
 // Eighth source of queue unit sfr_gfx_08 (the unit spans several original GFx sources).
 // MS2-UNIT: sfr_gfx_08
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1426519d0-0x1426535f0 .text$mn
+// MS2-RANGE: 0x1426519d0-0x1426535c0 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
