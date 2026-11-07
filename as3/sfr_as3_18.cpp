@@ -3025,7 +3025,21 @@ public:
     void QueueFrameActions();
 };
 
-// MS2-FUNCTIONAL the exe leaves a dead lea of the AvmDisplayObj after the Flags or and does not align its loop heads
+// ToAvmDisplayObj (AS3_AvmDisplayObj.h) with its null test
+static inline AvmDisplayObj* Sfr18ToAvmDisplayObj(DisplayObjectBase* po)
+{
+    if (!po)
+        return NULL;
+    return static_cast<AvmDisplayObj*>(po->GetAvmObjImpl());
+}
+
+// AvmDisplayObj::SetFirstFrameCalledFlag (AS3_AvmDisplayObj.h)
+static inline void Sfr18SetLoadedFlag(AvmDisplayObj* avm, bool v = true)
+{
+    (v) ? avm->Flags |= AvmDisplayObj::Flag_Loaded : avm->Flags &= ~AvmDisplayObj::Flag_Loaded;
+}
+
+// FrameCounter::QueueFrameActions (AS3_AvmStage.cpp): the SDK null-tested ToAvmDisplayObj and lvalue-conditional flag setter
 // @0x14251ff60
 void FrameCounter::QueueFrameActions()
 {
@@ -3037,7 +3051,7 @@ void FrameCounter::QueueFrameActions()
     {
         for (InteractiveObject* cur = pPlayPrev; cur; cur = cur->pPlayPrev)
         {
-            ToAvmDisplayObj(cur)->Flags |= AvmDisplayObj::Flag_Loaded;
+            Sfr18SetLoadedFlag(Sfr18ToAvmDisplayObj(cur));
             if (cur->IsSprite())
             {
                 AvmSprite* aspr = static_cast<AvmSprite*>(ToAvmDisplayObj(cur));
@@ -3053,7 +3067,7 @@ void FrameCounter::QueueFrameActions()
     {
         for (InteractiveObject* cur = pPlayPrevOpt; cur; cur = cur->pPlayPrevOpt)
         {
-            ToAvmDisplayObj(cur)->Flags |= AvmDisplayObj::Flag_Loaded;
+            Sfr18SetLoadedFlag(Sfr18ToAvmDisplayObj(cur));
             if (cur->IsSprite())
             {
                 AvmSprite* aspr = static_cast<AvmSprite*>(ToAvmDisplayObj(cur));
