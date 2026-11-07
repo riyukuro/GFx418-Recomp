@@ -8791,14 +8791,180 @@ void FUN_140059c10(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
   }
 }
 
-// MS2-FUNCTIONAL: 16-wide bidirectional average into dst (16 rows when h == 16, else 8).
+// SSE2 16-wide average of src into dst (16 rows when h == 16, else 8): two pavgb halves per row, unrolled as in the exe.
 // @0x140059dd0
 void FUN_140059dd0(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
 {
+  __int64 s = stride;
   (void)off;
-  int rows = h == 16 ? 16 : 8;
-  for (int i = 0; i < rows; ++i)
-    for (int j = 0; j < 16; ++j) dst[i * stride + j] = cri06_avg(src[i * stride + j], dst[i * stride + j]);
+  {
+    __m128i hi = _mm_loadl_epi64((const __m128i*)(src + 8));
+    __m128i lo = _mm_loadl_epi64((const __m128i*)src);
+    hi = _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(dst + 8)));
+    lo = _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)dst));
+    _mm_storel_epi64((__m128i*)dst, lo);
+    _mm_storel_epi64((__m128i*)(dst + 8), hi);
+  }
+  src += s;
+  dst += s;
+  {
+    __m128i hi = _mm_loadl_epi64((const __m128i*)(src + 8));
+    __m128i lo = _mm_loadl_epi64((const __m128i*)src);
+    hi = _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(dst + 8)));
+    lo = _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)dst));
+    _mm_storel_epi64((__m128i*)dst, lo);
+    _mm_storel_epi64((__m128i*)(dst + 8), hi);
+  }
+  src += s;
+  dst += s;
+  {
+    __m128i hi = _mm_loadl_epi64((const __m128i*)(src + 8));
+    __m128i lo = _mm_loadl_epi64((const __m128i*)src);
+    hi = _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(dst + 8)));
+    lo = _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)dst));
+    _mm_storel_epi64((__m128i*)dst, lo);
+    _mm_storel_epi64((__m128i*)(dst + 8), hi);
+  }
+  src += s;
+  dst += s;
+  {
+    __m128i hi = _mm_loadl_epi64((const __m128i*)(src + 8));
+    __m128i lo = _mm_loadl_epi64((const __m128i*)src);
+    hi = _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(dst + 8)));
+    lo = _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)dst));
+    _mm_storel_epi64((__m128i*)dst, lo);
+    _mm_storel_epi64((__m128i*)(dst + 8), hi);
+  }
+  src += s;
+  dst += s;
+  {
+    __m128i hi = _mm_loadl_epi64((const __m128i*)(src + 8));
+    __m128i lo = _mm_loadl_epi64((const __m128i*)src);
+    hi = _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(dst + 8)));
+    lo = _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)dst));
+    _mm_storel_epi64((__m128i*)dst, lo);
+    _mm_storel_epi64((__m128i*)(dst + 8), hi);
+  }
+  src += s;
+  dst += s;
+  {
+    __m128i hi = _mm_loadl_epi64((const __m128i*)(src + 8));
+    __m128i lo = _mm_loadl_epi64((const __m128i*)src);
+    hi = _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(dst + 8)));
+    lo = _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)dst));
+    _mm_storel_epi64((__m128i*)dst, lo);
+    _mm_storel_epi64((__m128i*)(dst + 8), hi);
+  }
+  src += s;
+  dst += s;
+  {
+    __m128i hi = _mm_loadl_epi64((const __m128i*)(src + 8));
+    __m128i lo = _mm_loadl_epi64((const __m128i*)src);
+    hi = _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(dst + 8)));
+    lo = _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)dst));
+    _mm_storel_epi64((__m128i*)dst, lo);
+    _mm_storel_epi64((__m128i*)(dst + 8), hi);
+  }
+  dst += s;
+  if (h == 16) {
+    src += s;
+    {
+      __m128i hi = _mm_loadl_epi64((const __m128i*)(src + 8));
+      __m128i lo = _mm_loadl_epi64((const __m128i*)src);
+      hi = _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(dst + 8)));
+      lo = _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)dst));
+      _mm_storel_epi64((__m128i*)dst, lo);
+      _mm_storel_epi64((__m128i*)(dst + 8), hi);
+    }
+    dst += s;
+    src += s;
+    {
+      __m128i hi = _mm_loadl_epi64((const __m128i*)(src + 8));
+      __m128i lo = _mm_loadl_epi64((const __m128i*)src);
+      hi = _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(dst + 8)));
+      lo = _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)dst));
+      _mm_storel_epi64((__m128i*)dst, lo);
+      _mm_storel_epi64((__m128i*)(dst + 8), hi);
+    }
+    dst += s;
+    src += s;
+    {
+      __m128i hi = _mm_loadl_epi64((const __m128i*)(src + 8));
+      __m128i lo = _mm_loadl_epi64((const __m128i*)src);
+      hi = _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(dst + 8)));
+      lo = _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)dst));
+      _mm_storel_epi64((__m128i*)dst, lo);
+      _mm_storel_epi64((__m128i*)(dst + 8), hi);
+    }
+    dst += s;
+    src += s;
+    {
+      __m128i hi = _mm_loadl_epi64((const __m128i*)(src + 8));
+      __m128i lo = _mm_loadl_epi64((const __m128i*)src);
+      hi = _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(dst + 8)));
+      lo = _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)dst));
+      _mm_storel_epi64((__m128i*)dst, lo);
+      _mm_storel_epi64((__m128i*)(dst + 8), hi);
+    }
+    dst += s;
+    src += s;
+    {
+      __m128i hi = _mm_loadl_epi64((const __m128i*)(src + 8));
+      __m128i lo = _mm_loadl_epi64((const __m128i*)src);
+      hi = _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(dst + 8)));
+      lo = _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)dst));
+      _mm_storel_epi64((__m128i*)dst, lo);
+      _mm_storel_epi64((__m128i*)(dst + 8), hi);
+    }
+    dst += s;
+    src += s;
+    {
+      __m128i hi = _mm_loadl_epi64((const __m128i*)(src + 8));
+      __m128i lo = _mm_loadl_epi64((const __m128i*)src);
+      hi = _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(dst + 8)));
+      lo = _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)dst));
+      _mm_storel_epi64((__m128i*)dst, lo);
+      _mm_storel_epi64((__m128i*)(dst + 8), hi);
+    }
+    dst += s;
+    src += s;
+    {
+      __m128i hi = _mm_loadl_epi64((const __m128i*)(src + 8));
+      __m128i lo = _mm_loadl_epi64((const __m128i*)src);
+      hi = _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(dst + 8)));
+      lo = _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)dst));
+      _mm_storel_epi64((__m128i*)dst, lo);
+      _mm_storel_epi64((__m128i*)(dst + 8), hi);
+    }
+    dst += s;
+    src += s;
+    {
+      __m128i hi = _mm_loadl_epi64((const __m128i*)(src + 8));
+      __m128i lo = _mm_loadl_epi64((const __m128i*)src);
+      hi = _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(dst + 8)));
+      lo = _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)dst));
+      _mm_storel_epi64((__m128i*)dst, lo);
+      _mm_storel_epi64((__m128i*)(dst + 8), hi);
+    }
+    dst += s;
+    {
+      __m128i hi = _mm_loadl_epi64((const __m128i*)(src + s + 8));
+      __m128i lo = _mm_loadl_epi64((const __m128i*)(src + s));
+      hi = _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(dst + 8)));
+      lo = _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)dst));
+      _mm_storel_epi64((__m128i*)dst, lo);
+      _mm_storel_epi64((__m128i*)(dst + 8), hi);
+    }
+  } else {
+    {
+      __m128i hi = _mm_loadl_epi64((const __m128i*)(src + s + 8));
+      __m128i lo = _mm_loadl_epi64((const __m128i*)(src + s));
+      hi = _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(dst + 8)));
+      lo = _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)dst));
+      _mm_storel_epi64((__m128i*)dst, lo);
+      _mm_storel_epi64((__m128i*)(dst + 8), hi);
+    }
+  }
 }
 
 // MS2-FUNCTIONAL: 16-wide vertical half-pel average, then averaged into dst.
