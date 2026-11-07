@@ -1162,28 +1162,36 @@ namespace Instances { namespace fl
         return r < 0 ? r + 7 : r;
     }
 
-    // MS2-FUNCTIONAL: binary-search register allocation differs
+    // the SDK 4.3 body
     // @0x1424272a0
     Value::Number Date::YearFromTime(Value::Number t)
     {
-        // The year lies between the estimates for all-leap and all-common years.
-        const SInt32 y1 = static_cast<SInt32>(::floor(t / 31536000000.0)) + 1970;
-        const SInt32 y2 = static_cast<SInt32>(::floor(t / 31622400000.0)) + 1970;
-        SInt32 lo = y2 <= y1 ? y2 : y1;
-        SInt32 hi = y2 <= y1 ? y1 : y2;
-        while (lo < hi)
+        int high = 1970 + (int) ::floor(t / (msPerDay * 365.0));
+        int low  = 1970 + (int) ::floor(t / (msPerDay * 366.0));
+
+        // Check if the date is negative (before 1970).
+        if (high < low)
+            Alg::Swap(high, low);
+
+        // Binary search for the "largest integer y such that TimeFromYear(y) <= t".
+        while (high > low)
         {
-            const SInt32 mid = (lo + hi) / 2;
-            if (TimeFromYear(mid) <= t)
-            {
-                if (t < TimeFromYear(mid + 1))
-                    return mid;
-                lo = mid + 1;
-            }
+            int middle = (high + low) / 2;
+
+            if (TimeFromYear(middle) > t)
+                high = middle - 1;
             else
-                hi = mid - 1;
+            {
+                low = middle + 1;
+                if (TimeFromYear(low) > t)
+                {
+                    low--;
+                    break;
+                }
+            }
         }
-        return lo;
+
+        return low;
     }
 
     // The leap-year table is picked by an index offset into MonthEndDay (as in MakeDay).
@@ -2947,69 +2955,89 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     // E4X name matching: the local name (or the wildcard), then the namespace. An unqualified element name
     // means the default xml namespace (the public one when the call frame has none); a namespace set matches
     // through its public members, an empty URI again standing for the default namespace.
-    // MS2-FUNCTIONAL: register allocation (exe keeps the result in dil and this in r14)
+    // the SDK 4.3 body
     // @0x14241ca70
     bool XML::Matches(const Multiname& prop_name) const
     {
         bool result = false;
+
         if (prop_name.Name.IsString())
         {
-        const ASString name = prop_name.Name.AsString();
-        if (GetName() == name || prop_name.IsAnyType())
-        {
-            if (prop_name.IsQName())
+            const ASString name = prop_name.Name.AsString();
+
+            if (GetName() == name || prop_name.IsAnyType())
             {
-                if (prop_name.IsAnyNamespace())
+                if (prop_name.IsQName())
+                {
+                    if (prop_name.IsAnyNamespace())
+                        result = true;
+                    else
+                    {
+                        const Instances::Namespace& ns = prop_name.GetNamespace();
+
+                        VM& vm = GetVM();
+                        Instances::Namespace* def_ns = vm.GetDefXMLNamespace();
+                        const ASString& def_uri = def_ns ? def_ns->GetUri() : vm.GetPublicNamespace().GetUri();
+
+                        const ASString& uri = ns.GetKind() == Abc::NS_Public && (prop_name.IsAttr() || !ns.GetUri().IsEmpty())? ns.GetUri() : def_uri;
+
+                        if (uri == GetNamespace().GetUri())
+                            result = true;
+                    }
+                }
+                else if (prop_name.IsAnyType())
                     result = true;
                 else
                 {
-                    const Instances::Namespace& ns = prop_name.GetNamespace();
                     VM& vm = GetVM();
-                    Instances::Namespace* def_ns = vm.GetDefXMLNamespace();
+                    const Instances::Namespace& cur_ns = GetNamespace();
+
+                    Instances::Namespace* def_ns = NULL;
+                    if (!prop_name.IsAttr())
+                        def_ns = vm.GetDefXMLNamespace();
+
                     if (def_ns == NULL)
                         def_ns = &vm.GetPublicNamespace();
-                    const ASString& uri = ns.GetKind() == Abc::NS_Public &&
-                                          (prop_name.IsAttr() || !ns.GetUri().IsEmpty()) ? ns.GetUri()
-                                                                                          : def_ns->GetUri();
-                    if (uri == GetNamespace().GetUri())
-                        result = true;
-                }
-            }
-            else if (prop_name.IsAnyType())
-                result = true;
-            else
-            {
-                VM& vm = GetVM();
-                const Instances::Namespace& cur_ns = GetNamespace();
-                Instances::Namespace* def_ns = NULL;
-                if (!prop_name.IsAttr())
-                    def_ns = vm.GetDefXMLNamespace();
-                Instances::Namespace& pub_ns = vm.GetPublicNamespace();
-                if (def_ns == NULL)
-                    def_ns = &pub_ns;
 
-                if (prop_name.ContainsNamespace(pub_ns))
-                {
-                    const ArrayLH<SPtr<Instances::Namespace> >& nss =
-                        static_cast<const NamespaceSet*>(prop_name.Obj.GetPtr())->GetNamespaces();
-                    for (UPInt i = 0; i < nss.GetSize(); ++i)
+                    if (prop_name.ContainsNamespace(vm.GetPublicNamespace()))
                     {
-                        const Instances::Namespace& ns = *nss[i];
-                        if (ns.GetKind() != Abc::NS_Public)
-                            continue;
-                        const ASString& uri = ns.GetUri().IsEmpty() ? def_ns->GetUri() : ns.GetUri();
-                        if (uri == cur_ns.GetUri())
+                        const ArrayLH<SPtr<Instances::Namespace> >& namespaces =
+                            static_cast<const NamespaceSet*>(prop_name.Obj.GetPtr())->GetNamespaces();
+                        const UPInt size = namespaces.GetSize();
+
+                        for(UPInt j = 0; j < size; ++j)
                         {
-                            result = true;
-                            break;
+                            const Instances::Namespace& ns = *namespaces[j];
+                            if (ns.GetKind() == Abc::NS_Public)
+                            {
+                                if (ns.GetUri().IsEmpty())
+                                {
+                                    if (def_ns->GetUri() == cur_ns.GetUri())
+                                    {
+                                        result = true;
+                                        break;
+                                    }
+                                }
+                                else
+                                {
+                                    if (ns.GetUri() == cur_ns.GetUri())
+                                    {
+                                        result = true;
+                                        break;
+                                    }
+                                }
+                            }
                         }
                     }
+                    else
+                    {
+                        if (*def_ns == cur_ns)
+                            result = true;
+                    }
                 }
-                else if (def_ns->GetUri() == cur_ns.GetUri())
-                    result = def_ns->GetKind() == cur_ns.GetKind();
             }
         }
-        }
+
         return result;
     }
 
@@ -5256,14 +5284,13 @@ namespace Instances { namespace fl
             if (def && def->GetUri().GetNode() == ns.GetUri().GetNode() && StrictEqual(def->GetPrefix(), ns.GetPrefix()))
                 return;
         }
-        if (ns.GetPrefix().IsString())
+        const Value& pref = ns.GetPrefix();
+        if (pref.IsString() && pref.GetStringNode()->Size != 0)
         {
-            const ASStringNode* prefix = ns.GetPrefix().GetStringNode();
-            if (prefix->Size != 0)
-            {
-                buf.AppendString(prefix->pData, prefix->Size);
-                buf.AppendChar(':');
-            }
+            const ASStringNode* prefix = pref.GetStringNode();
+
+            buf.AppendString(prefix->pData, prefix->Size);
+            buf.AppendChar(':');
         }
     }
 
@@ -5375,7 +5402,7 @@ namespace Instances { namespace fl
                         if (matchFound)
                             newPrefix.Append("aaa", 3);
                     }
-                    nsAttr.SetPrefix(Value(newPrefix));
+                    { Value prefix(newPrefix); nsAttr.SetPrefix(prefix); }
                 }
 
                 NsaAdd(namespaceDeclarations, nsAttr);
@@ -5407,7 +5434,7 @@ namespace Instances { namespace fl
                         newPrefix.Append("aaa", 3);
                 }
 
-                ans->SetPrefix(Value(newPrefix));
+                { Value prefix(newPrefix); ans->SetPrefix(prefix); }
 
                 bool nsFound = false;
                 for (UPInt j = 0; j < sizeAD; ++j)
@@ -5455,7 +5482,7 @@ namespace Instances { namespace fl
                         newPrefix.Append("aaa", 3);
                 }
 
-                ans->SetPrefix(Value(newPrefix));
+                { Value prefix(newPrefix); ans->SetPrefix(prefix); }
             }
 
             NsSuffix(this, buf, *ans, true);
