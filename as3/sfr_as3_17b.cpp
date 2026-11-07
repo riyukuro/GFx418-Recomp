@@ -17,8 +17,6 @@ void FUN_1424efe30(Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::Value* valu
 void FUN_14241de40(Scaleform::GFx::AS3::ValueStack* stack, unsigned n);   // ValueStack::PopBack: pops (and releases) the top n values
 bool FUN_1425146d0(Scaleform::GFx::AS3::VM* vm, const Scaleform::GFx::AS3::Value* v, const void* traits);
 Scaleform::GFx::AS3::Object* FUN_14250a550(Scaleform::GFx::AS3::VM& vm);   // the VM's fallback object (global); defined in sfr_as3_18
-void FUN_1424d9530(void* ra, Scaleform::GFx::AS3::VM* vm, Scaleform::UInt32 argc);   // ReadArgs::ReadArgs
-void FUN_1424de9e0(void* ra);                                                        // ReadArgs::~ReadArgs
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -91,11 +89,11 @@ enum Sfr33ExecExit
     Sfr33ExitCalled     // a call pushed a new frame; this one resumes at its CP
 };
 
-// The raw storage of a ReadArgs, built and torn down by the exe's own out-of-line functions.
+// The raw storage of a ReadArgs, built and torn down by its out-of-line ctor/dtor.
 struct Sfr33Args
 {
-    Sfr33Args(VM* vm, UInt32 argc) { FUN_1424d9530(buf, vm, argc); }
-    ~Sfr33Args() { FUN_1424de9e0(buf); }
+    Sfr33Args(VM* vm, UInt32 argc) { reinterpret_cast<ReadArgs*>(buf)->ReadArgs::ReadArgs(*vm, argc); }
+    ~Sfr33Args() { reinterpret_cast<ReadArgs*>(buf)->ReadArgs::~ReadArgs(); }
     UInt32 ArgNum() const { return *reinterpret_cast<const UInt32*>(buf + 0x10); }
     const Value* Argv() const
     {
@@ -805,8 +803,3 @@ int VM::ExecuteCode(unsigned max_stack_depth)
 
 }}} // namespace Scaleform::GFx::AS3
 
-// The ReadArgs ctor/dtor the Sfr33Args wrapper above calls out of line, bound by alternatename to the real symbols.
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:?FUN_1424d9530@@YAXPEAXPEAVVM@AS3@GFx@Scaleform@@K@Z=??0ReadArgs@AS3@GFx@Scaleform@@QEAA@AEAVVM@123@K@Z")
-#pragma comment(linker, "/alternatename:?FUN_1424de9e0@@YAXPEAX@Z=??1ReadArgs@AS3@GFx@Scaleform@@QEAA@XZ")
-#endif
