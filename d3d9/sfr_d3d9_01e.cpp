@@ -2186,6 +2186,25 @@ bool FUN_142734790(D3D9::ShaderManager* sm, Render::Texture** tex, const Matrix2
     return FUN_142731310(sm, copySource ? 2 : 1, tex, texgen, texsize, mvp, psi, flags);
 }
 
+// ShaderInterfaceBase::SetUniform0 as a forceinline copy: with the header's member (inlined on its own) cl puts the
+// pVDesc batch branch's UniformSet store as [index+this]; this copy gives the exe's [this+index] in SetFilterFill
+struct SffSI : D3D9::ShaderInterface
+{
+    static __forceinline void SetU0(SffSI* psi, const D3D9::ShaderPair& sd, unsigned var, const float* v, unsigned n,
+                                    unsigned index)
+    {
+        if (sd->pVDesc->Uniforms[var].Size)
+            memcpy(psi->UniformData + sd->pVDesc->Uniforms[var].ShadowOffset +
+                       sd->pVDesc->Uniforms[var].ElementSize * index,
+                   v, n * sizeof(float));
+        if (sd->pFDesc->Uniforms[var].Size)
+            memcpy(psi->UniformData + sd->pFDesc->Uniforms[var].ShadowOffset +
+                       sd->pFDesc->Uniforms[var].ElementSize * index,
+                   v, n * sizeof(float));
+        psi->UniformSet[var] = true;
+    }
+};
+
 // the SDK ShaderInterfaceBase::SetUniform body inlined: SetUniform0 takes the desc's Array, not the bvar local
 static __forceinline void SffSetUniform(D3D9::ShaderInterface* psi, const D3D9::ShaderPair& sd, unsigned var,
                                         const float* v, unsigned n, unsigned index = 0, unsigned batch = 0)
@@ -2193,8 +2212,8 @@ static __forceinline void SffSetUniform(D3D9::ShaderInterface* psi, const D3D9::
     if (sd->pVDesc->BatchUniforms[var].Offset >= 0)
     {
         unsigned bvar = sd->pVDesc->BatchUniforms[var].Array;
-        psi->SetUniform0(sd, sd->pVDesc->BatchUniforms[var].Array, v, n,
-                         batch * sd->pVDesc->Uniforms[bvar].BatchSize + sd->pVDesc->BatchUniforms[var].Offset + index);
+        SffSI::SetU0((SffSI*)psi, sd, sd->pVDesc->BatchUniforms[var].Array, v, n,
+                     batch * sd->pVDesc->Uniforms[bvar].BatchSize + sd->pVDesc->BatchUniforms[var].Offset + index);
     }
     else if (sd->pFDesc->BatchUniforms[var].Offset >= 0)
     {
@@ -2208,8 +2227,6 @@ static __forceinline void SffSetUniform(D3D9::ShaderInterface* psi, const D3D9::
 
 // StaticShaderManager::SetFilterFill: the SDK body. The first target is the texture to be filtered; a blur pass takes
 // its kernel size, a shadow pass its colors, offset and the source, a color matrix its matrix with the cxform folded in
-// MS2-FUNCTIONAL: 1 line left: fsize's inline SetUniform stores UniformSet[array] as [r9+rdi] (exe [rdi+r9]); the SDK
-// SetUniform body, int/unsigned bvar, index order, declaration order and the knockout test were tried
 // @0x142734e10
 bool FUN_142734e10(D3D9::ShaderManager* sm, const Matrix2F& mvp, const Cxform& cx, const Filter* filter,
                    Ptr<RenderTarget>* targets, unsigned* shaders, unsigned pass, unsigned passCount,
