@@ -3113,7 +3113,8 @@ void AvmTextField::ReplaceSel(const FnCall& fn)
 }
 
 // replaceText(beginIndex, endIndex, text): text takes the formats of the first replaced character.
-// MS2-FUNCTIONAL 0x142909d80: regalloc floor: the exe keeps the doc in rcx and its StyledText in r10 (ours r8/rcx), one extra mov rcx,r10 before GetTextAndParagraphFormat; same calls and stores
+// MS2-FUNCTIONAL 0x142909d80: 1 byte off: newEnd's add is lea ebx,[r14+r15] (startPos+len), the exe has [r15+r14]; reordering the
+// operands or the references to startPos/len (fe36 variants) does not move it
 // @0x142909d80
 void AvmTextField::ReplaceTextA(const FnCall& fn)
 {
@@ -3142,7 +3143,7 @@ void AvmTextField::ReplaceTextA(const FnCall& fn)
         pparaFmt = StyledText_GetDefaultParagraphFormat(DocView_GetStyledText(pdoc));
     }
     else
-        static_cast<Render::Text::StyledText*>(DocView_GetStyledText(pdoc))->GetTextAndParagraphFormat((const Render::Text::TextFormat**)&ptextFmt, (const Render::Text::ParagraphFormat**)&pparaFmt, startPos);
+        static_cast<Render::Text::StyledText*>(DocView_GetStyledText(ptf->GetDocument()))->GetTextAndParagraphFormat((const Render::Text::TextFormat**)&ptextFmt, (const Render::Text::ParagraphFormat**)&pparaFmt, startPos);
     // Both are held across the replacement.
     if (ptextFmt)
         ++*(int*)ptextFmt;
