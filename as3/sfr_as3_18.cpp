@@ -3517,7 +3517,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // An object past its unload depth only drops its unload state. A timeline child (not named by an instance) is
 // taken off the parent's property of its name if that property still holds this object; the AS3 object is then
 // kept raw (no longer collectible).
-// MS2-FUNCTIONAL the exe inlines both Multiname(Namespace&, const Value&) constructions
+// MS2-FUNCTIONAL both Multiname constructions use the inline copy (InlineStr, InlineCtorTag) as the exe inlines them; left: the exe lays the early Depth < -1 return out of line, shrink-wraps on rdi, and register allocation
 // @0x142519200
 void AvmDisplayObj::OnEventUnload()
 {
@@ -3540,7 +3540,7 @@ void AvmDisplayObj::OnEventUnload()
         ASString                              name      = pDispObj->GetName();
         Value                                 v;
         {
-            Multiname mn(AS3RootOf(pDispObj)->pAVM->GetPublicNamespace(), Value(name));
+            Multiname mn(AS3RootOf(pDispObj)->pAVM->GetPublicNamespace(), Value(name, Value::InlineStr), Multiname::InlineCtorTag());
             parentObj->GetProperty(mn, v);
         }
         VM* vm = AS3RootOf(pDispObj)->pAVM;
@@ -3549,7 +3549,7 @@ void AvmDisplayObj::OnEventUnload()
             if (!v.IsObject() || v.GetObject() != GetAS3Obj())
                 goto done;
             {
-                Multiname mn(AS3RootOf(pDispObj)->pAVM->GetPublicNamespace(), Value(name));
+                Multiname mn(AS3RootOf(pDispObj)->pAVM->GetPublicNamespace(), Value(name, Value::InlineStr), Multiname::InlineCtorTag());
                 parentObj->SetProperty(mn, Value::GetNull());
             }
             vm = AS3RootOf(pDispObj)->pAVM;
