@@ -4582,7 +4582,6 @@ struct Sfr31ExecReadMnObjectRef : public Sfr31ExecReadMnS
 };
 
 // getsuper: replaces the object on top of the stack with its named property, read through the current frame's super traits.
-// MS2-FUNCTIONAL 0x14253a430: 508 B vs the exe 506; the exe keeps zero in rsi (saved in the prolog) where ours uses immediates
 // @0x14253a430
 void Sfr31ExecGetSuper(UPInt vmAddr, UPInt file, UInt32 idx)
 {
@@ -4590,11 +4589,11 @@ void Sfr31ExecGetSuper(UPInt vmAddr, UPInt file, UInt32 idx)
     Sfr31ExecReadMnObjectRef args(file, idx);
     if (vm.IsException())
         return;
-    Value _this(args.ArgObject, PickValue);
+    const Value _this(args.ArgObject, PickValue);
     const UPInt n = Sfr31Rd(vmAddr, 0x78) - 1;
     const Traits* ot = *reinterpret_cast<const Traits* const*>(Sfr31Rd(Sfr31Rd(vmAddr, 0x90), (n >> 6) * 8) + 0x40 + (n & 0x3f) * 0xa8);
     if (!GetSuperProperty(vm, ot, args.ArgObject, _this, args.ArgMN.Get()))
-        vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x40b), vm, *reinterpret_cast<const Value*>(&args.ArgMN.w2)));
+        return vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x40b), vm, *reinterpret_cast<const Value*>(&args.ArgMN.w2)));
 }
 
 // ---- batch 30
@@ -5671,7 +5670,6 @@ static __forceinline CheckResult Sfr31SetSuperPropertyInl(VM& vm, const Traits* 
     }
     return false;
 }
-// MS2-FUNCTIONAL 0x142540490: 716 B vs the exe 696; the exe puts both Error temps above the reader (ours below it, frame 0xe0 vs 0xd0), keeps zero in r14 and lays the tail out differently
 // @0x142540490
 void Sfr31ExecSetSuper(UPInt vmAddr, UPInt file, UInt32 idx)
 {
@@ -5682,7 +5680,7 @@ void Sfr31ExecSetSuper(UPInt vmAddr, UPInt file, UInt32 idx)
     const UPInt n = Sfr31Rd(vmAddr, 0x78) - 1;
     const Traits* ot = *reinterpret_cast<const Traits* const*>(Sfr31Rd(Sfr31Rd(vmAddr, 0x90), (n >> 6) * 8) + 0x40 + (n & 0x3f) * 0xa8);
     if (!Sfr31SetSuperPropertyInl(vm, ot, args.ArgObject, args.ArgMN.Get(), args.ArgValue))
-        vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x40b), vm, *reinterpret_cast<const Value*>(&args.ArgMN.w2)));
+        return vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x40b), vm, *reinterpret_cast<const Value*>(&args.ArgMN.w2)));
 }
 // ---- batch 45
 // Native with a required object argument: the current frame's parent-traits helper is invoked with the remaining arguments.
