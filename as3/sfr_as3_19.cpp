@@ -6522,81 +6522,121 @@ SPInt Sfr31NumberToChars(char* out, int size, double d)
     return o - out;
 }
 
+// The tracer's ReadObject (inlined in the exe): the popped object, released at each return.
+struct TrReadObject19 : public TR::StackReader
+{
+    TrReadObject19(VM& vm, State& st) : TR::StackReader(vm, st), ArgObject(st.PopOpValue())
+    {
+        ++Num;
+    }
+    Value ArgObject;
+};
+
+// Slots::GetSlotInfo (sfr_as3_04 0x142416fb0), one level inline here as in the exe.
+static SF_INLINE const SlotInfo& Sfr19GetSlotInfo(const Slots& s, AbsoluteIndex ind)
+{
+    if (ind < s.FirstOwnSlotNum)
+        return s.Parent->GetSlotInfo(ind);
+    return s.VArray[static_cast<UInt32>(ind.Get()) - s.FirstOwnSlotNum].Value;
+}
+
+// Value(const ASString&) as the exe inlines it here: a null string becomes a null object (the payload copied as one
+// 16-byte union).
+struct TrStrValue19
+{
+    struct Pair { void* a; void* b; };
+    TrStrValue19(const ASString& str)
+    {
+        w0 = static_cast<UInt32>(Value::kString);
+        w1 = 0;
+        w2 = reinterpret_cast<UPInt>(str.GetNode());
+        if (str.GetNode() == str.GetManager()->GetNullStringNode())
+        {
+            Pair p;
+            p.a = NULL;
+            w0 = static_cast<UInt32>(Value::kObject);
+            *reinterpret_cast<Pair*>(&w2) = p;
+        }
+        else
+            str.GetNode()->AddRef();
+    }
+    ~TrStrValue19() { Get().~Value(); }
+    Value& Get() { return *reinterpret_cast<Value*>(&w0); }
+    UInt32 w0;
+    UPInt w1, w2, w3;
+};
+
+// A traced Value(traits, null type): second word zeroed, then the payload, then the tag.
+struct TrTypedScratch19
+{
+    TrTypedScratch19(UInt32 tag, UPInt p) { w1 = 0; w2 = p; w0 = tag; }
+    const Value& Get() const { return *reinterpret_cast<const Value*>(&w0); }
+    UInt32 w0;
+    UPInt w1, w2, w3;
+};
+
 // ---- batch 58
 // Tracer getslot: pops the object, resolves its traits and pushes the declared type of the slot (nullability from the declared
 // instance traits); an unresolvable slot type is a verify error, an unknown object type pushes undefined.
-// MS2-FUNCTIONAL 0x142539f30: raw-offset model; codegen differs from the exe
+// MS2-FUNCTIONAL 0x142539f30: SDK exec_getslot shape on a raw-offset model; the exe keeps the popped object's flags in esi and its kind spilled for the shared release tail and saves r12/r15 in the prolog, ours re-reads the flags and shrink-wraps two epilogues (959 vs 914 bytes)
 // @0x142539f30
 void Sfr31TraceGetSlot(State* st, UInt32 slot)
 {
-    StV s(st);
-    const UPInt tracer = s.Tracer();
-    FUN_14251fcd0(tracer, slot);
-    VM* vm = reinterpret_cast<VM*>(TrRd(TrRd(TrRd(tracer, 0x20), 0x28), 0x20));
-    const UPInt vmA = reinterpret_cast<UPInt>(vm);
-    TrPopped popped;
-    FUN_14251cd30(st, &popped.Get());
-    const UInt32 k = popped.w0 & 0x1f;
+    FUN_14251fcd0(TrRd(reinterpret_cast<UPInt>(st), 0), slot);
+    TrReadObject19 args(*reinterpret_cast<VM*>(TrVM(TrRd(reinterpret_cast<UPInt>(st), 0))), *st);
+    const UPInt tracer = TrRd(reinterpret_cast<UPInt>(st), 0);
+    const UInt32 k = *reinterpret_cast<const UInt32*>(&args.ArgObject) & 0x1f;
     UPInt tr;
-    if (k == 0)
-        tr = TrRd(vmA, 0x278);
-    else if (k == 8 || k == 9)
-        tr = popped.w2;
-    else
-        tr = reinterpret_cast<UPInt>(&vm->GetValueTraits(popped.Get()));
-    bool pushed = false;
+    switch (k)
+    {
+    case 0:
+        tr = TrRd(TrVM(tracer), 0x278);
+        break;
+    case 8:
+        tr = reinterpret_cast<UPInt>(&args.ArgObject.GetInstanceTraits());
+        break;
+    case 9:
+        tr = reinterpret_cast<UPInt>(&args.ArgObject.GetClassTraits());
+        break;
+    default:
+        tr = reinterpret_cast<UPInt>(&reinterpret_cast<VM*>(TrVM(tracer))->GetValueTraits(args.ArgObject));
+        break;
+    }
     if (tr != 0)
     {
-        if (tr == TrRd(vmA, 0x1f0))
-            tr = TrRd(vmA, 0x1f8);
-        if (tr != 0)
-        {
-            pushed = true;
-            if (TrRd(tr, 0x38) + TrRd(tr, 0x20) < slot)
-            {
-                TrTraitsScratch t;
-                t.w0 = 0x48;
-                t.SetTraits(*reinterpret_cast<InstanceTraits::Traits*>(TrRd(TrRd(vmA, 0x1f8), 0xc0)));
-                s.OpStack().PushBack(t.Get());
-            }
-            else
-            {
-                const SPInt idx = static_cast<SPInt>(slot) - 1 + static_cast<UInt32>(TrRd(tr, 0x50));  // 64-bit (lea/add at 0x14253a021)
-                const SlotInfo* si = &reinterpret_cast<Traits*>(tr)->GetSlotInfo(AbsoluteIndex(idx));
-                ClassTraits::Traits* ct = FUN_1425085b0(si, reinterpret_cast<VM*>(TrRd(tr, 0x78)));
-                if (ct == NULL)
-                {
-                    RawASString typeName;
-                    FUN_142508720(si, &typeName.Get(), vm);
-                    Value tv(typeName.Get());
-                    vm->ThrowVerifyError(Sfr31Err(static_cast<VM::ErrorID>(0x3f6), *vm, tv));
-                }
-                else
-                {
-                    InstanceTraits::Traits* it = reinterpret_cast<InstanceTraits::Traits*>(TrRd(reinterpret_cast<UPInt>(ct), 0xc0));
-                    const UPInt aux = TrRd(reinterpret_cast<UPInt>(si), 0x20);
-                    const bool isClass = (*reinterpret_cast<const UInt32*>(si) & 0x3e0) == 0x20 ||
-                                         (aux != 0 && (*reinterpret_cast<const UInt8*>(aux) & 0xf) == 4);
-                    TrTraitsScratch t;
-                    t.w0 = (static_cast<UInt32>(reinterpret_cast<const TR::State*>(st)->CanBeNull(*it)) & 0x7fffff7u) << 5;
-                    if (isClass)
-                    {
-                        t.w0 |= 9;
-                        t.w2 = reinterpret_cast<UPInt>(ct);
-                    }
-                    else
-                    {
-                        t.w0 |= 8;
-                        t.SetTraits(*it);
-                    }
-                    s.OpStack().PushBack(t.Get());
-                }
-            }
-        }
+        if (tr == TrRd(TrVM(tracer), 0x1f0))
+            tr = TrRd(TrVM(tracer), 0x1f8);
     }
-    if (!pushed)
-        s.OpStack().PushBack(Value::GetUndefined());
-    popped.Get().~Value();
+    if (tr != 0)
+    {
+        if (slot <= TrRd(tr, 0x38) + TrRd(tr, 0x20))
+        {
+            const SPInt aind = static_cast<SPInt>(slot) - 1 + static_cast<UInt32>(TrRd(tr, 0x50));
+            const SlotInfo& si = Sfr19GetSlotInfo(*reinterpret_cast<Traits*>(tr), AbsoluteIndex(aind));
+            ClassTraits::Traits* ctr = FUN_1425085b0(&Sfr19GetSlotInfo(*reinterpret_cast<Traits*>(tr), AbsoluteIndex(aind)), reinterpret_cast<VM*>(TrRd(tr, 0x78)));
+            if (ctr == NULL)
+            {
+#define SFR19_VM (*reinterpret_cast<VM*>(TrVM(TrRd(reinterpret_cast<UPInt>(st), 0))))
+                return SFR19_VM.ThrowVerifyError(VM::Error(static_cast<VM::ErrorID>(0x3f6), SFR19_VM, TrStrValue19(si.GetDataTypeName(SFR19_VM)).Get()));
+#undef SFR19_VM
+            }
+            InstanceTraits::Traits& itr = *reinterpret_cast<InstanceTraits::Traits*>(TrRd(reinterpret_cast<UPInt>(ctr), 0xc0));
+            const UPInt aux = TrRd(reinterpret_cast<UPInt>(&si), 0x20);
+            const bool isClass = (*reinterpret_cast<const UInt32*>(&si) & 0x3e0) == 0x20 ||
+                                 (aux != 0 && (*reinterpret_cast<const UInt8*>(aux) & 0xf) == 4);
+            if (isClass)
+                TrPushOp(st, TrTypedScratch19(((static_cast<UInt32>(st->CanBeNull(itr)) << 5) & ~0x100u) | 9, reinterpret_cast<UPInt>(ctr)).Get());
+            else
+                TrPushOp(st, TrTypedScratch19(((static_cast<UInt32>(st->CanBeNull(itr)) << 5) & ~0x100u) | 8, reinterpret_cast<UPInt>(&itr)).Get());
+        }
+        else
+        {
+            TrTypedScratch19 t(0x48, TrRd(TrRd(TrVM(tracer), 0x1f8), 0xc0));
+            TrPushOp(st, t.Get());
+        }
+        return;
+    }
+    TrPushOp(st, Value());
 }
 
 // ---- batch 59
