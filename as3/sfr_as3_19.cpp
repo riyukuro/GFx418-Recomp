@@ -9663,7 +9663,7 @@ static const void* const Sfr31AvmStickyTable[2] = { reinterpret_cast<const void*
 
 // MovieRoot::SetVariable: sets the member after the last '.' of the path on the object the rest of the path resolves to
 // ("root" when there is no dot). setType 1 keeps the value for a target that does not exist yet, 2 keeps it permanently.
-// MS2-FUNCTIONAL 0x14252a700: the multiname is built in a local structure and the string reference counts are folded into ASString; the sticky node is a local class standing in for the exe one
+// MS2-FUNCTIONAL 0x14252a700: the multiname now uses the InlineAssignTag SDK ctor; the exe inlines ExtractPathAndName with builtin-empty path/name ASStrings and the sticky node is a local class standing in for the exe one
 // @0x14252a700
 char Sfr31MovieRootSetVariable(UPInt root, const char* path, const void* gfxValue, int setType)
 {
@@ -9684,40 +9684,8 @@ char Sfr31MovieRootSetVariable(UPInt root, const char* path, const void* gfxValu
         return 0;
 
     const UPInt memberNode = Sfr31Rd(reinterpret_cast<UPInt>(&member), 0);
-    struct Mn
-    {
-        UInt32 Flags;
-        UPInt  Ns;
-        Value  Name;
-    } mn;
-    mn.Flags = 0;
-    mn.Ns = Sfr31Rd(Sfr31Rd(root, 0x48), 0x1d0);
-    if (mn.Ns != 0)
-        *reinterpret_cast<UInt32*>(mn.Ns + 0x10) = (*reinterpret_cast<UInt32*>(mn.Ns + 0x10) + 1u) & 0x8fbfffffu;
-    if (memberNode == Sfr31Rd(memberNode, 8) + 0x68)
-        mn.Name = Value::GetNull();
-    else
-    {
-        mn.Name = member;
-        const UInt32 n = *reinterpret_cast<const UInt32*>(memberNode + 0x20);
-        if (n != 0)
-        {
-            const char* s = *reinterpret_cast<const char* const*>(memberNode);
-            if (s[0] == '*' || s[0] == '@')
-            {
-                bool any = s[0] == '*';
-                if (s[0] == '@')
-                {
-                    mn.Flags = 8;
-                    any = n == 2 && s[1] == '*';
-                }
-                if (any)
-                    mn.Name = ASString(reinterpret_cast<ASStringNode*>(Sfr31Rd(memberNode, 8) + 0x40));
-                else if (s[0] == '@')
-                    mn.Name = ASString(member.SubstringNode(1, static_cast<int>(n)));
-            }
-        }
-    }
+    Multiname mn(*reinterpret_cast<Instances::Namespace*>(Sfr31Rd(Sfr31Rd(root, 0x48), 0x1d0)), Value(member, Value::InlineStr),
+                 Multiname::InlineAssignTag());
 
     Value converted;
     FUN_1425048d0(root, gfxValue, &converted);
