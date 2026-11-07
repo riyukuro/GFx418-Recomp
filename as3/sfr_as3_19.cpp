@@ -5291,65 +5291,33 @@ UInt8* Sfr31ValueToPrimitive(Value* v, UInt8* ok)
     return ok;
 }
 
-// 'in' operator: replaces the top value (the object) with whether it has the property named by the multiname.
-// MS2-FUNCTIONAL 0x142538040: raw-offset model; codegen differs from the exe
+// deleteproperty: replaces the top value (the object) with whether the property named by the multiname was deleted.
 // @0x142538040
 void Sfr31ExecIn(UPInt vmAddr, UPInt file, UInt32 idx)
 {
     VM& vm = *reinterpret_cast<VM*>(vmAddr);
-    const UPInt cvm = Sfr31Rd(file, 0x20);
-    Sfr31ExecMnCtx ctx = {cvm, cvm + 0x48, file};
-    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
-    FUN_1425201f0(&ctx, &mn);
-    Value* top = reinterpret_cast<Value*>(Sfr31Rd(ctx.stack, 8));
-    Sfr31ThrowIfNullOperand(cvm, reinterpret_cast<const UInt32*>(top));
-    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    Sfr31ExecReadMnObjectRef args(file, idx);
+    if (vm.IsException())
+        return;
+    const Value& name = *reinterpret_cast<const Value*>(&args.ArgMN.w2);
+    bool result = false;
+    if (vm.GetXMLSupport().IsEnabled() && name.IsObject() && name.GetObject() != NULL)
     {
-        const UPInt mnp = reinterpret_cast<UPInt>(&mn);
-        const Value& nameV = *reinterpret_cast<const Value*>(mnp + 0x10);
-        const UInt32 nk = *reinterpret_cast<const UInt32*>(mnp + 0x10) & 0x1f;
-        const UPInt nobj = Sfr31Rd(mnp, 0x20);
-        const UPInt vmHelper = Sfr31Rd(vmAddr, 0x40);
-        if (*reinterpret_cast<UInt8*>(vmHelper + 0x20) == 0 || nk - 0xc > 3 || nobj == 0 ||
-            Sfr31Rd(Sfr31Rd(nobj, 0x20), 0x70) != 0xe || ((*reinterpret_cast<UInt8*>(Sfr31Rd(nobj, 0x20) + 0x68) >> 5) & 1) != 0)
-        {
-            const UInt32 tk = *reinterpret_cast<const UInt32*>(top) & 0x1f;
-            if (tk > 4 && tk != 10)
-            {
-                bool res = false;
-                bool halted = false;
-                if (tk - 0xc < 4)
-                {
-                    const UPInt o = Sfr31Rd(reinterpret_cast<UPInt>(top), 0x10);
-                    if ((*reinterpret_cast<UInt8*>(Sfr31Rd(o, 0x20) + 0x68) >> 1) & 1)
-                    {
-                        typedef UInt8* (*VHas)(UPInt, UInt8*, void*);
-                        UInt8 tmp[8];
-                        res = *reinterpret_cast<VHas>(Sfr31Rd(Sfr31Rd(o, 0), 0x48))(o, tmp, &mn) != 0;
-                    }
-                    halted = *reinterpret_cast<UInt8*>(vmAddr + 0x180) != 0;
-                }
-                if (!halted)
-                    top->SetBool(res);
-            }
-            else
-            {
-                Sfr31Err e(static_cast<VM::ErrorID>(0x460), vm, nameV, *top);
-                vm.ThrowReferenceError(e);
-            }
-        }
-        else
-        {
-            const UPInt tr = reinterpret_cast<UPInt>(&vm.GetValueTraits(nameV));
-            UPInt node = 0;
-            UPInt* nm = reinterpret_cast<Sfr31VFnName>(Sfr31Rd(Sfr31Rd(tr, 0), 0x38))(tr, &node);
-            alignas(8) char eb[sizeof(VM::Error)];
-            FUN_1424d7850(eb, 0x45f, reinterpret_cast<void*>(vmAddr), reinterpret_cast<const char*>(Sfr31Rd(*nm, 0)));
-            vm.ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
-            reinterpret_cast<VM::Error*>(eb)->~Error();
-            Sfr31ReleaseStr(node);
-        }
+        const Traits& tr = name.GetObject()->GetTraits();
+        if (tr.GetTraitsType() == Traits_XMLList && tr.IsInstanceTraits())
+            return vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x45f), vm, vm.GetValueTraits(name).GetName().ToCStr()));
     }
+    if (args.ArgObject.IsPrimitive())
+        return vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x460), vm, name, args.ArgObject));
+    if (args.ArgObject.IsObject())
+    {
+        Object* obj = args.ArgObject.GetObject();
+        if (obj->GetTraits().IsDynamic())
+            result = obj->DeleteProperty(args.ArgMN.Get());
+        if (vm.IsException())
+            return;
+    }
+    args.ArgObject.SetBool(result);
 }
 
 // getproperty-style op: moves the object off the stack top, reads the named property into the slot and raises a ReferenceError
