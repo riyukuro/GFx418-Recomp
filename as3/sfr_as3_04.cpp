@@ -1984,17 +1984,24 @@ extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e3a0[7];   // Classes::fl::
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e7f0[2];   // Classes::fl::Boolean prototype methods
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313d6e8[1];   // Classes::fl::Error prototype methods
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e690[2];   // Classes::fl::Namespace prototype methods
-// The exe's table is at 0x14313d600 (0x14313d610 is &[0].Name, which the exe's lea addresses); the data unit split
-// it at 0x14313d610 and dropped [0].Method/ResultType, so [i].Name read a zero field. Classes::fl::Array prototype
-// methods (type-checked), kept local.
-struct Sd_14313d9e0; extern Sd_14313d9e0 DAT_14313d9e0;
-// The result type is the exe's String type info; its address cannot sit in static data (ADDR64 on an exe global),
-// so the table is filled at run time.
-__declspec(noinline) static const Scaleform::GFx::AS3::TypeInfo* ArrayProtoResultType()
+extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313d600[2];   // Classes::fl::Array prototype methods (type-checked)
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+// FunctionBase(InstanceTraits::Traits&) (0x1423ed140, sfr_as3_01c) inlined, as in Array::InitPrototype
+__forceinline Instances::FunctionBase::FunctionBase(InstanceTraits::Traits& t, InlineCtorTag)
+    : fl::Object(t)
 {
-    return (const Scaleform::GFx::AS3::TypeInfo*)&DAT_14313d9e0;
+    Prototype.Pick(GetVM().MakeObject());
 }
-static Scaleform::GFx::AS3::ThunkInfo s_ArrayProtoThunks[2];
+
+// MakeCheckTypeInstance (0x142419d90) over the inlined FunctionBase constructor
+__forceinline Pickable<Instances::CheckTypeTF> Classes::Function::MakeCheckTypeInstance(
+    const Class& data_type, const ThunkInfo& thunk, const Traits& ot, Instances::FunctionBase::InlineCtorTag tag) const
+{
+    InstanceTraits::Traits& itr = GetClassTraits().GetThunkFunctionTraits();
+    return Pickable<Instances::CheckTypeTF>(new(GetVM().GetMemoryHeap()) Instances::CheckTypeTF(itr, thunk, data_type, ot, tag));
+}
+}}} // namespace Scaleform::GFx::AS3
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e840[2];   // Classes::fl::String prototype methods
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313d850[6];   // Classes::fl::Number prototype methods
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313d6a0[1];   // Classes::fl::QName prototype methods
@@ -2086,7 +2093,6 @@ namespace Classes { namespace fl
 
     // The prototype methods go through a closure that checks the type of 'this' (so toString.toString() is a
     // function).
-    // MS2-FUNCTIONAL: the exe inlines the FunctionBase constructor here as well
     // @0x142417800
     void Array::InitPrototype(AS3::Object& obj) const
     {
@@ -2097,13 +2103,10 @@ namespace Classes { namespace fl
         const Classes::Function& cf =
             static_cast<const Classes::Function&>(FUN_142508460(&GetVM().GetClassTraitsFunction().GetInstanceTraits()));
         InstanceTraits::Traits& itr = GetClassTraits().GetInstanceTraits();
-        // The check-type instances keep a pointer to their ThunkInfo, so the table must outlive this call.
-        s_ArrayProtoThunks[0] = {&Instances::fl::Array::toLocaleStringProto, ArrayProtoResultType(), "toLocaleString", 0};
-        s_ArrayProtoThunks[1] = {&Instances::fl::Array::toStringProto, ArrayProtoResultType(), "toString", 0};
         for (unsigned i = 0; i < 2; ++i)
         {
-            Value f(cf.MakeCheckTypeInstance(*this, s_ArrayProtoThunks[i], itr));
-            obj.AddDynamicSlotValuePair(GetVM().GetStringManager().CreateConstString(s_ArrayProtoThunks[i].Name), f,
+            Value f(cf.MakeCheckTypeInstance(*this, DAT_14313d600[i], itr, Instances::FunctionBase::InlineCtorTag()));
+            obj.AddDynamicSlotValuePair(GetVM().GetStringManager().CreateConstString(DAT_14313d600[i].Name), f,
                                         SlotInfo::aDontEnum);
         }
         AddConstructor(obj);

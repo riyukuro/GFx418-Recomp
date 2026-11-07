@@ -32,6 +32,13 @@ namespace Instances {
             , OriginationTraits(&ot)
         {
         }
+        // (appended, fe40) the same constructor over the inlined FunctionBase one (Classes::fl::Array::InitPrototype).
+        __forceinline ThunkFunction(InstanceTraits::Traits& t, const ThunkInfo& thunk, const Traits& ot, InlineCtorTag tag)
+            : FunctionBase(t, tag)
+            , Function(thunk)
+            , OriginationTraits(&ot)
+        {
+        }
 
     public:
         // (appended, sfr19) also visits the origination traits. 0x14240c160
@@ -61,6 +68,13 @@ namespace Instances {
     protected:
         CheckTypeTF(InstanceTraits::Traits& t, const ThunkInfo& thunk, const Class& data_type, const Traits& ot)
             : ThunkFunction(t, thunk, ot)
+            , DataTypeClass(data_type)
+        {
+        }
+        // (appended, fe40) the same constructor over the inlined FunctionBase one (Classes::fl::Array::InitPrototype).
+        __forceinline CheckTypeTF(InstanceTraits::Traits& t, const ThunkInfo& thunk, const Class& data_type,
+                                  const Traits& ot, InlineCtorTag tag)
+            : ThunkFunction(t, thunk, ot, tag)
             , DataTypeClass(data_type)
         {
         }
@@ -188,6 +202,11 @@ namespace Classes {
         // 0x142419d90
         Pickable<Instances::CheckTypeTF> MakeCheckTypeInstance(const Class& data_type, const ThunkInfo& thunk,
                                                                const Traits& ot) const;
+        // (appended, fe40) the same with the FunctionBase constructor inlined (Classes::fl::Array::InitPrototype);
+        // defined __forceinline in sfr_as3_04
+        Pickable<Instances::CheckTypeTF> MakeCheckTypeInstance(const Class& data_type, const ThunkInfo& thunk,
+                                                               const Traits& ot,
+                                                               Instances::FunctionBase::InlineCtorTag tag) const;
         // (appended, sfr33) member ABI: the exe passes the result slot in rdx. 0x14241a7d0
         Pickable<Instances::Function> FUN_14241a7d0(VMAbcFile& file, UInt32 method_ind, const ScopeStackType& ss,
                                                     Instances::fl::GlobalObjectScript& gos) const;   // a method's Function

@@ -1165,8 +1165,14 @@ namespace Instances
         friend class InstanceTraits::Function;  // MakeObject constructs one in place
         friend class Classes::Function;         // MakePrototype constructs one in place
 
+    public:
+        struct InlineCtorTag {};   // (appended, fe40) tag for the inlined constructor below
+
     protected:
         explicit FunctionBase(InstanceTraits::Traits& t);
+        // (appended, fe40) the same constructor inlined: the exe's Classes::fl::Array::InitPrototype 0x142417800
+        // inlines it. Defined __forceinline in sfr_as3_04, its only user (the body needs the VM).
+        FunctionBase(InstanceTraits::Traits& t, InlineCtorTag);
 
     public:
         // (appended, sfr22) user-declared: the derived dtors re-store this vftable before releasing Prototype
