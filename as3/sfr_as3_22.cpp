@@ -66,7 +66,7 @@ extern ExeDecl<void*> DAT_1431921d0;
 extern ExeDecl<void*> DAT_143192160;
 #define AS3MovieMemoryItemVtable ((void*)&DAT_143192160)
 struct Sd_1431bede8;
-extern Sd_1431bede8 DAT_1431bede8;
+extern "C" Sd_1431bede8 DAT_1431bede8;
 #define AS3AudioEventVtable (*reinterpret_cast<void**>(&DAT_1431bede8))
 extern "C" char DAT_1431bcbb0[];   // the sound objects' outermost base
 #define AS3SoundObjectBaseVtable DAT_1431bcbb0
@@ -74,25 +74,25 @@ extern unsigned char DAT_142dc9d48[];   // RefCountImplCore vftable (SwfSoundStr
 #define DAT_142dc9d48_RefCountImplCore DAT_142dc9d48
 extern "C" char DAT_1431b80b8[];   // SoundRenderer::AuxStreamer vftable
 struct Sd_1431bec40;
-extern Sd_1431bec40 DAT_1431bec40;
+extern "C" Sd_1431bec40 DAT_1431bec40;
 #define AS3AudioListNodeVtable (*reinterpret_cast<void**>(&DAT_1431bec40))
 struct Sd_1431bed18;
-extern Sd_1431bed18 DAT_1431bed18;
+extern "C" Sd_1431bed18 DAT_1431bed18;
 #define AS3SoundRequestVtable (*reinterpret_cast<void**>(&DAT_1431bed18))
 struct Sd_1431bed50;
-extern Sd_1431bed50 DAT_1431bed50;
+extern "C" Sd_1431bed50 DAT_1431bed50;
 #define AS3SoundRequestNodeVtable (*reinterpret_cast<void**>(&DAT_1431bed50))
 struct Sd_1431bef00;
-extern Sd_1431bef00 DAT_1431bef00;
+extern "C" Sd_1431bef00 DAT_1431bef00;
 #define AS3BufferedRequestVtable (*reinterpret_cast<void**>(&DAT_1431bef00))
 struct Sd_1431bef38;
-extern Sd_1431bef38 DAT_1431bef38;
+extern "C" Sd_1431bef38 DAT_1431bef38;
 #define AS3BufferedRequestNodeVtable (*reinterpret_cast<void**>(&DAT_1431bef38))
 struct Sd_1431bee50;
-extern Sd_1431bee50 DAT_1431bee50;
+extern "C" Sd_1431bee50 DAT_1431bee50;
 #define AS3StreamRequestVtable (*reinterpret_cast<void**>(&DAT_1431bee50))
 struct Sd_1431bee68;
-extern Sd_1431bee68 DAT_1431bee68;
+extern "C" Sd_1431bee68 DAT_1431bee68;
 #define AS3StreamRequestNodeVtable (*reinterpret_cast<void**>(&DAT_1431bee68))
 // The exe's read-only constants this unit alone reads: defined here with the exe's values so the full exe links
 // (the hook DLL binds the names to the exe's copies).

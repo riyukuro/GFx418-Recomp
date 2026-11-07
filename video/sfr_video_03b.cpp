@@ -23,23 +23,23 @@ namespace Scaleform { namespace GFx { int FUN_1427443c0(void* channel, int type,
 ExeDecl<uint64_t()>::type FUN_1425e3480;
 namespace Scaleform { unsigned FUN_142745f50(void*); }
 namespace Scaleform { void ReserveVideoPlayerArray(void** array, void* heap, UPInt requested); }   // ArrayData<VideoPlayerImpl*>::Reserve (sfr_as3_22)
-extern ExeDecl<void*>::type DAT_1431b4c60; struct Sd_1431bec40; extern Sd_1431bec40 DAT_1431bec40;
+extern ExeDecl<void*>::type DAT_1431b4c60; struct Sd_1431bec40; extern "C" Sd_1431bec40 DAT_1431bec40;
 #define VideoAudioVtableA DAT_1431b4c60
 #define VideoAudioVtableB (*reinterpret_cast<void**>(&DAT_1431bec40))
-struct Sd_1431bed60; extern Sd_1431bed60 DAT_1431bed60; struct Sd_1431bedd8; extern Sd_1431bedd8 DAT_1431bedd8;
+struct Sd_1431bed60; extern "C" Sd_1431bed60 DAT_1431bed60; struct Sd_1431bedd8; extern "C" Sd_1431bedd8 DAT_1431bedd8;
 #define VideoAudioDeleteVtable (*reinterpret_cast<void**>(&DAT_1431bed60))
 #define VideoAudioSubVtable (*reinterpret_cast<void**>(&DAT_1431bedd8))
-struct Sd_1431bede8; extern Sd_1431bede8 DAT_1431bede8;
+struct Sd_1431bede8; extern "C" Sd_1431bede8 DAT_1431bede8;
 #define VideoAudioEventVtable (*reinterpret_cast<void**>(&DAT_1431bede8))
-struct Sd_1431bcbb0; extern Sd_1431bcbb0 DAT_1431bcbb0;
+struct Sd_1431bcbb0; extern "C" Sd_1431bcbb0 DAT_1431bcbb0;
 #define VideoSoundDeleteVtable (*reinterpret_cast<void**>(&DAT_1431bcbb0))
-struct Sd_1431bef00; extern Sd_1431bef00 DAT_1431bef00;
+struct Sd_1431bef00; extern "C" Sd_1431bef00 DAT_1431bef00;
 #define VideoSoundVtable (*reinterpret_cast<void**>(&DAT_1431bef00))
-struct Sd_1431bef38; extern Sd_1431bef38 DAT_1431bef38;
+struct Sd_1431bef38; extern "C" Sd_1431bef38 DAT_1431bef38;
 #define VideoSoundSubVtable (*reinterpret_cast<void**>(&DAT_1431bef38))
-struct Sd_1431bee78; extern Sd_1431bee78 DAT_1431bee78;
+struct Sd_1431bee78; extern "C" Sd_1431bee78 DAT_1431bee78;
 #define VideoAudioStreamVtable (*reinterpret_cast<void**>(&DAT_1431bee78))
-struct Sd_1431beef0; extern Sd_1431beef0 DAT_1431beef0;
+struct Sd_1431beef0; extern "C" Sd_1431beef0 DAT_1431beef0;
 #define VideoAudioStreamSubVtable (*reinterpret_cast<void**>(&DAT_1431beef0))
 
 typedef Scaleform::GFx::Video::VideoPlayerImpl* Video03bElement;
