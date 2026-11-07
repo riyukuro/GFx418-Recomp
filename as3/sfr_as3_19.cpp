@@ -5019,58 +5019,70 @@ void Sfr31ExecPushNamespace(UPInt vm, UPInt target)
 }
 
 // ---- batch 38
+// Remove only reads the key, so the exe (LTCG) releases its name and namespace from registers: dtor-less holder.
+union Sfr31CtKeyHolder { Sfr19CtKey k; Sfr31CtKeyHolder(const ASString& n, const Instances::Namespace* p) : k(n, p) {} ~Sfr31CtKeyHolder() {} };
 // Removes every class traits held in the array at +0xa0 from the owner's multiname hash, then clears the array.
-// MS2-FUNCTIONAL 0x142530de0: raw-offset model; codegen differs from the exe
+// MS2-FUNCTIONAL 0x142530de0: regalloc: same code shape and length; exe swaps rbx/rdi for the ctr/pns and node registers and hoists the set-address load above the key stores
 // @0x142530de0
 void Sfr31UnregisterClassTraits(UPInt self)
 {
-    const UPInt count = Sfr31Rd(self, 0xa8);
-    for (UPInt i = 0; i < count; ++i)
+    const UPInt size = Sfr31Rd(self, 0xa8);
+    for (UPInt i = 0; i < size; ++i)
     {
-        const UPInt tr = Sfr31Rd(Sfr31Rd(self, 0xa0), i * 8);
-        const UPInt nsObj = Sfr31Rd(tr, 0xc0);
-        const UPInt owner = Sfr31Rd(self, 0x20);
-        if (nsObj == 0)
+        ClassTraits::Traits& ctr = *reinterpret_cast<ClassTraits::Traits*>(Sfr31Rd(Sfr31Rd(self, 0xa0), i * 8));
+        if (Sfr31Rd(reinterpret_cast<UPInt>(&ctr), 0xc0) != 0)
         {
-            // value-keyed removal: scan the hash for the entry holding this traits
-            const UPInt tbl = Sfr31Rd(owner, 0x1c8);
-            for (UPInt e = 0; tbl != 0 && static_cast<long>(Sfr31Rd(tbl, 8)) >= static_cast<long>(e); ++e)
+            // fast way: remove the entry by the instance traits' name and namespace
+            InstanceTraits::Traits& itr = ctr.GetInstanceTraits();
+            const ASString str_name = itr.GetName();
+            const Instances::Namespace& ns = itr.GetNamespace();
+            ASStringNode* const node = str_name.GetNode();
+            const Instances::Namespace* const pns = &ns;
+            Sfr31CtKeyHolder key(str_name, pns);
+            FUN_142522350(reinterpret_cast<void*>(Sfr31Rd(self, 0x20) + 0x1c8), &key.k);
+            if (pns != NULL)
             {
-                if (Sfr31Rd(tbl, e * 0x28 + 0x10) == static_cast<UPInt>(-2))
-                    continue;
-                if (Sfr31Rd(tbl, e * 0x28 + 0x30) == tr)
+                if ((reinterpret_cast<UPInt>(pns) & 1) != 0)
+                    key.k.pNs.GetRawRef() = reinterpret_cast<const Instances::Namespace*>(reinterpret_cast<UPInt>(pns) - 1);
+                else
+                    pns->Release();
+            }
+            node->Release();
+        }
+        else
+        {
+            // slow way: scan the hash for the entry holding this traits
+            Sfr19CtHash& set = *reinterpret_cast<Sfr19CtHash*>(Sfr31Rd(self, 0x20) + 0x1c8);
+            for (Sfr19CtHash::Iterator it = set.Begin(); !it.IsEnd(); ++it)
+            {
+                if (it->Second == &ctr)
                 {
-                    FUN_142522350(reinterpret_cast<void*>(owner + 0x1c8), reinterpret_cast<void*>(tbl + e * 0x28 + 0x20));
+                    FUN_142522350(&set, const_cast<Sfr19CtKey*>(&it->First));
                     break;
                 }
             }
-            continue;
         }
-        UPInt node = 0;
-        reinterpret_cast<Sfr31VFnName>(Sfr31Rd(Sfr31Rd(nsObj, 0), 0x38))(nsObj, &node);
-        const UPInt ns = Sfr31Rd(nsObj, 0xc0);
-        UPInt key[2];
-        key[0] = node;
-        ++*reinterpret_cast<int*>(node + 0x18);
-        if (ns != 0)
-            *reinterpret_cast<UInt32*>(ns + 0x10) = (*reinterpret_cast<UInt32*>(ns + 0x10) + 1u) & 0x8fbfffffu;
-        key[1] = ns;
-        FUN_142522350(reinterpret_cast<void*>(Sfr31Rd(self, 0x20) + 0x1c8), key);
-        if (ns != 0)
-        {
-            if ((ns & 1) == 0)
-            {
-                if ((*reinterpret_cast<UInt32*>(ns + 0x10) & 0x3fffff) != 0)
-                {
-                    --*reinterpret_cast<UInt32*>(ns + 0x10);
-                    FUN_1423dfa20(reinterpret_cast<void*>(ns));
-                }
-            }
-        }
-        Sfr31ReleaseStr(key[0]);
-        Sfr31ReleaseStr(node);
     }
-    reinterpret_cast<Sfr19TraitsArr*>(self + 0xa0)->ResizeNoConstruct(reinterpret_cast<const void*>(self + 0xa0), 0);
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+    (reinterpret_cast<Sfr19TraitsArr*>(self + 0xa0)->*static_cast<void (Sfr19TraitsArr::*)(const void*, UPInt)>(&Sfr19TraitsArr::ResizeNoConstruct))(reinterpret_cast<const void*>(self + 0xa0), 0);
 }
 
 // ---- batch 39
