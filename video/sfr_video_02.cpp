@@ -3237,103 +3237,93 @@ void* FUN_1400105b0(void* object)
 #pragma intrinsic(memcpy)
 
 // MS2-FUNCTIONAL: constructs the video shape provider, scales its geometry to the decoded frame, and creates a tree entry.
-// BEHAVIOUR FIX: the video rectangle is (0, 0, width, height) as in the exe, where ours drew it at the frame bounds
-// (left, top, right, bottom), offsetting it from the bitmap fill; without a provider the placeholder path is the
-// exe's 0,0 -> 1,1 segment (ours was a zero-length line). Both paths are closed as the exe does.
+// The video rectangle is (0, 0, width, height) as in the exe; without a provider the placeholder path is the exe's
+// 0,0 -> 1,1 segment. Both paths are closed inline (ClosePath) as the exe does.
+// ShapeDataFloatTempl::ClosePath inlined on the reloaded pData (the exe inlines it here, FUN_140011410 is its copy)
+static __forceinline void Video02ClosePath(void* path)
+{
+    unsigned char* bytes = static_cast<unsigned char*>(path);
+    if (*reinterpret_cast<float*>(bytes + 0x5c) != *reinterpret_cast<float*>(bytes + 0x54) ||
+        *reinterpret_cast<float*>(bytes + 0x60) != *reinterpret_cast<float*>(bytes + 0x58))
+        Video02LineTo(path, *reinterpret_cast<float*>(bytes + 0x54), *reinterpret_cast<float*>(bytes + 0x58));
+}
 // @0x140011610
 void* FUN_140011610(void* object, void** result, void* context)
 {
+    using namespace Scaleform;
+    using namespace Scaleform::Render;
+    unsigned char* bytes = static_cast<unsigned char*>(object);
     // the exe asks the interface (object + [0x6d]*4, slot 0x60) for the extent before allocating (0x140011638)
-    const unsigned char ifaceIndex = static_cast<unsigned char>(static_cast<unsigned char*>(object)[0x6d]);
-    unsigned char* iface = static_cast<unsigned char*>(object) + ifaceIndex * 4;
-    void** ifaceVtable = *reinterpret_cast<void***>(iface);
+    unsigned char* iface = bytes + static_cast<UPInt>(bytes[0x6d]) * 4;
     typedef void* (*GetVideoExtent)(void*);
-    unsigned char* extent = static_cast<unsigned char*>(reinterpret_cast<GetVideoExtent>(ifaceVtable[12])(iface));
-    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    __declspec(align(16)) unsigned allocInfo[4] = { 2, 0, 0, 0 };
-    typedef void* (*Allocate)(void*, void*, size_t, const void*);
-    Allocate allocate = reinterpret_cast<Allocate>(heapVtable[14]);
-    unsigned char* shape = static_cast<unsigned char*>(allocate(DAT_143b15f60, object, 0x90, allocInfo));
-    if (!shape) { *result = 0; return result; }
-    reinterpret_cast<Scaleform::Render::ShapeDataFloatMP*>(shape)->Scaleform::Render::ShapeDataFloatMP::ShapeDataFloatMP();
-    void* path = *reinterpret_cast<void**>(shape + 0x88);
-    void* provider = *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x100);
-    if (!provider) {
-        Scaleform::GFx::AS3::Sfr31WriteRecord3(reinterpret_cast<Scaleform::UPInt>(path), 0, 0, 0);
-        Video02MoveTo(path, 0.0f, 0.0f);
-        Video02LineTo(path, 1.0f, 1.0f);
-        FUN_140011410(path);
-        Scaleform::GFx::AS3::Sfr33PathEndRun(static_cast<Scaleform::UByte*>(path));
-    } else {
-        void** transform = static_cast<void**>(allocate(DAT_143b15f60, object, 0x50, allocInfo));
-        if (transform) {
-            ::new (transform) Scaleform::Render::ComplexFill;   // vftable, RefCount 1, no image or gradient, identity, Repeat|Point, BindIndex ~0
-            //
-            float* m = reinterpret_cast<float*>(transform + 4);
-            //
-            m[0] = m[5] = 0.05f;   // identity scaled by 1/20 (twips)
-            //
-            //
-            void** providerVtable = *reinterpret_cast<void***>(provider);
-            reinterpret_cast<void (*)(void*)>(providerVtable[1])(provider);
-            transform[2] = provider;
-            float left = *reinterpret_cast<float*>(static_cast<unsigned char*>(object) + 0xe0);
-            float top = *reinterpret_cast<float*>(static_cast<unsigned char*>(object) + 0xe4);
-            float right = *reinterpret_cast<float*>(static_cast<unsigned char*>(object) + 0xe8);
-            float bottom = *reinterpret_cast<float*>(static_cast<unsigned char*>(object) + 0xec);
-            const float sx = static_cast<float>(*reinterpret_cast<int*>(extent + 8) * 20) / (right - left);
-            const float sy = static_cast<float>(*reinterpret_cast<int*>(extent + 12) * 20) / (bottom - top);
-            m[0] *= sx; m[1] *= sx; m[2] *= sx; m[3] *= sx;
-            m[4] *= sy; m[5] *= sy; m[6] *= sy; m[7] *= sy;
-            *reinterpret_cast<unsigned char*>(transform + 8) =
-                *reinterpret_cast<unsigned char*>(extent + 0x14) ? 3 : 1;
-            unsigned char* pathBytes = static_cast<unsigned char*>(path);
-            Scaleform::UPInt* fillCount = reinterpret_cast<Scaleform::UPInt*>(pathBytes + 0x20);
-            const Scaleform::UPInt oldFillCount = *fillCount;
-            Video02ResizeFills(pathBytes + 0x18, pathBytes + 0x18, oldFillCount + 1);
-            unsigned char* fillArray = *reinterpret_cast<unsigned char**>(pathBytes + 0x18);
-            // the new last entry: the exe indexes with the count after the resize (0x1400118cb)
-            unsigned* fill = reinterpret_cast<unsigned*>(fillArray - 0x10 + *fillCount * 0x10);
-            *fill = 0;
-            FUN_14257dc30(transform);
-            *reinterpret_cast<void**>(fill + 2) = transform;
-            Video02StartLayer(path);
-            void** pathVtable = *reinterpret_cast<void***>(path);
-            unsigned fillStyles = reinterpret_cast<unsigned (*)(void*)>(pathVtable[2])(path);
-            Scaleform::GFx::AS3::Sfr31WriteRecord3(reinterpret_cast<Scaleform::UPInt>(path), fillStyles, 0, 0);
-            // the rectangle is the frame's size at the origin (0x140011943), not its bounds
-            FUN_140011500(shape, 0.0f, 0.0f, right - left, bottom - top);
-            FUN_140011410(path);
-            reinterpret_cast<Scaleform::Render::ShapeDataFloatMP*>(shape)->CountLayers();
-            // The closing reference drop is RefCountImpl::Release (exe 0x140011982 -> 0x14257dcb0), not vftable slot 2:
-            // slot 2 of ??_7ComplexFill (0x1424e3830) is a deleting dtor, which freed the fill while the path still
-            // held it (refcount 2); the path's later Release then decremented +8 of the freed (reused) block.
-            FUN_14257dcb0(transform);
+    unsigned char* extent = static_cast<unsigned char*>(reinterpret_cast<GetVideoExtent>((*reinterpret_cast<void***>(iface))[12])(iface));
+    void* shapeMem = Memory::pGlobalHeap->AllocAutoHeap(object, 0x90, &static_cast<const AllocInfo&>(AllocInfo(2, 0, 0)));
+    ShapeDataFloatMP* pshape = shapeMem ? ::new (shapeMem) ShapeDataFloatMP() : 0;
+    unsigned char* shape = reinterpret_cast<unsigned char*>(pshape);
+    void** pdata = reinterpret_cast<void**>(shape + 0x88);   // reloaded for each step
+    Ptr<ImageBase>& pimage = *reinterpret_cast<Ptr<ImageBase>*>(bytes + 0x100);
+    if (pimage) {
+        FillStyleType fs;
+        void* fillMem = Memory::pGlobalHeap->AllocAutoHeap(object, 0x50, &static_cast<const AllocInfo&>(AllocInfo(2, 0, 0)));
+        ComplexFill* pcf = fillMem ? ::new (fillMem) ComplexFill() : 0;
+        pcf->pImage = pimage;
+        pcf->ImageMatrix.SetIdentity();
+        pcf->ImageMatrix.AppendScaling(0.05f);   // twips
+        pcf->ImageMatrix.AppendScaling(
+            static_cast<float>(*reinterpret_cast<int*>(extent + 8) * 20) /
+                (*reinterpret_cast<float*>(bytes + 0xe8) - *reinterpret_cast<float*>(bytes + 0xe0)),
+            static_cast<float>(*reinterpret_cast<int*>(extent + 12) * 20) /
+                (*reinterpret_cast<float*>(bytes + 0xec) - *reinterpret_cast<float*>(bytes + 0xe4)));
+        pcf->FillMode.Fill = *reinterpret_cast<unsigned char*>(extent + 0x14) ? 3 : 1;   // Wrap_Clamp, Sample_Linear when smoothing
+        // ShapeDataFloatTempl::AddFillStyle: Fills.PushBack, the copy's AddRef unconditional as in the exe (0x1400118de)
+        unsigned char* data = static_cast<unsigned char*>(*pdata);
+        Video02ResizeFills(data + 0x18, data + 0x18, *reinterpret_cast<UPInt*>(data + 0x20) + 1);
+        UInt32* fill = reinterpret_cast<UInt32*>(*reinterpret_cast<unsigned char**>(data + 0x18) - 0x10 +
+                                                 *reinterpret_cast<UPInt*>(data + 0x20) * 0x10);
+        if (fill) {
+            *fill = fs.Color;
+            FUN_14257dc30(pcf);
+            *reinterpret_cast<ComplexFill**>(fill + 2) = pcf;
         }
+        Video02StartLayer(*pdata);
+        unsigned fillStyles = reinterpret_cast<unsigned (*)(void*)>((*reinterpret_cast<void***>(*pdata))[2])(*pdata);
+        Scaleform::GFx::AS3::Sfr31WriteRecord3(reinterpret_cast<UPInt>(*pdata), fillStyles, 0, 0);
+        // the rectangle is the frame's size at the origin (0x140011943), not its bounds
+        FUN_140011500(shape, 0.0f, 0.0f,
+            *reinterpret_cast<float*>(bytes + 0xe8) - *reinterpret_cast<float*>(bytes + 0xe0),
+            *reinterpret_cast<float*>(bytes + 0xec) - *reinterpret_cast<float*>(bytes + 0xe4));
+        Video02ClosePath(*pdata);
+        pshape->CountLayers();
+        // The closing reference drop is RefCountImpl::Release (exe 0x140011982 -> 0x14257dcb0), not vftable slot 2:
+        // slot 2 of ??_7ComplexFill (0x1424e3830) is a deleting dtor, which freed the fill while the path still
+        // held it (refcount 2); the path's later Release then decremented +8 of the freed (reused) block.
+        FUN_14257dcb0(pcf);
+    } else {
+        Scaleform::GFx::AS3::Sfr31WriteRecord3(reinterpret_cast<UPInt>(*pdata), 0, 0, 0);
+        Video02MoveTo(*pdata, 0.0f, 0.0f);
+        Video02LineTo(*pdata, 1.0f, 1.0f);
+        Video02ClosePath(*pdata);
+        Scaleform::GFx::AS3::Sfr33PathEndRun(static_cast<UByte*>(*pdata));
     }
     typedef void* (*AllocateNodeData)(void*, size_t, size_t);
     void* nodeHeap = *reinterpret_cast<void**>(context);  // MS2: exe 0x140011a06 allocates from [context], the context's heap
-    AllocateNodeData allocateNodeData = reinterpret_cast<AllocateNodeData>((*reinterpret_cast<void***>(nodeHeap))[10]);
-    unsigned char* nodeData = static_cast<unsigned char*>(allocateNodeData(nodeHeap, 0xa0, 0));
-    if (!nodeData) {
-        reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(shape + 0x10))[2])(shape + 0x10);
-        *result = 0;
-        return result;
-    }
-    reinterpret_cast<Scaleform::Render::TreeNode::NodeData*>(nodeData)->Scaleform::Render::TreeNode::NodeData::NodeData(static_cast<Scaleform::Render::ContextImpl::EntryData::EntryType>(3));
-    *reinterpret_cast<const void* const**>(nodeData) = Scaleform::Render::TreeShapeNodeDataVTable;
-    typedef void (*AddRef)(void*);
+    unsigned char* nodeData = static_cast<unsigned char*>(
+        reinterpret_cast<AllocateNodeData>((*reinterpret_cast<void***>(nodeHeap))[10])(nodeHeap, 0xa0, 0));
     unsigned char* providerBase = shape + 0x10;
-    reinterpret_cast<AddRef>((*reinterpret_cast<void***>(providerBase))[1])(providerBase);
-    *reinterpret_cast<void**>(nodeData + 0x90) = shape;
-    *reinterpret_cast<float*>(nodeData + 0x98) = 0.0f;
-    void* entry = Scaleform::Render::Video02CreateEntry(context, nodeData);
-    if (entry) ++*reinterpret_cast<int*>(static_cast<unsigned char*>(entry) + 8);
+    if (nodeData) {
+        reinterpret_cast<TreeNode::NodeData*>(nodeData)->TreeNode::NodeData::NodeData(static_cast<ContextImpl::EntryData::EntryType>(3));
+        *reinterpret_cast<const void* const**>(nodeData) = TreeShapeNodeDataVTable;
+        reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(providerBase))[1])(providerBase);
+        *reinterpret_cast<void**>(nodeData + 0x90) = shape;
+        *reinterpret_cast<float*>(nodeData + 0x98) = 0.0f;
+    }
+    void* entry = Video02CreateEntry(context, nodeData);
+    if (entry) ++*reinterpret_cast<UPInt*>(static_cast<unsigned char*>(entry) + 8);
     *result = entry;
     reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(providerBase))[2])(providerBase);
     if (entry) {
-        int* refs = reinterpret_cast<int*>(static_cast<unsigned char*>(entry) + 8);
-        if (--*refs == 0) static_cast<Scaleform::Render::Video02EntryAccess*>(entry)->Scaleform::Render::Video02EntryAccess::destroyHelper();
+        if (--*reinterpret_cast<UPInt*>(static_cast<unsigned char*>(entry) + 8) == 0)
+            static_cast<Video02EntryAccess*>(entry)->Video02EntryAccess::destroyHelper();
     }
     return result;
 }
