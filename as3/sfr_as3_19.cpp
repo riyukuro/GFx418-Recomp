@@ -1382,21 +1382,21 @@ void Sfr27ExecAsType(VM* vm)
         below->SetNull();
 }
 
+// SDK ReadArgsObject / ReadArgsObjectValue (AS3_VMRead.h): the call arguments, then the object (StackReader::CheckObject inlined), then the function.
+struct Sfr27ReadArgsObject : public ReadArgs { SF_INLINE Sfr27ReadArgsObject(VM& vm, UInt32 n) : ReadArgs(vm, n), ArgObject(OpStack) { if (ArgObject.IsNullOrUndefined()) { const VM::ErrorID id = ArgObject.IsNull() ? static_cast<VM::ErrorID>(0x3f1) : static_cast<VM::ErrorID>(0x3f2); VM& vm = VMRef; vm.ThrowTypeError(VM::Error(id, vm)); } }
+    SF_INLINE const Value* GetCallArgs() const { return ArgNum <= 8 ? FixedArgs : CallArgs.GetDataPtr(); } Value ArgObject; };
+struct Sfr27ReadArgsObjectValue : public Sfr27ReadArgsObject { SF_INLINE Sfr27ReadArgsObjectValue(VM& vm, UInt32 n) : Sfr27ReadArgsObject(vm, n), value(OpStack) {} const Value value; };
+static SF_INLINE void Sfr27Execute(VM* vm, const Value& func, const Value& _this, unsigned argc, const Value* argv)   // VM::Execute (result left on the stack)
+{ Value result = Value::GetUndefined(); vm->ExecuteInternalUnsafe(func, _this, result, argc, argv, true); }
 // call: function, receiver and argc arguments popped; the result is dropped.
-// MS2-FUNCTIONAL 0x142533680: same receiver/function pops and ExecuteInternalUnsafe call; the exe inlines the Value Release/AddRef paths where ours calls the out-of-line ReleaseInternal/ReleaseWeakRef (frame and size differ; same helper calls).
+// VM::exec_call with the SDK ReadArgsObjectValue reader and the inline VM::Execute.
 // @0x142533680
 void Sfr27ExecCallVoid(VM* vm, UInt32 argc)
 {
-    RA args(vm, argc);
-    Value receiver;
-    receiver.Pick(args.Stk());
-    ExecRequireObject(*vm, receiver);
-    Value func;
-    func.Pick(args.Stk());
+    Sfr27ReadArgsObjectValue args(*vm, argc);   // VM::exec_call
     if (vm->IsException())
         return;
-    Value result(Value::GetUndefined());
-    vm->ExecuteInternalUnsafe(func, receiver, result, argc, args.Argv(), true);
+    Sfr27Execute(vm, args.value, args.ArgObject, argc, args.GetCallArgs());
 }
 
 // callmethod: receiver and argc arguments popped; the method comes from the receiver's method table.
