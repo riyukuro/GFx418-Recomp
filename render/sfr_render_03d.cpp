@@ -566,24 +566,21 @@ RectF ComputeBoundsRoundStrokeSorter(const ShapeDataInterface& shape, ShapePosIn
     RectF bounds(1e30f, 1e30f, -1e30f, -1e30f);
     AddStrokeToSorter(shape, pos, strokeStyle, trans, gen);
 
-    const StrokeSorter& sorter = gen->mStrokeSorter;
-    for (unsigned i = 0; i < sorter.GetPathCount(); ++i)
+    for (unsigned i = 0; i < gen->mStrokeSorter.GetPathCount(); ++i)
     {
-        unsigned n  = sorter.GetVertexCount(i);
+        unsigned n  = gen->mStrokeSorter.GetVertexCount(i);
         float    x0 = 0;
         float    y0 = 0;
         for (unsigned j = 0; j < n;)
         {
-            const StrokeSorter::VertexType& p1 = sorter.GetVertex(i, j++);
+            const StrokeSorter::VertexType& p1 = gen->mStrokeSorter.GetVertex(i, j++);
             if (p1.segType == Math2D::Seg_MoveTo || p1.segType == Math2D::Seg_LineTo)
             {
-                x0 = p1.x;
-                y0 = p1.y;
-                bounds.ExpandToPoint(x0, y0);
+                bounds.ExpandToPoint(x0 = p1.x, y0 = p1.y);
             }
             else if (p1.segType == Math2D::Seg_QuadTo)
             {
-                const StrokeSorter::VertexType& p2 = sorter.GetVertex(i, j++);
+                const StrokeSorter::VertexType& p2 = gen->mStrokeSorter.GetVertex(i, j++);
                 float x, y;
                 float t = Math2D::QuadCurveExtremum(x0, p1.x, p2.x);
                 if (t > 0 && t < 1)
@@ -603,8 +600,8 @@ RectF ComputeBoundsRoundStrokeSorter(const ShapeDataInterface& shape, ShapePosIn
             }
             else if (p1.segType == Math2D::Seg_CubicTo)
             {
-                const StrokeSorter::VertexType& p2 = sorter.GetVertex(i, j++);
-                const StrokeSorter::VertexType& p3 = sorter.GetVertex(i, j++);
+                const StrokeSorter::VertexType& p2 = gen->mStrokeSorter.GetVertex(i, j++);
+                const StrokeSorter::VertexType& p3 = gen->mStrokeSorter.GetVertex(i, j++);
                 float x, y, t1, t2;
                 Math2D::CubicCurveExtremum(x0, p1.x, p2.x, p3.x, &t1, &t2);
                 if (t1 > 0 && t1 < 1)
