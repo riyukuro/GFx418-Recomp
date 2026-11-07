@@ -54,8 +54,8 @@ public:
     struct RootArray { bool allocatePageSafe(UPInt index); };
 };
 } } }
-ExeDecl<void*(void*, InteractiveObject*)>::type FUN_14001af70;     // the AS3 AVM video character constructor
-#define FUN_14001af70_ctor FUN_14001af70
+namespace Scaleform { namespace GFx { namespace AS3 {   // ctor-only view of sfr_video_03's AS3 AVM video character
+class AvmVideoCharacter { public: AvmVideoCharacter(InteractiveObject* pdispObj); }; }}}   // 0x14001af70
 namespace Scaleform { namespace GFx { namespace AS2 {
 class NetStream;
 void FUN_140006ba0(NetStream* pnetStream, Sprite* pchar);         // sfr_video_01: NetStream's provider->SetAudioTarget
@@ -215,8 +215,8 @@ DisplayObjectBase* AS3VideoSupportImpl::CreateASCharacter(MovieImpl* proot, Char
     }
     else
         pobj = 0;
-    if (pmem + 0x110 != 0)
-        FUN_14001af70_ctor(pmem + 0x110, pobj);
+    ::new (pmem + 0x110) AS3::AvmVideoCharacter(pobj);
+    //
     return (DisplayObjectBase*)pobj;
 }
 

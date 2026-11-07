@@ -157,19 +157,19 @@ ExeDecl<void(void*)>::type FUN_140026ed0;
 ExeDecl<void()>::type FUN_140026db0;
 extern ExeDecl<void*>::type DAT_1431b7c70;
 #define VideoTraitsVtable DAT_1431b7c70
-extern ExeDecl<void*>::type DAT_1431b7f60;
-#define VideoTraitsBaseVtable DAT_1431b7f60
-extern ExeDecl<void*>::type DAT_1431b7ea0;
-#define VideoTraitsSubVtableA DAT_1431b7ea0
-extern ExeDecl<void*>::type DAT_1431b7de0;
-#define VideoTraitsSubVtableB DAT_1431b7de0
-// The AvmVideoCharacter model at the end of the file emits these three tables; the hand-inlined ctor FUN_14001af70
-// stores them through the DAT_ names. The hook DLL binds the DAT_ names to the exe by their symbols rows.
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:?DAT_1431b7f60@@3PEAXEA=??_7AvmVideoCharacter@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@")
-#pragma comment(linker, "/alternatename:?DAT_1431b7ea0@@3PEAXEA=??_7AvmVideoCharacter@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@")
-#pragma comment(linker, "/alternatename:?DAT_1431b7de0@@3PEAXEA=??_7AvmVideoCharacter@AS3@GFx@Scaleform@@6B@")
-#endif
+// (AvmVideoCharacter's ctor 0x14001af70, at the end of the file, stores its three vftables by name)
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 extern ExeDecl<void*>::type DAT_1431b7160; extern ExeDecl<void*>::type DAT_1431b7900;
 #define VideoClassInfoA DAT_1431b7160
 #define VideoClassVtableA DAT_1431b7900
@@ -1224,31 +1224,31 @@ uint64_t* FUN_14001a920(uint64_t* record, uint64_t vm, uint64_t property, int co
     }
     return record;
 }
-} // namespace (sfr_video_04 calls FUN_14001af70)
-
-// the character's own fields at +0x48, set up after the AvmInteractiveObj base
-namespace {
-struct VideoTraitsFields
-{
-    uint32_t A, B, C;
-    bool Flag;
-    VideoTraitsFields() { C = 0; B = 0; A = 0; Flag = true; }
-};
 } // namespace
-
-// the AS3 AVM video character constructor (sfr_video_04): runs the AvmInteractiveObj base constructor on
-// the character (rdx passes through) and installs the Video character vtables and defaults.
-// @0x14001af70
-void* FUN_14001af70(void* self, Scaleform::GFx::InteractiveObject* object)
-{
-    uint64_t* traits = static_cast<uint64_t*>(self);
-    reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(traits)->Scaleform::GFx::AS3::AvmInteractiveObj::AvmInteractiveObj(object);
-    reinterpret_cast<VideoTraitsFields*>(reinterpret_cast<unsigned char*>(traits) + 0x48)->VideoTraitsFields::VideoTraitsFields();
-    *reinterpret_cast<void***>(traits) = &VideoTraitsBaseVtable;
-    reinterpret_cast<void***>(traits)[6] = &VideoTraitsSubVtableA;
-    reinterpret_cast<void***>(traits)[8] = &VideoTraitsSubVtableB;
-    return traits;
-}
+// (the AS3 AVM video character ctor 0x14001af70 is defined after its class at the end of the file)
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 namespace {
 
@@ -1918,13 +1918,13 @@ void FUN_14001a180(void*, void*, void* callFrame, void* result)
 // +0x40 and its own fields at +0x48 (ctor FUN_14001af70). Vftables 0x1431b7f60 (+0x00), 0x1431b7ea0 (+0x30) and
 // 0x1431b7de0 (+0x40). The overriders are the leaves above at their exe VAs (declared here, symbols-manual rows), so
 // the two secondary tables' slots are cl's own adjustor thunks (sub rcx,N; jmp member), which are the exe ones in
-// 0x14001b160-0x14001b390. Sfr03EmitAvmVideoVftables copy-constructs one so that cl emits the vftables and thunks.
+// 0x14001b160-0x14001b390. its ctor (0x14001af70) makes cl emit the vftables and thunks.
 namespace Scaleform { namespace GFx {
 class __declspec(novtable) AvmVideoCharacterBase : public AvmInteractiveObjBase
 {
 };
-namespace AS3 {
-class AvmVideoCharacter : public AvmInteractiveObj, public AvmVideoCharacterBase
+namespace AS3 { struct Sfr03VideoFields { UInt32 FieldA, FieldB, FieldC; bool Flag; Sfr03VideoFields() { FieldC = 0; FieldB = 0; FieldA = 0; Flag = true; } };   // +0x48 / +0x54
+class AvmVideoCharacter : public AvmInteractiveObj, public AvmVideoCharacterBase, public Sfr03VideoFields
 {
 public:
     // the AS3 part lives inside its display object's allocation: the deleting destructor (0x14001b3a0) frees nothing
@@ -1958,13 +1958,13 @@ public:
     virtual bool     IsFocusEnabled(FocusMovedType fmt = GFx_FocusMovedByKeyboard) const;   // 0x14001b130
     virtual bool     IsTabable() const;                                 // 0x14001b140
 
-    UInt32  FieldA, FieldB, FieldC;     // +0x48
-    bool    Flag;                       // +0x54
-};
-void Sfr03EmitAvmVideoVftables(void* p, const AvmVideoCharacter* pvideo)
-{
-    new (p) AvmVideoCharacter(*pvideo);
-}
+    // (its own fields at +0x48 are the Sfr03VideoFields base: the exe sets them before the vftable stores)
+    //
+    AvmVideoCharacter(InteractiveObject* pdispObj); };   // ctor 0x14001af70 (sfr_video_04)
+// @0x14001af70
+AvmVideoCharacter::AvmVideoCharacter(InteractiveObject* pdispObj) : AvmInteractiveObj(pdispObj)
+{ }
+//
 
 // AvmVideoCharacter's own leaves and its forwards to the AvmInteractiveObj / AvmDisplayObj versions.
 // @0x14001afd0
