@@ -170,7 +170,6 @@ bool MeshKey::CalcMatrixKey(const Matrix2F& m, float* key, Matrix2F* m2)
 
 // the scalar version; m2 gets the matrix mapping the unit square onto the key's parallelogram, turned so that its
 // longest direction is vertical (the tessellator does better on it)
-// MS2-FUNCTIONAL: lb5 oracle compiles it functional only (register allocation in the rotation search)
 // @0x142695230
 bool MeshKey::CalcMatrixKey_NonOpt(const Matrix2F& m, float* key, Matrix2F* m2)
 {
@@ -196,7 +195,14 @@ bool MeshKey::CalcMatrixKey_NonOpt(const Matrix2F& m, float* key, Matrix2F* m2)
     if (m2)
     {
         float p[8] = { 0, 0, sx, 0, sx + w, h };
-        m2->SetRectToParl(0, 0, 1, 1, p);
+        {
+            // SetRectToParl(0, 0, 1, 1, p) written out: the exe expands SetParlToParl here (no call to 0x1425e74a0)
+            const float src[6] = { 0, 0, 1, 0, 1, 1 };
+            m2->SetMatrix(src[2] - src[0], src[4] - src[0], src[0], src[3] - src[1], src[5] - src[1], src[1]);
+            Matrix2F d(p[2] - p[0], p[4] - p[0], p[0], p[3] - p[1], p[5] - p[1], p[1]);
+            m2->Invert();
+            m2->Append(d);
+        }
 
         // four candidate directions (0, 45, 90 a bit favoured, 135 degrees)
         p[0] = 1;
