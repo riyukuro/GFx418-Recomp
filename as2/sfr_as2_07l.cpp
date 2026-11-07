@@ -54,8 +54,8 @@ inline bool MayBeStandardMember(const ASString& name)
 
 } // namespace
 
-// MS2-FUNCTIONAL: the parameters get other callee-saved registers and the __proto__ case check is laid out
-// differently (the exe branches on IsCaseSensitive first); same behavior
+// MS2-FUNCTIONAL: register allocation only, at equal length: in the topmostLevel case the exe loads pASRoot
+// into rcx and its pMovieImpl after the flag test (ours goes through rax first); same behavior
 // @0x142982d20
 bool AvmCharacter::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
 {
@@ -150,9 +150,23 @@ bool AvmCharacter::SetMember(Environment* penv, const ASString& name, const Valu
         }
     }
 
-    if (penv->GetBuiltin(ASBuiltin___proto__).CompareBuiltIn_CaseCheck(name, penv->IsCaseSensitive()) &&
-        val.T.Type != Value::UNSET)
-        Set__proto__(&penv->StringContext, val.ToObject(0));
+    if (penv->IsCaseSensitive())
+    {
+        if (name.GetNode() == penv->GetBuiltin(ASBuiltin___proto__).GetNode())
+        {
+            if (val.T.Type != Value::UNSET)
+                Set__proto__(&penv->StringContext, val.ToObject(0));
+        }
+    }
+    else
+    {
+        name.ResolveLowercase();
+        if (penv->GetBuiltin(ASBuiltin___proto__).GetNode()->pLower == name.GetNode()->pLower)
+        {
+            if (val.T.Type != Value::UNSET)
+                Set__proto__(&penv->StringContext, val.ToObject(0));
+        }
+    }
 
     Object* pobj = GetASObject();
     if (pobj)
