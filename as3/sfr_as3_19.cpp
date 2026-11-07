@@ -6493,7 +6493,7 @@ void Sfr31VMRaiseError(UPInt vmAddr, const UInt32* err, UPInt classInfo)
 // Checks that a value converts to a string: null-ish operands convert directly; otherwise the object's public toString is invoked
 // and its result converted. Writes the success flag through ret.
 // MS2-FUNCTIONAL 0x14252f9b0: SDK AS3::ToString body with the inlined Multiname(ns, Value) ctor; the r / name-temp /
-// Multiname stack slots are rotated vs the exe and the PostProcessName branch layout differs
+// Multiname stack slots are rotated vs the exe
 // @0x14252f9b0
 char* Sfr31ValueToStringCheck(char* ret, VM* vm, Value* v, void* strOut)
 {
@@ -7202,20 +7202,25 @@ __forceinline Multiname::Multiname(Instances::Namespace& ns, const Value& name, 
     }
     Sfr17ValueInline::Assign(Name, name);
     // PostProcessName(false) (0x14251cef0, sfr_as3_18) inlined: the three renames share one assignment
-    if (!Name.IsString())
-        return;
-    ASString n = Name.AsString();
-    if (n.GetSize() == 0)
-        return;
-    if (n[0] == '*')
-        FUN_1424e0d40(Name, ASString(n.GetManager()->GetEmptyStringNode()));
-    else if (n[0] == '@')
+    if (Name.IsString())
     {
-        Kind = static_cast<Abc::MultinameKind>(Kind | 8);
-        if (n.GetSize() == 2 && n[1] == '*')
-            FUN_1424e0d40(Name, ASString(n.GetManager()->GetEmptyStringNode()));
-        else
-            FUN_1424e0d40(Name, ASString(n.SubstringNode(1, n.GetSize())));
+        ASString n = Name.AsString();
+        if (n.GetSize() != 0)
+        {
+            if (n[0] == '*')
+                goto empty_name;
+            if (n[0] == '@')
+            {
+                Kind = static_cast<Abc::MultinameKind>(Kind | 8);
+                if (n.GetSize() == 2 && n[1] == '*')
+                {
+                empty_name:
+                    FUN_1424e0d40(Name, ASString(n.GetManager()->GetEmptyStringNode()));
+                }
+                else
+                    FUN_1424e0d40(Name, ASString(n.SubstringNode(1, n.GetSize())));
+            }
+        }
     }
 }
 
