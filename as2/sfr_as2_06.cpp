@@ -1380,18 +1380,28 @@ FunctionRef ColorTransformCtorFunction::Register(GlobalContext* pgc)
     return ctor;
 }
 
-// MS2-FUNCTIONAL the exe inlines the RectangleCtorFunction ctor
+// MS2-FUNCTIONAL regalloc floor, as ColorTransformCtorFunction::Register above (731 vs 730 B).
 // @0x142979d00
 FunctionRef RectangleCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClass<RectangleCtorFunction, RectangleProto>(pgc, ASBuiltin_Rectangle, ASBuiltin_Object, pgc->FlashGeomPackage);
+    ASStringContext sc(pgc, 8);
+    FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) RectangleCtorFunction(&sc, ObjectInlineCtorTag()));
+    Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) RectangleProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor);
+    SetBuiltinPrototype(pgc, ASBuiltin_Rectangle, proto);
+    pgc->FlashGeomPackage->SetMemberRaw(&sc, sc.GetBuiltin(ASBuiltin_Rectangle), Value(ctor));
+    return ctor;
 }
 
-// MS2-FUNCTIONAL the exe inlines the TransformCtorFunction ctor
+// MS2-FUNCTIONAL regalloc floor, as ColorTransformCtorFunction::Register above (731 vs 730 B).
 // @0x14297c400
 FunctionRef TransformCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClass<TransformCtorFunction, TransformProto>(pgc, ASBuiltin_Transform, ASBuiltin_Object, pgc->FlashGeomPackage);
+    ASStringContext sc(pgc, 8);
+    FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) TransformCtorFunction(&sc, ObjectInlineCtorTag()));
+    Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) TransformProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor);
+    SetBuiltinPrototype(pgc, ASBuiltin_Transform, proto);
+    pgc->FlashGeomPackage->SetMemberRaw(&sc, sc.GetBuiltin(ASBuiltin_Transform), Value(ctor));
+    return ctor;
 }
 
 // MS2-FUNCTIONAL the exe inlines the GASMatrixCtorFunction and MatrixProto ctors (sfr_as2_03)
