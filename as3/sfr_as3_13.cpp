@@ -2431,10 +2431,20 @@ namespace Instances { namespace fl_text
         }
     }
 
+    // Text::TextFormat::GetLetterSpacing and ParagraphFormat::Is*Alignment, as the SDK inlines them.
+    static SF_INLINE float Sfr13GetLetterSpacing(const TextFormatStorage& tf) { return (float)(SInt16)(tf.LetterSpacing / 20); }
+    static SF_INLINE bool Sfr13IsBold(const TextFormatStorage& tf) { return (tf.FormatFlags & Flag_Bold) != 0; }
+    static SF_INLINE bool Sfr13IsAlignment(const ParagraphFormatStorage& pf, unsigned a)
+    {
+        return (pf.PresentMask & Para_Alignment) != 0 && ((pf.PresentMask & Para_AlignMask) >> Para_AlignShift) == a;
+    }
+
     // The style named by name (".name" a class, else a tag) as an object of CSS property strings and numbers,
     // or null when there is none.
     // @0x1424b15e0
-    // the SDK body; the style's formats are raw storage here
+    // the SDK body; the style's formats are raw storage here. The present bits are tested as (UByte)(mask >> n) & 1.
+    // MS2-FUNCTIONAL: 5127 bytes, exe 5120. The exe tests the textAlign present bit with a byte test and reloads the
+    // mask word (ours keeps one word load), and the colour string's release compares with sub eax,1 (ours cmp eax,1).
     void StyleSheet::getStyle(SPtr<Instances::fl::Object>& result, const ASString& styleName)
     {
         const Render::Text::Style* pstyle = NULL;
@@ -2482,7 +2492,7 @@ namespace Instances { namespace fl_text
         }
 
         // fontFamily
-        if (tf.PresentMask & Fmt_FontList)
+        if ((UByte)(tf.PresentMask >> 2) & 1)
         {
             pobj->SetProperty(Multiname(
                 publicNS, sm.CreateString("fontFamily")),
@@ -2490,7 +2500,7 @@ namespace Instances { namespace fl_text
         }
 
         // fontSize
-        if (tf.PresentMask & Fmt_FontSize)
+        if ((UByte)(tf.PresentMask >> 3) & 1)
         {
             pobj->SetProperty(Multiname(
                 publicNS, sm.CreateString("fontSize")),
@@ -2498,7 +2508,7 @@ namespace Instances { namespace fl_text
         }
 
         // fontStyle
-        if (tf.PresentMask & Fmt_Italic)
+        if ((UByte)(tf.PresentMask >> 5) & 1)
         {
             pobj->SetProperty(Multiname(
                 publicNS, sm.CreateString("fontStyle")),
@@ -2506,15 +2516,15 @@ namespace Instances { namespace fl_text
         }
 
         // fontWeight
-        if (tf.PresentMask & Fmt_Bold)
+        if ((UByte)(tf.PresentMask >> 4) & 1)
         {
             pobj->SetProperty(Multiname(
                 publicNS, sm.CreateString("fontWeight")),
-                Value(sm.CreateString((tf.FormatFlags & Flag_Bold) ? "bold" : "normal"))).DoNotCheck();
+                Value(sm.CreateString(Sfr13IsBold(tf) ? "bold" : "normal"))).DoNotCheck();
         }
 
         // kerning
-        if (tf.PresentMask & Fmt_Kerning)
+        if ((UByte)(tf.PresentMask >> 7) & 1)
         {
             pobj->SetProperty(Multiname(
                 publicNS, sm.CreateString("kerning")),
@@ -2522,7 +2532,7 @@ namespace Instances { namespace fl_text
         }
 
         // leading
-        if (pf.PresentMask & Para_Leading)
+        if ((UByte)(pf.PresentMask >> 3) & 1)
         {
             pobj->SetProperty(Multiname(
                 publicNS, sm.CreateString("leading")),
@@ -2530,15 +2540,15 @@ namespace Instances { namespace fl_text
         }
 
         // letterSpacing
-        if (tf.PresentMask & Fmt_LetterSpacing)
+        if ((UByte)(tf.PresentMask >> 1) & 1)
         {
             pobj->SetProperty(Multiname(
                 publicNS, sm.CreateString("letterSpacing")),
-                Value((float)(SInt16)(tf.LetterSpacing / 20))).DoNotCheck();
+                Value(Sfr13GetLetterSpacing(tf))).DoNotCheck();
         }
 
         // marginLeft
-        if (pf.PresentMask & Para_LeftMargin)
+        if ((UByte)(pf.PresentMask >> 4) & 1)
         {
             pobj->SetProperty(Multiname(
                 publicNS, sm.CreateString("marginLeft")),
@@ -2546,7 +2556,7 @@ namespace Instances { namespace fl_text
         }
 
         // marginRight
-        if (pf.PresentMask & Para_RightMargin)
+        if ((UByte)(pf.PresentMask >> 5) & 1)
         {
             pobj->SetProperty(Multiname(
                 publicNS, sm.CreateString("marginRight")),
@@ -2556,19 +2566,18 @@ namespace Instances { namespace fl_text
         // textAlign
         if (pf.PresentMask & Para_Alignment)
         {
-            const unsigned a = (pf.PresentMask & Para_AlignMask) >> Para_AlignShift;
             pobj->SetProperty(Multiname(
                 publicNS, sm.CreateString("textAlign")),
                 Value(sm.CreateString(
-                    ((pf.PresentMask & Para_Alignment) && a == Align_Left) ? "left" :
-                        ((pf.PresentMask & Para_Alignment) && a == Align_Center) ? "center" :
-                            ((pf.PresentMask & Para_Alignment) && a == Align_Right) ? "right" :
+                    Sfr13IsAlignment(pf, Align_Left) ? "left" :
+                        Sfr13IsAlignment(pf, Align_Center) ? "center" :
+                            Sfr13IsAlignment(pf, Align_Right) ? "right" :
                                 "justify"
                 ))).DoNotCheck();
         }
 
         // textDecoration
-        if (tf.PresentMask & Fmt_Underline)
+        if ((UByte)(tf.PresentMask >> 6) & 1)
         {
             pobj->SetProperty(Multiname(
                 publicNS, sm.CreateString("textDecoration")),
@@ -2576,7 +2585,7 @@ namespace Instances { namespace fl_text
         }
 
         // textIndent
-        if (pf.PresentMask & Para_Indent)
+        if ((UByte)(pf.PresentMask >> 2) & 1)
         {
             pobj->SetProperty(Multiname(
                 publicNS, sm.CreateString("textIndent")),
