@@ -1582,19 +1582,22 @@ ClassTraits::Traits* Sfr33LookupHash1c8(VM* self, const ASString& name, const In
 // @0x142505aa0
 ClassTraits::Traits** Sfr33ClassTraitsCacheGet(TClassTraitsCache* self, const Multiname& mn)
 {
+    ClassTraits::Traits** p = NULL;
     if ((static_cast<UInt32>(mn.Kind) & 3) != Abc::MNF_NS_Multi)
     {
         ASString name = mn.Name.AsString();
-        return FUN_142414ac0(self, name, static_cast<const Instances::Namespace&>(*mn.Obj));
+        p = FUN_142414ac0(self, name, static_cast<const Instances::Namespace&>(*mn.Obj));
     }
-    const NamespaceSet& nss = static_cast<const NamespaceSet&>(*mn.Obj);
-    const ArrayLH<SPtr<Instances::Namespace> >& nsa = nss.GetNamespaces();
-    const UPInt n = nsa.GetSize();
-    ClassTraits::Traits** p = NULL;
-    for (UPInt i = 0; p == NULL && i < n; ++i)
+    else
     {
-        ASString name = mn.Name.AsString();
-        p = self->Entries.Get(TClassTraitsCache::Key(name, nsa[i].GetPtr()));
+        const NamespaceSet& nss = static_cast<const NamespaceSet&>(*mn.Obj);
+        const ArrayLH<SPtr<Instances::Namespace> >& nsa = nss.GetNamespaces();
+        const UPInt n = nsa.GetSize();
+        for (UPInt i = 0; p == NULL && i < n; ++i)
+        {
+            ASString name = mn.Name.AsString();
+            p = self->Entries.Get(TClassTraitsCache::Key(name, nsa[i].GetPtr()));
+        }
     }
     return p;
 }
@@ -7934,12 +7937,14 @@ const char* FUN_142506ed0(Scaleform::UPInt self, Scaleform::String* ppath)
 // @0x142507b70
 Scaleform::GFx::CharacterDef* Scaleform::GFx::AS3::ShapeObject::GetCharacterDef() const { return pDef; }
 
-// The enabled bit (Mask_Enabled, 0x10) of the AVM object's display object (+0x18 back from the AVM base), as 0 or 1.
-// MS2-FUNCTIONAL: the exe zero-extends the shifted byte before the mask (movzx; and eax,1)
+// AvmButton::GetCursorType (SDK AS3_AvmButton.cpp): HAND (1) when the button (+0x18 back from the AVM base) has its
+// enabled flag set, else AvmInteractiveObj's ARROW (0).
 // @0x142508500
 unsigned FUN_142508500(Scaleform::UPInt self)
 {
-    return static_cast<Scaleform::UByte>((*reinterpret_cast<Scaleform::GFx::InteractiveObject* const*>(self - 0x18))->Flags >> 4) & 1;
+    if ((*reinterpret_cast<Scaleform::GFx::InteractiveObject* const*>(self - 0x18))->IsEnabledFlagSet())
+        return 1;
+    return 0;
 }
 
 // MS2-FUNCTIONAL: the exe returns its .rdata copy
