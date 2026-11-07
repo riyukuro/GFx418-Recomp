@@ -937,6 +937,8 @@ void Sfr27MultinameFromQName(Multiname* mn, const Value* qname);   // sfr_as3_19
 struct Sfr17dValueInline
 {
     static SF_FORCEINLINE void SetClassKind(Value& v) { v.SetKind(Value::kClass); }
+    static SF_FORCEINLINE void InitClass(Value& v, Class* cl)
+    { Value::VU tmp(cl); cl->AddRef(); v.Flags = Value::kClass; v.value = tmp; }
 };
 }}} // namespace Scaleform::GFx::AS3
 
@@ -1336,7 +1338,9 @@ static SF_FORCEINLINE void Sfr17dThrow(AS3::VM* vm, const AS3::VM::Error& e, con
 
 // A new empty Sprite named instanceName at depth (the top when negative) of the container; its constructor runs
 // right away.
-// MS2-FUNCTIONAL: Value::~Value is inlined in full (the exe knows the class kind and calls ReleaseInternal)
+// The class Value is declared before GetClass and set up in place (Value(Class*) inlined: VU temp, AddRef, kind).
+// MS2-FUNCTIONAL: Value::~Value is inlined in full (the exe knows the class kind and calls ReleaseInternal), and the
+// exe stores the VU temp before the null test; the length is 819 against the exe's 823
 // @0x1424f33d0
 bool AS3ValueObjectInterface::CreateEmptyMovieClip(void* pdata, GFx::Value* pmc, const char* instanceName, SInt32 depth)
 {
@@ -1351,11 +1355,11 @@ bool AS3ValueObjectInterface::CreateEmptyMovieClip(void* pdata, GFx::Value* pmc,
     const StringDataPtr className("flash.display.Sprite", 0x14);
     const UPInt callStackSize = vm->Unk070[1];
     bool needExecute;
+    Value _class;
     Class* cls = vm->GetClass(className);
     if (cls)
     {
-        Value _class(cls, Value::InlineObj);
-        Sfr17dValueInline::SetClassKind(_class);
+        Sfr17dValueInline::InitClass(_class, cls);
         if (_class.IsNullOrUndefined())
         {
             Sfr17dThrow(vm, VM::Error(VM::ErrorID(1009) /* eConvertNullToObjectError */, *vm), fl::TypeErrorCI);
