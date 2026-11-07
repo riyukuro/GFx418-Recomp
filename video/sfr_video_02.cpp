@@ -124,10 +124,10 @@ namespace Scaleform { namespace Render { inline ComplexFill::ComplexFill() : Bin
 namespace Scaleform { typedef ArrayPagedBase<const GFx::AS3::RefCountBaseGC<323>*, 10, 5, AllocatorPagedLH_POD<const GFx::AS3::RefCountBaseGC<323>*, 2> > Video02GcRoots; template<> bool Video02GcRoots::allocatePageSafe(UPInt); struct ArrayPagedFriend { static bool AllocatePageSafe(Video02GcRoots* a, UPInt nb) { return a->allocatePageSafe(nb); } }; } // (C3) FUN_1423dfe30
 extern void* PTR_FUN_1431b71b0;
 extern void* PTR_FUN_1431b7260;
-//
-//
-extern void* PTR_LAB_1431b67d0;
-extern void* PTR_LAB_1431b6740;
+void FUN_140012340(const Scaleform::GFx::AS2::FnCall& call);   // NetConnection's script constructor (below)
+namespace Scaleform { namespace GFx { namespace AS2 { class NetConnectionCtorFunction : public CFunctionObject { public:
+    NetConnectionCtorFunction(ASStringContext* psc);   // exe 0x140012650
+    virtual Object* CreateNewObject(Environment* penv) const; }; }}}   // exe 0x140011d50 (vftables 0x1431b6740 / +0x20 0x1431b67d0)
 extern void* PTR_LAB_1431b6540;
 extern void* PTR_LAB_1431b65f0;
 extern void* PTR_LAB_1431b5e70;
@@ -2132,16 +2132,16 @@ Scaleform::GFx::AS2::VideoCtorFunction::VideoCtorFunction(
 }
 
 // constructs the frame-rate native function object and installs its executable tables.
-// @0x140012650
-Scaleform::GFx::AS2::CFunctionObject* FUN_140012650(
-    Scaleform::GFx::AS2::CFunctionObject* object, Scaleform::GFx::AS2::ASStringContext* context)
-{
-    extern void FUN_140012340(const Scaleform::GFx::AS2::FnCall&);
-    object->Scaleform::GFx::AS2::CFunctionObject::CFunctionObject(context, FUN_140012340);
-    *reinterpret_cast<void**>(object) = &PTR_LAB_1431b6740;
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b67d0;
-    return object;
-}
+// (NetConnectionCtorFunction's ctor 0x140012650 is defined after CreateNewObject below)
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 // initializes the recovered AS2 function prototype's Object and function-reference bases.
 // @0x1400122e0
@@ -2453,9 +2453,9 @@ Scaleform::GFx::AS2::FunctionRef* FUN_1400126f0(
     Scaleform::GFx::AS2::CFunctionObject* function = static_cast<Scaleform::GFx::AS2::CFunctionObject*>(context->pHeap->Alloc(0x70));
     if (function)
     {
-        function->Scaleform::GFx::AS2::CFunctionObject::CFunctionObject(&stringContext, FUN_140012340);
-        *reinterpret_cast<void**>(function) = &PTR_LAB_1431b6740;
-        *reinterpret_cast<void**>(reinterpret_cast<char*>(function) + 0x20) = &PTR_LAB_1431b67d0;
+        ::new (function) Scaleform::GFx::AS2::NetConnectionCtorFunction(&stringContext);
+        //
+        //
     }
     else
         function = 0;
@@ -3631,13 +3631,13 @@ void Video02EmitNetConnectionVftables(void* p, ASStringContext* psc, Object* ppr
     ::new (p) NetConnectionProto(psc, pprototype, constructor);
 }
 // The NetConnection constructor function (vftables 0x1431b6740 / 0x1431b67d0).
-class NetConnectionCtorFunction : public CFunctionObject
+// (declared at the top of the file; implicit destructor: the ??_G 0x1400126b0 calls the out-of-line ~CFunctionObject)
+// @0x140012650
+NetConnectionCtorFunction::NetConnectionCtorFunction(ASStringContext* psc)
+    : CFunctionObject(psc, ::FUN_140012340)
 {
-public:
-    NetConnectionCtorFunction(ASStringContext* psc) : CFunctionObject(psc, ::FUN_140012340) {}
-    // (implicit destructor: the ??_G 0x1400126b0 calls the out-of-line ~CFunctionObject)
-    virtual Object* CreateNewObject(Environment* penv) const;   // exe 0x140011d50
-};
+}
+//
 // BEHAVIOUR FIX: allocates from the movie's heap (Environment::GetHeap), as the exe does and as the constructor
 // path at 0x140012340 already did; it used the global heap.
 // @0x140011d50
@@ -3831,8 +3831,8 @@ Ptr<Render::TreeNode> Video02Character::CreateRenderNode(Render::ContextImpl::Co
 #pragma comment(linker, "/alternatename:?PTR_LAB_1431b6690@@3PEAXEA=??_7NetConnectionProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
 #pragma comment(linker, "/alternatename:?PTR_LAB_1431b6638@@3PEAXEA=??_7NetConnectionProto@AS2@GFx@Scaleform@@6B@")
 //
-#pragma comment(linker, "/alternatename:?PTR_LAB_1431b6740@@3PEAXEA=??_7NetConnectionCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
-#pragma comment(linker, "/alternatename:?PTR_LAB_1431b67d0@@3PEAXEA=??_7NetConnectionCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
+//
+//
 //
 //
 //
