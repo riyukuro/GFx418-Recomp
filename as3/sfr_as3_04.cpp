@@ -4930,30 +4930,46 @@ static SF_INLINE bool Sfr04XmlElementHasProperty(Instances::fl::XMLElement* el, 
     if (Scaleform::GFx::AS3::GetVectorInd(prop_name, ind))
         return ind == 0;
     Instances::fl::EmptyCallBack cb(*el);
-    if ((prop_name.IsAttr() ? el->ForEachAttr(prop_name, cb) : el->ForEachChild(prop_name, cb)) != 0)
+    if (prop_name.IsAttr())
+    {
+        if (el->ForEachAttr(prop_name, cb) != 0)
+            return true;
+        return false;
+    }
+    if (el->ForEachChild(prop_name, cb) != 0)
         return true;
     return false;
 }
 
 // XMLList::HasProperty: an index within the list, or a matching child / attribute of an element item
-// MS2-FUNCTIONAL: exe tests the empty list before saving rdi/r12/r15 and duplicates the return-true epilogue
 // @0x142417560
 bool FUN_142417560(Instances::fl::XMLList* self, const Multiname& prop_name)
 {
+    bool result = false;
     Scaleform::UInt32 ind;
     if (Scaleform::GFx::AS3::GetVectorInd(prop_name, ind))
-        return ind < self->List.GetSize();
-    const UPInt size = self->List.GetSize();
-    for (UPInt i = 0; i < size; ++i)
     {
-        Instances::fl::XML* x = self->List[i];
-        if (x->GetKind() == Instances::fl::XML::kElement)
+        if (ind < self->List.GetSize())
+            result = true;
+    }
+    else
+    {
+        const UPInt size = self->List.GetSize();
+        for (UPInt i = 0; i < size; ++i)
         {
-            if (Sfr04XmlElementHasProperty(static_cast<Instances::fl::XMLElement*>(x), prop_name))
-                return true;
+            Instances::fl::XML* x = self->List[i];
+            if (x->GetKind() == Instances::fl::XML::kElement)
+            {
+                Instances::fl::XMLElement* el = static_cast<Instances::fl::XMLElement*>(x);
+                if (Sfr04XmlElementHasProperty(el, prop_name))
+                {
+                    result = true;
+                    break;
+                }
+            }
         }
     }
-    return false;
+    return result;
 }
 
 // The name of a trait's type: its own for a slot or const, its class's for the others (inlined in the exe).
