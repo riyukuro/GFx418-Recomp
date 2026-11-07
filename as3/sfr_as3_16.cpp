@@ -232,12 +232,12 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // ASVM::~ASVM (0x1424dd500) is implicit (as3_asvm.h); it is emitted with the vftable in sfr_as3_15.
 }}} // namespace Scaleform::GFx::AS3
 
-void FUN_1424de460(long long* owner);
+__declspec(noinline) void FUN_1424de460(long long* owner);
 
 // MovieRoot is only partially modeled, so keep its destructor out of the class vtable and recover the owned fields
 // from the exe's offsets. The four MouseState rollover arrays use ArrayLH's data/size/capacity prefix.
 void FUN_1424dcd40(void* self);
-namespace Scaleform { void DestroyMovieRootDisplayObjects(void* set); }
+namespace Scaleform { __declspec(noinline) void DestroyMovieRootDisplayObjects(void* set); }
 // The vftables the inlined MovieRoot/ASMovieRootBase and Tracer destructors store.
 namespace Scaleform { namespace GFx { namespace AS3 {
 extern const void* DAT_14317d8d8[];     // MovieRoot
@@ -247,8 +247,20 @@ extern const void* DAT_14317afe8[];     // ASMovieRootBase at +0x38
 extern const void* DAT_14317b938[];     // Tracer
 }}}
 
-// MS2-FUNCTIONAL 0x1424de650: releases the modeled smart-pointer members, string builtins, action queue, mouse stacks,
-// and ASMovieRootBase; the opaque LoadedMovieDefs table is still cleared only by its own owner path.
+// The four MovieRoot::MouseState records as the dtor sees them: the rollover ArrayLH<Ptr<..> > and the last
+// mouse-over Ptr (both NTS refcounted), then the POD double-click info.
+struct Sfr16MouseState
+{
+    Scaleform::ArrayLH<Scaleform::Ptr<Scaleform::RefCountNTSImpl> > RolloverStack;
+    Scaleform::Ptr<Scaleform::RefCountNTSImpl> LastMouseOverObj;
+    unsigned char DblClick[0xc0];
+};
+struct Sfr16MouseStates { Sfr16MouseState States[4]; };
+static_assert(sizeof(Sfr16MouseStates) == 4 * 0xe0, "MouseState size");
+
+// MovieRoot::~MovieRoot over the exe's offsets: the LoadedMovieDefs table, the mouse states, the builtin names, the
+// stage, the display-object map, the action queue, the Value, the AutoPtr<ASVM>, the nested root, then the inlined
+// ASMovieRootBase dtor. The member teardowns the exe keeps out of line are noinline here.
 // @0x1424de650
 extern "C" void FUN_1424de650(void* self)
 {
@@ -258,35 +270,17 @@ extern "C" void FUN_1424de650(void* self)
     *reinterpret_cast<const void***>(bytes + 0x38) = Scaleform::GFx::AS3::DAT_14317daa0;
     FUN_1424dcd40(bytes + 0x6e8);
 
-    auto* heap = Scaleform::Memory::pGlobalHeap;
-    for (unsigned i = 4; i-- != 0;)
-    {
-        auto* state = bytes + 0x360 + i * sizeof(Scaleform::GFx::AS3::MovieRoot::MouseState);
-        if (auto* over = *reinterpret_cast<void**>(state + 0x18))
-            static_cast<const Scaleform::RefCountNTSImpl*>(over)->Release();
-        auto** rollover = *reinterpret_cast<void***>(state);
-        const auto count = *reinterpret_cast<Scaleform::UPInt*>(state + 8);
-        for (Scaleform::UPInt j = count; rollover && j != 0; --j)
-            if (rollover[j - 1])
-                static_cast<const Scaleform::RefCountNTSImpl*>(rollover[j - 1])->Release();
-        if (rollover)
-            heap->Free(rollover);
-    }
+    reinterpret_cast<Sfr16MouseStates*>(bytes + 0x360)->~Sfr16MouseStates();
 
     auto* strings = reinterpret_cast<Scaleform::GFx::AS3::StringManager*>(bytes + 0x160);
-    if (strings->pStringManager)
-        strings->pStringManager->ReleaseBuiltinArray(strings->Builtins, Scaleform::GFx::AS3::AS3BuiltinConst_Count_);
+    strings->pStringManager->ReleaseBuiltinArray(strings->Builtins, Scaleform::GFx::AS3::AS3BuiltinConst_Count_);
     if (auto* stage = *reinterpret_cast<void**>(bytes + 0x158))
         static_cast<const Scaleform::RefCountNTSImpl*>(stage)->Release();
     Scaleform::DestroyMovieRootDisplayObjects(bytes + 0x150);
     reinterpret_cast<Scaleform::GFx::AS3::MovieRoot::ActionQueueType*>(bytes + 0x88)->~ActionQueueType();
     reinterpret_cast<Scaleform::GFx::AS3::Value*>(bytes + 0x58)->~Value();
 
-    auto** pAvm = reinterpret_cast<Scaleform::GFx::AS3::ASVM**>(bytes + 0x48);
-    if (*pAvm && *reinterpret_cast<bool*>(bytes + 0x50))
-        delete *pAvm;
-    *pAvm = nullptr;
-    *reinterpret_cast<bool*>(bytes + 0x50) = false;
+    reinterpret_cast<Scaleform::AutoPtr<Scaleform::GFx::AS3::ASVM>*>(bytes + 0x48)->~AutoPtr();
 
     FUN_1424de460(reinterpret_cast<long long*>(bytes + 0x40));
     *reinterpret_cast<const void***>(bytes + 0x38) = Scaleform::GFx::AS3::DAT_14317afe8;
@@ -1938,7 +1932,7 @@ ValueStack::Page* ValueStack::AllocPage(UInt16 pageSize)
 
 // Clears queued actions, releases each recycled ActionEntry's references, then frees the same nodes.
 // @0x1424dda00
-MovieRoot::ActionQueueType::~ActionQueueType()
+__declspec(noinline) MovieRoot::ActionQueueType::~ActionQueueType()
 {
     Clear();
     for (ActionEntry* pcur = pFreeEntry; pcur; )
