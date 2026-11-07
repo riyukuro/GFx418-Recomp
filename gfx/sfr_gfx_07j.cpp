@@ -12,7 +12,6 @@
 // MS2-FUNCTIONAL 0x142624f80: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
 // MS2-FUNCTIONAL 0x1426251d0: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
 // MS2-FUNCTIONAL 0x1426255e0: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
-// MS2-FUNCTIONAL 0x142624300: same HashSetBase::Set; the exe tail-calls String::operator= on the found path (jmp), ours calls it
 
 #define MS2_RAW_INLINE __forceinline
 #include "sfr_gfx_07raw.h"
@@ -37,7 +36,8 @@ struct RawLocker
 struct AmpCallInfoSlot { U a, b, c; }; static __forceinline void FUN_142623b10(U* a, void* o, U n) { reinterpret_cast<ArrayDataBase<AmpCallInfoSlot, AllocatorLH<AmpCallInfoSlot, 0x245>, ArrayConstPolicy<0, 4, true> >*>(a)->Reserve(o, n); }   // (C3) = Array<CallInfo>::Reserve (0x142623b10)
 void FUN_142623ee0(U*, void*, U);                 // Array<Ptr>::Reserve
 void FUN_14261ee70(U**, void*, NodeRef*, U);
-void FUN_14261f070(U**, void*, KeyStringOps::Ref*, U);
+// noalias: the exe (LTCG) knows the add does not keep &ref, so 0x142624300 tail-calls String::operator=
+__declspec(noalias) void FUN_14261f070(U**, void*, KeyStringOps::Ref*, U);
 void FUN_14261e7a0(U**, void*, const char*, U);
 void FUN_14261e940(U**, void*, const char*, U);
 U FUN_14261fc40(void*, const unsigned char*);
