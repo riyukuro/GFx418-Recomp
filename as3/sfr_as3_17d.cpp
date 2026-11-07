@@ -941,12 +941,14 @@ struct Sfr17dValueInline
     { Value::VU tmp(cl); cl->AddRef(); v.Flags = Value::kClass; v.value = tmp; }
     // Value::ReleaseInternal (0x142521f00) out of line, for a Value whose kind is known to be ref-counted.
     static SF_FORCEINLINE void Release(Value& v) { v.ReleaseInternal(); }
+    // Value()'s Bonus init: the exe keeps the store, its kUndefined Flags store dies under InitClass.
+    static SF_FORCEINLINE void ClearBonus(Value& v) { v.Bonus.pWeakProxy = NULL; }
 };
 // A Value slot with no destructor: released through Sfr17dValueInline::Release, as in the exe.
 struct Sfr17dRawValue
 {
     union { Value v; };
-    Sfr17dRawValue() {}
+    Sfr17dRawValue() { Sfr17dValueInline::ClearBonus(v); }
     ~Sfr17dRawValue() {}
 };
 }}} // namespace Scaleform::GFx::AS3
@@ -1346,16 +1348,17 @@ static SF_FORCEINLINE void Sfr17dThrow(AS3::VM* vm, const AS3::VM::Error& e, con
 }
 
 // VM::Construct(gname, result) (SDK AS3_VM.cpp), inline here as in the exe: true when code has to run.
-static SF_FORCEINLINE bool Sfr17dConstruct(AS3::VM* vm, const StringDataPtr& className, AS3::Value& result)
+static SF_FORCEINLINE bool Sfr17dConstruct(AS3::VM* vm, const char* gname, AS3::Value& result)
 {
     using namespace AS3;
     using AS3::Value;
     const UPInt callStackSize = vm->Unk070[1];
+    Sfr17dRawValue cb;
+    Value& _class = cb.v;
+    const StringDataPtr className(gname);
     Class* cls = vm->GetClass(className);
     if (cls)
     {
-        Sfr17dRawValue cb;
-        Value& _class = cb.v;
         Sfr17dValueInline::InitClass(_class, cls);
         if (_class.IsNullOrUndefined())
         {
@@ -1389,12 +1392,19 @@ static SF_FORCEINLINE bool Sfr17dCreateObject(AS3::VM* vm, bool needExecute)
     return !vm->HandleException;
 }
 
+// VM::CreateObject(gname, result) (SDK AS3_VM.h), inline here as in the exe.
+static SF_FORCEINLINE bool Sfr17dCreateObjectFull(AS3::VM* vm, const char* gname, AS3::Value& result)
+{
+    const bool needExecute = Sfr17dConstruct(vm, gname, result);
+    return Sfr17dCreateObject(vm, needExecute);
+}
+
 // A new empty Sprite named instanceName at depth (the top when negative) of the container; its constructor runs
 // right away.
 // VM::Construct and CreateObject are inline here as in the exe. The class Value is a dtor-less slot set up in place
 // (Value(Class*) inlined) and released out of line on each exit. The nameSet result lives to the end.
-// MS2-FUNCTIONAL: frame layout only: the exe gives the 1065 Error its own slot and has a 0x10 larger frame, so every
-// local sits at another rbp offset (819 against 823 bytes)
+// MS2-FUNCTIONAL: one store scheduled apart: the exe sets the class Value's Flags (0xd) between the AddRef's inc and
+// its store; written in that order here, cl re-reads Flags for IsNullOrUndefined (2 diffs)
 // @0x1424f33d0
 bool AS3ValueObjectInterface::CreateEmptyMovieClip(void* pdata, GFx::Value* pmc, const char* instanceName, SInt32 depth)
 {
@@ -1406,9 +1416,7 @@ bool AS3ValueObjectInterface::CreateEmptyMovieClip(void* pdata, GFx::Value* pmc,
     DisplayObject* pcont = static_cast<Instances::fl_display::DisplayObject*>(static_cast<Object*>(pdata))->pDispObj;
     Value result;
     VM*   vm = root->pAVM;
-    const StringDataPtr className("flash.display.Sprite", 0x14);
-    const bool needExecute = Sfr17dConstruct(vm, className, result);
-    if (!Sfr17dCreateObject(vm, needExecute))
+    if (!Sfr17dCreateObjectFull(vm, "flash.display.Sprite", result))
         return false;
     if (!Sfr17d_IsDisplayObject(result))
         return false;
