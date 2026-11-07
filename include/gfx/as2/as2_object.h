@@ -279,6 +279,8 @@ public:
 struct ObjectInlineCtorTag {};
 // FunctionObject(psc) with Object(psc) inlined too (the Register functions in sfr_as2_06).
 struct ObjectDeepInlineCtorTag {};
+// FunctionObject(psc) with Object(psc) inlined via psc->GetGC() (some Register functions in sfr_as2_06).
+struct ObjectGcInlineCtorTag {};
 
 // Script object: GC base at +0, ObjectInterface at +0x20. 0x68 bytes.
 class Object : public ASRefCountBase<Object>, public ObjectInterface
@@ -398,6 +400,7 @@ protected:
     FunctionObject(ASStringContext* psc); // exe 0x14291c090
     FunctionObject(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_04
     FunctionObject(ASStringContext* psc, ObjectDeepInlineCtorTag); // inline in sfr_as2_06
+    FunctionObject(ASStringContext* psc, ObjectGcInlineCtorTag); // inline in sfr_as2_06
     FunctionObject(Environment* penv); // exe 0x14291c0c0
     FunctionObject(Environment* penv, ObjectInlineCtorTag); // inline in sfr_as2_05
 };
@@ -437,6 +440,7 @@ public:
     CFunctionObject(ASStringContext* psc, Object* pprototype, CFunctionPtr func);
     CFunctionObject(ASStringContext* psc, Object* pprototype, CFunctionPtr func, ObjectInlineCtorTag); // inline in sfr_as2_04f
     CFunctionObject(ASStringContext* psc, CFunctionPtr func, ObjectInlineCtorTag); // inline in sfr_as2_06s9
+    CFunctionObject(ASStringContext* psc, CFunctionPtr func, ObjectGcInlineCtorTag); // inline in sfr_as2_06
 };
 
 // Function defined in script (the action buffer of a DefineFunction). Its instances are plain objects.
