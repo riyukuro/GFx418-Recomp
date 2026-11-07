@@ -376,13 +376,10 @@ struct AmpBufferInstructionTimes : public RefCountBase<AmpBufferInstructionTimes
 
 // ViewStats::CollectAmpInstructionStats: copies each buffer's non-zero instruction times (in microseconds) into a new ScriptBufferStats and appends it to the movie profile.
 // @0x1426214b0
-// MS2-FUNCTIONAL: same size and instruction sequence as the exe (871 B). Only the registers in the inlined BufferStatsArray PushBack resize differ: exe rsi/r15/rdi/rbp = array/newSize/p/count, ours r15/rbp/rsi/rdi (regalloc). Tried a Ptr local + copy-construct, an SDK DestructArray helper and a ResizeNoConstruct helper.
 void FUN_1426214b0(char* self, AMP::MovieProfile* movieProfile)
 {
     typedef HashLH<UInt64, Ptr<AmpBufferInstructionTimes> > InstructionTimingMap;
     typedef AMP::MovieInstructionStats::ScriptBufferStats ScriptBufferStats;
-    // SDK ConstructorMov<T>::DestructArray: destroys count elements from the last one down.
-    struct DestructArray { static void Run(Ptr<ScriptBufferStats>* first, UPInt count) { first += count - 1; for (; count; --count, --first) first->~Ptr<ScriptBufferStats>(); } };
     Mutex& instructionTimingMutex = *reinterpret_cast<Mutex*>(self + 0xa8);
     if (instructionTimingMutex.TryLock())
     {
@@ -429,19 +426,7 @@ void FUN_1426214b0(char* self, AMP::MovieProfile* movieProfile)
                     }
                 }
 
-                U* array = reinterpret_cast<U*>(&movieProfile->InstructionStats->BufferStatsArray);
-                UPInt oldSize = array[1];
-                UPInt newSize2 = oldSize + 1;
-                if (newSize2 < oldSize)
-                {
-                    DestructArray::Run((Ptr<ScriptBufferStats>*)array[0] + newSize2, oldSize - newSize2);
-                    if (newSize2 < (array[2] >> 1))
-                        FUN_142623e40(array, array, newSize2);
-                }
-                else if (newSize2 >= array[2])
-                    FUN_142623e40(array, array, newSize2 + (newSize2 >> 2));
-                array[1] = newSize2;
-                new ((Ptr<ScriptBufferStats>*)array[0] + newSize2 - 1) Ptr<ScriptBufferStats>(nonZeroValues);
+                movieProfile->InstructionStats->BufferStatsArray.PushBack(nonZeroValues);
             }
         }
         instructionTimingMutex.Unlock();
