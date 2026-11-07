@@ -244,7 +244,7 @@ public:
 // to a quad with its control point at the midpoint. Gradients that differ between the ends are linked for
 // morphing.
 // @0x142630260
-// MS2-FUNCTIONAL: the exe tail-duplicates the final EndPath/EndShape blocks; tag-byte store operand order differs
+// MS2-FUNCTIONAL: the exe also inlines the edge2 EndShape pair (ours cross-jumps it into the outer EndShape calls); tag-byte store operand order differs
 void ShapeMeshProvider::createMorphData()
 {
     ShapeDataInterface* from = pShapeData;
@@ -371,8 +371,7 @@ void ShapeMeshProvider::createMorphData()
                 {
                     pMorphData->ShapeData1.EndShape();
                     pMorphData->ShapeData2.EndShape();
-                    finished = true;
-                    break;
+                    return;
                 }
                 pMorphData->ShapeData1.StartPath(styles1[0], styles1[1], styles1[2]);
                 pMorphData->ShapeData2.StartPath(styles1[0], styles1[1], styles1[2]);
