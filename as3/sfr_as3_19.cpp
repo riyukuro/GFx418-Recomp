@@ -6782,94 +6782,219 @@ void Sfr31TraceGetSlot(State* st, UInt32 slot)
 }
 
 // ---- batch 59
-// Peephole for "increment/decrement; convert; setlocal N" on register N: when the register's known type matches, the sequence
-// is replaced by one specialized opcode and the register is converted. Returns whether the sequence was consumed.
-// MS2-FUNCTIONAL 0x14252cd80: raw-offset model; codegen differs from the exe
-// @0x14252cd80
-bool Sfr31TracerOptRegIncDec(UPInt tracer, UPInt* pos, UPInt code0, UPInt state, UInt32 reg)
+// Tracer::SubstituteGetlocal: the peephole for "increment/decrement; convert; setlocal N" on register N. When the
+// register's known type matches, the sequence becomes one specialized opcode and the register is converted. Returns
+// whether the sequence was consumed.
+// The Tracer fields it reads: the byte code text and the original opcode positions.
+struct Sfr31TrSubstView
 {
-    const UInt8* code = reinterpret_cast<const UInt8*>(Sfr31Rd(tracer, 0x50));
-    UPInt* posArr = reinterpret_cast<UPInt*>(tracer + 0x70);
-    const UInt32* regv = reinterpret_cast<const UInt32*>(Sfr31Rd(state, 0x18) + static_cast<UPInt>(reg) * 0x20);
-    const UInt8 op = code[code0];
-    UPInt p = code0 + 1;
-    if (op != 0x91 && op != 0x93 && op - 0xc0u > 1)
-        return false;
-    reinterpret_cast<Scaleform::Sfr19PosData*>(posArr)->Resize(posArr[1] + 1);
-    reinterpret_cast<UPInt*>(posArr[0])[posArr[1] - 1] = p;
-    int curTy = 4;
-    int want;
-    UInt8 next = code[p++];
-    UPInt pushed;
-    if (next == 0x73 || next == 0x74 || next == 0x75)
+    UInt8 pad0[0x50];
+    const UInt8* pCode;             // +0x50
+    UInt8 pad1[0x70 - 0x58];
+    Scaleform::Sfr19PosData OrigOpcodePos;   // +0x70
+};
+// Tracer::GetValueTraits(v) (super_tr false), as the exe inlines it.
+static __forceinline const Traits* Sfr31TrValueTraitsOf(UPInt tracer, const Value& v)
+{
+    const Traits* result;
+    switch (v.GetKind())
     {
-        want = next == 0x73 ? 2 : (next == 0x74 ? 3 : 4);
-        reinterpret_cast<Scaleform::Sfr19PosData*>(posArr)->Resize(posArr[1] + 1);
-        pushed = 2;
-        reinterpret_cast<UPInt*>(posArr[0])[posArr[1] - 1] = p;
-        next = code[p++];
+    case Value::kUndefined:
+        result = reinterpret_cast<const Traits*>(Sfr31Rd(TrVM(tracer), 0x278));
+        break;
+    case Value::kInstanceTraits:
+        result = &v.GetInstanceTraits();
+        break;
+    case Value::kClassTraits:
+        result = &v.GetClassTraits();
+        break;
+    default:
+        result = &reinterpret_cast<VM*>(TrVM(tracer))->GetValueTraits(v);
     }
-    else
+    if (result && result == reinterpret_cast<const Traits*>(Sfr31Rd(TrVM(tracer), 0x1f0)))
+        result = reinterpret_cast<const Traits*>(Sfr31Rd(TrVM(tracer), 0x1f8));
+    return result;
+}
+// MS2-FUNCTIONAL 0x14252cd80: SDK SubstituteGetlocal; only regalloc differs (st in r14, the exe r15)
+// @0x14252cd80
+bool Sfr31TracerOptRegIncDec(UPInt tracer, UPInt* bcp, UPInt ccp, UPInt state, UInt32 regInd)
+{
+    Sfr31TrSubstView& tr = *reinterpret_cast<Sfr31TrSubstView*>(tracer);
+    State& st = *reinterpret_cast<State*>(state);
+    const int src_reg_num = static_cast<int>(regInd);
+    const Value& reg = reinterpret_cast<const Value*>(Sfr31Rd(state, 0x18))[static_cast<UInt32>(src_reg_num)];
+    const int next_opcode = tr.pCode[ccp++];
+    bool check_setlocal = false;
+    int drop_num = 0;
+
+    switch (next_opcode)
     {
-        pushed = 1;
-        want = op - 0xc0u > 1 ? 4 : 2;
+    case 0x91:  // op_increment
+    case 0x93:  // op_decrement
+    case 0xc0:  // op_increment_i
+    case 0xc1:  // op_decrement_i
+        check_setlocal = true;
+        break;
+    default:
+        break;
     }
-    UInt32 r;
-    if (next == 0x63)
-        r = static_cast<UInt32>(Abc::ReadU30<UInt8>(code, p));
-    else if (next >= 0xd4 && next <= 0xd7)
-        r = next - 0xd4u;
-    else
-        r = 0xffffffffu - 1;
-    if ((next != 0x63 && !(next >= 0xd4 && next <= 0xd7)) || r != reg)
+
+    if (check_setlocal)
     {
-        reinterpret_cast<Scaleform::Sfr19PosData*>(posArr)->Resize(posArr[1] - pushed);
-        return false;
-    }
-    const UInt32 k = regv[0] & 0x1f;
-    const UPInt vmA = TrVM(tracer);
-    UPInt tr;
-    if (k == 0)
-        tr = Sfr31Rd(vmA, 0x278);
-    else if (k == 8 || k == 9)
-        tr = Sfr31Rd(reinterpret_cast<UPInt>(regv), 0x10);
-    else
-        tr = reinterpret_cast<UPInt>(&reinterpret_cast<VM*>(vmA)->GetValueTraits(*reinterpret_cast<const Value*>(regv)));
-    if (tr != 0)
-    {
-        if (tr == Sfr31Rd(vmA, 0x1f0))
-            tr = Sfr31Rd(vmA, 0x1f8);
-        if (tr != 0 && !((*reinterpret_cast<const UInt8*>(tr + 0x68) >> 5) & 1))
-            curTy = *reinterpret_cast<const int*>(tr + 0x70);
-    }
-    int newOp;
-    if (op == 0x91 || op == 0xc0)
-    {
-        if (curTy == want)
-            newOp = curTy == 2 ? 10 : (curTy == 3 ? 0x37 : (curTy == 4 ? 0x92 : 0));
+        tr.OrigOpcodePos.PushBack(ccp);
+        ++drop_num;
+        int current_opcode = tr.pCode[ccp++];
+        BuiltinTraitsType result_dt = Traits_Unknown;
+
+        switch (current_opcode)
+        {
+        case 0x73:  // op_convert_i
+            result_dt = Traits_SInt;
+            break;
+        case 0x74:  // op_convert_u
+            result_dt = Traits_UInt;
+            break;
+        case 0x75:  // op_convert_d
+            result_dt = Traits_Number;
+            break;
+        default:
+            break;
+        }
+
+        if (result_dt == Traits_Unknown)
+        {
+            switch (next_opcode)
+            {
+            case 0xc0:
+            case 0xc1:
+                result_dt = Traits_SInt;
+                break;
+            default:
+                result_dt = Traits_Number;
+                break;
+            }
+        }
         else
-            newOp = want != 2 ? 0x92 : 0xc2;
-    }
-    else
-    {
-        if (curTy == want)
-            newOp = curTy == 2 ? 0xb : (curTy == 3 ? 0x38 : (curTy == 4 ? 0x94 : 0));
+        {
+            tr.OrigOpcodePos.PushBack(ccp);
+            ++drop_num;
+            current_opcode = tr.pCode[ccp++];
+        }
+
+        int dest_reg_num = 0;
+        bool is_setlocal = true;
+
+        switch (current_opcode)
+        {
+        case 0x63:  // op_setlocal
+            dest_reg_num = Abc::ReadU30<UInt8>(tr.pCode, ccp);
+            break;
+        case 0xd4:
+            dest_reg_num = 0;
+            break;
+        case 0xd5:
+            dest_reg_num = 1;
+            break;
+        case 0xd6:
+            dest_reg_num = 2;
+            break;
+        case 0xd7:
+            dest_reg_num = 3;
+            break;
+        default:
+            is_setlocal = false;
+            break;
+        }
+
+        if (is_setlocal && dest_reg_num == src_reg_num)
+        {
+            BuiltinTraitsType reg_dt = Traits_Number;
+            const Traits* reg_tr = Sfr31TrValueTraitsOf(tracer, reg);
+
+            if (reg_tr && reg_tr->IsInstanceTraits())
+                reg_dt = reg_tr->GetTraitsType();
+
+            switch (next_opcode)
+            {
+            case 0x91:
+            case 0xc0:
+                if (reg_dt == result_dt)
+                {
+                    switch (reg_dt)
+                    {
+                    case Traits_SInt:
+                        FUN_14251fb90(&tr, 0x0a, src_reg_num);  // op_inclocal_ti
+                        st.RegInt(src_reg_num);
+                        break;
+                    case Traits_UInt:
+                        FUN_14251fb90(&tr, 0x37, src_reg_num);  // op_inclocal_tu
+                        st.RegUInt(src_reg_num);
+                        break;
+                    case Traits_Number:
+                        FUN_14251fb90(&tr, 0x92, src_reg_num);  // op_inclocal
+                        st.RegNumber(src_reg_num);
+                        break;
+                    default:
+                        break;
+                    }
+                }
+                else if (result_dt == Traits_SInt)
+                {
+                    FUN_14251fb90(&tr, 0xc2, src_reg_num);  // op_inclocal_i
+                    st.RegInt(src_reg_num);
+                }
+                else
+                {
+                    FUN_14251fb90(&tr, 0x92, src_reg_num);
+                    st.RegNumber(src_reg_num);
+                }
+                Sfr31TracerSkipOrigOpCode(tracer, bcp, ccp);
+                return true;
+            case 0x93:
+            case 0xc1:
+                if (reg_dt == result_dt)
+                {
+                    switch (reg_dt)
+                    {
+                    case Traits_SInt:
+                        FUN_14251fb90(&tr, 0x0b, src_reg_num);  // op_declocal_ti
+                        st.RegInt(src_reg_num);
+                        break;
+                    case Traits_UInt:
+                        FUN_14251fb90(&tr, 0x38, src_reg_num);  // op_declocal_tu
+                        st.RegUInt(src_reg_num);
+                        break;
+                    case Traits_Number:
+                        FUN_14251fb90(&tr, 0x94, src_reg_num);  // op_declocal
+                        st.RegNumber(src_reg_num);
+                        break;
+                    default:
+                        break;
+                    }
+                }
+                else if (result_dt == Traits_SInt)
+                {
+                    FUN_14251fb90(&tr, 0xc3, src_reg_num);  // op_declocal_i
+                    st.RegInt(src_reg_num);
+                }
+                else
+                {
+                    FUN_14251fb90(&tr, 0x94, src_reg_num);
+                    st.RegNumber(src_reg_num);
+                }
+                Sfr31TracerSkipOrigOpCode(tracer, bcp, ccp);
+                return true;
+            default:
+                break;
+            }
+        }
         else
-            newOp = want == 2 ? 0xc3 : 0x94;
+        {
+            tr.OrigOpcodePos.Resize(tr.OrigOpcodePos.Size - drop_num);
+        }
     }
-    if (newOp != 0)
-    {
-        FUN_14251fb90(reinterpret_cast<void*>(tracer), newOp, static_cast<SPInt>(static_cast<SInt32>(reg)));
-        // the register takes the new opcode's type: Number (0x92/0x94), uint (0x37/0x38), else int
-        if (newOp == 0x92 || newOp == 0x94)
-            reinterpret_cast<State*>(state)->RegNumber(reg);
-        else if (newOp == 0x37 || newOp == 0x38)
-            reinterpret_cast<State*>(state)->RegUInt(reg);
-        else
-            reinterpret_cast<State*>(state)->RegInt(reg);
-    }
-    Sfr31TracerSkipOrigOpCode(tracer, pos, p);
-    return true;
+
+    return false;
 }
 
 // ---- batch 60
