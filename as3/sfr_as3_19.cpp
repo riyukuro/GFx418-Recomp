@@ -5322,33 +5322,21 @@ void Sfr31ExecIn(UPInt vmAddr, UPInt file, UInt32 idx)
 
 // getproperty-style op: moves the object off the stack top, reads the named property into the slot and raises a ReferenceError
 // when a primitive has no such property.
-// MS2-FUNCTIONAL 0x142539be0: raw-offset model; codegen differs from the exe
 // @0x142539be0
 void Sfr31ExecGetProp(UPInt vmAddr, UPInt file, UInt32 idx)
 {
     VM& vm = *reinterpret_cast<VM*>(vmAddr);
-    const UPInt cvm = Sfr31Rd(file, 0x20);
-    Sfr31ExecMnCtx ctx = {cvm, cvm + 0x48, file};
-    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
-    FUN_1425201f0(&ctx, &mn);
-    Value* top = reinterpret_cast<Value*>(Sfr31Rd(ctx.stack, 8));
-    Sfr31ThrowIfNullOperand(cvm, reinterpret_cast<const UInt32*>(top));
-    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    Sfr31ExecReadMnObjectRef args(file, idx);
+    if (vm.IsException())
+        return;
+    Value _this(args.ArgObject, PickValue);
+    char r;
+    if (!*FUN_14250d2f0(&r, vm, _this, args.ArgMN.Get(), args.ArgObject))
     {
-        Sfr31RawTraitsVal obj;
-        for (int i = 0; i < 8; ++i)
-            reinterpret_cast<UInt32*>(&obj)[i] = reinterpret_cast<const UInt32*>(top)[i];
-        *reinterpret_cast<UInt32*>(top) = 0;
-        UInt8 ret[16];
-        const UInt8* r = FUN_14250d2f0(ret, vmAddr, &obj, &mn, top);
-        const UInt32 ok = obj.w0 & 0x1f;
-        if (*r == 0 && *reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0 && (ok < 5 || ok == 10))
-        {
-            Sfr31Err e(static_cast<VM::ErrorID>(0x42d), vm, *reinterpret_cast<const Value*>(reinterpret_cast<UPInt>(&mn) + 0x10),
-                       *reinterpret_cast<const Value*>(&obj));
-            vm.ThrowReferenceError(e);
-        }
-        reinterpret_cast<Value*>(&obj)->~Value();
+        if (vm.IsException())
+            return;
+        if (_this.IsPrimitive())
+            return vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x42d), vm, *reinterpret_cast<const Value*>(&args.ArgMN.w2), _this));
     }
 }
 
