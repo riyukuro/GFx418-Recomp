@@ -6930,27 +6930,6 @@ __declspec(noinline) int FUN_1423da420(void* self)
     return ++*(int*)((UByte*)self + 0x3c);
 }
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the AddRef at 0x1423da420. The exe has a compiler-generated thunk (sub rcx,N); a hand-written one gives add rcx,-N. The target is noinline so the thunk stays a jmp.
-// @0x1423da42c
-int FUN_1423da42c(void* self)
-{
-    return FUN_1423da420((UByte*)self - 8);
-}
-
-// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the QueryInterface at 0x1423dadd0. The exe has a compiler-generated thunk (sub rcx,N); a hand-written one gives add rcx,-N. The target is noinline so the thunk stays a jmp.
-// @0x1423dae98
-HRESULT FUN_1423dae98(void* self, const unsigned long long* iid, void** output)
-{
-    return FUN_1423dadd0((long long*)((UByte*)self - 8), iid, output);
-}
-
-// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the Release at 0x1423daeb0. The exe has a compiler-generated thunk (sub rcx,N); a hand-written one gives add rcx,-N. The target is noinline so the thunk stays a jmp.
-// @0x1423daed8
-int FUN_1423daed8(void* self)
-{
-    return FUN_1423daeb0((long long*)((UByte*)self - 8));
-}
-
 // (0x1423db880 / 0x1423db88c / 0x1423db898 are cl's AvmMovieClip ??_E adjustor thunks for its +0x30 / +0x40 / +0x48
 // parts, emitted by Ime01EmitAvmMovieClipVftables at the end of the file)
 
@@ -7001,7 +6980,55 @@ void Ime01EmitTsfSinkVftables(void* p, const Ime01TsfSink* psink)
     ::new (p) Ime01TsfSink(*psink);
 }
 }}}
+// The TSF UI-element sink object built by FUN_1423da250 (0x110 bytes, refcount at +0x3c): a thread-manager event
+// sink at +0 (exe vftable 0x14313b920: QI 0x1423dadd0, AddRef 0x1423da420, Release 0x1423daeb0, the five S_OK
+// callbacks, then the deleting destructor 0x1423da2c0) and a UI-element sink at +8 (0x14313b968: cl's this-8
+// thunks 0x1423dae98 / 0x1423da42c / 0x1423daed8, then Begin/Update/EndUIElement). The overriders are declared only
+// and bound to their FUN_ VAs by symbols-manual rows. The destructor slot is declared as a plain virtual so the
+// hand-written ??_G body FUN_1423da2c0 (exact) stays the definition. Ime01EmitTsfUiSinkVftables copy-constructs one
+// so cl emits the vftables and thunks here.
+namespace Scaleform { namespace GFx { namespace IME {
+struct __declspec(novtable) Ime01ThreadMgrEventSink {
+    virtual HRESULT QueryInterface(const unsigned long long* iid, void** output) = 0;
+    virtual int AddRef() = 0;
+    virtual int Release() = 0;
+    virtual long long OnInitDocumentMgr(void* documentMgr) = 0;
+    virtual long long OnUninitDocumentMgr(void* documentMgr) = 0;
+    virtual long long OnSetFocus(void* focus, void* previousFocus) = 0;
+    virtual long long OnPushContext(void* context) = 0;
+    virtual long long OnPopContext(void* context) = 0;
+};
+struct __declspec(novtable) Ime01UIElementSink {
+    virtual HRESULT QueryInterface(const unsigned long long* iid, void** output) = 0;
+    virtual int AddRef() = 0;
+    virtual int Release() = 0;
+    virtual unsigned long long BeginUIElement(unsigned long long elementId, unsigned* show) = 0;
+    virtual unsigned long long UpdateUIElement(unsigned elementId) = 0;
+    virtual unsigned long long EndUIElement(int elementId) = 0;
+};
+class Ime01TsfUiSink : public Ime01ThreadMgrEventSink, public Ime01UIElementSink {
+public:
+    HRESULT QueryInterface(const unsigned long long* iid, void** output) override;           // 0x1423dadd0
+    int AddRef() override;                                                                 // 0x1423da420
+    int Release() override;                                                                // 0x1423daeb0
+    long long OnInitDocumentMgr(void* documentMgr) override;                               // 0x1423dad80
+    long long OnUninitDocumentMgr(void* documentMgr) override;                             // 0x1423dadc0
+    long long OnSetFocus(void* focus, void* previousFocus) override;                       // 0x1423dadb0
+    long long OnPushContext(void* context) override;                                       // 0x1423dada0
+    long long OnPopContext(void* context) override;                                        // 0x1423dad90
+    virtual void* DeletingDestructor(unsigned flags);                                      // 0x1423da2c0
+    unsigned long long BeginUIElement(unsigned long long elementId, unsigned* show) override;   // 0x1423da440
+    unsigned long long UpdateUIElement(unsigned elementId) override;                       // 0x1423db0c0
+    unsigned long long EndUIElement(int elementId) override;                               // 0x1423da730
+};
+void Ime01EmitTsfUiSinkVftables(void* p, const Ime01TsfUiSink* psink)
+{
+    ::new (p) Ime01TsfUiSink(*psink);
+}
+}}}
 #ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:DAT_14313b920=??_7Ime01TsfUiSink@IME@GFx@Scaleform@@6BIme01ThreadMgrEventSink@123@@")
+#pragma comment(linker, "/alternatename:DAT_14313b968=??_7Ime01TsfUiSink@IME@GFx@Scaleform@@6BIme01UIElementSink@123@@")
 #pragma comment(linker, "/alternatename:DAT_14313b5a0=??_7Ime01TsfSink@IME@GFx@Scaleform@@6BIme01CompartmentEventSink@123@@")
 #pragma comment(linker, "/alternatename:DAT_14313b5c0=??_7Ime01TsfSink@IME@GFx@Scaleform@@6BIme01ProfileActivationSink@123@@")
 #endif
@@ -7049,3 +7076,9 @@ void Ime01EmitTsfSinkVftables(void* p, const Ime01TsfSink* psink)
 // MS2-PIN: ??_7AvmSprite@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317cf78
 // MS2-PIN: ??_7AvmSprite@AS3@GFx@Scaleform@@6BAvmDisplayObjContainer@123@@ 0x14317d030
 // MS2-PIN: ??_7AvmSprite@AS3@GFx@Scaleform@@6BAvmSpriteBase@23@@ 0x14317d0f0
+// Ime01TsfUiSink's vftables and the adjustor thunks of its UI-element sink.
+// MS2-PIN: ??_7Ime01TsfUiSink@IME@GFx@Scaleform@@6BIme01ThreadMgrEventSink@123@@ 0x14313b920
+// MS2-PIN: ??_7Ime01TsfUiSink@IME@GFx@Scaleform@@6BIme01UIElementSink@123@@ 0x14313b968
+// MS2-PIN: ?QueryInterface@Ime01TsfUiSink@IME@GFx@Scaleform@@W7EAAJPEB_KPEAPEAX@Z 0x1423dae98
+// MS2-PIN: ?AddRef@Ime01TsfUiSink@IME@GFx@Scaleform@@W7EAAHXZ 0x1423da42c
+// MS2-PIN: ?Release@Ime01TsfUiSink@IME@GFx@Scaleform@@W7EAAHXZ 0x1423daed8
