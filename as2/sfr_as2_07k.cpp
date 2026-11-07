@@ -30,81 +30,87 @@ static SF_FORCEINLINE ASString PieceString(ASStringContext* psc, const char* sta
 
 // No delimiter keeps the string whole; an empty one gives each character (the limit is not looked at then). Else the
 // pieces between the delimiters, at most limit of them (a negative limit is 0).
-// MS2-FUNCTIONAL: PushBack and CreateStringFromCStr are inlined and parr is the return slot (one return) as in the exe;
-// what is left is register allocation and the order of the refcount and type stores in the inlined Value copies.
+// MS2-FUNCTIONAL: the SDK body; PushBack and CreateStringFromCStr are inlined as in the exe. The exe's inlined
+// PushBack keeps the new Value* in a stack slot (0 on a failed alloc) and re-reads the type byte after the Value copy,
+// and splits the second string AddRef into load/inc/store; ours keeps these in registers (exe 83 bytes longer).
 // @0x1429902c0
 Ptr<ArrayObject> StringProto::StringSplit(Environment* penv, const ASString& str, const char* delimiters, int limit)
 {
-    Ptr<ArrayObject> parr = *static_cast<ArrayObject*>(penv->OperatorNew(penv->GetBuiltin(ASBuiltin_Array)));
+    Ptr<ArrayObject> retVal = *static_cast<ArrayObject*>(penv->OperatorNew(penv->GetBuiltin(ASBuiltin_Array)));
+
+    const char*      search = delimiters;
+    ASStringContext* psc    = penv->GetSC();
+    const char*      pstr   = str.ToCStr();
+
     if (limit < 0)
         limit = 0;
 
-    const char* p = str.ToCStr();
-    if (!delimiters)
-    {
-        parr->PushBack(Value(str));
-        goto done;
-    }
+    UInt32 c1, c2;
 
-    if (*delimiters == 0)
+    if (search == 0)
     {
-        String  charStr;
-        UInt32  c;
-        while ((c = UTF8Util::DecodeNextChar(&p)) != 0)
+        retVal->PushBack(Value(str));
+    }
+    else if (*search == 0)
+    {
+        String tmpStr;
+
+        while ((c1 = UTF8Util::DecodeNextChar(&pstr)) != 0)
         {
-            charStr.Clear();
-            charStr.AppendChar(c);
-            PushElem(parr, Value(penv->CreateString(charStr)));
+            tmpStr.Clear();
+            tmpStr.AppendChar(c1);
+            PushElem(retVal, Value(psc->CreateString(tmpStr)));
         }
-        goto done;
     }
-
-    // pstart: the start of the current piece; pmatch: where the delimiter is being matched.
-    const char* pstart = p;
-    const char* pmatch = 0;
-    UInt32      c1, c2;
-    int         count = 0;
-    do
+    else
     {
-        pmatch                = p;
-        const char* pd        = delimiters;
-        const char* pnextChar = 0;
-        const char* pprev;
+        int         count = 0;
+        const char* start = pstr;
+
         for (;;)
         {
-            pprev = p;
-            c1    = UTF8Util::DecodeNextChar(&p);
-            c2    = UTF8Util::DecodeNextChar(&pd);
-            if (!pnextChar)
-                pnextChar = p;
-            if (c1 == 0 || c2 == 0)
-                break;
-            if (c1 != c2)
+            const char* s2    = search;
+            const char* end   = pstr;
+            const char* prev  = pstr;
+            const char* pnext = NULL;
+
+            for (;;)
             {
-                // No match here: go on from the character after the match start.
-                p = pnextChar;
+                prev = pstr;
+                c1   = UTF8Util::DecodeNextChar(&pstr);
+                c2   = UTF8Util::DecodeNextChar(&s2);
+                if (!pnext)
+                    pnext = pstr;
+                if (c1 == 0 || c2 == 0)
+                    break;
+                if (c1 != c2)
+                {
+                    pstr = pnext;
+                    break;
+                }
+            }
+            if (c2 == 0)
+            {
+                if (count >= limit)
+                    break;
+                PushElem(retVal, Value(PieceString(psc, start, end)));
+                pstr = start = prev;
+                ++count;
+            }
+            if (c1 == 0)
+            {
+                if (count < limit)
+                {
+                    if (c2 == 0)
+                        PushElem(retVal, Value(PieceString(psc, start, end)));
+                    else
+                        PushElem(retVal, Value(PieceString(psc, start)));
+                }
                 break;
             }
         }
-        if (c2 == 0)
-        {
-            if (count >= limit)
-                goto done;
-            PushElem(parr, Value(PieceString(&penv->StringContext, pstart, pmatch)));
-            ++count;
-            p      = pprev;
-            pstart = pprev;
-        }
-    } while (c1 != 0);
-
-    if (count >= limit)
-        goto done;
-    if (c2 == 0)
-        PushElem(parr, Value(PieceString(&penv->StringContext, pstart, pmatch)));
-    else
-        PushElem(parr, Value(PieceString(&penv->StringContext, pstart)));
-done:
-    return parr;
+    }
+    return retVal;
 }
 
 }}} // namespace Scaleform::GFx::AS2
