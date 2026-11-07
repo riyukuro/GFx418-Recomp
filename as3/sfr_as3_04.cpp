@@ -184,7 +184,7 @@ template<> SF_NOINLINE void Scaleform::ArrayBase<Scaleform::ArrayDataDH<Scalefor
 // the namespace array's RemoveAt is out of line in the exe (0x14241e8b0, pinned below)
 template<> SF_NOINLINE void Scaleform::ArrayBase<Scaleform::ArrayData<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>,
     Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>, 2>, Scaleform::ArrayDefaultPolicy> >::RemoveAt(Scaleform::UPInt index);
-
+template<> SF_NOINLINE void Scaleform::ArrayBase<Scaleform::ArrayData<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>, Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>, 2>, Scaleform::ArrayDefaultPolicy> >::InsertAt(Scaleform::UPInt index, const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>& val);
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // HashDH<UPInt, Value>'s node lookup through the exe's out-of-line GetAlt.
@@ -4072,7 +4072,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
 
     // Insert value (a node, a list's items, or a node built from value) as child pos; a text node goes in as a
     // copy. Nothing is inserted past the end, nor an ancestor of this element.
-    // MS2-FUNCTIONAL: register allocation and list-loop induction differ
+    // Children.InsertAt is out of line in the exe (declared noinline at the top of the file).
     // @0x142419270
     CheckResult XMLElement::InsertChildAt(UPInt pos, const Value& value)
     {
@@ -6300,7 +6300,7 @@ template<> SF_NOINLINE void Scaleform::ArrayBase<Scaleform::ArrayData<Scaleform:
     }
 }
 template void Scaleform::ArrayBase<Scaleform::ArrayData<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>, Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>, 2>, Scaleform::ArrayDefaultPolicy> >::RemoveAt(Scaleform::UPInt);
-template void Scaleform::ArrayBase<Scaleform::ArrayData<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>, Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>, 2>, Scaleform::ArrayDefaultPolicy> >::InsertAt(Scaleform::UPInt, const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>&);
+template<> SF_NOINLINE void Scaleform::ArrayBase<Scaleform::ArrayData<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>, Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>, 2>, Scaleform::ArrayDefaultPolicy> >::InsertAt(Scaleform::UPInt index, const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>& val) { Data.Resize(Data.Size + 1); if (index < Data.Size - 1) AllocatorType::CopyArrayBackward(Data.Data + index + 1, Data.Data + index, Data.Size - 1 - index); AllocatorType::Construct(Data.Data + index, val); }
 // declared noinline at the top of the file, so this is the SDK body as a specialization
 template<> SF_NOINLINE void Scaleform::ArrayBase<Scaleform::ArrayDataDH<Scaleform::GFx::AS3::Value, Scaleform::AllocatorDH<Scaleform::GFx::AS3::Value, 2>, Scaleform::ArrayDefaultPolicy> >::RemoveMultipleAt(Scaleform::UPInt index, Scaleform::UPInt num)
 {
@@ -6396,7 +6396,6 @@ template<> SF_NOINLINE void Scaleform::ArrayBase<Scaleform::ArrayDataDH<Scalefor
 // MS2-PIN: ?RemoveAt@?$ArrayBase@U?$ArrayData@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_K@Z 0x14241e8b0
 // MS2-FUNCTIONAL ?RemoveAt@?$ArrayBase@U?$ArrayData@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_K@Z: the exe calls ResizeNoConstruct out of line for Clear; ours inlines it
 // MS2-PIN: ?RemoveAt@?$ArrayBase@U?$ArrayData@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_K@Z 0x14241e940
-// MS2-FUNCTIONAL ?InsertAt@?$ArrayBase@U?$ArrayData@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_KAEBV?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@2@@Z: the exe calls ResizeNoConstruct out of line; ours inlines it
 // MS2-PIN: ?InsertAt@?$ArrayBase@U?$ArrayData@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_KAEBV?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@2@@Z 0x1424190e0
 // MS2-PIN: ?RemoveMultipleAt@?$ArrayBase@U?$ArrayDataDH@VValue@AS3@GFx@Scaleform@@U?$AllocatorDH@VValue@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_K0@Z 0x14241ebb0
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceHashFunc@NamespaceInstanceFactory@345@U67345@U?$AllocatorLH@PEAVNamespace@Instances@AS3@GFx@Scaleform@@$01@5@V?$HashsetEntry@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceHashFunc@NamespaceInstanceFactory@345@@5@@Scaleform@@AEAAXPEAX_K@Z 0x14242a240
