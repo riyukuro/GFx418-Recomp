@@ -784,7 +784,8 @@ namespace Classes { namespace fl
 
     // new XML(v): a deep copy of an XML value, the one item of a one-item list, the parse of markup, else a text
     // node holding v as a string (empty for no argument, null or undefined).
-    // MS2-FUNCTIONAL: register allocation (the exe swaps rsi/rdi and r13/r14/r15 for argv, _this, argc and this)
+    // MS2-FUNCTIONAL: register allocation (the exe swaps rsi/rdi and r13/r14/r15 for argv, _this, argc and this) and the
+    // order of the StringDataPtr stores before Parse
     // @0x1424077a0
     void XML::Construct(Value& _this, unsigned argc, const Value* argv, bool extCall)
     {
@@ -842,13 +843,18 @@ namespace Classes { namespace fl
                                 // Malformed markup gives an empty text node.
                                 InstanceTraits::fl::XML& titr =
                                     static_cast<InstanceTraits::fl::XML&>(GetClassTraits().GetInstanceTraits());
-                                _this = Sfr03MakeInstanceText(titr, vm.GetStringManager().CreateEmptyString());
+                                Pickable<Instances::fl::XMLText> t =
+                                    Sfr03MakeInstanceText(titr, vm.GetStringManager().CreateEmptyString());
+                                _this = t;
                             }
                         }
                     }
                     return;
                 case Traits_XML:
-                    _this = static_cast<Instances::fl::XML*>(v.GetObject())->DeepCopy(NULL);
+                    {
+                        Pickable<Instances::fl::XML> copy = static_cast<Instances::fl::XML*>(v.GetObject())->DeepCopy(NULL);
+                        _this = copy;
+                    }
                     return;
                 case Traits_XMLList:
                     {
