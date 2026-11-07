@@ -1031,6 +1031,12 @@ static __forceinline void Sfr01SetConstMember(Object* pobj, ASStringContext* psc
     pobj->SetMemberRaw(psc, psc->CreateConstString(name), val, PropFlags());
 }
 
+// The same, called as the ObjectInterface member the exe inlines (this = &obj->ObjectInterface, no null test).
+static __forceinline bool Sfr01SetConstMemberOI(ObjectInterface& obj, ASStringContext* psc, const char* name, const Value& val)
+{
+    return obj.SetMemberRaw(psc, psc->CreateConstString(name), val, PropFlags());
+}
+
 // @0x1428eb050
 void MovieClipLoaderProto::GetProgress(const FnCall& fn)
 {
@@ -1339,41 +1345,73 @@ void GAS_GlobalASSetPropFlags(const FnCall& fn)
 // Bodies of the exe called here, by their addresses.
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-// Global getIMECandidateListStyle(): an object with the style members that are set.
-// The exe tests each flag as (bool)((Flags >> n) & 1): movzx, shr, test al,1.
+// Global getIMECandidateListStyle(): an object with the style members that are set (SDK GAS_GetIMECandidateListStyle).
+// SetConstMemberRaw is inlined through the ObjectInterface reference (exe loads the vptr from [pobj+0x20]).
 // @0x1428fa7a0
-// MS2-FUNCTIONAL register allocation differs (exe keeps fn in r15 and saves an unused rdi, frame 0x90)
 void GAS_GlobalGetIMECandidateListStyle(const FnCall& fn)
 {
-    Ptr<IMEManagerBase> pime = fn.Env->GetTarget()->GetMovieImpl()->GetIMEManager();
-    if (!pime)
-        return;
-    IMECandidateListStyle style;
-    if (!pime->GetCandidateListStyle(&style))
-        return;
-    // Adopt the new object: the exe takes no extra reference (0x1428fa82f Object ctor, no AddRef)
-    Ptr<Object>      pobj = *SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);
-    if ((bool)((style.Flags >> 0) & 1))
-        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "textColor", Value((Number)style.GetTextColor()));
-    if ((bool)((style.Flags >> 1) & 1))
-        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "backgroundColor", Value((Number)style.GetBackgroundColor()));
-    if ((bool)((style.Flags >> 2) & 1))
-        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "indexBackgroundColor", Value((Number)style.GetIndexBackgroundColor()));
-    if ((bool)((style.Flags >> 3) & 1))
-        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "selectedTextColor", Value((Number)style.GetSelectedTextColor()));
-    if ((bool)((style.Flags >> 4) & 1))
-        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "selectedTextBackgroundColor", Value((Number)style.GetSelectedBackgroundColor()));
-    if ((bool)((style.Flags >> 5) & 1))
-        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "selectedIndexBackgroundColor", Value((Number)style.GetSelectedIndexBackgroundColor()));
-    if ((bool)((style.Flags >> 6) & 1))
-        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "fontSize", Value((Number)style.GetFontSize()));
-    if ((bool)((style.Flags >> 7) & 1))
-        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "readingWindowTextColor", Value((Number)style.GetReadingWindowTextColor()));
-    if ((bool)((style.Flags >> 8) & 1))
-        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "readingWindowBackgroundColor", Value((Number)style.GetReadingWindowBackgroundColor()));
-    if ((bool)((style.Flags >> 9) & 1))
-        Sfr01SetConstMember(pobj, fn.Env->GetSC(), "readingWindowFontSize", Value((Number)style.GetReadingWindowFontSize()));
-    fn.Result->SetAsObject(pobj);
+    InteractiveObject* const poriginalTarget = fn.Env->GetTarget();
+    MovieImpl*               proot           = poriginalTarget->GetMovieImpl();
+    Ptr<IMEManagerBase>      pimeMgr         = proot->GetIMEManager();
+    if (pimeMgr)
+    {
+        IMECandidateListStyle st;
+        if (pimeMgr->GetCandidateListStyle(&st))
+        {
+            Ptr<Object> pobj = *SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);
+            if (st.HasTextColor())
+            {
+                Number c = (Number)(st.GetTextColor() & 0xFFFFFFu);
+                Sfr01SetConstMemberOI(*pobj, fn.Env->GetSC(), "textColor", Value(c));
+            }
+            if (st.HasBackgroundColor())
+            {
+                Number c = (Number)(st.GetBackgroundColor() & 0xFFFFFFu);
+                Sfr01SetConstMemberOI(*pobj, fn.Env->GetSC(), "backgroundColor", Value(c));
+            }
+            if (st.HasIndexBackgroundColor())
+            {
+                Number c = (Number)(st.GetIndexBackgroundColor() & 0xFFFFFFu);
+                Sfr01SetConstMemberOI(*pobj, fn.Env->GetSC(), "indexBackgroundColor", Value(c));
+            }
+            if (st.HasSelectedTextColor())
+            {
+                Number c = (Number)(st.GetSelectedTextColor() & 0xFFFFFFu);
+                Sfr01SetConstMemberOI(*pobj, fn.Env->GetSC(), "selectedTextColor", Value(c));
+            }
+            if (st.HasSelectedBackgroundColor())
+            {
+                Number c = (Number)(st.GetSelectedBackgroundColor() & 0xFFFFFFu);
+                Sfr01SetConstMemberOI(*pobj, fn.Env->GetSC(), "selectedTextBackgroundColor", Value(c));
+            }
+            if (st.HasSelectedIndexBackgroundColor())
+            {
+                Number c = (Number)(st.GetSelectedIndexBackgroundColor() & 0xFFFFFFu);
+                Sfr01SetConstMemberOI(*pobj, fn.Env->GetSC(), "selectedIndexBackgroundColor", Value(c));
+            }
+            if (st.HasFontSize())
+            {
+                Number c = (Number)st.GetFontSize();
+                Sfr01SetConstMemberOI(*pobj, fn.Env->GetSC(), "fontSize", Value(c));
+            }
+            if (st.HasReadingWindowTextColor())
+            {
+                Number c = (Number)st.GetReadingWindowTextColor();
+                Sfr01SetConstMemberOI(*pobj, fn.Env->GetSC(), "readingWindowTextColor", Value(c));
+            }
+            if (st.HasReadingWindowBackgroundColor())
+            {
+                Number c = (Number)st.GetReadingWindowBackgroundColor();
+                Sfr01SetConstMemberOI(*pobj, fn.Env->GetSC(), "readingWindowBackgroundColor", Value(c));
+            }
+            if (st.HasReadingWindowFontSize())
+            {
+                Number c = (Number)st.GetReadingWindowFontSize();
+                Sfr01SetConstMemberOI(*pobj, fn.Env->GetSC(), "readingWindowFontSize", Value(c));
+            }
+            fn.Result->SetAsObject(pobj);
+        }
+    }
 }
 
 // Global setIMECandidateListStyle(object): the numeric members of the object become the style.
