@@ -1539,6 +1539,9 @@ static inline void FUN_142608530(void * p0, char const * p1, unsigned __int64 p2
 struct Sfr33ParaFmtAccess : Scaleform::Render::Text::ParagraphFormat
 {
     using ParagraphFormat::AllocTabStops;
+    // the SDK's two-statement bodies (Text_Core.h); the project header folds the masks into one &=
+    __forceinline void SdkClearAlignment() { PresentMask &= ~Mask_Align; PresentMask &= ~PresentMask_Alignment; }
+    __forceinline void SdkClearBullet()    { PresentMask &= ~Mask_Bullet; PresentMask &= ~PresentMask_Bullet; }
 };
 static inline void FUN_1426084b0(void * p0, unsigned int p1, unsigned int p2) { ((Scaleform::Render::Text::ParagraphFormat*)(p0))->SetTabStopsElement(p1, p2); }              // Render::Text::ParagraphFormat::SetTabStopsElement
 void  FUN_142584fc0(void* pstr, void* pheap);                          // StringDH::StringDH(MemoryHeap*)
@@ -1709,216 +1712,194 @@ namespace Instances { namespace fl_text
         return (SInt16)v;
     }
 
-    // MS2-FUNCTIONAL: written from the exe's control flow (render formats kept as raw storage here)
     // @0x1424ac700
+    // the SDK body (AS3_Obj_Text_TextFormat.cpp)
     void TextFormat::GetTextFormat(Render::Text::ParagraphFormat* parafmt, Render::Text::TextFormat* fmt)
     {
-        ParagraphFormatStorage& para = *reinterpret_cast<ParagraphFormatStorage*>(parafmt);
-        TextFormatStorage& tf = *reinterpret_cast<TextFormatStorage*>(fmt);
         StringManager& sm = GetVM().GetStringManager();
-        SInt32 iv;
-        UInt32 uv;
-        Value::Number nv;
 
         if (!align.IsNullOrUndefined())
         {
-            ASString str = sm.CreateEmptyString();
-            align.Convert2String(str);
-            const char* s = str.ToCStr();
-            if (!strcmp(s, "left"))
-                SetParaAlignment(para, Align_Left);
-            else if (!strcmp(s, "right"))
-                SetParaAlignment(para, Align_Right);
-            else if (!strcmp(s, "center"))
-                SetParaAlignment(para, Align_Center);
-            else if (!strcmp(s, "justify"))
-                SetParaAlignment(para, Align_Justify);
-            else
-                para.PresentMask &= ~(Para_AlignMask | Para_Alignment);
-        }
-
-        if (blockIndent.IsNullOrUndefined())
-        {
-            para.PresentMask &= ~Para_BlockIndent;
-            para.BlockIndent = 0;
-        }
-        else
-        {
-            blockIndent.Convert2Int32(iv);
-            para.PresentMask |= Para_BlockIndent;
-            para.BlockIndent = (UInt16)ClampPixels(iv, 0);
-        }
-
-        if (bold.IsNullOrUndefined())
-        {
-            tf.FormatFlags &= ~Flag_Bold;
-            tf.PresentMask &= ~Fmt_Bold;
-        }
-        else
-            FUN_142607d90(fmt, bold.Convert2Boolean());
-        if (italic.IsNullOrUndefined())
-        {
-            tf.FormatFlags &= ~Flag_Italic;
-            tf.PresentMask &= ~Fmt_Italic;
-        }
-        else
-            FUN_1426082a0(fmt, italic.Convert2Boolean());
-        if (underline.IsNullOrUndefined())
-        {
-            tf.FormatFlags &= ~Flag_Underline;
-            tf.PresentMask &= ~Fmt_Underline;
-        }
-        else
-            FUN_1426084d0(fmt, underline.Convert2Boolean());
-
-        if (bullet.IsNullOrUndefined())
-            para.PresentMask &= ~(Para_BulletOn | Para_Bullet);
-        else
-        {
-            if (bullet.Convert2Boolean())
-                para.PresentMask |= Para_BulletOn;
-            else
-                para.PresentMask &= ~Para_BulletOn;
-            para.PresentMask |= Para_Bullet;
-        }
-
-        if (color.IsNullOrUndefined())
-        {
-            tf.PresentMask &= ~Fmt_Color;
-            tf.ColorV = 0xFF000000u;
-        }
-        else
-        {
-            color.Convert2UInt32(uv);
-            tf.PresentMask |= Fmt_Color;
-            tf.ColorV = (tf.ColorV & 0xFF000000u) | (uv & 0xFFFFFFu);
-        }
-
-        if (font.IsNullOrUndefined())
-            tf.PresentMask &= ~(Fmt_FontList | Fmt_FontHandle);
-        else
-        {
-            ASString str = sm.CreateEmptyString();
-            font.Convert2String(str);
-            FUN_142607f40(fmt, str.ToCStr(), ~0ull);
-        }
-
-        if (indent.IsNullOrUndefined())
-        {
-            para.Indent = 0;
-            para.PresentMask &= ~Para_Indent;
-        }
-        else
-        {
-            indent.Convert2Int32(iv);
-            para.PresentMask |= Para_Indent;
-            para.Indent = ClampPixels(iv, -720);
-        }
-        if (leading.IsNullOrUndefined())
-        {
-            para.Leading = 0;
-            para.PresentMask &= ~Para_Leading;
-        }
-        else
-        {
-            leading.Convert2Int32(iv);
-            para.PresentMask |= Para_Leading;
-            para.Leading = ClampPixels(iv, -720);
-        }
-        if (leftMargin.IsNullOrUndefined())
-        {
-            para.LeftMargin = 0;
-            para.PresentMask &= ~Para_LeftMargin;
-        }
-        else
-        {
-            leftMargin.Convert2Int32(iv);
-            para.PresentMask |= Para_LeftMargin;
-            para.LeftMargin = (UInt16)ClampPixels(iv, 0);
-        }
-        if (rightMargin.IsNullOrUndefined())
-        {
-            para.RightMargin = 0;
-            para.PresentMask &= ~Para_RightMargin;
-        }
-        else
-        {
-            rightMargin.Convert2Int32(iv);
-            para.PresentMask |= Para_RightMargin;
-            para.RightMargin = (UInt16)ClampPixels(iv, 0);
-        }
-
-        if (size.IsNullOrUndefined())
-        {
-            tf.FontSize = 0;
-            tf.PresentMask &= ~Fmt_FontSize;
-        }
-        else
-        {
-            // pixels to twips; sizes of 128 and more are 127
-            size.Convert2Int32(iv);
-            if (iv >= 0)
+            ASString strval = sm.CreateEmptyString();
+            align.Convert2String(strval).DoNotCheck();
+            if (strval == "left")
             {
-                tf.PresentMask |= Fmt_FontSize;
-                if (iv >= 128)
-                    tf.FontSize = 127 * 20;
-                else if ((float)iv >= 3276.8f)
-                    tf.FontSize = 0xFFFF;
+                parafmt->SetAlignment(Render::Text::ParagraphFormat::Align_Left);
+            }
+            else if (strval == "right")
+            {
+                parafmt->SetAlignment(Render::Text::ParagraphFormat::Align_Right);
+            }
+            else if (strval == "center")
+            {
+                parafmt->SetAlignment(Render::Text::ParagraphFormat::Align_Center);
+            }
+            else if (strval == "justify")
+            {
+                parafmt->SetAlignment(Render::Text::ParagraphFormat::Align_Justify);
+            }
+            else
+            {
+                reinterpret_cast<Sfr33ParaFmtAccess*>(parafmt)->SdkClearAlignment();
+            }
+        }
+
+        if (!blockIndent.IsNullOrUndefined())
+        {
+            SInt32 v;
+            blockIndent.Convert2Int32(v).DoNotCheck();
+            if (v < 0) v = 0;
+            else if (v > 720) v = 720;
+            parafmt->SetBlockIndent((unsigned)v);
+        }
+        else
+            parafmt->ClearBlockIndent();
+
+        if (!bold.IsNullOrUndefined())
+        {
+            fmt->SetBold(bold.Convert2Boolean());
+        }
+        else
+            fmt->ClearBold();
+
+        if (!italic.IsNullOrUndefined())
+        {
+            fmt->SetItalic(italic.Convert2Boolean());
+        }
+        else
+            fmt->ClearItalic();
+
+        if (!underline.IsNullOrUndefined())
+        {
+            fmt->SetUnderline(underline.Convert2Boolean());
+        }
+        else
+            fmt->ClearUnderline();
+
+        if (!bullet.IsNullOrUndefined())
+        {
+            parafmt->SetBullet(bullet.Convert2Boolean());
+        }
+        else
+            reinterpret_cast<Sfr33ParaFmtAccess*>(parafmt)->SdkClearBullet();
+
+        if (!color.IsNullOrUndefined())
+        {
+            UInt32 c;
+            color.Convert2UInt32(c).DoNotCheck();
+            fmt->SetColor32(c);
+        }
+        else
+            fmt->ClearColor();
+
+        if (!font.IsNullOrUndefined())
+        {
+            ASString v = sm.CreateEmptyString();
+            font.Convert2String(v).DoNotCheck();
+            fmt->SetFontList(v.ToCStr());
+        }
+        else
+            fmt->ClearFontList();
+
+        if (!indent.IsNullOrUndefined())
+        {
+            SInt32 v;
+            indent.Convert2Int32(v).DoNotCheck();
+            if (v < -720) v = -720;
+            else if (v > 720) v = 720;
+            parafmt->SetIndent((int)v);
+        }
+        else
+            parafmt->ClearIndent();
+
+        if (!leading.IsNullOrUndefined())
+        {
+            SInt32 v;
+            leading.Convert2Int32(v).DoNotCheck();
+            if (v < -720) v = -720;
+            else if (v > 720) v = 720;
+            parafmt->SetLeading((int)v);
+        }
+        else
+            parafmt->ClearLeading();
+
+        if (!leftMargin.IsNullOrUndefined())
+        {
+            SInt32 v;
+            leftMargin.Convert2Int32(v).DoNotCheck();
+            if (v < 0) v = 0;
+            else if (v > 720) v = 720;
+            parafmt->SetLeftMargin((unsigned)v);
+        }
+        else
+            parafmt->ClearLeftMargin();
+
+        if (!rightMargin.IsNullOrUndefined())
+        {
+            SInt32 v;
+            rightMargin.Convert2Int32(v).DoNotCheck();
+            if (v < 0) v = 0;
+            else if (v > 720) v = 720;
+            parafmt->SetRightMargin((unsigned)v);
+        }
+        else
+            parafmt->ClearRightMargin();
+
+        if (!size.IsNullOrUndefined())
+        {
+            SInt32 v;
+            size.Convert2Int32(v).DoNotCheck();
+            if (v >= 0)
+            {
+                if (v < 128)
+                   fmt->SetFontSize((float)(unsigned)v);
                 else
-                    tf.FontSize = (UInt16)(int)((float)iv * 20.0f);
+                    fmt->SetFontSize(127);
             }
         }
+        else
+            fmt->ClearFontSize();
 
-        if (url.IsNullOrUndefined())
+        if (!url.IsNullOrUndefined())
         {
-            reinterpret_cast<String*>(&tf.Url)->Clear();
-            tf.PresentMask &= ~Fmt_Url;
+            ASString v = sm.CreateEmptyString();
+            url.Convert2String(v).DoNotCheck();
+            fmt->SetUrl(v.ToCStr());
         }
         else
-        {
-            ASString str = sm.CreateEmptyString();
-            url.Convert2String(str);
-            FUN_142608530(fmt, str.ToCStr(), ~0ull);
-        }
+            fmt->ClearUrl();
 
-        if (letterSpacing.IsNullOrUndefined())
+        if (!letterSpacing.IsNullOrUndefined())
         {
-            tf.PresentMask &= ~Fmt_LetterSpacing;
-            tf.LetterSpacing = 0;
+            Value::Number v;
+            letterSpacing.Convert2Number(v).DoNotCheck();
+            if (v < -720) v = -720;
+            else if (v > 720) v = 720;
+            fmt->SetLetterSpacing((float)v);
         }
         else
-        {
-            letterSpacing.Convert2NumberInline(nv);
-            if (nv < -720.0 || nv > 720.0)
-                nv = nv < -720.0 ? -720.0 : 720.0;
-            tf.PresentMask |= Fmt_LetterSpacing;
-            tf.LetterSpacing = (SInt16)(int)((float)nv * 20.0f);
-        }
+            fmt->ClearLetterSpacing();
 
-        if (kerning.IsNullOrUndefined())
+        if (!kerning.IsNullOrUndefined())
         {
-            tf.FormatFlags &= ~Flag_Kerning;
-            tf.PresentMask &= ~Fmt_Kerning;
+            fmt->SetKerning(kerning.Convert2Boolean());
         }
         else
-            FUN_142608330(fmt, kerning.Convert2Boolean());
+            fmt->ClearKerning();
 
-        if (!tabStops)
+        if (tabStops)
         {
-            parafmt->~ParagraphFormat();
-            para.PresentMask &= ~Para_TabStops;
-        }
-        else
-        {
-            UPInt n = tabStops->GetSize();
-            reinterpret_cast<Sfr33ParaFmtAccess*>(parafmt)->AllocTabStops((unsigned)n);
-            para.PresentMask |= Para_TabStops;
-            for (UPInt i = 0; i < n; ++i)
+            const UPInt size = tabStops->GetSize();
+            reinterpret_cast<Sfr33ParaFmtAccess*>(parafmt)->BeginTabStops((unsigned)size);
+            for(UPInt i = 0; i < size; ++i)
             {
-                tabStops->At(i).Convert2NumberInline(nv);
-                FUN_1426084b0(parafmt, (unsigned)i, (unsigned)(SInt64)nv);
+                Value::Number v;
+                tabStops->At(i).Convert2Number(v);
+                parafmt->SetTabStopsElement((unsigned)i, (unsigned)v);
             }
         }
+        else
+            parafmt->ClearTabStops();
     }
 
     // The present bits and format flags as bitfield views: the exe reads each bit with its own byte load.
@@ -2435,17 +2416,17 @@ namespace Instances { namespace fl_text
     // Text::TextFormat::GetLetterSpacing and ParagraphFormat::Is*Alignment, as the SDK inlines them.
     static SF_INLINE float Sfr13GetLetterSpacing(const TextFormatStorage& tf) { return (float)(SInt16)(tf.LetterSpacing / 20); }
     static SF_INLINE bool Sfr13IsBold(const TextFormatStorage& tf) { return (tf.FormatFlags & Flag_Bold) != 0; }
-    static SF_INLINE bool Sfr13IsAlignment(const ParagraphFormatStorage& pf, unsigned a)
+    // ParagraphFormat::GetAlignment: the arms compare it alone, as the SDK's Is*Alignment() re-test of the
+    // present bit folds away inside the if (pf.IsAlignmentSet()) block.
+    static SF_INLINE unsigned Sfr13GetAlignment(const ParagraphFormatStorage& pf)
     {
-        return (pf.PresentMask & Para_Alignment) != 0 && ((pf.PresentMask & Para_AlignMask) >> Para_AlignShift) == a;
+        return (pf.PresentMask & Para_AlignMask) >> Para_AlignShift;
     }
 
     // The style named by name (".name" a class, else a tag) as an object of CSS property strings and numbers,
     // or null when there is none.
     // @0x1424b15e0
     // the SDK body; the style's formats are raw storage here. The present bits are tested as (UByte)(mask >> n) & 1.
-    // MS2-FUNCTIONAL: 5127 bytes, exe 5120. The exe tests the textAlign present bit with a byte test and reloads the
-    // mask word (ours keeps one word load), and the colour string's release compares with sub eax,1 (ours cmp eax,1).
     void StyleSheet::getStyle(SPtr<Instances::fl::Object>& result, const ASString& styleName)
     {
         const Render::Text::Style* pstyle = NULL;
@@ -2565,14 +2546,14 @@ namespace Instances { namespace fl_text
         }
 
         // textAlign
-        if (pf.PresentMask & Para_Alignment)
+        if ((UByte)pf.PresentMask & 1)
         {
             pobj->SetProperty(Multiname(
                 publicNS, sm.CreateString("textAlign")),
                 Value(sm.CreateString(
-                    Sfr13IsAlignment(pf, Align_Left) ? "left" :
-                        Sfr13IsAlignment(pf, Align_Center) ? "center" :
-                            Sfr13IsAlignment(pf, Align_Right) ? "right" :
+                    Sfr13GetAlignment(pf) == Align_Left ? "left" :
+                        Sfr13GetAlignment(pf) == Align_Center ? "center" :
+                            Sfr13GetAlignment(pf) == Align_Right ? "right" :
                                 "justify"
                 ))).DoNotCheck();
         }
