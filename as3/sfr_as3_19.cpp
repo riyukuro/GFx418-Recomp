@@ -4825,9 +4825,9 @@ static __forceinline bool Sfr31InstanceOfChain(UPInt vmAddr, Value* v, const Val
 }
 
 // instanceof: pops the class operand and replaces the top value with whether the class (or its prototype) is on the value's traits chain.
-// MS2-FUNCTIONAL 0x14253b990: same blocks and calls (SetBool(false) split out as in the SDK); the exe keeps the popped value's Flags in esi
-// and its weak pointer in rbx across the calls and saves all six callee-saved registers in the prolog, while ours
-// shrink-wraps rbx/rsi past the type-error path and keeps the Flags in r15.
+// MS2-FUNCTIONAL 0x14253b990: same blocks and calls, one tail-merged SetBool as in the exe; register allocation differs: the exe
+// keeps the class Value's weak pointer in rbx and the stack Value in r15 and saves all six callee-saved registers in the prolog,
+// while ours keeps the weak pointer in rbp and shrink-wraps rbx/rdi/r14.
 // @0x14253b990
 void Sfr31ExecInstanceOf(UPInt vmAddr)
 {
@@ -4836,30 +4836,28 @@ void Sfr31ExecInstanceOf(UPInt vmAddr)
     struct RawVal { UInt32 w0; void* w1; RawPair v; };
     Value* below;
     RawVal cls;
-    UInt32 flags;
     void* weak;
     {
         const UPInt top = Sfr31Rd(vmAddr, 0x50);
         const RawVal& src = *reinterpret_cast<const RawVal*>(top);
-        flags = src.w0;
+        cls.w0 = src.w0;
+        below = reinterpret_cast<Value*>(top - 0x20);
         weak = src.w1;
-        cls.w0 = flags;
         cls.w1 = weak;
         cls.v = src.v;
-        below = reinterpret_cast<Value*>(top - 0x20);
         Sfr31Wr(vmAddr, 0x50, top - 0x20);
     }
-    if ((flags & 0x1f) - 0xd > 1)
+    if ((cls.w0 & 0x1f) - 0xd > 1)
         vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x410), vm));
     else
     {
         const UInt32 bk = *reinterpret_cast<const UInt32*>(below) & 0x1f;
-        if (bk == 0 || (bk - 0xc <= 3 && Sfr31Rd(reinterpret_cast<UPInt>(below), 0x10) == 0)) below->SetBool(false);
-        else below->SetBool(Sfr31InstanceOfChain(vmAddr, below, *reinterpret_cast<const Value*>(&cls), flags));
+        below->SetBool((bk == 0 || (bk - 0xc <= 3 && Sfr31Rd(reinterpret_cast<UPInt>(below), 0x10) == 0)) ? false
+                       : Sfr31InstanceOfChain(vmAddr, below, *reinterpret_cast<const Value*>(&cls), cls.w0));
     }
-    if (static_cast<Sfr31Kind8>(flags & 0x1f) > static_cast<Sfr31Kind8>(9))
+    if (static_cast<Sfr31Kind8>(cls.w0 & 0x1f) > static_cast<Sfr31Kind8>(9))
     {
-        if ((static_cast<UInt8>(flags >> 9) & 1) != 0)
+        if ((static_cast<UInt8>(cls.w0 >> 9) & 1) != 0)
         {
             int* rc = static_cast<int*>(weak);
             if (--*rc == 0)
