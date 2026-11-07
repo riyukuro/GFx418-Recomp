@@ -122,6 +122,35 @@ AutoPtr<ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy> >::operator=
 }
 // Traits' vtable holder releases through the out-of-line 0x142524290.
 template<> SF_NOINLINE void AutoPtr<GFx::AS3::VTable>::Reset(GFx::AS3::VTable* p, bool owner);
+// The exe inlines the whole slot-table PushBack (resize included) into SlotContainerType::Add and Slots::Add.
+// Both PushBack levels need forcing; with only the ArrayBase level, the Data load moves past the Size store.
+template<> __forceinline void ArrayDataBase<GFx::AS3::Slots::Pair, AllocatorLH<GFx::AS3::Slots::Pair,
+    GFx::AS3::StatMV_VM_SlotInfo_Mem>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize)
+{
+    UPInt oldSize = Size;
+    if (newSize < oldSize)
+    {
+        AllocatorType::DestructArray(Data + newSize, oldSize - newSize);
+        if (newSize < (Policy.GetCapacity() >> 1))
+            Reserve(pheapAddr, newSize);
+    }
+    else if (newSize >= Policy.GetCapacity())
+    {
+        Reserve(pheapAddr, newSize + (newSize >> 2));
+    }
+    Size = newSize;
+}
+template<> __forceinline void ArrayData<GFx::AS3::Slots::Pair, AllocatorLH<GFx::AS3::Slots::Pair,
+    GFx::AS3::StatMV_VM_SlotInfo_Mem>, ArrayDefaultPolicy>::PushBack(const GFx::AS3::Slots::Pair& val)
+{
+    BaseType::ResizeNoConstruct(this, this->Size + 1);
+    AllocatorType::Construct(this->Data + this->Size - 1, val);
+}
+template<> __forceinline void ArrayBase<ArrayData<GFx::AS3::Slots::Pair, AllocatorLH<GFx::AS3::Slots::Pair,
+    GFx::AS3::StatMV_VM_SlotInfo_Mem>, ArrayDefaultPolicy> >::PushBack(const GFx::AS3::Slots::Pair& val)
+{
+    Data.PushBack(val);
+}
 } // namespace Scaleform
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -850,54 +879,61 @@ SlotInfo& SlotInfo::operator=(const SlotInfo& other)
     return *this;
 }
 
-// MS2-FUNCTIONAL: the exe inlines the ArrayLH PushBack/resize path in full (unity TU inlining budget); ours
-// calls it.
 // @0x1424e63b0
 AbsoluteIndex SlotContainerType::Add(const ASString& k, const SlotInfo& v)
 {
-    const UPInt ind = VArray.GetSize();
+    UPInt result;
 
-    VArray.PushBack(Pair(v, Ptr<ASStringNode>(k.GetNode())));
-    ++Size;
+    {
+        result = VArray.GetSize();
+        VArray.PushBack(Pair(v, Ptr<ASStringNode>(k.GetNode())));
+        ++Size;
+    }
 
     ASStringNode* node = k.GetNode();
+
+    const SPInt index = static_cast<SPInt>(result);
     SetType::Iterator it = KVHashSet.Find(node);
     if (it.IsEnd())
     {
-        KVHashSet.Add(node, ind);
-        VArray[ind].Prev = -1;
+        KVHashSet.Add(node, index);
+        VArray[index].Prev = -1;
     }
     else
     {
-        VArray[ind].Prev = it->Second;
-        it->Second = ind;
+        const SPInt cur_ind = it->Second;
+        VArray[index].Prev = cur_ind;
+        it->Second = index;
     }
 
-    return AbsoluteIndex(ind);
+    return AbsoluteIndex(result);
 }
 
-// MS2-FUNCTIONAL: the exe inlines the ArrayLH PushBack/resize path in full (unity TU inlining budget); ours
-// calls it.
 // @0x1424e6670
 AbsoluteIndex Slots::Add(const ASString& k, const SlotInfo& v)
 {
-    const UPInt ind = VArray.GetSize();
+    UPInt result;
 
+    result = VArray.GetSize();
     VArray.PushBack(Pair(v, Ptr<ASStringNode>(k.GetNode())));
 
-    SetType::Iterator it = Set.Find(Ptr<ASStringNode>(k.GetNode()));
+    ASStringNode* node = k.GetNode();
+
+    const SPInt index = static_cast<SPInt>(result);
+    SetType::Iterator it = Set.Find(node);
     if (it.IsEnd())
     {
-        Set.Add(Ptr<ASStringNode>(k.GetNode()), static_cast<UInt32>(FirstOwnSlotNum + ind));
-        VArray[ind].Prev = -1;
+        Set.Add(node, static_cast<UInt32>(index + FirstOwnSlotNum));
+        VArray[index].Prev = -1;
     }
     else
     {
-        VArray[ind].Prev = it->Second;
-        it->Second = static_cast<UInt32>(FirstOwnSlotNum + ind);
+        const SPInt cur_ind = it->Second;
+        VArray[index].Prev = cur_ind;
+        it->Second = static_cast<UInt32>(index + FirstOwnSlotNum);
     }
 
-    return AbsoluteIndex(FirstOwnSlotNum + ind);
+    return AbsoluteIndex(result + FirstOwnSlotNum);
 }
 
 // ==== objects ========================================================================================================

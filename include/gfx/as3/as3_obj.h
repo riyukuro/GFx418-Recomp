@@ -190,7 +190,7 @@ public:
     // (appended, sfr19) an empty unbound slot. Inline body in as3_vmabcfile.h.
     inline SlotInfo();
     // (sfr19) out of line in the exe; both copy the bit fields one at a time.
-    SlotInfo(const SlotInfo& other);                // 0x1424d99f0
+    __declspec(noalias) SlotInfo(const SlotInfo& other);                // 0x1424d99f0 (noalias: same-TU mod-ref in the exe)
     ~SlotInfo();                                    // 0x1424def30
     SlotInfo& operator=(const SlotInfo& other);     // 0x1424e0b80
 
