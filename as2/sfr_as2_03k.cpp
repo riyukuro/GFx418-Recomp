@@ -77,7 +77,6 @@ KeyCtorFunction::KeyCtorFunction(ASStringContext* psc, MovieImpl* pmovie)
     pmovie->SetKeyboardListener(this);
 }
 
-// MS2-FUNCTIONAL: exe tail-jumps into Object::Finalize_GC
 // @0x142942da0
 void KeyCtorFunction::Finalize_GC()
 {
