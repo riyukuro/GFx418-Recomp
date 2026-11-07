@@ -5944,19 +5944,20 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 // The position of the first lookupswitch of the byte code (at +0x50 of its holder) from pos on, past which pos is
 // left; 0 when there is none (pos is then at the end).
-// MS2-FUNCTIONAL free function over a layout view of the byte code's holder (it has no caller in the exe), in the
-// SDK Tracer::GetNextSwitchStmt form (result + goto end); the exe keeps bcp in rbp (ours r14) and does not align
-// its loop heads
+// SDK Tracer::GetNextSwitchStmt, as a free function over a layout view of the byte code's holder (it has no caller
+// in the exe).
 // @0x14250c080
 UPInt FUN_14250c080(const void* self, UPInt& pos)
 {
     struct View { char pad[0x50]; const UInt8* data; UPInt size; };
     const View* c = static_cast<const View*>(self);
     UPInt result = 0;
+    int op = 0; // SDK Code::OpCode (an int enum)
+    UPInt op_pos;
     while (pos < c->size)
     {
-        const UPInt op_pos = pos;
-        const UInt8 op     = c->data[pos++];
+        op_pos = pos;
+        op     = c->data[pos++];
         {
             const Sfr34_OpCodeInfo& oi = DAT_14317fea0[op];
             if (oi.pop_mn)
@@ -5976,11 +5977,11 @@ UPInt FUN_14250c080(const void* self, UPInt& pos)
         case 0x1b:
         {
             // lookupswitch: the default offset, the case count - 1 and the case offsets
+            result = op_pos;
             Abc::ReadS24(c->data, pos);
             const int n = Abc::ReadU30(c->data, pos);
             for (int i = 0; i <= n; ++i)
                 Abc::ReadS24(c->data, pos);
-            result = op_pos;
         }
             goto end;
         case 0x24:
