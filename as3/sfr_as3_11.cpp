@@ -2383,7 +2383,6 @@ namespace Instances { namespace fl_geom
     }
 
     // vout[i..i+2] = mat4 * vin[i..i+2] for each (x, y, z) triple of vin; elements that do not convert read as 0.
-    // MS2-FUNCTIONAL: Value temporaries and the per-element bounds checks scheduled differently
     // @0x142490960
     void Matrix3D::transformVectors(const Value& result, Instances::fl_vec::Vector_double* vin, Instances::fl_vec::Vector_double* vout)
     {
