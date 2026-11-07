@@ -2044,22 +2044,8 @@ struct ActionLoggerMovie
     virtual MovieDef* GetMovieDef() const = 0; // 1
 };
 
-// The CRT's C strcmp body (strcmp.c), which the exe has inlined here.
-static __forceinline int Sfr02StrCmp(const char* src, const char* dst)
-{
-    int ret;
-    do
-    {
-        ret = *(const unsigned char*)src - *(const unsigned char*)dst;
-        if (ret)
-            break;
-        ++src;
-        ++dst;
-    } while (dst[-1]);
-    return ret;
-}
-
-// MS2-FUNCTIONAL 0x142917910: regalloc floor: the exe keeps suffix in rbp (ours rsi), Flags in r8d across the inlined strcmp (src walked, dst as offset) and the GetLog result in rsi (ours r14); same flag logic and stores
+// The exe has strcmp inlined here: the compiler intrinsic, not a hand loop.
+#pragma intrinsic(strcmp)
 ActionLogger::ActionLogger(DisplayObject* ptarget, const char* suffix)
 {
     MovieImpl* pm = ptarget->FindMovieImpl();
@@ -2070,9 +2056,12 @@ ActionLogger::ActionLogger(DisplayObject* ptarget, const char* suffix)
         UseSuffix = false;
     else
     {
-        const char* url   = ((ActionLoggerMovie*)pm)->GetMovieDef()->GetFileURL();
+        // LogSuffix is read before the GetFileURL call, Flags after it.
+        MovieDef*   pdef  = ((ActionLoggerMovie*)pm)->GetMovieDef();
+        const char* psuf  = LogSuffix;
+        const char* url   = pdef->GetFileURL();
         UInt32      flags = pm->Flags;
-        if (Sfr02StrCmp(url, LogSuffix) == 0)
+        if (strcmp(url, psuf) == 0)
             UseSuffix = (flags >> 3) & 1;
         else
             UseSuffix = (flags >> 4) & 1;
