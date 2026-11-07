@@ -153,6 +153,7 @@ public:
     {
         Set__proto__(psc, pprototype);
     }
+    Math(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     // Next value of the movie's random generator (exe 0x142953f50).
     static UInt32 GetNextRandom(MovieImpl* proot);
@@ -162,6 +163,7 @@ class MathProto : public Prototype<Math>
 {
 public:
     MathProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291e6a0
+    MathProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 };
 class MouseObject : public Object
 {
@@ -276,6 +278,7 @@ public:
 
     // The prototype instance has no button.
     ButtonObject(ASStringContext* psc, Object* pprototype) : Object(psc) { Set__proto__(psc, pprototype); }
+    ButtonObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
     inline ButtonObject(Environment* penv); // defined in sfr_as2_04
     // The AS object of a button character (AvmButton::GetButtonASObject, defined in sfr_as2_05d).
     inline ButtonObject(GlobalContext* pgc, InteractiveObject* pbutton);
@@ -295,6 +298,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x1432135f0
 
     ButtonProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142919c00
+    ButtonProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 };
 class ColorObject : public Object
 {
@@ -305,6 +309,7 @@ public:
     ColorObject(Environment* penv, InteractiveObject* ptarget, ObjectInlineCtorTag); // inline in sfr_as2_04
     // The prototype instance has no target.
     ColorObject(ASStringContext* psc, Object* pprototype) : Object(psc) { Set__proto__(psc, pprototype); }
+    ColorObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual ObjectType GetObjectType() const; // exe 0x142954200: Object_Color
 
@@ -321,6 +326,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x1432136c0
 
     ColorProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291adc0
+    ColorProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     static void GetRGB(const FnCall& fn);       // exe 0x1428ed450
     static void SetRGB(const FnCall& fn);       // exe 0x1428ed2a0
@@ -346,6 +352,7 @@ public:
     MovieClipLoader(Environment* penv, ObjectInlineCtorTag); // inline in sfr_as2_04
     // The prototype instance tracks nothing.
     MovieClipLoader(ASStringContext* psc, Object* pprototype) : Object(psc) { Set__proto__(psc, pprototype); }
+    MovieClipLoader(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual ObjectType GetObjectType() const; // exe 0x142954290: Object_MovieClipLoader
 
@@ -376,6 +383,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x1432134f0
 
     MovieClipLoaderProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291edc0
+    MovieClipLoaderProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     static void GetProgress(const FnCall& fn); // exe 0x1428eb050
     static void LoadClip(const FnCall& fn);    // exe 0x1428eb340
@@ -578,6 +586,7 @@ public:
     SharedObject(Environment* penv); // exe 0x142920710
     // The prototype instance, no name.
     SharedObject(ASStringContext* psc, Object* pprototype) : Object(psc) { Set__proto__(psc, pprototype); }
+    SharedObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual ObjectType GetObjectType() const; // exe 0x142954300: Object_SharedObject
 
@@ -609,6 +618,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143213e40 (empty)
 
     SharedObjectProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142920830
+    SharedObjectProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     // (appended for sfr_as2_02)
     static void Flush(const FnCall& fn); // exe 0x142901150
@@ -1050,6 +1060,7 @@ public:
     ASStringHash_GC<SharedObjectPtr> SharedObjects; // +0x70
 
     SharedObjectCtorFunction(ASStringContext* psc); // exe 0x142920790
+    SharedObjectCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     static const NameFunction StaticFunctionTable[]; // exe 0x143213ed0: getLocal
 
@@ -1079,6 +1090,7 @@ class GASLoadVarsLoaderCtorFunction : public CFunctionObject
 {
 public:
     GASLoadVarsLoaderCtorFunction(ASStringContext* psc); // exe 0x14291c1c0
+    GASLoadVarsLoaderCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     // LoadVars() on a LoadVars instance returns it, null otherwise (exe 0x14295afb0).
     static void GlobalCtor(const FnCall& fn);
@@ -1387,6 +1399,7 @@ class ColorCtorFunction : public CFunctionObject
 public:
     // (appended for sfr_as2_06) Inlined into Register in the exe.
     ColorCtorFunction(ASStringContext* psc) : CFunctionObject(psc, GlobalCtor) {}
+    __forceinline ColorCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t) : CFunctionObject(psc, GlobalCtor, t) {} // sfr_as2_06
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936b10
     // Color(target) as a constructor retargets the instance, as a function makes a new one (exe 0x142959740).
@@ -1420,6 +1433,7 @@ class MovieClipLoaderCtorFunction : public CFunctionObject
 {
 public:
     MovieClipLoaderCtorFunction(ASStringContext* psc); // exe 0x14291ed40
+    MovieClipLoaderCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936ff0
 
@@ -1459,6 +1473,7 @@ class ButtonCtorFunction : public CFunctionObject
 public:
     // (appended for sfr_as2_06) Inlined into Register in the exe.
     ButtonCtorFunction(ASStringContext* psc) : CFunctionObject(psc, GlobalCtor) {}
+    __forceinline ButtonCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t) : CFunctionObject(psc, GlobalCtor, t) {} // sfr_as2_06
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936a50
     // (appended for sfr_as2_06) Button() does nothing (exe 0x142959730, folded with other empty functions).

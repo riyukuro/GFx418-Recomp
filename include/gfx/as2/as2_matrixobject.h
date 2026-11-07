@@ -42,6 +42,7 @@ public:
     {
         Set__proto__(psc, pprototype);
     }
+    MatrixObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual ObjectType GetObjectType() const; // exe 0x142954280: Object_Matrix
 
@@ -59,6 +60,7 @@ class GASMatrixCtorFunction : public CFunctionObject
 public:
     // (appended for sfr_as2_06) Inlined into Register in the exe.
     GASMatrixCtorFunction(ASStringContext* psc) : CFunctionObject(psc, GlobalCtor) {}
+    __forceinline GASMatrixCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t) : CFunctionObject(psc, GlobalCtor, t) {} // sfr_as2_06
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936e50
 
@@ -76,6 +78,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143213330
 
     MatrixProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291e830
+    MatrixProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     static void ToString(const FnCall& fn);
     static void Clone(const FnCall& fn);
