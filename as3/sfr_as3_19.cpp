@@ -62,6 +62,13 @@ struct ValueAssignCopies
         to.SetKind(Value::kObject);
         to.value = v;
     }
+    // Value::Pick(Class*) (the SCU inlines it into exec_newclass 0x14253c470).
+    static __forceinline void PickClass19(Value& to, Class* v)
+    {
+        to.Release();
+        to.SetKind(Value::kClass);
+        to.value = v;
+    }
     // Value::Assign(const ASString&) as the SDK writes it, for the out-of-line operator= copy (FUN_1424e0d40).
     static SF_INLINE void AssignString19(Value& to, const ASString& v)
     {
@@ -6655,63 +6662,100 @@ void Sfr31ExecIn(UPInt vmAddr)
 // ---- batch 61
 // exec_getclass-style op: the operand must be a class object (or null when the entry has no base); the class entry resolves to its
 // class object, except classes in the "scaleform.gfx" package, which must exist as a property of the global object.
-// MS2-FUNCTIONAL 0x14253c470: raw-offset model; codegen differs from the exe
+// Value::AssignUnsafe(const Value&) (0x1424edce0), inlined: the same definition as sfr_as3_17's (a Value friend).
+struct Sfr17ValueInline
+{
+    static __forceinline void Assign(Value& self, const Value& other)
+    {
+        self.Release();
+        SIMD::PrefetchObj(&other);
+        memcpy(&self, &other, sizeof(Value));
+        self.AddRef();
+    }
+};
+
+// Multiname(Namespace&, const Value&) with AssignUnsafe inlined too, as exec_newclass has it (sfr_as3_17d has the same).
+__forceinline Multiname::Multiname(Instances::Namespace& ns, const Value& name, InlineAssignTag)
+    : Kind(static_cast<Abc::MultinameKind>(0))
+    , Obj(&ns)
+{
+    const UInt32 k = static_cast<UInt32>(name.GetKind());
+    if (k - 0xc <= 3 && name.GetGASRefCountBase() != NULL)
+    {
+        const Traits& tr = reinterpret_cast<Object*>(name.GetGASRefCountBase())->GetTraits();
+        if (static_cast<int>(tr.TraitsType) == 0xc && (static_cast<UInt8>(~static_cast<UInt8>(static_cast<UInt8>(tr.Flags) >> 5)) & 1) != 0)
+        {
+            Sfr27MultinameFromQName(this, &name);
+            return;
+        }
+    }
+    Sfr17ValueInline::Assign(Name, name);
+    // PostProcessName(false) (0x14251cef0, sfr_as3_18) inlined: the three renames share one assignment
+    if (!Name.IsString())
+        return;
+    ASString n = Name.AsString();
+    if (n.GetSize() == 0)
+        return;
+    if (n[0] == '*')
+        FUN_1424e0d40(Name, ASString(n.GetManager()->GetEmptyStringNode()));
+    else if (n[0] == '@')
+    {
+        Kind = static_cast<Abc::MultinameKind>(Kind | 8);
+        if (n.GetSize() == 2 && n[1] == '*')
+            FUN_1424e0d40(Name, ASString(n.GetManager()->GetEmptyStringNode()));
+        else
+            FUN_1424e0d40(Name, ASString(n.SubstringNode(1, n.GetSize())));
+    }
+}
+
+// MS2-FUNCTIONAL 0x14253c470: SDK exec_newclass form; the remaining diff is register allocation (the
+// interned namespace / global object held in other callee-saved regs) and the placement of the inlined
+// PostProcessName blocks (the exe hoists the string manager load and moves SubstringNode to the end).
 // @0x14253c470
 void Sfr31ExecClassEntry(UPInt vmAddr, UPInt link, UInt32 idx)
 {
     VM& vm = *reinterpret_cast<VM*>(vmAddr);
-    const UPInt file = Sfr31Rd(link, 0x28);
-    const UPInt cls = Sfr31Rd(Sfr31Rd(file, 0x140), static_cast<UPInt>(idx) * 8);
-    UInt32* top = reinterpret_cast<UInt32*>(Sfr31Rd(vmAddr, 0x50));
-    const UInt32 k = top[0] & 0x1f;
-    bool ok;
-    if (k == 0 || (k - 0xc < 4 && Sfr31Rd(reinterpret_cast<UPInt>(top), 0x10) == 0))
-        ok = *reinterpret_cast<const int*>(cls + 0x28) == 0;
+    VMAbcFile& file = *reinterpret_cast<VMAbcFile*>(link);
+    const UPInt abc = Sfr31Rd(link, 0x28);
+    // file.GetClasses().Get(v)
+    const UPInt class_info = reinterpret_cast<const UPInt*>(Sfr31Rd(abc, 0x140))[idx];
+    Value& value = *reinterpret_cast<Value*>(Sfr31Rd(vmAddr, 0x50));
+    if (value.IsNullOrUndefined())
+    {
+        // class_info.HasSuperClass()
+        if (*reinterpret_cast<const int*>(class_info + 0x28) != 0)
+            return vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x3f1), vm));
+    }
     else
-        ok = k == 0xd;
-    if (!ok)
     {
-        vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x3f1), vm));
-        return;
+        if (!value.IsClass())
+            return vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x3f1), vm));
     }
-    const SPInt mnIdx = *reinterpret_cast<const int*>(cls + 0x24);
-    const UPInt mnE = mnIdx == 0 ? file + 0xe8 : mnIdx * 0x10 + Sfr31Rd(file, 0xb8);
-    const UPInt ns = FUN_14250ae60(link, *reinterpret_cast<const int*>(mnE + 4));
-    const UPInt uri = Sfr31Rd(ns, 0x30);
-    if (*reinterpret_cast<const UInt32*>(uri + 0x20) < 13 || strncmp(reinterpret_cast<const char*>(Sfr31Rd(uri, 0)), "scaleform.gfx", 13) != 0)
+    // class_info.GetName(file.GetConstPool())
+    const SPInt mnIdx = *reinterpret_cast<const int*>(class_info + 0x24);
+    const UPInt name = mnIdx == 0 ? abc + 0xe8 : mnIdx * 0x10 + Sfr31Rd(abc, 0xb8);
+    Instances::Namespace& t_ns = file.GetInternedNamespace(*reinterpret_cast<const int*>(name + 4));
+    const ASString& t_uri = *reinterpret_cast<const ASString*>(reinterpret_cast<UPInt>(&t_ns) + 0x30);
+    const StringDataPtr t_str(t_uri.ToCStr(), t_uri.GetSize());
+    const StringDataPtr scaleform_gfx("scaleform.gfx");
+    if (t_str.GetSize() >= scaleform_gfx.GetSize() && strncmp(t_str.ToCStr(), scaleform_gfx.ToCStr(), scaleform_gfx.GetSize()) == 0)
     {
-        const UPInt tr = FUN_14250f9a0(vmAddr, link, cls);
-        const UPInt inst = Sfr31Rd(tr, 0xc0);
-        if (Sfr31Rd(inst, 0x80) != 0)
+        const ASString t_name = file.GetInternedString(*reinterpret_cast<const int*>(name + 8));
+        if (!reinterpret_cast<Object*>(vm.GlobalObject.GetPtr())->GetProperty(Multiname(t_ns, Value(t_name, Value::InlineStr), Multiname::InlineAssignTag()), value))
+            return vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x42d), vm, t_name.ToCStr(), scaleform_gfx.ToCStr()));
+    }
+    else
+    {
+        ClassTraits::Traits& cud = *reinterpret_cast<ClassTraits::Traits*>(FUN_14250f9a0(vmAddr, link, class_info));
+        const UPInt itr = Sfr31Rd(reinterpret_cast<UPInt>(&cud), 0xc0);
+        if (Sfr31Rd(itr, 0x80) != 0)
+            value = reinterpret_cast<Class*>(Sfr31Rd(itr, 0x80));
+        else
         {
-            reinterpret_cast<Value*>(top)->Assign(reinterpret_cast<Class*>(Sfr31Rd(inst, 0x80)));   // the class object itself (exe: Assign(Class*))
-            return;
+            SPtr<Class> made = cud.FUN_142419e50();
+            ValueAssignCopies::PickClass19(value, made.GetPtr());
+            made.GetRawRef() = NULL;
         }
-        SPtr<Class> made = reinterpret_cast<ClassTraits::Traits*>(tr)->FUN_142419e50();
-        const UPInt obj = reinterpret_cast<UPInt>(made.GetPtr());
-        made.GetRawRef() = NULL;   // the reference moves into the stack Value
-        reinterpret_cast<Value*>(top)->~Value();
-        top[0] = (top[0] & 0xffffffedu) | 0xd;
-        *reinterpret_cast<UPInt*>(top + 4) = obj;
-        *reinterpret_cast<UPInt*>(top + 6) = 0;
-        return;
-    }
-    UPInt nameNode;
-    FUN_14250b240(link, &nameNode, *reinterpret_cast<const int*>(mnE + 8));
-    ASString name(reinterpret_cast<ASStringNode*>(nameNode));
-    Multiname mn(*reinterpret_cast<Instances::Namespace*>(ns));
-    Value nv(name);
-    mn.SetRTNameUnsafe(nv);
-    const UPInt glob = Sfr31Rd(vmAddr, 0x298);
-    typedef bool* (*HasFn)(UPInt, void*, void*, void*);
-    UInt8 tmp[8];
-    const bool found = *reinterpret_cast<HasFn>(Sfr31Rd(Sfr31Rd(glob, 0), 0x38))(glob, tmp, &mn, top);
-    if (!found)
-    {
-        alignas(8) char eb[sizeof(VM::Error)];
-        FUN_1424d7690(eb, 0x42d, &vm, name.ToCStr(), "scaleform.gfx");
-        vm.ThrowReferenceError(*reinterpret_cast<VM::Error*>(eb));
-        reinterpret_cast<VM::Error*>(eb)->~Error();
     }
 }
 
