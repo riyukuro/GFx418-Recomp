@@ -1838,7 +1838,7 @@ __forceinline Scaleform::GFx::AS3::VM& VideoSelfVMRef(void* callback)
     return *reinterpret_cast<Scaleform::GFx::AS3::VM*>(VideoSelfVM(*reinterpret_cast<void**>(static_cast<unsigned char*>(callback) + 0x10)));
 }
 }
-// MS2-FUNCTIONAL: builds a CRI subtitle/cue event object with its name, timestamp, type and parameter map.
+// MS2-FUNCTIONAL: builds a CRI subtitle/cue event object with its name, timestamp, type and parameter map. Remaining diffs (267 lines): name/type key-vs-Value construction order, an extra loop-alignment nop, and the type ternary temp kept in rsi in the exe.
 // @0x140018930
 void FUN_140018930(void* callback, const uint32_t* eventData)
 {
@@ -1852,7 +1852,7 @@ void FUN_140018930(void* callback, const uint32_t* eventData)
     Scaleform::GFx::ASStringManager* const& manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8);
     // The cue strings are Scaleform::String data pointers (low 2 bits are flags): size at +0 (top bit is a flag),
     // chars at +0xc. The exe copies each into a new ASString node (0x1425c0a80); they are not ASStringNodes.
-    event->AddDynamicSlotValuePair(ASString(manager->CreateStringNode("name")), ASString(VideoCopyString(manager, *reinterpret_cast<const uint64_t*>(eventData + 2))));
+    { ASString name(VideoCopyString(manager, *reinterpret_cast<const uint64_t*>(eventData + 2))); Scaleform::GFx::ASStringNode* key = manager->CreateStringNode("name"); event->AddDynamicSlotValuePair(ASString(key), name); }
     event->AddDynamicSlotValuePair(ASString(manager->CreateStringNode("time")), Value(static_cast<double>(static_cast<float>(eventData[4]) / VideoDurationScale)));
     event->AddDynamicSlotValuePair(ASString(manager->CreateStringNode("type")),
                                    eventData[0] == 1 ? ASString(manager->CreateStringNode("navigation")) : ASString(manager->CreateStringNode("event")));
@@ -1864,9 +1864,9 @@ void FUN_140018930(void* callback, const uint32_t* eventData)
     if (*reinterpret_cast<const uint64_t*>(eventData + 8) > 0) {
         SPtr<Instances::fl::Object> parameters = reinterpret_cast<VM*>(VideoSelfVM(*reinterpret_cast<void**>(static_cast<unsigned char*>(callback) + 0x10)))->MakeObject();
         for (uint64_t i = 0; i < *reinterpret_cast<const uint64_t*>(eventData + 8); ++i) {
-            const uint64_t* pair = reinterpret_cast<const uint64_t*>(*reinterpret_cast<const unsigned char* const*>(eventData + 6) + i * 0x10);
-            ASString text(VideoCopyString(manager, pair[1]));
-            parameters->AddDynamicSlotValuePair(ASString(VideoCopyString(manager, pair[0])), text);
+            const uint64_t* const& pairs = *reinterpret_cast<const uint64_t* const*>(eventData + 6);
+            ASString text(VideoCopyString(manager, pairs[i * 2 + 1]));
+            parameters->AddDynamicSlotValuePair(ASString(VideoCopyString(manager, pairs[i * 2])), text);
         }
         event->AddDynamicSlotValuePair(ASString(manager->CreateStringNode("parameters")), Value(parameters));
     }
