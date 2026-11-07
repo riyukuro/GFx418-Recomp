@@ -6573,6 +6573,14 @@ unsigned long long FUN_1423da440(long long raw, unsigned long long, unsigned* re
     return 0;
 }
 
+// The exe keeps an unreferenced `vector destructor iterator' (0x1423c8fa0) in this unit: some Value[2] local was
+// destroyed through it. CreateList below now builds its arguments with PushBack as the exe does, so this
+// never-called helper keeps that iterator emitted.
+__declspec(noinline) void Ime01KeepValueArrayDtor()
+{
+    Scaleform::GFx::Value values[2];
+}
+
 // MS2-FUNCTIONAL: TSF UpdateUIElement on the IME UI-element sink. It gets the element from ITfUIElementMgr. A reading
 // element copies its reading string to the manager's String at +0xb0 and calls MakeInvisible, plus RemoveList when
 // the sink's +0x55 flag is set. A candidate-list element first calls CreateList(10.0, 0/1) once. It then reads the
@@ -6591,12 +6599,12 @@ unsigned long long FUN_1423db0c0(long long raw, unsigned message)
     const unsigned id = message;
     IUnknown* uiManager = nullptr;
     IUnknown* element = nullptr;
-    IUnknown* candidates = nullptr;
-    IUnknown* reading = nullptr;
     BSTR readingText = nullptr;
-    BSTR description = nullptr;
-    GUID guid;
     UINT count = 0;
+    BSTR description = nullptr;
+    IUnknown* reading = nullptr;
+    IUnknown* candidates = nullptr;
+    GUID guid;
     auto* manager = *reinterpret_cast<unsigned char**>(self + 8);
     const unsigned mode = *reinterpret_cast<unsigned*>(manager + 0x98);
     if (((mode - 0x1000000) & 0xfeffffff) == 0) return 0;
@@ -6652,14 +6660,14 @@ unsigned long long FUN_1423db0c0(long long raw, unsigned message)
             unsigned char* owner = *reinterpret_cast<unsigned char**>(self + 8);
             const unsigned state = *reinterpret_cast<unsigned*>(owner + 0x98);
             const int vertical = (state == 0xd00001 || state == 5) ? 0 : 1;
-            Scaleform::GFx::Value args[2];
-            args[0] = Scaleform::GFx::Value(10.0);
-            args[1] = Scaleform::GFx::Value(static_cast<double>(vertical));
+            Ime01ValueArgs args;
             Scaleform::GFx::Value result;
+            Ime01PushArgCall(args, Scaleform::GFx::Value(10.0));
+            Ime01PushArgCall(args, Scaleform::GFx::Value(static_cast<double>(vertical)));
             if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(
                     *reinterpret_cast<unsigned char**>(self + 8) + 0xa8) + 0x18))
                 reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
-                    bridge, "CreateList", &result, args, 2);
+                    bridge, "CreateList", &result, args.data, 2);
             {
                 void* stateOwner = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 8) + 8);
                 Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime = reinterpret_cast<Scaleform::GFx::StateBag*>(
