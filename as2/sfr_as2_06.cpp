@@ -1587,40 +1587,90 @@ void MouseCtorFunction::LocalInvokeCallback::Invoke(Environment* penv, ObjectInt
     }
 }
 
-// MS2-FUNCTIONAL event compare folding and FunctionRef temporary scheduling
+struct MouseLocalFrameInlineTag {};
+
+// FunctionRefBase::SetLocalFrame (exe 0x142981e70), expanded in place as the exe has it in PushListenersParams.
+static SF_FORCEINLINE void MouseFunctionRefSetLocalFrame(FunctionRefBase* p, LocalFrame* localFrame, bool weakRef)
+{
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->Release();
+    p->pLocalFrame = localFrame;
+    if (weakRef)
+        p->Flags |= FunctionRefBase::FuncRef_Weak;
+    else
+        p->Flags &= ~FunctionRefBase::FuncRef_Weak;
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->AddRef();
+}
+
+// FunctionRefBase::Init(orig) with the SetLocalFrame call expanded.
+template<>
+SF_FORCEINLINE FunctionRef::FunctionRef(const FunctionRefBase& orig, MouseLocalFrameInlineTag)
+{
+    Flags    = 0;
+    Function = orig.Function;
+    if (!(Flags & FuncRef_Internal) && Function)
+        Function->AddRef();
+    pLocalFrame = 0;
+    if (orig.pLocalFrame)
+        MouseFunctionRefSetLocalFrame(this, orig.pLocalFrame, (orig.Flags & FuncRef_Weak) != 0);
+}
+
+// Value::ToFunction as the SDK writes it (a switch), with the copy above.
+struct MouseValueAccess : Value
+{
+    using Value::ResolveFunctionName;
+};
+static SF_FORCEINLINE FunctionRef MouseValueToFunction(const Value& v, const Environment* penv)
+{
+    switch (v.GetType())
+    {
+    case Value::FUNCTIONNAME:
+        return static_cast<const MouseValueAccess&>(v).ResolveFunctionName(penv);
+    case Value::FUNCTION:
+        return FunctionRef(v.V.FunctionValue, MouseLocalFrameInlineTag());
+    default:;
+    }
+    return FunctionRef();
+}
+
+// The SDK body: the switch on the event, ToFunction with SetLocalFrame expanded, in-place pushes.
 // @0x142971d70
 int MouseCtorFunction::PushListenersParams(Environment* penv, unsigned mouseIndex, ASBuiltinType eventName,
                                            const Value& method, const ASString* ptargetName, unsigned button,
                                            int delta, bool dblClick)
 {
-    int  nargs     = 0;
     // Without extensions (or for a method taking no arguments) only the standard arguments.
     bool noExtArgs = !penv->CheckExtensions();
-    if (penv->CheckExtensions() && button != 0 &&
+    if (penv->CheckExtensions() && button > 0 &&
         (eventName == ASBuiltin_onMouseDown || eventName == ASBuiltin_onMouseUp))
     {
         // An extended button other than the left one only reaches methods that declare arguments.
-        FunctionRef func = method.ToFunction(penv);
-        if (func.IsNull())
-            return -1;
-        if (func->GetNumArgs() <= 0)
+        FunctionRef func = MouseValueToFunction(method, penv);
+        if (!func.IsNull())
         {
-            if (button > 1)
-                return -1;
-            noExtArgs = true;
+            if (func->GetNumArgs() <= 0)
+            {
+                if (button > 1)
+                    return -1;
+                noExtArgs = true;
+            }
         }
+        else
+            return -1;
     }
+    int nargs = 0;
     if (penv->CheckExtensions() && !noExtArgs)
     {
         if (eventName == ASBuiltin_onMouseDown && dblClick)
         {
             penv->Push(dblClick);
-            nargs = 1;
+            ++nargs;
         }
         Render::PointF pos = GetMovieMouseState(penv->GetTarget()->GetMovieImpl(), mouseIndex)->GetLastPosition();
         penv->Push(Number(Render::TwipsToPixels(floor(pos.y + 0.5))));
         penv->Push(Number(Render::TwipsToPixels(floor(pos.x + 0.5))));
-        penv->Push(Value((int)mouseIndex));
+        penv->Push((int)mouseIndex);
         nargs += 3;
     }
     if (eventName != ASBuiltin_onMouseMove)
@@ -1630,29 +1680,35 @@ int MouseCtorFunction::PushListenersParams(Environment* penv, unsigned mouseInde
             penv->Push(*ptargetName);
             ++nargs;
         }
-        else if (nargs)
+        else if (nargs > 0)
         {
-            penv->Push(Value(Value::NULLTYPE));
+            penv->Push(Value::NULLTYPE);
             ++nargs;
         }
     }
-    if (eventName == ASBuiltin_onMouseDown || eventName == ASBuiltin_onMouseUp)
+    switch (eventName)
     {
+    case ASBuiltin_onMouseWheel:
+        penv->Push(delta);
+        ++nargs;
+        break;
+    case ASBuiltin_onMouseDown:
+    case ASBuiltin_onMouseUp:
         if (button && !noExtArgs)
         {
             penv->Push(Number(button));
             ++nargs;
         }
-        else if (nargs)
+        else if (nargs > 0)
         {
-            penv->Push(Value(Value::NULLTYPE));
+            penv->Push(Value::NULLTYPE);
             ++nargs;
         }
-    }
-    else if (eventName == ASBuiltin_onMouseWheel)
-    {
-        penv->Push(Value(delta));
-        ++nargs;
+        break;
+    case ASBuiltin_onMouseMove:
+        break;
+    default:
+        break;
     }
     return nargs;
 }
