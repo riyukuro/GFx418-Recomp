@@ -5680,36 +5680,33 @@ UPInt Sfr31ResolveClassTraits(UPInt vmAddr, UPInt link, UPInt entry)
 }
 // ---- batch 44
 // setsuper: pops the value and the object, then stores through the parent traits' fixed slot or raises a ReferenceError.
-// MS2-FUNCTIONAL 0x142540490: raw-offset model; codegen differs from the exe
+// The exe inlines SetSuperProperty (0x14252a150) here.
+static __forceinline CheckResult Sfr31SetSuperPropertyInl(VM& vm, const Traits* tr, const Value& obj, const Multiname& mn, const Value& v)
+{
+    if (tr == 0)
+        tr = &vm.GetValueTraits(obj);
+    const Traits* parent = tr->GetParent();
+    if (parent != 0)
+    {
+        UPInt ind = 0;
+        const SlotInfo* si = FindFixedSlot(vm, *parent, mn, ind, 0);
+        char res;
+        return CheckResult(si != 0 && *Sfr27SlotSetValueThis(si, &res, &vm, &v, &obj, static_cast<VTable*>(FUN_14250fa80(parent))) != 0);
+    }
+    return false;
+}
+// MS2-FUNCTIONAL 0x142540490: 716 B vs the exe 696; the exe puts both Error temps above the reader (ours below it, frame 0xe0 vs 0xd0), keeps zero in r14 and lays the tail out differently
 // @0x142540490
 void Sfr31ExecSetSuper(UPInt vmAddr, UPInt file, UInt32 idx)
 {
-    const UPInt cvm = Sfr31Rd(file, 0x20);
-    Sfr31ExecMnCtx ctx = {cvm, cvm + 0x48, file};
-    Sfr31RawTraitsVal val;
-    Sfr31TakeTop(cvm, val);
-    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
-    FUN_1425201f0(&ctx, &mn);
-    const UPInt st = Sfr31Rd(ctx.stack, 8);
-    Sfr31RawTraitsVal obj;
-    for (int i = 0; i < 8; ++i)
-        reinterpret_cast<UInt32*>(&obj)[i] = reinterpret_cast<const UInt32*>(st)[i];
-    Sfr31Wr(ctx.stack, 8, st - 0x20);
-    Sfr31ThrowIfNullOperand(cvm, reinterpret_cast<const UInt32*>(&obj));
-    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
-    {
-        const UPInt n = Sfr31Rd(vmAddr, 0x78) - 1;
-        const UPInt frame = Sfr31Rd(Sfr31Rd(vmAddr, 0x90), (n >> 6) * 8) + 0x40 + (n & 0x3f) * 0xa8;
-        UPInt tr = Sfr31Rd(frame, 0);
-        VM& vm = *reinterpret_cast<VM*>(vmAddr);
-        if (!SetSuperProperty(vm, reinterpret_cast<const Traits*>(tr), *reinterpret_cast<const Value*>(&obj), mn, *reinterpret_cast<const Value*>(&val)))
-        {
-            VM::Error e(static_cast<VM::ErrorID>(0x40b), vm);
-            vm.ThrowReferenceError(e);
-        }
-    }
-    reinterpret_cast<Value*>(&obj)->~Value();
-    reinterpret_cast<Value*>(&val)->~Value();
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    Sfr31ExecReadValueMnObject args(file, idx);
+    if (vm.IsException())
+        return;
+    const UPInt n = Sfr31Rd(vmAddr, 0x78) - 1;
+    const Traits* ot = *reinterpret_cast<const Traits* const*>(Sfr31Rd(Sfr31Rd(vmAddr, 0x90), (n >> 6) * 8) + 0x40 + (n & 0x3f) * 0xa8);
+    if (!Sfr31SetSuperPropertyInl(vm, ot, args.ArgObject, args.ArgMN.Get(), args.ArgValue))
+        vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x40b), vm, *reinterpret_cast<const Value*>(&args.ArgMN.w2)));
 }
 // ---- batch 45
 // Native with a required object argument: the current frame's parent-traits helper is invoked with the remaining arguments.
