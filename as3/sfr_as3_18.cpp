@@ -588,6 +588,7 @@ struct ValueAssignCopies
         if (&other != &v)
         {
             v.Release();
+            SIMD::PrefetchObj(&other);
             memcpy(&v, &other, sizeof(Value));
             v.AddRef();
         }
@@ -7890,8 +7891,8 @@ namespace AS3 {
 
 // ObjectInterface::InvokeClosure: a closure of the AS3 object (a VTable index closure when bit 1 of pdata is set,
 // with dataAux its index, else a thunk closure of the thunk dataAux) called on it with the host's arguments.
-// MS2-FUNCTIONAL: body differs from the exe (the exe shares one AddRef tail between the two closure ctors, and its
-// inlined Value dtors test the weak-ref bit another way)
+// MS2-FUNCTIONAL: the exe schedules asfn's init stores before asresult's, and its inlined Value dtor (the in-TU
+// ReleaseInternal) merges the two closure cases' tail, testing the weak-ref bit on the loaded pointer
 // @0x142513920
 bool AS3ValueObjectInterface::InvokeClosure(void* pdata, UPInt dataAux, GFx::Value* presult, const GFx::Value* pargs,
                                       UPInt nargs)
@@ -7905,7 +7906,7 @@ bool AS3ValueObjectInterface::InvokeClosure(void* pdata, UPInt dataAux, GFx::Val
     int        closureType = (reinterpret_cast<UPInt>(pdata) & 2) ? 1 : 0;
     Object*    pobj = reinterpret_cast<Object*>(reinterpret_cast<UPInt>(pdata) & ~UPInt(2));
     if (closureType)
-        ValueAssignCopies::AssignInline18(asfn, Value(pobj, SInt32(dataAux), false));   // VTableIndClosure
+        ValueAssignCopies::AssignInline18(asfn, Value(pobj, SInt32(dataAux)));   // VTableIndClosure
     else
         ValueAssignCopies::AssignInline18(asfn, Value(pobj, *reinterpret_cast<const ThunkInfo*>(dataAux)));   // ThunkClosure
     if (nargs)
