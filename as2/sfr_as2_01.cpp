@@ -1378,7 +1378,6 @@ void GAS_GlobalGetIMECandidateListStyle(const FnCall& fn)
 // Global setIMECandidateListStyle(object): the numeric members of the object become the style.
 // The exe sets each reading-window flag before storing the value.
 // @0x1428f9f50
-// MS2-FUNCTIONAL the exe schedules the style/val init stores inside holder's AddRef (48 bytes)
 void GAS_GlobalSetIMECandidateListStyle(const FnCall& fn)
 {
     if (fn.NArgs < 1)
@@ -1386,74 +1385,73 @@ void GAS_GlobalSetIMECandidateListStyle(const FnCall& fn)
     Ptr<IMEManagerBase> pime = fn.Env->GetTarget()->GetMovieImpl()->GetIMEManager();
     if (!pime)
         return;
-    Object* pobjArg = fn.Arg(0).ToObject(fn.Env);
-    if (!pobjArg)
-        return;
-    Ptr<Object>         holder = pobjArg;
-    IMECandidateListStyle style;
-    Value               val;
-    ObjectInterface*    pobj = pobjArg;
-    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("textColor"), &val))
+    Ptr<Object> pobj = fn.Arg(0).ToObject(fn.Env);
+    if (pobj)
     {
-        Number n = val.ToNumber(fn.Env);
-        if (!NumberUtil::IsNaNOrInfinity(n))
-            style.SetTextColor((UInt32)(SInt64)n);
+        IMECandidateListStyle style;
+        Value                 val;
+        if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("textColor"), &val))
+        {
+            Number n = val.ToNumber(fn.Env);
+            if (!NumberUtil::IsNaNOrInfinity(n))
+                style.SetTextColor((UInt32)(SInt64)n);
+        }
+        if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("backgroundColor"), &val))
+        {
+            Number n = val.ToNumber(fn.Env);
+            if (!NumberUtil::IsNaNOrInfinity(n))
+                style.SetBackgroundColor((UInt32)(SInt64)n);
+        }
+        if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("indexBackgroundColor"), &val))
+        {
+            Number n = val.ToNumber(fn.Env);
+            if (!NumberUtil::IsNaNOrInfinity(n))
+                style.SetIndexBackgroundColor((UInt32)(SInt64)n);
+        }
+        if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("selectedTextColor"), &val))
+        {
+            Number n = val.ToNumber(fn.Env);
+            if (!NumberUtil::IsNaNOrInfinity(n))
+                style.SetSelectedTextColor((UInt32)(SInt64)n);
+        }
+        if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("selectedTextBackgroundColor"), &val))
+        {
+            Number n = val.ToNumber(fn.Env);
+            if (!NumberUtil::IsNaNOrInfinity(n))
+                style.SetSelectedBackgroundColor((UInt32)(SInt64)n);
+        }
+        if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("selectedIndexBackgroundColor"), &val))
+        {
+            Number n = val.ToNumber(fn.Env);
+            if (!NumberUtil::IsNaNOrInfinity(n))
+                style.SetSelectedIndexBackgroundColor((UInt32)(SInt64)n);
+        }
+        if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("fontSize"), &val))
+        {
+            Number n = val.ToNumber(fn.Env);
+            if (!NumberUtil::IsNaNOrInfinity(n))
+                style.SetFontSize((UInt32)(SInt64)n);
+        }
+        if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("readingWindowTextColor"), &val))
+        {
+            Number n = val.ToNumber(fn.Env);
+            if (!NumberUtil::IsNaNOrInfinity(n))
+                { style.Flags |= IMECandidateListStyle::Flag_ReadingWindowTextColor; style.ReadingWindowTextColor = (UInt32)(SInt64)n; }
+        }
+        if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("readingWindowBackgroundColor"), &val))
+        {
+            Number n = val.ToNumber(fn.Env);
+            if (!NumberUtil::IsNaNOrInfinity(n))
+                { style.Flags |= IMECandidateListStyle::Flag_ReadingWindowBackgroundColor; style.ReadingWindowBackgroundColor = (UInt32)(SInt64)n; }
+        }
+        if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("readingWindowFontSize"), &val))
+        {
+            Number n = val.ToNumber(fn.Env);
+            if (!NumberUtil::IsNaNOrInfinity(n))
+                { style.Flags |= IMECandidateListStyle::Flag_ReadingWindowFontSize; style.ReadingWindowFontSize = (UInt32)(SInt64)n; }
+        }
+        pime->SetCandidateListStyle(style);
     }
-    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("backgroundColor"), &val))
-    {
-        Number n = val.ToNumber(fn.Env);
-        if (!NumberUtil::IsNaNOrInfinity(n))
-            style.SetBackgroundColor((UInt32)(SInt64)n);
-    }
-    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("indexBackgroundColor"), &val))
-    {
-        Number n = val.ToNumber(fn.Env);
-        if (!NumberUtil::IsNaNOrInfinity(n))
-            style.SetIndexBackgroundColor((UInt32)(SInt64)n);
-    }
-    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("selectedTextColor"), &val))
-    {
-        Number n = val.ToNumber(fn.Env);
-        if (!NumberUtil::IsNaNOrInfinity(n))
-            style.SetSelectedTextColor((UInt32)(SInt64)n);
-    }
-    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("selectedTextBackgroundColor"), &val))
-    {
-        Number n = val.ToNumber(fn.Env);
-        if (!NumberUtil::IsNaNOrInfinity(n))
-            style.SetSelectedBackgroundColor((UInt32)(SInt64)n);
-    }
-    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("selectedIndexBackgroundColor"), &val))
-    {
-        Number n = val.ToNumber(fn.Env);
-        if (!NumberUtil::IsNaNOrInfinity(n))
-            style.SetSelectedIndexBackgroundColor((UInt32)(SInt64)n);
-    }
-    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("fontSize"), &val))
-    {
-        Number n = val.ToNumber(fn.Env);
-        if (!NumberUtil::IsNaNOrInfinity(n))
-            style.SetFontSize((UInt32)(SInt64)n);
-    }
-    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("readingWindowTextColor"), &val))
-    {
-        Number n = val.ToNumber(fn.Env);
-        if (!NumberUtil::IsNaNOrInfinity(n))
-            { style.Flags |= IMECandidateListStyle::Flag_ReadingWindowTextColor; style.ReadingWindowTextColor = (UInt32)(SInt64)n; }
-    }
-    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("readingWindowBackgroundColor"), &val))
-    {
-        Number n = val.ToNumber(fn.Env);
-        if (!NumberUtil::IsNaNOrInfinity(n))
-            { style.Flags |= IMECandidateListStyle::Flag_ReadingWindowBackgroundColor; style.ReadingWindowBackgroundColor = (UInt32)(SInt64)n; }
-    }
-    if (pobj->GetMember(fn.Env, fn.Env->GetSC()->CreateConstString("readingWindowFontSize"), &val))
-    {
-        Number n = val.ToNumber(fn.Env);
-        if (!NumberUtil::IsNaNOrInfinity(n))
-            { style.Flags |= IMECandidateListStyle::Flag_ReadingWindowFontSize; style.ReadingWindowFontSize = (UInt32)(SInt64)n; }
-    }
-    pime->SetCandidateListStyle(style);
 }
 
 // ---- TextField IME composition string styles ----
