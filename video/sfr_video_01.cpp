@@ -301,15 +301,15 @@ void** FUN_1400029f0(void** channel, void* replacement)
 // detaches the sound channel from the stream and tears down the video sound base. The exe clears the channel's
 // back-pointer without a null test, then releases the Ptr member (null-tested).
 // @0x140002ab0
-void FUN_140002ab0(void* stream)
+Scaleform::GFx::Video::VideoSoundStream::~VideoSoundStream()
 {
-    unsigned char* bytes = static_cast<unsigned char*>(stream);
-    *reinterpret_cast<void***>(bytes) = &VideoSoundStreamVtable;
-    void** channelSlot = reinterpret_cast<void**>(bytes + 0x10);
-    *reinterpret_cast<void**>(static_cast<unsigned char*>(*channelSlot) + 0x10) = 0;
-    if (*channelSlot) FUN_14257dcb0(*channelSlot);
-    static_cast<Scaleform::GFx::Video::VideoSound*>(stream)->Scaleform::GFx::Video::VideoSound::~VideoSound();
+    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(pChannel.GetPtr()) + 0x10) = 0;
 }
+//
+//
+//
+//
+//
 
 // the stream's sound channel.
 // @0x140002b00
@@ -318,13 +318,13 @@ Scaleform::Sound::SoundChannel* Scaleform::GFx::Video::VideoSoundStream::GetSoun
 // initializes the refcounted stream and allocates its SoundChannelSystem back-reference; the inlined
 // channel ctor keeps the RefCountImplCore base vftable store, so that store is volatile here.
 // @0x140002e80
-void* FUN_140002e80(void* stream)
+Scaleform::GFx::Video::VideoSoundStream::VideoSoundStream()
 {
-    unsigned char* bytes = static_cast<unsigned char*>(stream);
-    *reinterpret_cast<unsigned*>(bytes + 8) = 1;
-    *reinterpret_cast<void***>(bytes) = &VideoSoundStreamVtable;
+    void* stream = this;
+    unsigned char* bytes = static_cast<unsigned char*>(stream);   // (RefCount 1 at +8, the vftable, the null pChannel:
+    // the base, vptr and member inits)
     void** channelSlot = reinterpret_cast<void**>(bytes + 0x10);
-    *channelSlot = 0;
+//
     void** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
     void* mem = reinterpret_cast<void* (*)(void*, Scaleform::UPInt, const void*)>(heapVtable[10])(Scaleform::Memory::pGlobalHeap, 0x20, 0);
     void* channel;
@@ -340,16 +340,16 @@ void* FUN_140002e80(void* stream)
     }
     if (*channelSlot) FUN_14257dcb0(*channelSlot);
     *channelSlot = channel;
-    return stream;
+//
 }
 
-// FUN_140002e80 / FUN_140002ab0 are VideoSoundStream's ctor and dtor (video_video.h declares the class; its callers
-// use the real names). The hook DLL binds those names to the exe by their symbols rows (a second /alternatename
-// would conflict).
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:??0VideoSoundStream@Video@GFx@Scaleform@@QEAA@XZ=?FUN_140002e80@@YAPEAXPEAX@Z")
-#pragma comment(linker, "/alternatename:??1VideoSoundStream@Video@GFx@Scaleform@@UEAA@XZ=?FUN_140002ab0@@YAXPEAX@Z")
-#endif
+// (0x140002e80 / 0x140002ab0 above are VideoSoundStream's ctor and dtor; video_video.h declares the class.)
+//
+//
+//
+//
+//
+//
 
 #pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
 // stores the ready flag and forwards the state update to the active player.
@@ -4453,3 +4453,4 @@ const char* ObjectInterface::GetTextValue(Environment*) const { return 0; }
 // MS2-PIN: ??_7AvmVideoCharacter@AS2@GFx@Scaleform@@6B@ 0x1431b5b40
 // MS2-PIN: ??_7AvmVideoCharacter@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b5c00
 // MS2-PIN: ??_7AvmVideoCharacter@AS2@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x1431b5cb0
+// MS2-PIN: ??_7VideoSoundStream@Video@GFx@Scaleform@@6B@ 0x1431b4be0
