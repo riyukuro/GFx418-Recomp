@@ -1474,7 +1474,7 @@ bool ShapeMeshProvider::GetData(MeshBase* mesh, VertexOutput* out, unsigned mesh
     return tessellateStroke(s9g, strokeStyle, layer, mesh, out, meshGenFlags);
 }
 
-// MS2-FUNCTIONAL: the inlined inverse of the 9-grid adjustment schedules its products in another order (registers)
+// MS2-FUNCTIONAL: the inlined in-place inverse of the 9-grid adjustment allocates its xmm registers differently
 // @0x14262b560
 void ShapeMeshProvider::GetFillMatrix(MeshBase* mesh, Matrix2F* matrix, unsigned layer, unsigned fillIndex,
                                       unsigned meshGenFlags)
@@ -1503,7 +1503,8 @@ void ShapeMeshProvider::GetFillMatrix(MeshBase* mesh, Matrix2F* matrix, unsigned
         {
             Matrix2F mtx;
             computeImgAdjustMatrix(mesh->GetScale9Grid(), layer, imgFillStyle, &mtx);
-            matrix->Prepend(mtx.GetInverse());
+            mtx.Invert();
+            matrix->Prepend(mtx);
         }
         if (fill->pImage)
         {
