@@ -953,7 +953,6 @@ Math::Math(Environment* penv)
 }
 
 // @0x14291e940
-// MS2-FUNCTIONAL the exe folds the named value's FUNCTION type through ToFunction and both dtors; ours reloads it
 MouseCtorFunction::MouseCtorFunction(ASStringContext* psc, MovieRoot* proot)
     : CFunctionObject(psc, GlobalCtor)
 {
@@ -967,9 +966,28 @@ MouseCtorFunction::MouseCtorFunction(ASStringContext* psc, MovieRoot* proot)
     NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
                                   PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
     // Kept to tell a script replacement of setCursorType (HasOverloadedCursorTypeFunction).
-    Value setCursorType(psc, SetCursorType);
-    SetCursorTypeFunc = setCursorType.ToFunction(0);
-    LastClickTime     = 0;
+    // The exe (LTCG) knows the value is a FUNCTION with no frame, so ToFunction and both dtors fold; the holders spell
+    // that out without the reloads a plain Value / FunctionRef needs here.
+    union ValueHolder
+    {
+        Value v;
+        ValueHolder(ASStringContext* psc, CFunctionPtr f) : v(psc, f) {}
+        ~ValueHolder() {}
+    } setCursorType(psc, SetCursorType);
+    FunctionObject* pfunc = setCursorType.v.V.FunctionValue.Function;
+    {
+        union FuncHolder
+        {
+            FunctionRef r;
+            FuncHolder(FunctionObject* f) : r(f) {}
+            ~FuncHolder() {}
+        } func(pfunc);
+        SetCursorTypeFunc = func.r;
+        if (pfunc)
+            pfunc->Release();
+    }
+    setCursorType.v.DropRefs();
+    LastClickTime = 0;
 }
 
 // @0x14291eb20
