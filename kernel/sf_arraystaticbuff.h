@@ -30,28 +30,29 @@ public:
     T&       operator[](UPInt i)       { return Data[i]; }
     const T& operator[](UPInt i) const { return Data[i]; }
 
-    // the first overflow copies the in-object elements out; later ones double the heap block
+    // the first overflow copies the in-object elements out; later ones double the heap block (SDK body: Size++ in
+    // each store, early return from the in-object path)
     void PushBack(const T& v)
     {
         if (Size < N)
-            Static[Size] = v;
-        else
         {
-            if (Size == N)
-            {
-                Reserved *= 2;
-                Data = (T*)(pHeap ? Memory::AllocInHeap(pHeap, Reserved * sizeof(T))
-                                  : Memory::AllocAutoHeap(this, Reserved * sizeof(T)));
-                memcpy(Data, Static, sizeof(Static));
-            }
-            else if (Size >= Reserved)
-            {
-                Reserved *= 2;
-                Data = (T*)Memory::Realloc(Data, Reserved * sizeof(T));
-            }
-            Data[Size] = v;
+            Static[Size++] = v;
+            return;
         }
-        ++Size;
+        if (Size == N)
+        {
+            Reserved *= 2;
+            Data = (T*)(pHeap ? Memory::AllocInHeap(pHeap, Reserved * sizeof(T))
+                              : Memory::AllocAutoHeap(this, Reserved * sizeof(T)));
+            memcpy(Data, Static, sizeof(Static));
+        }
+        else
+        if (Size >= Reserved)
+        {
+            Reserved *= 2;
+            Data = (T*)Memory::Realloc(Data, Reserved * sizeof(T));
+        }
+        Data[Size++] = v;
     }
 
     void CutAt(UPInt newSize)

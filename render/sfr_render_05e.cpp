@@ -291,7 +291,6 @@ void Scale9GridTess::addCorner(TmpVertices& ver, const float* c, float x, float 
 }
 
 // the vertices of one cell (ver[i1..i2)) are sorted around their centre and emitted as a triangle fan
-// MS2-FUNCTIONAL: register allocation (the array pointer lives in r15 instead of r14); same code otherwise
 // @0x1426947c0
 void Scale9GridTess::tessellateArea(TmpVertices& ver, unsigned i1, unsigned i2)
 {
