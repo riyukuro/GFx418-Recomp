@@ -804,3 +804,9 @@ int VM::ExecuteCode(unsigned max_stack_depth)
 }
 
 }}} // namespace Scaleform::GFx::AS3
+
+// The ReadArgs ctor/dtor the Sfr33Args wrapper above calls out of line, bound by alternatename to the real symbols.
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:?FUN_1424d9530@@YAXPEAXPEAVVM@AS3@GFx@Scaleform@@K@Z=??0ReadArgs@AS3@GFx@Scaleform@@QEAA@AEAVVM@123@K@Z")
+#pragma comment(linker, "/alternatename:?FUN_1424de9e0@@YAXPEAX@Z=??1ReadArgs@AS3@GFx@Scaleform@@QEAA@XZ")
+#endif

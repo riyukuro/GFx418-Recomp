@@ -4772,3 +4772,10 @@ void SoundTransform::panSet(const Value& result, Value::Number v) { SF_UNUSED(re
 // MS2-PIN: ??_7AvmStaticText@AS3@GFx@Scaleform@@6B@ 0x14317e9b8
 // MS2-PIN: ??_7LoadQueueEntryMT_LoadMovie@AS3@GFx@Scaleform@@6B@ 0x14317d890
 // MS2-PIN: ??0VM@AS3@GFx@Scaleform@@QEAA@AEAVFlashUI@123@AEAVFileLoader@123@AEAVStringManager@123@AEAVASRefCountCollector@123@@Z 0x1424dae90
+
+// The two vftable images the dead-store sequence above writes, bound by alternatename to the real vftables so the
+// fullexe link needs no alias for them.
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:?DAT_142dc9d48@AS3@GFx@Scaleform@@3PAPEBXA=??_7RefCountImplCore@Scaleform@@6B@")
+#pragma comment(linker, "/alternatename:?DAT_14317bde0@AS3@GFx@Scaleform@@3PAPEBXA=??_7ASMovieRootBase@GFx@Scaleform@@6B@")
+#endif
