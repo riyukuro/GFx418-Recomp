@@ -343,7 +343,7 @@ RectF ShapeObject::GetBounds(const Matrix& t) const
 // AvmBitmap::CreateBitmapShape: the shape of the bitmap's tree shape node, a rectangle of the image's size (in
 // twips) filled with the image, smoothed unless the Bitmap object turned smoothing off. Without an image, a unit
 // rectangle with no fill. An image resource that is only an image source gets its image from the image creator.
-// MS2-FUNCTIONAL 0x1424f27b0: the exe calls the shape data's EndPath / EndShape out of line; our header inlines them
+// MS2-FUNCTIONAL 0x1424f27b0: frame layout only: the exe puts the ImageCreateInfo below the ImageRect (cinfo rbp-0x71, irect rbp-0x39)
 // @0x1424f27b0
 bool FUN_1424f27b0(Scaleform::GFx::AS3::AvmBitmap* self)
 {
@@ -351,8 +351,59 @@ bool FUN_1424f27b0(Scaleform::GFx::AS3::AvmBitmap* self)
     using namespace Scaleform::GFx;
     Render::TreeShape* tshp = static_cast<Render::TreeShape*>(self->pRenNode.GetPtr());
     Ptr<Render::ShapeDataFloat> shapeData = *SF_HEAP_AUTO_NEW(self) Render::ShapeDataFloat();
-    Ptr<Render::ComplexFill> complexFill = *SF_HEAP_AUTO_NEW(self) Render::ComplexFill();
-    if (!self->pImage)
+    Render::FillStyleType fill;
+    fill.Color = 0;
+    fill.pFill = *SF_HEAP_AUTO_NEW(self) Render::ComplexFill();
+    if (self->pImage)
+    {
+        Ptr<Render::Image> img;
+        if (self->pImage->GetImage()->GetImageType() != Render::ImageBase::Type_ImageBase)
+            img = static_cast<Render::Image*>(self->pImage->GetImage());
+        else
+        {
+            MovieImpl* pmovie = static_cast<DisplayObjectBase*>(self)->GetMovieImpl();
+            ImageCreator* pcreator = Ptr<ImageCreator>(*(ImageCreator*)pmovie->GetStateBag()->GetStateAddRef(State::State_ImageCreator));
+            if (pcreator)
+            {
+                ImageCreateInfo cinfo(ImageCreateInfo::Create_SourceImage, static_cast<DisplayObjectBase*>(self)->GetMovieImpl()->GetMovieHeap(), 1,
+                                      Resource::Use_Bitmap);
+                img = *pcreator->CreateImage(cinfo, (Render::ImageSource*)self->pImage->GetImage());
+            }
+            else
+            {   LogDebugMessage(Log_Warning, "Image is not created: can't find ImageCreator."); return false; }
+        }
+        fill.pFill->pImage = img;
+        if (!img)
+        {
+            LogDebugMessage(Log_Warning, "Image is not created.");
+            return false;
+        }
+        fill.pFill->ImageMatrix.SetIdentity();
+        fill.pFill->ImageMatrix.AppendScaling(0.05f);
+        fill.pFill->FillMode = Render::ImageFillMode(Render::Wrap_Clamp, Render::Sample_Point);
+        // SDK: GetAS3Obj() is tested, then re-read as GetAS3Bitmap(); smoothing is on by default without an AS3 object
+        if (!self->GetAS3Obj() || static_cast<AS3::Instances::fl_display::Bitmap*>(self->GetAS3Obj())->Smoothing)
+            fill.pFill->FillMode = Render::ImageFillMode(Render::Wrap_Clamp, Render::Sample_Linear);
+        Render::ImageRect irect = img->GetRect();
+        Render::Matrix2F m;
+        img->GetMatrix(&m);
+        RectF r(0);
+        m.EncloseTransform(&r, RectF(float(irect.x1), float(irect.y1), float(irect.x2), float(irect.y2)));
+
+
+        shapeData->AddFillStyle(fill);
+        shapeData->StartPath(1, 0, 0);
+        shapeData->MoveTo(0, 0);
+        shapeData->LineTo(r.Width() * 20.0f, 0);
+        shapeData->LineTo(r.Width() * 20.0f, r.Height() * 20.0f);
+        shapeData->LineTo(0, r.Height() * 20.0f);
+        shapeData->ClosePath();
+        shapeData->EndPath();
+        shapeData->EndShape();
+        Ptr<Render::ShapeMeshProvider> prov = *SF_HEAP_AUTO_NEW(self) Render::ShapeMeshProvider(shapeData);
+        tshp->SetShape(prov);
+    }
+    else
     {
         shapeData->StartPath(0, 0, 0);
         shapeData->MoveTo(0, 0);
@@ -362,58 +413,7 @@ bool FUN_1424f27b0(Scaleform::GFx::AS3::AvmBitmap* self)
         shapeData->EndShape();
         Ptr<Render::ShapeMeshProvider> prov = *SF_HEAP_AUTO_NEW(self) Render::ShapeMeshProvider(shapeData);
         tshp->SetShape(prov);
-        return true;
     }
-
-    Ptr<Render::Image> img;
-    if (self->pImage->GetImage()->GetImageType() != Render::ImageBase::Type_ImageBase)
-        img = static_cast<Render::Image*>(self->pImage->GetImage());
-    else
-    {
-        MovieImpl* pmovie = static_cast<DisplayObjectBase*>(self)->GetMovieImpl();
-        ImageCreator* pcreator = Ptr<ImageCreator>(*(ImageCreator*)pmovie->GetStateBag()->GetStateAddRef(State::State_ImageCreator));
-        if (!pcreator)
-        {
-            LogDebugMessage(Log_Warning, "Image is not created: can't find ImageCreator.");
-            return false;
-        }
-        ImageCreateInfo cinfo(ImageCreateInfo::Create_SourceImage, static_cast<DisplayObjectBase*>(self)->GetMovieImpl()->GetMovieHeap(), 1,
-                              Resource::Use_Bitmap);
-        img = *pcreator->CreateImage(cinfo, (Render::ImageSource*)self->pImage->GetImage());
-    }
-    complexFill->pImage = img;
-    if (!img)
-    {
-        LogDebugMessage(Log_Warning, "Image is not created.");
-        return false;
-    }
-    complexFill->ImageMatrix.SetIdentity();
-    complexFill->ImageMatrix.AppendScaling(0.05f);
-    complexFill->FillMode = Render::ImageFillMode(Render::Wrap_Clamp, Render::Sample_Point);
-    AS3::Instances::fl_display::Bitmap* pbmp = static_cast<AS3::Instances::fl_display::Bitmap*>(self->GetAS3Obj());
-    if (!pbmp || pbmp->Smoothing)
-        complexFill->FillMode = Render::ImageFillMode(Render::Wrap_Clamp, Render::Sample_Linear);
-
-    Render::ImageRect irect = img->GetRect();
-    Render::Matrix2F m;
-    img->GetMatrix(&m);
-    RectF r(0);
-    m.EncloseTransform(&r, RectF(float(irect.x1), float(irect.y1), float(irect.x2), float(irect.y2)));
-
-    Render::FillStyleType fill;
-    fill.Color = 0;
-    fill.pFill = complexFill;
-    shapeData->AddFillStyle(fill);
-    shapeData->StartPath(1, 0, 0);
-    shapeData->MoveTo(0, 0);
-    shapeData->LineTo(r.Width() * 20.0f, 0);
-    shapeData->LineTo(r.Width() * 20.0f, r.Height() * 20.0f);
-    shapeData->LineTo(0, r.Height() * 20.0f);
-    shapeData->ClosePath();
-    shapeData->EndPath();
-    shapeData->EndShape();
-    Ptr<Render::ShapeMeshProvider> prov = *SF_HEAP_AUTO_NEW(self) Render::ShapeMeshProvider(shapeData);
-    tshp->SetShape(prov);
     return true;
 }
 
