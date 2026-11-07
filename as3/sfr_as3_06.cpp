@@ -2695,7 +2695,6 @@ void FUN_142440e50(Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameS
 }
 
 // A Scene object standing for the whole clip (no scene table): an unreferenced MovieClip helper.
-// MS2-FUNCTIONAL: written from the exe's control flow
 // @0x142440f80
 Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_display::Scene>
 Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FUN_142440f80()

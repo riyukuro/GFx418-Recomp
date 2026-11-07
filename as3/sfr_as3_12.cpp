@@ -2321,7 +2321,6 @@ void ASSharedObjectLoader::Begin()
 }
 #pragma inline_depth()
 
-// MS2-FUNCTIONAL: register allocation of the name length/data around String::GetLength differs
 // @0x142499e80
 void ASSharedObjectLoader::PushObject(const String& name)
 {
@@ -2337,7 +2336,6 @@ void ASSharedObjectLoader::PushObject(const String& name)
     ObjectStack.PushBack(pobj);
 }
 
-// MS2-FUNCTIONAL: register allocation of the name length/data around String::GetLength differs
 // @0x142499c20
 void ASSharedObjectLoader::PushArray(const String& name)
 {
