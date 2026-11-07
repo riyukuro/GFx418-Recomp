@@ -23,6 +23,7 @@
 // MapImageSource into mapTextureRT, mapTextureRT into updateStagingTargetRT).
 #define MS2_SF_NOINL __declspec(noinline)
 
+namespace Scaleform { template <> void ArrayDataBase<Render::FillStyleType, AllocatorLH<Render::FillStyleType, 2>, ArrayDefaultPolicy>::ResizeNoConstruct(const void*, UPInt); }
 namespace Scaleform { namespace Render {
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -379,7 +380,8 @@ __declspec(noinline) bool FUN_1425eae70(TreeContainer* container, TreeNode* node
     return container->Insert(container->GetReadOnlyData()->Children.GetSize(), node);
 }
 
-// MS2-FUNCTIONAL: the exe also inlines ShapeDataFloatTempl::MoveTo in RectanglePath (ours calls it; render_shapedata.h) and grows the fill array through ResizeNoConstruct
+// MS2-FUNCTIONAL: same code (MoveTo inlined in RectanglePath, the fill array grown through the out-of-line ResizeNoConstruct),
+// the exe keeps the clipRect/cxform params in frame slots and places the second byte-array growth block in line
 // @0x1425eb8c0
 #pragma strict_gs_check(push, on)
 void DrawableImage::Draw(Image* source, const Matrix2F& matrix, const Cxform& cxform, BlendMode blendMode,
@@ -400,7 +402,6 @@ void DrawableImage::Draw(Image* source, const Matrix2F& matrix, const Cxform& cx
     fill.Color = 0;
     fill.pFill = *SF_NEW ComplexFill();
     fill.pFill->pImage    = source;
-    fill.pFill->BindIndex = ~0u;
 
     Ptr<ShapeDataFloatMP> shapeData = *SF_NEW ShapeDataFloatMP();
     shapeData->AddFillStyle(fill);
@@ -1048,6 +1049,26 @@ void DrawableImageContext::processTreeRootKillList()
 }
 
 }} // namespace Scaleform::Render
+
+// ArrayDataBase<FillStyleType, AllocatorLH>::ResizeNoConstruct (0x1425eec50): the body of the specialization declared
+// at the top, so Draw calls it out of line as the exe does and this unit still emits the copy (sf_array.h body).
+namespace Scaleform {
+template <> inline SF_NOINLINE void ArrayDataBase<Render::FillStyleType, AllocatorLH<Render::FillStyleType, 2>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize)
+{
+    UPInt oldSize = Size;
+    if (newSize < oldSize)
+    {
+        AllocatorLH<Render::FillStyleType, 2>::DestructArray(Data + newSize, oldSize - newSize);
+        if (newSize < (Policy.GetCapacity() >> 1))
+            Reserve(pheapAddr, newSize);
+    }
+    else if (newSize >= Policy.GetCapacity())
+    {
+        Reserve(pheapAddr, newSize + (newSize >> 2));
+    }
+    Size = newSize;
+}
+} // namespace Scaleform
 // The DICommand_SourceRect clip helper's out-of-line copy (inline virtual, render_drawableimage.h), linked after Unmap.
 // MS2-PIN: ?UpdateClippedRects@DICommand_SourceRect@Render@Scaleform@@UEAAXXZ 0x1425ef3d0
 // MS2-PIN: ??_7DICommand@Render@Scaleform@@6B@ 0x14318ce80

@@ -38,7 +38,7 @@ public:
     // (the exe always inlines it: DrawableImage::Draw 0x1425eb8c0 tests the start and last points inline)
     __forceinline void RectanglePath(float x1, float y1, float x2, float y2)
     {
-        pData->MoveTo(x1, y1);
+        pData->MoveToInl(x1, y1);
         pData->LineTo(x2, y1);
         pData->LineTo(x2, y2);
         pData->LineTo(x1, y2);

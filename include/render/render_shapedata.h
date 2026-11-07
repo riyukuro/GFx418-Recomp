@@ -327,6 +327,18 @@ public:
         LastY  = y;
         Status = Status_MoveTo;
     }
+    // MoveTo as the exe inlines it in ShapeDataFloatMP::RectanglePath (DrawableImage::Draw 0x1425eb8c0): the SDK body,
+    // Status stored before the points; cl 19.16 keeps MoveTo itself out of line there
+    __forceinline void MoveToInl(float x, float y)
+    {
+        PathDataEncoder<ContainerType> encoder(*Data);
+        encoder.WriteChar(Tag_MoveTo);
+        encoder.WriteFloat(x);
+        encoder.WriteFloat(y);
+        Status = Status_MoveTo;
+        StartX = x; StartY = y;
+        LastX = x; LastY = y;
+    }
     void LineTo(float x, float y)
     {
         PathDataEncoder<ContainerType> encoder(*Data);
