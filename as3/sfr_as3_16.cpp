@@ -1524,10 +1524,9 @@ void Traits::Add2StoredScopeStack(const Value& o)
     InitScope.PushBack(o);
 }
 
-// MS2-FUNCTIONAL: SDK body (new_bt reused for the GetNewBT result, empty getter/setter else-if). What is left: the
-// exe keeps the name temp's node in a saved register across SetMethod and AddMethod (its SCU knew they leave the
-// temp alone; SetMethod is out of line in another unit here). VTable::AddMethod is SF_NOINLINE below: the exe
-// calls it.
+// MS2-FUNCTIONAL: SDK body (new_bt reused for the GetNewBT result, empty getter/setter else-if); the name temp is a
+// separate node copy so its release uses the saved register, as in the exe. What is left: one arg move scheduled
+// before the temp store in each branch. VTable::AddMethod is SF_NOINLINE below: the exe calls it.
 // @0x1424e5510
 void Traits::Add2VT(SlotInfo& si, const Value& v, SlotInfo::BindingType new_bt)
 {
@@ -1547,14 +1546,24 @@ void Traits::Add2VT(SlotInfo& si, const Value& v, SlotInfo::BindingType new_bt)
         {
         }
 
-        vt.SetMethod(method_ind, v, new_bt, ASString(si.Name.GetPtr()));
+        {
+            ASStringNode* const node = si.Name.GetPtr();
+            ASStringNode* tmp = node;
+            node->AddRef();
+            vt.SetMethod(method_ind, v, new_bt, *reinterpret_cast<const ASString*>(&tmp));
+            node->Release();
+        }
 
         new_bt = GetNewBT(bt, new_bt);
         if (new_bt != bt)
             si.Bind(new_bt, method_ind);
     } else
     {
-        si.Bind(new_bt, vt.AddMethod(v, new_bt, ASString(si.Name.GetPtr())));
+        ASStringNode* const node = si.Name.GetPtr();
+        ASStringNode* tmp = node;
+        node->AddRef();
+        si.Bind(new_bt, vt.AddMethod(v, new_bt, *reinterpret_cast<const ASString*>(&tmp)));
+        node->Release();
     }
 }
 
