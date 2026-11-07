@@ -5004,16 +5004,16 @@ void FUN_1424187f0(Instances::fl::GlobalObjectScript* self)
 
 // ClassTraits::UserDefined: resolves the super class (initializing it first), makes the instance traits, then the
 // class's static slots
-// MS2-FUNCTIONAL: written from the exe on raw offsets; the exe inlines FUN_142417000
+// MS2-FUNCTIONAL: written from the exe on raw offsets. Same calls (FUN_142417000 inlined); the exe keeps 0 in rbp
+// across the body, shrink-wraps the r15 save into the super-class lookup and gives each return its own epilogue,
+// ours saves r15 in the prolog and shares one tail (571 vs 615 bytes)
 // @0x142418970
 CheckResult ClassTraits::Traits::FUN_142418970()
 {
     ClassTraits::Traits* self = this;
     ClassTraits::Traits* parent = FUN_142417000(*(VMAbcFile**)((char*)self + 0xc8), *(const char**)((char*)self + 0xd0));
-    VMAbcFile* file = *(VMAbcFile**)((char*)self + 0xc8);
-    const char* ci = *(const char**)((char*)self + 0xd0);
-    VM& vm = self->GetVM();
-    if (vm.IsException())
+    // the VM, the file (+0xc8) and the class info (+0xd0) are read from the traits at each use
+    if (self->GetVM().IsException())
         return false;
     SPtr<const Scaleform::GFx::AS3::Traits>& pparent = *(SPtr<const Scaleform::GFx::AS3::Traits>*)((char*)self + 0x88);
     if (!pparent && parent)
@@ -5026,20 +5026,24 @@ CheckResult ClassTraits::Traits::FUN_142418970()
         if (!*(void**)((char*)parent + 0xc0))
         {
             parent->FUN_142418970();
-            if (vm.IsException())
+            if (self->GetVM().IsException())
                 return false;
         }
         parent_itr = *(InstanceTraits::Traits**)((char*)parent + 0xc0);
     }
-    void* mem = vm.GetMemoryHeap()->Alloc(0xe0);
-    InstanceTraits::Traits* itr = mem ? (static_cast<InstanceTraits::UserDefined*>(mem)->UserDefined::UserDefined(*file, parent_itr, *reinterpret_cast<const AS3::Abc::ClassInfo*>(ci)), static_cast<InstanceTraits::Traits*>(mem)) : NULL;
+    void* mem = self->GetVM().GetMemoryHeap()->Alloc(0xe0);
+    InstanceTraits::Traits* itr = NULL;
+    if (mem)
+        itr = (static_cast<InstanceTraits::UserDefined*>(mem)->UserDefined::UserDefined(**(VMAbcFile**)((char*)self + 0xc8), parent_itr, **reinterpret_cast<const AS3::Abc::ClassInfo**>((char*)self + 0xd0)), static_cast<InstanceTraits::Traits*>(mem));
     self->SetInstanceTraits(Pickable<InstanceTraits::Traits>(itr));
-    if (vm.IsException())
+    if (self->GetVM().IsException())
         return false;
+    VMAbcFile* file = *(VMAbcFile**)((char*)self + 0xc8);
+    const char* ci = *(const char**)((char*)self + 0xd0);
     if (!self->AddSlots(*(const Scaleform::GFx::AS3::Abc::HasTraits*)(ci + 0x48), *file, self->GetFixedMemSize()))
         return false;
-    if (*(const Scaleform::UInt8*)(ci + 0x20) & 4)
-        AS3::Sfr21AddInterfaceSlots(self, *file, *reinterpret_cast<const AS3::Abc::ClassInfo*>(ci));
+    if (*(const Scaleform::UInt8*)(*(const char**)((char*)self + 0xd0) + 0x20) & 4)
+        AS3::Sfr21AddInterfaceSlots(self, **(VMAbcFile**)((char*)self + 0xc8), **reinterpret_cast<const AS3::Abc::ClassInfo**>((char*)self + 0xd0));
     return true;
 }
 // ClassTraits::UserDefined::RegisterSlots: the class's static slots (after the Classes::UserDefined object), then the
