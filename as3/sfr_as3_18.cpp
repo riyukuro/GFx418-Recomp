@@ -1853,6 +1853,7 @@ __declspec(safebuffers) CheckResult Tracer::MergeValues(UPInt ind, TR::State& to
     const Value& fv = (*from_list)[ind];
     const Traits* t1 = TR::TraceValueTraits(*this, tv);
     const Traits* t2 = TR::TraceValueTraits(*this, fv);
+    bool found = false;
 
     if (ms == TR::msScopeStack)
     {
@@ -1907,7 +1908,6 @@ __declspec(safebuffers) CheckResult Tracer::MergeValues(UPInt ind, TR::State& to
                     for (const Traits* t = t1; t != NULL; t = t->GetParent())
                         t->Flags |= Traits::TmpBitMask;
                     // bit 7 = TmpBitMask, bit 5 = IsClassTraits(); the unsigned byte shifts give the exe's shr
-                    bool found;
                     [&] {
                         for (const Traits* t = t2; t != NULL; t = t->GetParent())
                         {
@@ -1923,7 +1923,6 @@ __declspec(safebuffers) CheckResult Tracer::MergeValues(UPInt ind, TR::State& to
                                 return;
                             }
                         }
-                        found = false;
                     }();
                     for (const Traits* t = t1; t != NULL; t = t->GetParent())
                         t->Flags &= ~static_cast<SPInt>(Traits::TmpBitMask);
