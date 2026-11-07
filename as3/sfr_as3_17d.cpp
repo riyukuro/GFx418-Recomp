@@ -699,7 +699,27 @@ AvmInteractiveObj* FUN_1424f4000(MovieRoot* proot, MovieDefImpl* pmovieDef)
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
-// MS2-FUNCTIONAL 0x1424fe620: written from the exe's control flow (register allocation and the inlined LoaderInfo content assignment differ)
+// SPtr<T>::SetPtr written out: the exe inlines LoaderInfo::Content's assignment in ExecuteFrame0Events.
+template <class T>
+static SF_FORCEINLINE void Sfr17dSetSPtr(SPtr<T>& sp, T* p)
+{
+    T*& raw = sp.GetRawRef();
+    if (p != raw)
+    {
+        if (raw)
+        {
+            if ((UPInt)raw & 1)
+                raw = (T*)((UPInt)raw - 1);
+            else
+                raw->Release();
+        }
+        if (p)
+            p->AddRef();
+        raw = p;
+    }
+}
+
+// MS2-FUNCTIONAL 0x1424fe620: written from the exe's control flow (register allocation differs: the exe keeps root in r14, the stage in r15)
 // @0x1424fe620
 // Builds the root movie ("root1") on the stage, gives it its LoaderInfo, runs frame 0 and the constructors it queued.
 void Stage::ExecuteFrame0Events()
@@ -715,14 +735,14 @@ void Stage::ExecuteFrame0Events()
     root->InteractiveObject::Flags |= InteractiveObject::Mask_MouseDisabled;
     if (root->HasAvmObject())
         root->GetAvmSprite()->ExecuteInitActionFrameTags(0);
-    root->SetName(ASString(GetStringManager()->CreateConstString("root1")));
+    root->SetName(ASString(GetMovieImpl()->pASMovieRoot->GetStringManager()->CreateConstString("root1")));
 
     pRoot = root;
     SetFOV(55.0);
     root->SetFOV(55.0);
     Ptr<Render::TreeContainer> node = GetRenderContainer();
-    mDisplayList.AddEntryAtIndex(this, mDisplayList.GetCount(), root);
-    static_cast<Render::TreeContainer*>(pmovie->pRenderRoot)->Insert(0, node);
+    mDisplayList.AddEntryAtIndex(this, (unsigned)mDisplayList.GetCount(), root);
+    static_cast<Render::TreeContainer*>(GetMovieImpl()->pRenderRoot)->Insert(0, node);
     root->pParent = this;
     root->AddToPlayList();
 
@@ -736,17 +756,18 @@ void Stage::ExecuteFrame0Events()
         SPtr<Instances::fl_display::LoaderInfo> li;
         if (static_cast<ASVM&>(vm)._constructInstance(reinterpret_cast<SPtr<Object>&>(li), cls, 0, NULL))
         {
-            if (Instances::fl_display::DisplayObject* pas3obj = ToAvmDisplayObj(root)->GetAS3Obj())
+            if (ToAvmDisplayObj(root)->pAS3RawPtr || ToAvmDisplayObj(root)->pAS3CollectiblePtr)
             {
-                pas3obj->SetLoaderInfo(li);
-                li->Content = ToAvmDisplayObj(root)->GetAS3Obj();
+                ToAvmDisplayObj(root)->GetAS3Obj()->SetLoaderInfo(li);
+                Sfr17dSetSPtr(li->Content, ToAvmDisplayObj(root)->GetAS3Obj());
             }
         }
     }
 
     root->ExecuteFrame0Events();
-    as3root->ExecuteActionQueue(MovieRoot::AL_Highest);
-    as3root->ExecuteActionQueue(MovieRoot::AL_High);
+    static_cast<MovieRoot*>(GetMovieImpl()->pASMovieRoot)->ExecuteActionQueue(MovieRoot::AL_Highest);
+    static_cast<MovieRoot*>(GetMovieImpl()->pASMovieRoot)->ExecuteActionQueue(MovieRoot::AL_High);
+    void (Value::*setUndefined)() = &Value::SetUndefined;
     while (unsigned n = as3root->ASFramesToExecute)
     {
         as3root->ASFramesToExecute = 0;
@@ -756,14 +777,14 @@ void Stage::ExecuteFrame0Events()
         {
             avm.HandleException = false;
             avm.OutputError(avm.ExceptionObj);
-            avm.ExceptionObj.SetUndefined();
+            (avm.ExceptionObj.*setUndefined)();
             FrameCounterObj->DisplayObject::Flags |= DisplayObject::Mask_ExecutionAborted;
         }
     }
     ToAvmDisplayObj(root)->OnAdded(true);
-    pmovie->Flags |= MovieImpl::Flag_OptAdvListInvalid;
+    GetMovieImpl()->Flags |= MovieImpl::Flag_OptAdvListInvalid;
     FrameCounterObj->AdvanceFrame(true, 0.0f);
-    as3root->ExecuteActionQueue(MovieRoot::AL_Frame);
+    static_cast<MovieRoot*>(GetMovieImpl()->pASMovieRoot)->ExecuteActionQueue(MovieRoot::AL_Frame);
 }
 
 }}} // namespace Scaleform::GFx::AS3
