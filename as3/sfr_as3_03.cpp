@@ -1829,7 +1829,7 @@ namespace Scaleform { namespace GFx { namespace AS3
     class CompareAsStringTriple
     {
     public:
-        CompareAsStringTriple(const CompareAsString& c) : Cmp(c) {}
+        CompareAsStringTriple(bool desc, bool ci, bool use_locale) : Cmp(desc, ci, use_locale) {}
 
         bool operator()(const StringValueTriple& a, const StringValueTriple& b) const { return Cmp.Compare(a.First, b.First) < 0; }
         bool Equal(const StringValueTriple& a, const StringValueTriple& b) const { return Cmp.Compare(a.First, b.First) == 0; }
@@ -1881,7 +1881,6 @@ namespace Scaleform { namespace GFx { namespace AS3
 
     namespace Instances { namespace fl
     {
-        // MS2-FUNCTIONAL: frame 0x10 smaller and newSA/compareFunction stack slots differ; code otherwise identical
         // @0x1423ffba0
         void Array::AS3sort(Value& result, unsigned argc, const Value* argv)
         {
@@ -1971,9 +1970,9 @@ namespace Scaleform { namespace GFx { namespace AS3
                 Value2StrCollector vc(GetVM(), pairs);
                 SA.ForEach(vc);
 
-                CompareAsStringTriple functor(CompareAsString((flags & SortFlags_Descending) != 0,
-                                                              (flags & SortFlags_CaseInsensitive) != 0,
-                                                              (flags & SortFlags_Locale) != 0));
+                CompareAsStringTriple functor((flags & SortFlags_Descending) != 0,
+                                               (flags & SortFlags_CaseInsensitive) != 0,
+                                               (flags & SortFlags_Locale) != 0);
                 Alg::QuickSortSafe(pairs, functor);
                 const UPInt size = pairs.GetSize();
 
