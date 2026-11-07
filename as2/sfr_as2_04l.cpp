@@ -137,15 +137,21 @@ static SF_FORCEINLINE bool FillObjectValue(MovieImpl* pmovie, GFx::Value::Object
     return true;
 }
 
-// The interface's own entry: the movie is reached through its movie root.
-// The interface class is not modelled, the movie is read by address.
+}}} // namespace Scaleform::GFx::AS2
+
+namespace Scaleform { namespace GFx {
+
+// The interface's own entry: the movie is reached through its AS2 movie root.
 // @0x142937a20
-bool FUN_142937a20(GFx::Value::ObjectInterface* pif, GFx::Value* pval, void* pdata, bool isdobj)
+bool AS2ValueObjectInterface::CreateObjectValue(Value* pval, void* pdata, bool isdobj)
 {
-    UByte* pasRoot = *reinterpret_cast<UByte**>(reinterpret_cast<UByte*>(pif) + 8);
-    UByte* pbase   = *reinterpret_cast<UByte**>(pasRoot + 0x18);
-    return FillObjectValue(*reinterpret_cast<MovieImpl**>(pbase + 0x10), pif, pval, pdata, isdobj);
+    AS2::MovieRoot* proot = static_cast<AS2::MovieRoot*>(pMovieRoot->pASMovieRoot);
+    return AS2::FillObjectValue(proot->pMovieImpl, this, pval, pdata, isdobj);
 }
+
+}} // namespace Scaleform::GFx
+
+namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The host value is filled by raw words.
 // @0x142937af0
