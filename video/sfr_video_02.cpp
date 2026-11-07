@@ -2470,14 +2470,68 @@ static __forceinline Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
     return result;
 }
 
-// MS2-FUNCTIONAL: creates and registers the attachVideo native function and prototype. Same calls and order as the exe;
-// the rest is register and frame layout (the exe uses an r11 frame, VC9 style).
+// MS2-FUNCTIONAL: creates and registers the attachVideo native function and prototype (VideoCtorFunction::Register),
+// written out rather than through CreateVideo02Builtin so the temps share the rcx home slot like the exe. Left: our
+// placement new tests result for null (the exe does not; without the test the result/prototype registers swap), the
+// prototype vptr stores are scheduled differently, and global/manager sit in rbx/rsi.
 // @0x14000ed60
 Scaleform::GFx::AS2::FunctionRef* FUN_14000ed60(
     Scaleform::GFx::AS2::FunctionRef* result, Scaleform::GFx::AS2::GlobalContext* context)
 {
-    return CreateVideo02Builtin(result, context, Scaleform::GFx::AS2::VideoCtorFunction::GlobalCtor, &PTR_LAB_1431b5f20,
-        &PTR_LAB_1431b5fb0, 0xb0, 0x24, 0x120, false);
+    Scaleform::GFx::AS2::ASStringContext stringContext(context, 8);
+    Scaleform::GFx::AS2::CFunctionObject* function = static_cast<Scaleform::GFx::AS2::CFunctionObject*>(context->pHeap->Alloc(0x70));
+    if (function)
+    {
+        function->Scaleform::GFx::AS2::CFunctionObject::CFunctionObject(&stringContext, Scaleform::GFx::AS2::VideoCtorFunction::GlobalCtor);
+        *reinterpret_cast<void**>(function) = &PTR_LAB_1431b5f20;
+        *reinterpret_cast<void**>(reinterpret_cast<char*>(function) + 0x20) = &PTR_LAB_1431b5fb0;
+    }
+    else
+        function = 0;
+    new (result) Scaleform::GFx::AS2::FunctionRef(*function);
+
+    Scaleform::GFx::AS2::Object* prototype = static_cast<Scaleform::GFx::AS2::Object*>(context->pHeap->Alloc(0xb0));
+    if (prototype)
+    {
+        Scaleform::GFx::AS2::FUN_14000e1e0(prototype, &stringContext,
+            context->GetPrototype(Scaleform::GFx::AS2::ASBuiltin_Object), *result);
+        *reinterpret_cast<void**>(prototype) = &PTR_FUN_1431b5e20;
+        *reinterpret_cast<void**>(reinterpret_cast<char*>(prototype) + 0x20) = &PTR_LAB_1431b5e70;
+        *reinterpret_cast<void**>(reinterpret_cast<char*>(prototype) + 0x70) = &PTR_LAB_1431b5e18;
+        const Scaleform::GFx::AS2::PropFlags flags(1);
+        reinterpret_cast<Video02PrototypeAccess*>(reinterpret_cast<char*>(prototype) + 0x70)->InitFunctionMembers(
+            prototype, &stringContext, Video02VideoFunctions, flags);
+        unsigned* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
+        *count = (*count + 1) & 0x8fffffff;
+    }
+    else
+        prototype = 0;
+    extern void FUN_14000c280(void*, unsigned, void**);
+    {
+        void* prototypeSlot = prototype;
+        FUN_14000c280(context, 0x24, &prototypeSlot);
+    }
+
+    Scaleform::GFx::AS2::Object* global = context->pGlobal;
+    Scaleform::GFx::AS2::StringManager* manager = context->GetStringManager();
+    const Scaleform::GFx::ASString& name = *reinterpret_cast<const Scaleform::GFx::ASString*>(
+        reinterpret_cast<char*>(manager) + 0x120);
+    // The exe builds and destroys the member value out of line (0x142923b90 / 0x1429260b0).
+    Video02ValueStorage valueStorage;
+    global->SetMemberRaw(&stringContext, name,
+        *Scaleform::GFx::AS2::FUN_142923b90(reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage), *result),
+        Scaleform::GFx::AS2::PropFlags());
+    reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage)->Scaleform::GFx::AS2::Value::~Value();
+    if (prototype)
+    {
+        unsigned* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
+        if ((*count & 0x03ffffffu) != 0)
+        {
+            --*count;
+            reinterpret_cast<Scaleform::GFx::AS2::Video02GCAccess*>(prototype)->ReleaseInternal();
+        }
+    }
+    return result;
 }
 
 // MS2-FUNCTIONAL: creates and registers the Connect native function and prototype. Same calls and order as the exe;
