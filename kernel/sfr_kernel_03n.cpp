@@ -186,11 +186,11 @@ void* FUN_1426893b0(void* self, unsigned flags)
 void* FUN_142689520(void* self, unsigned flags)
 {
     FUN_142687170(RawFieldPtr<void>(self, 0x40));
-    RawReleaseString(self, 0x38);
-    RawReleaseString(self, 0x30);
-    RawReleaseString(self, 0x28);
-    RawReleaseString(self, 0x20);
-    RawReleaseString(self, 0x18);
+    RawField<String>(self, 0x38).~String();
+    RawField<String>(self, 0x30).~String();
+    RawField<String>(self, 0x28).~String();
+    RawField<String>(self, 0x20).~String();
+    RawField<String>(self, 0x18).~String();
     RawRefCountCoreDtor(self);
     RawDeleteBranch(self, flags, 0x78);
     return self;
