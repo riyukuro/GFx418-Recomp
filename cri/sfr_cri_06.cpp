@@ -8624,18 +8624,39 @@ void FUN_140065fc0(char *ctx, int mask)
 static inline cri_u1 cri06_avg(int a, int b) { return (cri_u1)((a + b + 1) >> 1); }
 
 
-// MS2-FUNCTIONAL: scalar form of the SSE2 store (packuswb of each 8x8 coefficient block into its destination).
+// SSE2 store of each 8x8 coefficient block: packuswb saturates two rows of shorts into one register, the low half
+// goes to the even row and the swapped (pshufd 0x4e) half to the odd row; the list ends at a NULL coefficient pointer.
+// MS2-FUNCTIONAL: same 163 B and instructions as the exe; cl 15 schedules the stride load after the xmm loads and keeps
+// stride and 2*stride in other registers (source order of the loads/stores does not move them).
 // @0x1400590c0
 void FUN_1400590c0(const cri06_block* rec)
 {
+  const __m128i* c = (const __m128i*)rec->coef;
   do {
-    for (int r = 0; r < 8; ++r)
-      for (int c = 0; c < 8; ++c) {
-        int v = rec->coef[r * 8 + c];
-        rec->dst[r * rec->stride + c] = (cri_u1)(v < 0 ? 0 : v > 255 ? 255 : v);
-      }
+    int stride = rec->stride;
+    __m128i r0 = _mm_load_si128(c + 0);
+    __m128i r1 = _mm_load_si128(c + 2);
+    cri_u1* d = rec->dst;
     ++rec;
-  } while (rec->coef);
+    __m128i r2 = _mm_load_si128(c + 4);
+    __m128i r3 = _mm_load_si128(c + 6);
+    r0 = _mm_packus_epi16(r0, c[1]);
+    r1 = _mm_packus_epi16(r1, c[3]);
+    r2 = _mm_packus_epi16(r2, c[5]);
+    r3 = _mm_packus_epi16(r3, c[7]);
+    _mm_storel_epi64((__m128i*)d, r0);
+    _mm_storel_epi64((__m128i*)(d + stride), _mm_shuffle_epi32(r0, 0x4e));
+    d += stride * 2;
+    _mm_storel_epi64((__m128i*)d, r1);
+    _mm_storel_epi64((__m128i*)(d + stride), _mm_shuffle_epi32(r1, 0x4e));
+    d += stride * 2;
+    _mm_storel_epi64((__m128i*)d, r2);
+    _mm_storel_epi64((__m128i*)(d + stride), _mm_shuffle_epi32(r2, 0x4e));
+    d += stride * 2;
+    _mm_storel_epi64((__m128i*)d, r3);
+    _mm_storel_epi64((__m128i*)(d + stride), _mm_shuffle_epi32(r3, 0x4e));
+    c = (const __m128i*)rec->coef;
+  } while (c);
 }
 
 // MS2-FUNCTIONAL: 8-wide block copy (8 rows when h == 8, else 4).
@@ -8759,13 +8780,15 @@ void FUN_140059b80(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
       dst[i * stride + j] = cri06_avg(cri06_avg(src[i * stride + j], src[off + i * stride + j]), dst[i * stride + j]);
 }
 
-// MS2-FUNCTIONAL: 8-wide average of src + 1 into dst (the exe reads only the right-hand sample).
+// SSE2 8-wide average of src + 1 into dst (the exe reads only the right-hand sample).
 // @0x140059c10
 void FUN_140059c10(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
 {
   (void)off;
-  for (int i = 0; i < h; ++i)
-    for (int j = 0; j < 8; ++j) dst[i * stride + j] = cri06_avg(src[i * stride + j + 1], dst[i * stride + j]);
+  src += 1;
+  for (int i = 0; i < h; ++i) {
+    _mm_storel_epi64((__m128i*)(dst + i * stride), _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(src + i * stride)), _mm_loadl_epi64((const __m128i*)(dst + i * stride))));
+  }
 }
 
 // MS2-FUNCTIONAL: 16-wide bidirectional average into dst (16 rows when h == 16, else 8).
