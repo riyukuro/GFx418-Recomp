@@ -4240,14 +4240,17 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // MovieRoot::ParseValueArguments: the AS3 values of an Invoke format into arr. %d int, %u undefined, %n null,
 // %b bool, %f or %hf number, %s or %ls string; spaces, tabs and commas between them are skipped and anything
 // else is logged as a script error.
-// MS2-FUNCTIONAL a member of the exe's MovieRoot, defined as a free function
+// plog is a raw pointer taken from the returned Ptr, as in the SDK (the temp is released at once).
+// MS2-FUNCTIONAL a member of the exe's MovieRoot, defined as a free function. The exe keeps arg's flags and
+// pointer in registers across the inlined release and calls ArrayData<Value>::PushBack (0x14251f660) out of
+// line; both the out-of-line call (member pointer) and the SDK for(;;) loop form score worse here.
 // @0x14251c1c0
 void FUN_14251c1c0(const Scaleform::GFx::AS3::MovieRoot* self, Scaleform::Array<Scaleform::GFx::AS3::Value>& arr,
                    const char* pmethodName, const char* pargFmt, va_list args)
 {
     using namespace Scaleform;
     using namespace Scaleform::GFx::AS3;
-    Ptr<GFx::LogState> plog = self->GetMovieImpl()->GetLogState();
+    GFx::LogState* plog = self->GetMovieImpl()->GetLogState();
     arr.Clear();
     if (!pargFmt)
         return;
