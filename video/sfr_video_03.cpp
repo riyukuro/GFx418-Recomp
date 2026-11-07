@@ -594,12 +594,11 @@ void* FUN_140017eb0(void* result, Scaleform::GFx::AS3::Value* value, uint64_t* a
     return result;
 }
 
-// MS2-FUNCTIONAL: assigns an atom after releasing the previous managed value.
+// assigns an object atom, releasing the previous one: SPtr<Object>::Pick(Pickable<Object>), the Pickable passed by value.
 // @0x1400190c0
-uint64_t* FUN_1400190c0(uint64_t* destination, uint64_t replacement)
+Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Object>& FUN_1400190c0(Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Object>& destination, Scaleform::Pickable<Scaleform::GFx::AS3::Object> replacement)
 {
-    if (replacement != *destination) { ReleaseVideoAtom(destination); *destination = replacement; }
-    return destination;
+    return destination.Pick(replacement);
 }
 // copy-assigns an atom while retaining its managed object.
 // @0x140019120
@@ -623,16 +622,16 @@ void FUN_140019220(Scaleform::GFx::AS3::Value* destination, const uint64_t* sour
 {
     FUN_1400191d0(destination, source);
 }
-// MS2-FUNCTIONAL: replaces the retained object atom at byte offset 0x80.
+// replaces the retained object atom at byte offset 0x80 (Pickable by value, as in FUN_1400190c0).
 // @0x140019270
-void FUN_140019270(void* object, uint64_t replacement)
+void FUN_140019270(void* object, Scaleform::Pickable<Scaleform::GFx::AS3::Object> replacement)
 {
-    FUN_1400190c0(reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(object) + 0x80), replacement);
+    FUN_1400190c0(*reinterpret_cast<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Object>*>(static_cast<unsigned char*>(object) + 0x80), replacement);
 }
 
-// MS2-FUNCTIONAL: transfers an object into an AS3 Value using Pick semantics.
+// transfers an object into an AS3 Value using Pick semantics (Value::Pick<Object>(Pickable<Object>), by value).
 // @0x14001a1e0
-void FUN_14001a1e0(Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3::Object* object)
+void FUN_14001a1e0(Scaleform::GFx::AS3::Value* value, Scaleform::Pickable<Scaleform::GFx::AS3::Object> object)
 {
     value->Pick(object);
 }
