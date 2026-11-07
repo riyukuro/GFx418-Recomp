@@ -338,7 +338,7 @@ public:
     VMGCGuard                               GC;                 // +0x018
     FlashUI&                                UI;                 // +0x020
     FileLoader&                             Loader;             // +0x028
-    UPInt                                   InInitializer;      // +0x030
+    int                                     InInitializer;      // +0x030 (int as in the SDK: the exe incs/stores a dword)
     MemoryHeap*                             MHeap;              // +0x038
     SPtr<XMLSupport>                        XMLSupport_;        // +0x040
     VMOpStackWords                          OpStack;            // +0x048 value stack (current page at +0x060)
