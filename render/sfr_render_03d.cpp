@@ -1496,10 +1496,14 @@ void ShapeMeshProvider::GetFillMatrix(MeshBase* mesh, Matrix2F* matrix, unsigned
             matrix->M[1][3] = m1.M[1][3] + (m2.M[1][3] - m1.M[1][3]) * t;
             matrix->Invert();
         }
-        if (mesh && mesh->GetScale9Grid())
+        Scale9GridData* s9g = 0;
+        if (mesh)
+            s9g = mesh->GetScale9Grid();
+
+        if (s9g)
         {
             Matrix2F mtx;
-            computeImgAdjustMatrix(mesh->GetScale9Grid(), layer, imgFillStyle, &mtx);
+            computeImgAdjustMatrix(s9g, layer, imgFillStyle, &mtx);
             mtx.Invert();
             matrix->Prepend(mtx);
         }
