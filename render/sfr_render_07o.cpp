@@ -139,8 +139,7 @@ static inline const Matrix3F& matrix3DDirect(const HMatrix& matrix)
 // The layer matrix of a vector glyph (the view matrix with the glyph's origin and size scale prepended), its colour
 // as a cxform (the colour as the add row, appended to the view cxform), and the key flags of its mesh. A cursor
 // layer is keyed as a mask without edge AA.
-// MS2-FUNCTIONAL: register allocation differs in the 2D path: the exe loads vec.x once into xmm9 and saves
-// xmm6 and xmm9 where ours saves xmm7
+// MS2-FUNCTIONAL: register allocation and scheduling differ in the inlined 2D translate/scale and HMatrix store
 // @0x1426e1d30
 unsigned TextMeshProvider::CalcVectorParams(TextMeshLayer& layer, const TextMeshEntry& ent, const Matrix2F& scalingMtx,
                                             float sizeScale, const HMatrix& m, Renderer2DImpl* ren,
@@ -162,7 +161,7 @@ unsigned TextMeshProvider::CalcVectorParams(TextMeshLayer& layer, const TextMesh
     else
     {
         Matrix2F m2d = m.GetMatrix2D();
-        m2d.PrependTranslation(vec.x, vec.y);
+        m2d.PrependTranslation(ent.EntryData.VectorData.x, ent.EntryData.VectorData.y);   // through ent, not vec: closer exe regalloc
         m2d.PrependScaling(sizeScale, sizeScale);
         if (layer.M.IsNull())
             layer.M = ren->GetMatrixPool().CreateMatrix(m2d);
