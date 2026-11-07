@@ -1050,18 +1050,18 @@ void calcPictureCodingExt(cri_any cri_p0)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140054b60
 void calcQuantMatrix(longlong arg1)
 {
   longlong l_v2;
   
-  /* the exe's x4-unrolled body is the compiler's: one byte of each of four int tables, scattered by DAT_143fe8260 */
+  /* the exe's x4-unrolled body is the compiler's: one byte of each of four int tables, scattered by DAT_143fe8260.
+     The `+ 1 - 1` index is what makes VC9 bias the table base by one (lea DAT+1, disp -1) as the exe does. */
   for (l_v2 = 0; l_v2 < 0x40; l_v2++) {
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8260)[l_v2] + 0xa80 + arg1) = *(cri_u1 *)(arg1 + 0x28 + l_v2 * 4);
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8260)[l_v2] + 0xac0 + arg1) = *(cri_u1 *)(arg1 + 0x12c + l_v2 * 4);
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8260)[l_v2] + 0xb00 + arg1) = *(cri_u1 *)(arg1 + 0x35c + l_v2 * 4);
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8260)[l_v2] + 0xb40 + arg1) = *(cri_u1 *)(arg1 + 0x460 + l_v2 * 4);
+    *(cri_u1 *)((longlong)(char)(&DAT_143fe8260)[l_v2 + 1 - 1] + 0xa80 + arg1) = *(cri_u1 *)(arg1 + 0x28 + l_v2 * 4);
+    *(cri_u1 *)((longlong)(char)(&DAT_143fe8260)[l_v2 + 1 - 1] + 0xac0 + arg1) = *(cri_u1 *)(arg1 + 0x12c + l_v2 * 4);
+    *(cri_u1 *)((longlong)(char)(&DAT_143fe8260)[l_v2 + 1 - 1] + 0xb00 + arg1) = *(cri_u1 *)(arg1 + 0x35c + l_v2 * 4);
+    *(cri_u1 *)((longlong)(char)(&DAT_143fe8260)[l_v2 + 1 - 1] + 0xb40 + arg1) = *(cri_u1 *)(arg1 + 0x460 + l_v2 * 4);
   }
   return;
 }
