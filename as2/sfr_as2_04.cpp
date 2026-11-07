@@ -1204,22 +1204,18 @@ void LoadVarsProto::DefaultOnData(const FnCall& fn)
     penv->Drop1();
 }
 
-// A number value, or a string that parses as a whole as one (+, -, . or a digit first).
-static SF_FORCEINLINE bool ArraySortGetNumber(const Value* pval, Environment* penv, Number* pnum)
+// The leading-character test and strtod of the SDK's GAS_ParseNumber.
+static SF_FORCEINLINE bool ArraySortParseNumber(const char* str, Number* retVal)
 {
-    if (pval->IsNumber())
+    if (str && *str)
     {
-        *pnum = pval->ToNumber(penv);
-        return true;
-    }
-    ASString    str = pval->ToString(penv);
-    const char* p   = str.ToCStr();
-    if (p && ((*p >= '0' && *p <= '9') || *p == '+' || *p == '-' || *p == '.'))
-    {
-        char* tail = 0;
-        *pnum      = Scaleform::SFstrtod(p, &tail);
-        if (!tail || !*tail)
-            return true;
+        if ((*str >= '0' && *str <= '9') || *str == '+' || *str == '-' || *str == '.')
+        {
+            char* end;
+            *retVal = (Number)Scaleform::SFstrtod(str, &end);
+            if (end == 0 || *end == 0)
+                return true;
+        }
     }
     return false;
 }
@@ -1227,49 +1223,77 @@ static SF_FORCEINLINE bool ArraySortGetNumber(const Value* pval, Environment* pe
 // @0x142934a80
 int ArraySortFunctor::Compare(const Value* a, const Value* b) const
 {
-    Value        undef;
-    const Value* pa = a ? a : &undef;
-    const Value* pb = b ? b : &undef;
+    Value dummy;
+    if (a == 0)
+        a = &dummy;
+    if (b == 0)
+        b = &dummy;
+    int cmpVal = 0;
     if (!Func.IsNull())
     {
-        // The script function: compare(a, b).
-        Value result;
-        Env->Push(*pb);
-        Env->Push(*pa);
-        FnCall fn(&result, This, Env, 2, Env->GetTopIndex());
+        Value retVal;
+        Env->Push(*b);
+        Env->Push(*a);
+        FnCall fn(&retVal, This, Env, 2, Env->GetTopIndex());
         Func.Invoke(fn);
         Env->Drop(2);
-        if (!fn.Result)
-            return 0;
-        int ret = fn.Result->ToInt32(Env);
-        return (Flags & ArrayObject::SortFlags_Descending) ? -ret : ret;
-    }
-    if (Flags & ArrayObject::SortFlags_Numeric)
-    {
-        Number na = 0, nb = 0;
-        bool   aIsNum = ArraySortGetNumber(pa, Env, &na);
-        bool   bIsNum = ArraySortGetNumber(pb, Env, &nb);
-        if (aIsNum && bIsNum)
+        if (fn.Result)
         {
-            int ret = 0;
-            if (nb > na)
-                ret = -1;
-            if (na > nb)
-                ret = 1;
-            return (Flags & ArrayObject::SortFlags_Descending) ? -ret : ret;
+            cmpVal = fn.Result->ToInt32(Env);
+            return (Flags & ArrayObject::SortFlags_Descending) ? -cmpVal : cmpVal;
         }
     }
-    ASString sa = pa->ToString(Env);
-    ASString sb = pb->ToString(Env);
-    int      ret;
-    if (Flags & ArrayObject::SortFlags_Locale)
-        ret = sa.LocaleCompare_CaseCheck(sb.ToCStr(), sb.GetLength(),
-                                         !(Flags & ArrayObject::SortFlags_CaseInsensitive));
-    else if (Flags & ArrayObject::SortFlags_CaseInsensitive)
-        ret = String::CompareNoCase(sa.ToCStr(), sb.ToCStr());
     else
-        ret = strcmp(sa.ToCStr(), sb.ToCStr());
-    return (Flags & ArrayObject::SortFlags_Descending) ? -ret : ret;
+    {
+        bool   numericA = false;
+        bool   numericB = false;
+        Number valA     = 0;
+        Number valB     = 0;
+        if (Flags & ArrayObject::SortFlags_Numeric)
+        {
+            if (a->IsNumber())
+            {
+                valA     = a->ToNumber(Env);
+                numericA = true;
+            }
+            else
+            {
+                ASString sa(a->ToString(Env));
+                numericA = ArraySortParseNumber(sa.ToCStr(), &valA);
+            }
+            if (b->IsNumber())
+            {
+                valB     = b->ToNumber(Env);
+                numericB = true;
+            }
+            else
+            {
+                ASString sb(b->ToString(Env));
+                numericB = ArraySortParseNumber(sb.ToCStr(), &valB);
+            }
+        }
+        if (numericA && numericB)
+        {
+            if (valA < valB)
+                cmpVal = -1;
+            if (valB < valA)
+                cmpVal = 1;
+            return (Flags & ArrayObject::SortFlags_Descending) ? -cmpVal : cmpVal;
+        }
+        else
+        {
+            ASString sa(a->ToString(Env));
+            ASString sb(b->ToString(Env));
+            if (Flags & ArrayObject::SortFlags_Locale)
+                cmpVal = sa.LocaleCompare_CaseCheck(sb.ToCStr(), sb.GetLength(),
+                                                    (Flags & ArrayObject::SortFlags_CaseInsensitive) == 0);
+            else
+                cmpVal = (Flags & ArrayObject::SortFlags_CaseInsensitive) ? String::CompareNoCase(sa.ToCStr(), sb.ToCStr())
+                                                                           : strcmp(sa.ToCStr(), sb.ToCStr());
+            return (Flags & ArrayObject::SortFlags_Descending) ? -cmpVal : cmpVal;
+        }
+    }
+    return 0;
 }
 
 // The object of a value, the script object of a character included (Value::ToObjectInterface with the character
