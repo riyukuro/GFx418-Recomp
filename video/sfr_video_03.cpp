@@ -21,6 +21,7 @@
 #include "../include/gfx/as3/as3_vm.h"
 #include "../include/gfx/as3/obj/as3_obj_display.h"
 #include "../include/gfx/as3/as3_avm.h"
+#include "../include/gfx/as3/as3_marshalling.h"
 #include "../include/gfx/as3/obj/as3_obj_media.h"
 #include "ms2/scaleform/kernel/sf_log.h"
 #include "../../../../third_party/fmod44464/api/inc/fmod.hpp"
@@ -1461,18 +1462,34 @@ __forceinline void ConvertVideoStringArg(const uint64_t* value, uint64_t* slot)
     }
 }
 }
-// MS2-FUNCTIONAL: captures two string callback parameters, retaining defaults and converting supplied AS3 values.
+// The SDK's thunk argument records (ArgsN chain): each level copies its default and then reads its argument with
+// ThunkReadArg; the second level is skipped once the first conversion raised an exception (tested on the vm argument).
+struct VideoStrArgs1
+{
+    Scaleform::GFx::AS3::VM& Vm;
+    uint64_t Prop;
+    Scaleform::GFx::ASString A0;
+    __forceinline VideoStrArgs1(Scaleform::GFx::AS3::VM& vm, uint64_t prop, unsigned argc, const Scaleform::GFx::AS3::Value* argv, const Scaleform::GFx::ASString* d)
+        : Vm(vm), Prop(prop), A0(d[0])
+    {
+        if (argc > 0) Scaleform::GFx::AS3::ThunkReadArg(A0, argv[0]);
+    }
+};
+struct VideoStrArgs2 : VideoStrArgs1
+{
+    Scaleform::GFx::ASString A1;
+    __forceinline VideoStrArgs2(Scaleform::GFx::AS3::VM& vm, uint64_t prop, unsigned argc, const Scaleform::GFx::AS3::Value* argv, const Scaleform::GFx::ASString* d)
+        : VideoStrArgs1(vm, prop, argc, argv, d), A1(d[1])
+    {
+        if (!vm.IsException() && argc > 1) Scaleform::GFx::AS3::ThunkReadArg(A1, argv[1]);
+    }
+};
+// captures two string callback parameters: the SDK Args2 constructor, built in place on the record.
 // @0x140017130
 __declspec(noinline) uint64_t* FUN_140017130(uint64_t* record, uint64_t vm, uint64_t property, unsigned count, const uint64_t* args, const uint64_t* defaults)
 {
-    record[0] = vm; record[1] = property;
-    record[2] = defaults[0];
-    ++*reinterpret_cast<uint32_t*>(record[2] + 0x18);
-    if (count) ConvertVideoStringArg(args, record + 2);
-    record[3] = defaults[1];
-    ++*reinterpret_cast<uint32_t*>(record[3] + 0x18);
-    if (*reinterpret_cast<unsigned char*>(vm + 0x180) == 0 && count > 1)
-        ConvertVideoStringArg(args + 4, record + 3);
+    reinterpret_cast<VideoStrArgs2*>(record)->VideoStrArgs2::VideoStrArgs2(*reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm), property, count,
+        reinterpret_cast<const Scaleform::GFx::AS3::Value*>(args), reinterpret_cast<const Scaleform::GFx::ASString*>(defaults));
     return record;
 }
 // captures three string callback parameters and converts each supplied AS3 argument.
