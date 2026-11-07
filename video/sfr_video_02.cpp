@@ -128,22 +128,22 @@ void FUN_140012340(const Scaleform::GFx::AS2::FnCall& call);   // NetConnection'
 namespace Scaleform { namespace GFx { namespace AS2 { class NetConnectionCtorFunction : public CFunctionObject { public:
     NetConnectionCtorFunction(ASStringContext* psc);   // exe 0x140012650
     virtual Object* CreateNewObject(Environment* penv) const; }; }}}   // exe 0x140011d50 (vftables 0x1431b6740 / +0x20 0x1431b67d0)
-extern void* PTR_LAB_1431b6540;
-extern void* PTR_LAB_1431b65f0;
+//
+//
 extern void* PTR_LAB_1431b5e70;
 extern void* PTR_LAB_1431b5e18;
 extern void* PTR_FUN_1431b5e20;
-extern void* PTR_LAB_1431b65f0;
-extern void* PTR_LAB_1431b6540;
-extern void* PTR_FUN_1431b64f0;
-extern void* PTR_LAB_1431b6440;
-extern void* PTR_LAB_1431b6430;
+//
+//
+//
+//
+//
 extern void* PTR_FUN_1431b7360;
 //
 //
-extern void* PTR_LAB_1431b6690;
-extern void* PTR_LAB_1431b6638;
-extern void* PTR_FUN_1431b6640;
+//
+//
+//
 extern void* PTR_FUN_1431b7858;
 extern void* DAT_143b274d8;
 extern void* DAT_143b274e0;
@@ -243,11 +243,11 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 class NetConnection : public Object
 {
 public:
-    NetConnection(ASStringContext* psc, Object* pprototype) : Object(psc) { Set__proto__(psc, pprototype); }
+    NetConnection(ASStringContext* psc, Object* pprototype); NetConnection(Environment* penv);   // exe 0x1400122e0, 0x140011c90
     virtual ObjectType GetObjectType() const;   // exe 0x140011b80
 };
-// constructor and __constructor__ from the prototype part (exe 0x140011de0)
-template<> bool Prototype<NetConnection>::GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
+template<> Prototype<NetConnection>::Prototype(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor);   // exe 0x140012440
+template<> bool Prototype<NetConnection>::GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);   // constructor / __constructor__ (exe 0x140011de0)
 // NetConnection's prototype (vftables 0x1431b6640 / +0x20 0x1431b6690 / +0x68 0x1431b6638). Its ??_G is 0x1400125e0;
 // the ObjectInterface / GASPrototypeBase slots are cl's adjustor thunks 0x140012580 / 0x140012590. The
 // Prototype<NetConnection> base's own vftables are 0x1431b64f0 / 0x1431b6440 / 0x1431b6430 (??_G 0x140011c00,
@@ -255,11 +255,11 @@ template<> bool Prototype<NetConnection>::GetMemberRaw(ASStringContext* psc, con
 class NetConnectionProto : public Prototype<NetConnection>
 {
 public:
-    NetConnectionProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
-        : Prototype<NetConnection>(psc, pprototype, constructor)
-    {
-        InitFunctionMembers(this, psc, Video02ConnectFunctions, PropFlags(1));
-    }
+    NetConnectionProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor);   // exe 0x140012510
+//
+//
+//
+//
 };
 }}}
 static const Scaleform::GFx::AS2::NameFunction Video02VideoFunctions[] = {     // 0x1431b5800
@@ -1569,18 +1569,18 @@ void FUN_1400115c0(void* object)
 
 // environment's builtin prototype type 0x22.
 // @0x140011c90
-Scaleform::GFx::AS2::Object* FUN_140011c90(Scaleform::GFx::AS2::Object* object,
-                                            Scaleform::GFx::AS2::Environment* environment)
+Scaleform::GFx::AS2::NetConnection::NetConnection(Scaleform::GFx::AS2::Environment* environment)
+    : Object(environment)
 {
-    object->Scaleform::GFx::AS2::Object::Object(environment);
-    *reinterpret_cast<void**>(object) = &PTR_LAB_1431b65f0;
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6540;
-    Scaleform::GFx::AS2::ObjectInterface* iface = reinterpret_cast<Scaleform::GFx::AS2::ObjectInterface*>(
-        reinterpret_cast<char*>(object) + 0x20);
-    iface->Set__proto__(environment->GetSC(),
+    // (cl stores the vftables 0x1431b65f0 / +0x20 0x1431b6540)
+    static_cast<ObjectInterface*>(this)->Set__proto__(environment->GetSC(),
         environment->GetPrototype(static_cast<Scaleform::GFx::AS2::ASBuiltinType>(0x22)));
-    return object;
 }
+//
+//
+//
+//
+//
 
 // (0x140011d50 is NetConnectionCtorFunction::CreateNewObject, defined after its class below)
 //
@@ -2145,17 +2145,17 @@ Scaleform::GFx::AS2::VideoCtorFunction::VideoCtorFunction(
 
 // initializes the recovered AS2 function prototype's Object and function-reference bases.
 // @0x1400122e0
-Scaleform::GFx::AS2::Object* FUN_1400122e0(
-    Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context, void* prototype)
-{
+Scaleform::GFx::AS2::NetConnection::NetConnection(
+    Scaleform::GFx::AS2::ASStringContext* context, Scaleform::GFx::AS2::Object* prototype)
     // the exe runs Object(ASStringContext*) (0x14291f6f0), not the prototype overload (0x14291f790), and sets the
     // prototype once below, after the vtables are stored
-    object->Scaleform::GFx::AS2::Object::Object(context);
-    *reinterpret_cast<void**>(object) = &PTR_LAB_1431b65f0;
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6540;
-    object->Scaleform::GFx::AS2::Object::Set__proto__(context, static_cast<Scaleform::GFx::AS2::Object*>(prototype));
-    return object;
+    : Object(context)
+{
+    Object::Set__proto__(context, prototype);
 }
+//
+//
+//
 
 // @0x14000eb50
 Scaleform::GFx::AS2::Object* FUN_14000eb50(
@@ -2184,21 +2184,21 @@ struct Video02PrototypeFields
 };
 
 // @0x140012440
-Scaleform::GFx::AS2::Object* FUN_140012440(
-    Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context,
-    void* prototype, const Scaleform::GFx::AS2::FunctionRef* constructor)
+namespace Scaleform { namespace GFx { namespace AS2 {
+template<>
+Prototype<NetConnection>::Prototype(ASStringContext* context, Object* prototype, const FunctionRef& constructor)
+    : NetConnection(context, prototype)
 {
-    object->Scaleform::GFx::AS2::Object::Object(context);
-    *reinterpret_cast<void**>(object) = &PTR_LAB_1431b65f0;
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6540;
-    object->Scaleform::GFx::AS2::Object::Set__proto__(context, static_cast<Scaleform::GFx::AS2::Object*>(prototype));
-    reinterpret_cast<Video02PrototypeFields*>(reinterpret_cast<char*>(object) + 0x68)->Video02PrototypeFields::Video02PrototypeFields();
-    *reinterpret_cast<void**>(object) = &PTR_FUN_1431b64f0;
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6440;
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x68) = &PTR_LAB_1431b6430;
-    reinterpret_cast<Video02PrototypeAccess*>(reinterpret_cast<char*>(object) + 0x68)->Init(object, context, *constructor);
-    return object;
+    // (the NetConnection ctor inlines; cl stores the vftables 0x1431b64f0 / +0x20 0x1431b6440 / +0x68 0x1431b6430)
+    Init(this, context, constructor);
 }
+}}}
+//
+//
+//
+//
+//
+//
 
 // @0x14000f470
 void FUN_14000f470(void* object, void* value)
@@ -2255,7 +2255,7 @@ void FUN_140012340(const Scaleform::GFx::AS2::FnCall& call)
     else
     {
         void* storage = call.Env->GetHeap()->Alloc(0x68);
-        object = storage ? FUN_140011c90(static_cast<Scaleform::GFx::AS2::Object*>(storage), call.Env) : 0;
+        object = storage ? ::new (storage) Scaleform::GFx::AS2::NetConnection(call.Env) : 0;
     }
     call.Result->SetAsObject(object);
     if (object)
@@ -2342,28 +2342,28 @@ void* FUN_1400140e0(void* object, void* traits)
 //
 //
 
-// the Connect prototype's constructor body; the exe inlines it into FUN_1400126f0.
-static __forceinline Scaleform::GFx::AS2::Object* Video02ConnectProtoInit(
-    Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context,
-    void* prototype, const Scaleform::GFx::AS2::FunctionRef* constructor)
-{
-    FUN_140012440(object, context, prototype, constructor);
-    *reinterpret_cast<void**>(object) = &PTR_FUN_1431b6640;
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6690;
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x68) = &PTR_LAB_1431b6638;
-    Scaleform::GFx::AS2::PropFlags flags(1);
-    reinterpret_cast<Video02PrototypeAccess*>(reinterpret_cast<char*>(object) + 0x68)->InitFunctionMembers(
-        object, context, Video02ConnectFunctions, flags);
-    return object;
-}
-
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 // @0x140012510
-Scaleform::GFx::AS2::Object* FUN_140012510(
-    Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context,
-    void* prototype, const Scaleform::GFx::AS2::FunctionRef* constructor)
-{
-    return Video02ConnectProtoInit(object, context, prototype, constructor);
-}
+Scaleform::GFx::AS2::NetConnectionProto::NetConnectionProto(Scaleform::GFx::AS2::ASStringContext* context,
+    Scaleform::GFx::AS2::Object* prototype, const Scaleform::GFx::AS2::FunctionRef& constructor)
+    : Prototype<NetConnection>(context, prototype, constructor)
+{ Scaleform::GFx::AS2::PropFlags flags(1);
+    InitFunctionMembers(this, context, Video02ConnectFunctions, flags); }
+//
 
 // The exe builds the native function and prototype inline in both registration functions below.
 namespace Scaleform { namespace GFx { namespace AS2 {
@@ -2464,8 +2464,8 @@ Scaleform::GFx::AS2::FunctionRef* FUN_1400126f0(
     Scaleform::GFx::AS2::Object* prototype = static_cast<Scaleform::GFx::AS2::Object*>(context->pHeap->Alloc(0xa8));
     if (prototype)
     {
-        Video02ConnectProtoInit(prototype, &stringContext,
-            context->GetPrototype(Scaleform::GFx::AS2::ASBuiltin_Object), result);
+        ::new (prototype) Scaleform::GFx::AS2::NetConnectionProto(&stringContext,
+            context->GetPrototype(Scaleform::GFx::AS2::ASBuiltin_Object), *result);
         unsigned* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
         *count = (*count + 1) & 0x8fffffff;
     }
@@ -3644,7 +3644,7 @@ NetConnectionCtorFunction::NetConnectionCtorFunction(ASStringContext* psc)
 Object* NetConnectionCtorFunction::CreateNewObject(Environment* environment) const
 {
     void* storage = environment->GetHeap()->Alloc(0x68);
-    if (storage) return ::FUN_140011c90(static_cast<Object*>(storage), environment);
+    if (storage) return ::new (storage) NetConnection(environment);
     return 0;
 }
 // Emits NetConnectionCtorFunction's vftables with its ??_G and the ObjectInterface (+0x20) adjustor thunk.
@@ -3821,15 +3821,15 @@ Ptr<Render::TreeNode> Video02Character::CreateRenderNode(Render::ContextImpl::Co
 //
 //
 //
-// FUN_140011ef0 / FUN_1400122e0 / FUN_140012440 store the NetConnection family vftables through these names.
-#pragma comment(linker, "/alternatename:?PTR_LAB_1431b65f0@@3PEAXEA=??_7NetConnection@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
-#pragma comment(linker, "/alternatename:?PTR_LAB_1431b6540@@3PEAXEA=??_7NetConnection@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
-#pragma comment(linker, "/alternatename:?PTR_FUN_1431b64f0@@3PEAXEA=??_7?$Prototype@VNetConnection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
-#pragma comment(linker, "/alternatename:?PTR_LAB_1431b6440@@3PEAXEA=??_7?$Prototype@VNetConnection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
-#pragma comment(linker, "/alternatename:?PTR_LAB_1431b6430@@3PEAXEA=??_7?$Prototype@VNetConnection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@")
-#pragma comment(linker, "/alternatename:?PTR_FUN_1431b6640@@3PEAXEA=??_7NetConnectionProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
-#pragma comment(linker, "/alternatename:?PTR_LAB_1431b6690@@3PEAXEA=??_7NetConnectionProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
-#pragma comment(linker, "/alternatename:?PTR_LAB_1431b6638@@3PEAXEA=??_7NetConnectionProto@AS2@GFx@Scaleform@@6B@")
+//
+//
+//
+//
+//
+//
+//
+//
+//
 //
 //
 //
