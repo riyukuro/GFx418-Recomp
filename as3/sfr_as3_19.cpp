@@ -289,7 +289,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { stru
 typedef Scaleform::GFx::AS3::MultinameHash<Scaleform::GFx::AS3::ClassTraits::Traits*, Scaleform::GFx::AS3::StatMV_VM_VM_Mem>::Key Sfr19CtKey;
 typedef Scaleform::HashDH<Sfr19CtKey, Scaleform::GFx::AS3::ClassTraits::Traits*, Sfr19CtKey::HashFunctor, Scaleform::GFx::AS3::StatMV_VM_VM_Mem>::BaseType Sfr19CtHash;
 #define FUN_142522350(hash, key) ((static_cast<Sfr19CtHash*>(static_cast<void*>(hash))->*static_cast<void (Sfr19CtHash::*)(const Sfr19CtKey&)>(&Sfr19CtHash::Remove))(*static_cast<const Sfr19CtKey*>(static_cast<void*>(key))))
-bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot*, Scaleform::GFx::AS3::Value*, const char*);
+__declspec(noalias) bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot*, Scaleform::GFx::AS3::Value*, const char*);
 inline bool FUN_142506000(Scaleform::UPInt root, void* valueOut, Scaleform::UPInt path) { return ::FUN_142506000(reinterpret_cast<const Scaleform::GFx::AS3::MovieRoot*>(root), static_cast<Scaleform::GFx::AS3::Value*>(valueOut), reinterpret_cast<const char*>(path)); }
 // ValueArray::PushBack, through the real ArrayBase<ArrayDataDH<Value>>::PushBack (0x14241e430, called out of line)
 typedef Scaleform::ArrayBase<Scaleform::ArrayDataDH<Scaleform::GFx::AS3::Value, Scaleform::AllocatorDH<Scaleform::GFx::AS3::Value, 2>, Scaleform::ArrayDefaultPolicy> > Sfr19ValueArray;
@@ -5101,42 +5101,48 @@ static inline void Sfr31ReleaseRawVal(UPInt* v)
         Memory::pGlobalHeap->Free(rc);
 }
 
+// VM::MakeArray (0x142516270), inlined in the AS3_All.cpp SCU.
+static SF_FORCEINLINE Pickable<Instances::fl::Array> Sfr31MakeArray(UPInt vm)
+{
+    InstanceTraits::fl::Array& itr = *reinterpret_cast<InstanceTraits::fl::Array*>(Sfr31Rd(Sfr31Rd(vm, 0x238), 0xc0));
+    return itr.MakeInstance(itr);
+}
+
+// Value(Pickable<Array>) as the exe inlines it here (AS3_All.cpp SCU: Value::PickUnsafe(Object*) is visible).
+template <> SF_FORCEINLINE Value::Value(Pickable<Instances::fl::Array> v) : Flags(0)
+{
+    SetKind(kObject);
+    value = static_cast<Object*>(v.GetPtr());
+}
+
 // Resizes the array stored at a variable path, creating a new array of that length when the variable is not an Array.
-// MS2-FUNCTIONAL 0x14252b3a0: raw-offset model; codegen differs from the exe
+// MS2-FUNCTIONAL 0x14252b3a0: frame layout: exe keeps parray in a frame slot (0xa0 frame, r12 saved in a home slot); ours puts it in rcx's home slot (0x90 frame); body otherwise the same
 // @0x14252b3a0
 bool Sfr31SetArraySize(UPInt root, UPInt path, int size, UInt32 flags)
 {
-    UPInt cur[4] = { 0, 0, 0, 0 };
-    const bool got = FUN_142506000(root, cur, path);
-    const UInt32 kind = reinterpret_cast<UInt32*>(cur)[0] & 0x1f;
-    bool ok;
-    if (got && kind - 0xc < 4 && cur[2] != 0 && Sfr31Rd(Sfr31Rd(cur[2], 0x20), 0x70) == 7 &&
-        ((*reinterpret_cast<UInt8*>(Sfr31Rd(cur[2], 0x20) + 0x68) >> 5) & 1) == 0)
+    MovieRoot& mr = *reinterpret_cast<MovieRoot*>(root);
+    const char* ppathToVar = reinterpret_cast<const char*>(path);
+    const unsigned count = static_cast<unsigned>(size);
+    Value retVal;
+    if (FUN_142506000(root, &retVal, path) && retVal.IsObject())
     {
-        if (size != *reinterpret_cast<int*>(cur[2] + 0x38))
-            FUN_14241fe30(reinterpret_cast<void*>(cur[2] + 0x38), size);
-        ok = true;
-    }
-    else
-    {
-        const UPInt tr = Sfr31Rd(Sfr31Rd(Sfr31Rd(root, 0x48), 0x238), 0xc0);
-        UPInt arr = 0;
-        FUN_14241a500(tr, &arr, tr);
-        FUN_14241fe30(reinterpret_cast<void*>(arr + 0x38), size);
-        UPInt nv[4] = { 0xc, 0, arr, 0 };
-        UPInt gv[3] = { 0, 0, 0 };
-        FUN_1424e42c0(root, reinterpret_cast<const Value*>(nv), gv);
-        typedef bool (*SetVar)(UPInt, UPInt, void*, UInt32);
-        ok = reinterpret_cast<SetVar>(Sfr31Rd(Sfr31Rd(root, 0), 0x138))(root, path, gv, flags);
-        if ((reinterpret_cast<UInt32*>(gv)[2] >> 6) & 1)
+        Object* pobj = retVal.GetObject();
+        if (pobj && pobj->GetTraits().GetTraitsType() == Traits_Array && pobj->GetTraits().IsInstanceTraits())
         {
-            typedef void (*Rel)(UPInt, UPInt*, UPInt);
-            reinterpret_cast<Rel>(Sfr31Rd(Sfr31Rd(gv[0], 0), 0x10))(gv[0], gv, gv[2]);
+            // Array already exists - just resize
+            SparseArray& sa = *reinterpret_cast<SparseArray*>(reinterpret_cast<UPInt>(pobj) + 0x38);
+            if (count != unsigned(sa.GetSize()))
+                FUN_14241fe30(&sa, count);
+            return true;
         }
-        Sfr31ReleaseRawVal(nv);
     }
-    Sfr31ReleaseRawVal(cur);
-    return ok;
+    // no array found - allocate new one, resize and set (VM::MakeArray inlined)
+    Pickable<Instances::fl::Array> parray = Sfr31MakeArray(Sfr31Rd(root, 0x48));
+    FUN_14241fe30(reinterpret_cast<void*>(reinterpret_cast<UPInt>(parray.GetPtr()) + 0x38), count);
+    Value val(parray);
+    GFx::Value gfxval;
+    mr.ASValue2GFxValue(val, &gfxval);
+    return mr.SetVariable(ppathToVar, gfxval, static_cast<MovieRoot::SetVarTypeArg>(flags));
 }
 
 // ---- batch 40
