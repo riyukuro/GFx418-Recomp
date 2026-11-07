@@ -7522,6 +7522,9 @@ char* FUN_14250e770(const Scaleform::GFx::AS3::SlotInfo* psi, char* r, Scaleform
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+static SF_FORCEINLINE SPtr<Instances::fl_display::DisplayObject> Sfr34_GetAS3ChildByName(AvmDisplayObjContainer* c,
+                                                                                         const ASString& name);
+
 } // namespace AS3
 
 // ObjectInterface::GetMember: the public property name of the AS3 object; for a display object container without
@@ -7529,8 +7532,9 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // property lookup is output (of the child lookup, dropped).
 // The Multiname ctor and the string Value are the inline copies (InlineCtorTag, Value::InlineStr), and the
 // failure paths are inside if (!GetProperty), as in the SDK.
-// MS2-FUNCTIONAL: the exe inlines AvmDisplayObjContainer::GetAS3ChildByName and saves all registers in the
-// prolog; the name Value's QName-call reload (LTCG)
+// GetAS3ChildByName is the forceinline Sfr34 copy (inlined, as in the exe).
+// MS2-FUNCTIONAL: the exe saves all registers in the prolog (push form) and does not reload the name Value
+// after the QName call (LTCG), so registers and slots differ
 // @0x14250b4a0
 bool AS3ValueObjectInterface::GetMember(void* pdata, const char* name, GFx::Value* pval, bool isdobj) const
 {
@@ -7553,7 +7557,7 @@ bool AS3ValueObjectInterface::GetMember(void* pdata, const char* name, GFx::Valu
             DisplayObject*          dobj  = Sfr34_DispObjOf(pdata);
             AvmDisplayObjContainer* pcurr = Sfr34_ToAvmContainer(dobj->IsDisplayObjContainer() ? dobj : NULL);
             const ASString propName(root->BuiltinsMgr.GetStringManager()->CreateStringNode(name));
-            SPtr<Instances::fl_display::DisplayObject> pchild = pcurr->GetAS3ChildByName(propName);
+            SPtr<Instances::fl_display::DisplayObject> pchild = Sfr34_GetAS3ChildByName(pcurr, propName);
             if (pchild)
             {
                 asval = Value(pchild);
