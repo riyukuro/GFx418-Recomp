@@ -67,8 +67,6 @@ SF_FORCEINLINE void AssignRoot(Ptr<XML::RootNode>& dst, const Ptr<XML::RootNode>
     dst.GetRawRef() = src.GetPtr();
 }
 
-SF_FORCEINLINE void SetNodeObject(Environment* penv, Value* val, XML::Node* pnode, XML::RootNode* proot);
-
 } // namespace
 
 // The member names answered from the DOM node, in StandardMember order.
@@ -125,13 +123,12 @@ struct XMLAttributeStringBuilder : public ObjectInterface::MemberVisitor
 
 namespace {
 
-SF_FORCEINLINE void SetNodeObject(Environment* penv, Value* val, XML::Node* pnode, XML::RootNode* proot)
+// Ptr adoption of a fresh object as GetMember inlines it: the exe has no self-assignment test here.
+SF_FORCEINLINE void PickNew(Ptr<Object>& p, Object* pnew)
 {
-    XMLShadowRef* pshadow = static_cast<XMLShadowRef*>(pnode->pShadow);
-    if (!pshadow || !pshadow->pASNode)
-        val->SetAsObject(CreateShadow(penv, pnode, proot));
-    else
-        val->SetAsObject(pshadow->pASNode);
+    if (p)
+        p->Release();
+    p.GetRawRef() = pnew;
 }
 
 // Takes pchild's node out of its parent (kept alive meanwhile) and puts it before pinsert's node in elemNode, or at
@@ -564,31 +561,57 @@ Ptr<XmlNodeObject> CreateShadow(Environment* penv, XML::Node* preal, XML::RootNo
 template void Prototype<XmlNodeObject>::Finalize_GC();
 
 // The members the DOM node answers.
-// MS2-FUNCTIONAL: the member switch is laid out and inlined differently
 // @0x14299daa0
 bool XmlNodeObject::GetMember(Environment* penv, const ASString& name, Value* val)
 {
+    // The exe calls CreateShadow out of line here (other functions of the unit inline it).
+    Ptr<XmlNodeObject> (*const createShadow)(Environment*, XML::Node*, XML::RootNode*) = &CreateShadow;
     ASStringContext* psc = penv->GetSC();
     if (pRealNode)
     {
-        switch (GetStandardMemberConstant(penv, name))
+        StandardMember member = GetStandardMemberConstant(penv, name);
+        switch (member)
         {
         case M_firstChild:
-            if (!pRealNode)
-                val->SetUndefined();
-            else if (pRealNode->Type == XML::ElementNodeType &&
-                     static_cast<XML::ElementNode*>(pRealNode)->HasChildren())
-                SetNodeObject(penv, val, static_cast<XML::ElementNode*>(pRealNode)->FirstChild, pRootNode);
+            if (pRealNode)
+            {
+                if (pRealNode->Type == XML::ElementNodeType)
+                {
+                    XML::ElementNode* pnode = static_cast<XML::ElementNode*>(pRealNode);
+                    if (pnode->HasChildren())
+                    {
+                        XMLShadowRef* pshadow = static_cast<XMLShadowRef*>(pnode->FirstChild->pShadow);
+                        if (NULL == pshadow || NULL == pshadow->pASNode)
+                            val->SetAsObject(createShadow(penv, pnode->FirstChild, pRootNode));
+                        else
+                            val->SetAsObject(static_cast<Object*>(pshadow->pASNode));
+                    }
+                    else
+                        val->SetNull();
+                }
+                else
+                    val->SetNull();
+            }
             else
-                val->SetNull();
+                val->SetUndefined();
             return true;
         case M_nextSibling:
-            if (!pRealNode)
-                val->SetUndefined();
-            else if (pRealNode->NextSibling)
-                SetNodeObject(penv, val, pRealNode->NextSibling, pRootNode);
+            if (pRealNode)
+            {
+                XML::Node* pnode = static_cast<XML::Node*>(pRealNode);
+                if (pnode->NextSibling)
+                {
+                    XMLShadowRef* pshadow = static_cast<XMLShadowRef*>(pnode->NextSibling->pShadow);
+                    if (NULL == pshadow || NULL == pshadow->pASNode)
+                        val->SetAsObject(createShadow(penv, pnode->NextSibling, pRootNode));
+                    else
+                        val->SetAsObject(static_cast<Object*>(pshadow->pASNode));
+                }
+                else
+                    val->SetNull();
+            }
             else
-                val->SetNull();
+                val->SetUndefined();
             return true;
         case M_childNodes:
             if (pRealNode && pRealNode->Type == XML::ElementNodeType)
@@ -599,9 +622,9 @@ bool XmlNodeObject::GetMember(Environment* penv, const ASString& name, Value* va
                 {
                     XMLShadowRef* pshadow = static_cast<XMLShadowRef*>(child->pShadow);
                     if (!pshadow || !pshadow->pASNode)
-                        parr->PushBack(Value(CreateShadow(penv, child, pRootNode)));
+                        parr->PushBack(Value(createShadow(penv, child, pRootNode)));
                     else
-                        parr->PushBack(Value(pshadow->pASNode));
+                        parr->PushBack(pshadow->pASNode);
                 }
                 val->SetAsObject(parr);
             }
@@ -609,83 +632,125 @@ bool XmlNodeObject::GetMember(Environment* penv, const ASString& name, Value* va
                 val->SetUndefined();
             return true;
         case M_nodeName:
-            if (!pRealNode)
-                val->SetUndefined();
-            else if (pRealNode->Type == XML::ElementNodeType)
+            if (pRealNode)
             {
-                XML::ElementNode* pelem = static_cast<XML::ElementNode*>(pRealNode);
-                if (pelem->Prefix.GetSize() > 0)
+                if (pRealNode->Type == XML::ElementNodeType)
                 {
-                    ASString str = psc->CreateString(pelem->Prefix.ToCStr());
-                    str += ":";
-                    str += pelem->Value.ToCStr();
-                    val->SetString(str);
+                    XML::ElementNode* pelem = static_cast<XML::ElementNode*>(pRealNode);
+                    if (pelem->Prefix.GetSize() > 0)
+                    {
+                        ASString str = psc->pContext->GetStringManager()->CreateString(pelem->Prefix.ToCStr());
+                        str += ":";
+                        str += pelem->Value.ToCStr();
+                        val->SetString(str);
+                    }
+                    else
+                    {
+                        val->SetString(psc->pContext->GetStringManager()->CreateString(pelem->Value.ToCStr()));
+                    }
                 }
                 else
-                    val->SetString(psc->CreateString(pelem->Value.ToCStr()));
+                    val->SetNull();
             }
             else
-                val->SetNull();
+                val->SetUndefined();
             return true;
         case M_nodeValue:
-            if (!pRealNode)
-                val->SetUndefined();
-            else if (pRealNode->Type == XML::ElementNodeType)
-                val->SetNull();
+            if (pRealNode)
+            {
+                if (pRealNode->Type == XML::ElementNodeType)
+                    val->SetNull();
+                else
+                    val->SetString(psc->pContext->GetStringManager()->CreateString(pRealNode->Value.ToCStr()));
+            }
             else
-                val->SetString(psc->CreateString(pRealNode->Value.ToCStr()));
+                val->SetUndefined();
             return true;
         case M_attributes:
             if (pRealNode)
             {
                 XMLShadowRef* pshadow = static_cast<XMLShadowRef*>(pRealNode->pShadow);
                 if (!pshadow->pAttributes)
-                    pshadow->pAttributes = *SF_HEAP_NEW(penv->GetHeap()) Object(penv);
+                    PickNew(pshadow->pAttributes, SF_HEAP_NEW(penv->GetHeap()) Object(penv));
                 val->SetAsObject(pshadow->pAttributes);
             }
             else
                 val->SetUndefined();
             return true;
         case M_lastChild:
-            if (!pRealNode)
-                val->SetUndefined();
-            else if (pRealNode->Type == XML::ElementNodeType &&
-                     static_cast<XML::ElementNode*>(pRealNode)->HasChildren())
-                SetNodeObject(penv, val, static_cast<XML::ElementNode*>(pRealNode)->LastChild, pRootNode);
+            if (pRealNode)
+            {
+                if (pRealNode->Type == XML::ElementNodeType)
+                {
+                    XML::ElementNode* pnode = static_cast<XML::ElementNode*>(pRealNode);
+                    if (pnode->HasChildren())
+                    {
+                        XMLShadowRef* pshadow = static_cast<XMLShadowRef*>(pnode->LastChild->pShadow);
+                        if (NULL == pshadow || NULL == pshadow->pASNode)
+                            val->SetAsObject(createShadow(penv, pnode->LastChild, pRootNode));
+                        else
+                            val->SetAsObject(static_cast<Object*>(pshadow->pASNode));
+                    }
+                    else
+                        val->SetNull();
+                }
+                else
+                    val->SetNull();
+            }
             else
-                val->SetNull();
+                val->SetUndefined();
             return true;
         case M_previousSibling:
-            if (!pRealNode)
-                val->SetUndefined();
-            else if (pRealNode->PrevSibling)
-                SetNodeObject(penv, val, pRealNode->PrevSibling, pRootNode);
+            if (pRealNode)
+            {
+                XML::Node* pnode = static_cast<XML::Node*>(pRealNode);
+                if (pnode->PrevSibling)
+                {
+                    XMLShadowRef* pshadow = static_cast<XMLShadowRef*>(pnode->PrevSibling->pShadow);
+                    if (NULL == pshadow || NULL == pshadow->pASNode)
+                        val->SetAsObject(createShadow(penv, pnode->PrevSibling, pRootNode));
+                    else
+                        val->SetAsObject(static_cast<Object*>(pshadow->pASNode));
+                }
+                else
+                    val->SetNull();
+            }
             else
-                val->SetNull();
+                val->SetUndefined();
             return true;
         case M_parentNode:
-            if (!pRealNode)
-                val->SetUndefined();
-            else if (pRealNode->Parent)
-                SetNodeObject(penv, val, pRealNode->Parent, pRootNode);
+            if (pRealNode)
+            {
+                XML::Node* pnode = static_cast<XML::Node*>(pRealNode);
+                if (pnode->Parent)
+                {
+                    XMLShadowRef* pshadow = static_cast<XMLShadowRef*>(pnode->Parent->pShadow);
+                    if (NULL == pshadow || NULL == pshadow->pASNode)
+                        val->SetAsObject(createShadow(penv, pnode->Parent, pRootNode));
+                    else
+                        val->SetAsObject(static_cast<Object*>(pshadow->pASNode));
+                }
+                else
+                    val->SetNull();
+            }
             else
-                val->SetNull();
+                val->SetUndefined();
             return true;
         case M_localName:
             if (pRealNode && pRealNode->Type == XML::ElementNodeType)
-                val->SetString(psc->CreateString(pRealNode->Value.ToCStr()));
+                val->SetString(psc->pContext->GetStringManager()->CreateString(pRealNode->Value.ToCStr()));
             else
                 val->SetUndefined();
             return true;
         case M_namespaceURI:
             if (pRealNode && pRealNode->Type == XML::ElementNodeType)
-                val->SetString(psc->CreateString(static_cast<XML::ElementNode*>(pRealNode)->Namespace.ToCStr()));
+                val->SetString(psc->pContext->GetStringManager()->CreateString(static_cast<XML::ElementNode*>(pRealNode)->Namespace.ToCStr()));
             else
                 val->SetUndefined();
             return true;
         case M_prefix:
             if (pRealNode && pRealNode->Type == XML::ElementNodeType)
-                val->SetString(psc->CreateString(static_cast<XML::ElementNode*>(pRealNode)->Prefix.ToCStr()));
+                val->SetString(psc->pContext->GetStringManager()->CreateString(static_cast<XML::ElementNode*>(pRealNode)->Prefix.ToCStr()));
             else
                 val->SetUndefined();
             return true;
