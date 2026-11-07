@@ -4255,17 +4255,20 @@ bool FUN_142513240(Scaleform::GFx::AS3::MovieRoot* self, const char* pmethodName
     return retVal;
 }
 
-namespace Scaleform { namespace GFx { namespace AS3 {
-
-} } } // namespace Scaleform::GFx::AS3
+namespace Scaleform {
+// ParseValueArguments calls ArrayData<Value>::PushBack out of line, as in the exe (defined below).
+template<> inline SF_NOINLINE void ArrayData<GFx::AS3::Value, AllocatorGH<GFx::AS3::Value, 2>, ArrayDefaultPolicy>::PushBack(
+    const GFx::AS3::Value& val);
+} // namespace Scaleform
 
 // MovieRoot::ParseValueArguments: the AS3 values of an Invoke format into arr. %d int, %u undefined, %n null,
 // %b bool, %f or %hf number, %s or %ls string; spaces, tabs and commas between them are skipped and anything
 // else is logged as a script error.
 // plog is a raw pointer taken from the returned Ptr, as in the SDK (the temp is released at once).
-// MS2-FUNCTIONAL a member of the exe's MovieRoot, defined as a free function. The exe keeps arg's flags and
-// pointer in registers across the inlined release and calls ArrayData<Value>::PushBack (0x14251f660) out of
-// line; both the out-of-line call (member pointer) and the SDK for(;;) loop form score worse here.
+// MS2-FUNCTIONAL a member of the exe's MovieRoot, defined as a free function. ArrayData<Value>::PushBack
+// (0x14251f660) is out of line as in the exe (a noinline specialization); the exe places the shared
+// whitespace-skip loop latch after the %d case and keeps arg in other registers and slots. The SDK for(;;)
+// loop form and the SDK skip loop score worse here.
 // @0x14251c1c0
 void FUN_14251c1c0(const Scaleform::GFx::AS3::MovieRoot* self, Scaleform::Array<Scaleform::GFx::AS3::Value>& arr,
                    const char* pmethodName, const char* pargFmt, va_list args)
@@ -5652,8 +5655,12 @@ bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value
 namespace Scaleform { struct MS2_LoadedMovieDefInfo { Ptr<GFx::MovieDefImpl> pMovieDef; unsigned UseCnt; MS2_LoadedMovieDefInfo(GFx::MovieDefImpl* def) : pMovieDef(def), UseCnt(1) {} }; typedef HashNode<GFx::MovieDefImpl*, MS2_LoadedMovieDefInfo, IdentityHash<GFx::MovieDefImpl*> > MS2_LoadedMovieDefNode; typedef HashsetNodeEntry<MS2_LoadedMovieDefNode, MS2_LoadedMovieDefNode::NodeHashF> MS2_LoadedMovieDefEntry; typedef HashSetBase<MS2_LoadedMovieDefNode, MS2_LoadedMovieDefNode::NodeHashF, MS2_LoadedMovieDefNode::NodeAltHashF, AllocatorLH<GFx::MovieDefImpl*, 2>, MS2_LoadedMovieDefEntry> MS2_LoadedMovieDefSet; template<> MS2_LoadedMovieDefEntry::HashsetNodeEntry(const MS2_LoadedMovieDefEntry&); }   // the entry copy ctor (0x1424d54f0) stays out of line, as in the exe; its COMDAT is sfr_as3_15's
 namespace Scaleform {
 // @0x14251f660
-template void ArrayBase<ArrayData<GFx::AS3::Value, AllocatorGH<GFx::AS3::Value, 2>, ArrayDefaultPolicy> >::PushBack(
-    const GFx::AS3::Value&);
+template<> inline SF_NOINLINE void ArrayData<GFx::AS3::Value, AllocatorGH<GFx::AS3::Value, 2>, ArrayDefaultPolicy>::PushBack(
+    const GFx::AS3::Value& val)
+{
+    BaseType::ResizeNoConstruct(this, this->Size + 1);
+    AllocatorGH<GFx::AS3::Value, 2>::Construct(this->Data + this->Size - 1, val);
+}
 // The Tracer's OrigOpcodePos.PushBack (SkipOrigOpCode calls it out of line).
 // @0x14251f710
 template void ArrayBase<ArrayDataDH<UPInt, AllocatorDH_POD<UPInt, GFx::AS3::StatMV_VM>, ArrayDefaultPolicy> >::PushBack(const UPInt&);
@@ -8674,7 +8681,6 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // MS2-PIN: ??_7FrameCounter@AS3@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@3@@ 0x14317e608
 // MS2-PIN: ??_7FrameCounter@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317e9a0
 // MS2-PIN: ?GetLoadingFrame@FrameCounter@AS3@GFx@Scaleform@@UEBAIXZ 0x14250b390
-// MS2-PIN: ?PushBack@?$ArrayData@VValue@AS3@GFx@Scaleform@@U?$AllocatorGH@VValue@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXAEBVValue@AS3@GFx@2@@Z 0x14251f660
 // MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358
 // MS2-PIN: ??_7Resource@GFx@Scaleform@@6B@ 0x143149880
 // MS2-PIN: ??_7RefCountImplCore@Scaleform@@6B@ 0x142dc9d48
