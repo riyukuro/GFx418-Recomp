@@ -387,6 +387,12 @@ public:
     const ASString& GetBuiltin(BuiltinType btype) const { return pMovieRoot->BuiltinsMgr.GetBuiltin(btype); }
 
     // Constructs an instance of the class object classObj; false when the construction threw.
+    // (sfm) MS2_AS3_CONSTRUCT_NOALIAS: the exe's callers keep the SPtr result in a register and release it with
+    // no store-back, as if its address did not escape; noalias tells cl the same. Opt-in per unit: header-wide
+    // it loses 21 matched functions in as3_07/09/11/12/13/14/20.
+#ifdef MS2_AS3_CONSTRUCT_NOALIAS
+    __declspec(noalias)
+#endif
     bool _constructInstance(SPtr<Object>& pobj, Object* classObj, unsigned argc, const Value* argv);   // 0x142531f40
     template <class T>
     bool ConstructInstance(SPtr<T>& pobj, Object* classObj, unsigned argc = 0, const Value* argv = 0)

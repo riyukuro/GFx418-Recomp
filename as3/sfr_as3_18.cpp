@@ -10,6 +10,7 @@
 #define SF_AS3_AVMBUTTON_MODEL
 #define SF_AS3_SHAPEOBJECT_MODEL   // ShapeObject / AvmBitmap from the SDK MI layout (as3_avm.h)
 #define MS2_AS3_ASSIGN_NOALIAS
+#define MS2_AS3_CONSTRUCT_NOALIAS   // ConstructInstance result kept in a register (as3_asvm.h)
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp/AS3_Value.cpp AddRef bodies inline (as3_value.h)
 #include <math.h>
 #include <stdlib.h>
@@ -6815,7 +6816,8 @@ static inline TextField* Sfr34_TextFieldOf(const AvmDisplayObj* avm)
 
 // AvmTextField::OnLinkEventEx: with the extensions on, the rolling over (or out of) a link gives a
 // "linkMouseOver" ("linkMouseOut") TextEventEx with the link's URL to the AS3 object when it listens for it.
-// MS2-FUNCTIONAL register allocation (exe keeps this in r15 and the event in rdi) and the Text assignment's refcount order differ
+// MS2-FUNCTIONAL scheduling only: the instructions match the exe (MS2_AS3_CONSTRUCT_NOALIAS), but the event's
+// Value-array stores and the [rcx+8]/0x350 loads come in another order
 // @0x14251a500
 void AvmTextField::OnLinkEventEx(TextField::LinkEvent event, unsigned pos, unsigned controllerIndex)
 {
@@ -6858,7 +6860,8 @@ void AvmTextField::OnLinkEventEx(TextField::LinkEvent event, unsigned pos, unsig
 
 // AvmTextField::OnMouseEvent: a click (not ending a selection) on an "event:" link of an HTML field gives a "link"
 // TextEvent with the rest of the URL to the AS3 object when it listens for it; true for any click.
-// MS2-FUNCTIONAL register allocation (exe keeps this in r15 and the event in rbx) and the Text assignment's refcount order differ
+// MS2-FUNCTIONAL scheduling only: the instructions match the exe (MS2_AS3_CONSTRUCT_NOALIAS), but the event's
+// Value-array stores and the [rcx+8]/0x20 loads come in another order
 // @0x14251a8a0
 bool AvmTextField::OnMouseEvent(const EventId& event)
 {
@@ -6917,8 +6920,8 @@ bool AvmTextField::OnMouseEvent(const EventId& event)
 
 // AvmTextField::OnCharEvent: a "textInput" TextEvent of the character to the AS3 object when it listens for it;
 // false when the event's default action was prevented.
-// MS2-FUNCTIONAL register allocation: the exe keeps one more callee-saved register and a 0x10 larger frame (this in
-// r14, the event in rdi, the result in esi), and reuses the event register for the SPtr release
+// MS2-FUNCTIONAL scheduling only: the instructions match the exe (MS2_AS3_CONSTRUCT_NOALIAS), but params[0]'s stores
+// come after the evt init in ours, and the 0x350/3/0x348 loads interleave differently with params[1..2]
 // @0x142518750
 bool AvmTextField::OnCharEvent(wchar_t wcharCode, unsigned controllerIdx)
 {
