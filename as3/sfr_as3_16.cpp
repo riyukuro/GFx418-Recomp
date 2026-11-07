@@ -1435,43 +1435,71 @@ CheckResult AbstractEqual(bool& result, const Value& l, const Value& r)
     return true;
 }
 
+// The exe inlines ToNumberValueInline here (its out-of-line copy is 0x14252f6d0).
+static __forceinline CheckResult Sfr16ToNumberValueInline(Value& v)
+{
+    CheckResult rc = true;
+    Value::Number result;
+
+    if (v.Convert2NumberInline(result))
+        v.SetNumber(result);
+    else
+        rc = false;
+
+    return rc;
+}
+
 // ECMA-262 11.8.5: undefined3 when either side is NaN.
-// MS2-FUNCTIONAL: exe shares one release tail for both temporaries; our inlined conversions are longer
+// MS2-FUNCTIONAL: SDK body; the exe places the ToNumber failure tail after the first Convert2NumberInternal call
+// (ours after the second), keeps the SetNumber flags in edx/eax and skips the true store into the CheckResult temp.
 // @0x1424e4f40
 CheckResult AbstractLessThan(Boolean3& result, const Value& l, const Value& r)
 {
     Value _1;
     Value _2;
 
-    if (!l.Convert2PrimitiveValueUnsafe(_1, Value::hintNumber) || !r.Convert2PrimitiveValueUnsafe(_2, Value::hintNumber))
+    if (!l.Convert2PrimitiveValueUnsafe(_1, Value::hintNumber))
         return false;
 
-    const Value::KindType k1 = _1.GetKind();
-    const Value::KindType k2 = _2.GetKind();
+    if (!r.Convert2PrimitiveValueUnsafe(_2, Value::hintNumber))
+        return false;
 
-    if (k1 == Value::kInt && k2 == Value::kInt)
+    Value::KindType _1k = _1.GetKind();
+    Value::KindType _2k = _2.GetKind();
+
+    if (_1k == Value::kInt && _2k == Value::kInt)
     {
         result = _1.AsInt() < _2.AsInt() ? true3 : false3;
         return true;
     }
-    if (k1 == Value::kUInt && k2 == Value::kUInt)
+
+    if (_1k == Value::kUInt && _2k == Value::kUInt)
     {
         result = _1.AsUInt() < _2.AsUInt() ? true3 : false3;
         return true;
     }
-    if (k1 == Value::kString && k2 == Value::kString && _1.AsStringNode() && _2.AsStringNode())
+
+    if (_1k == Value::kString && _2k == Value::kString &&
+        _1.GetStringNode() != NULL && _2.AsStringNode() != NULL)
     {
-        result = _1.AsString() < _2.AsString() ? true3 : false3;
+        const ASString str1 = _1;
+        const ASString str2 = _2;
+
+        result = str1 < str2 ? true3 : false3;
         return true;
     }
 
-    if (!_1.ToNumberValueInline() || !_2.ToNumberValueInline())
+    if (!Sfr16ToNumberValueInline(_1) || !Sfr16ToNumberValueInline(_2))
         return false;
 
-    Boolean3 r3 = undefined3;
-    if (!_1.IsNaN() && !_2.IsNaN())
-        r3 = _1.AsNumber() < _2.AsNumber() ? true3 : false3;
-    result = r3;
+    if (_1.IsNaN() || _2.IsNaN())
+    {
+        result = undefined3;
+        return true;
+    }
+
+    result = _1.AsNumber() < _2.AsNumber() ? true3 : false3;
+
     return true;
 }
 
