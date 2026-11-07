@@ -1771,7 +1771,7 @@ static SF_INLINE void InsertElements(VectorBase<Value>& self, UPInt pos, unsigne
     self.Insert(pos, argc, argv);
 }
 
-template <class I, class TR, typename T>
+template <class I, class TR, bool NamedPickable, typename T>
 static __forceinline void VectorSplice(VectorBase<T>& self, Value& result, unsigned argc, const Value* argv, I& owner)
 {
     self.CheckFixed();
@@ -1803,6 +1803,15 @@ static __forceinline void VectorSplice(VectorBase<T>& self, Value& result, unsig
 
     TR& itr = static_cast<TR&>(owner.GetTraits());
     I* r;
+    if (NamedPickable)
+    {
+        // A named Pickable keeps the result in its stack slot; r is re-read from it.
+        Pickable<I> pr = itr.MakeInstanceS(itr);
+        r = pr.GetPtr();
+        SPtr<I> sr = pr;
+        result.Pick(sr);
+    }
+    else
     {
         SPtr<I> sr = itr.MakeInstanceS(itr);
         r = sr.GetPtr();
@@ -2213,23 +2222,23 @@ void FUN_142553170(VectorBase<UInt32>& v, Value& result, unsigned argc, const Va
 // MS2-FUNCTIONAL: splice: the RangeError's AsString temporaries get other stack slots and ToCStr is scheduled differently; register allocation
 // @0x142553bb0
 void FUN_142553bb0(VectorBase<Ptr<GFx::ASStringNode> >& v, Value& result, unsigned argc, const Value* argv, VI::Vector_String& owner)
-{ VI::VectorSplice<VI::Vector_String, VT::Vector_String>(v, result, argc, argv, owner); }
-// MS2-FUNCTIONAL: splice: the RangeError's AsString temporaries get other stack slots and ToCStr is scheduled differently; register allocation
+{ VI::VectorSplice<VI::Vector_String, VT::Vector_String, false>(v, result, argc, argv, owner); }
+// MS2-FUNCTIONAL: splice: the VM load is hoisted above the RangeError's AsString calls, and the AsString temporary and the named Pickable swap stack slots
 // @0x142553e90
 void FUN_142553e90(VectorBase<Value::Number>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_double& owner)
-{ VI::VectorSplice<VI::Vector_double, VT::Vector_double>(v, result, argc, argv, owner); }
-// MS2-FUNCTIONAL: splice: the RangeError's AsString temporaries get other stack slots and ToCStr is scheduled differently; register allocation
+{ VI::VectorSplice<VI::Vector_double, VT::Vector_double, true>(v, result, argc, argv, owner); }
+// MS2-FUNCTIONAL: splice: the VM load is hoisted above the RangeError's AsString calls, and the AsString temporary and the named Pickable swap stack slots
 // @0x142554280
 void FUN_142554280(VectorBase<SInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_int& owner)
-{ VI::VectorSplice<VI::Vector_int, VT::Vector_int>(v, result, argc, argv, owner); }
+{ VI::VectorSplice<VI::Vector_int, VT::Vector_int, true>(v, result, argc, argv, owner); }
 // MS2-FUNCTIONAL: splice: the RangeError's AsString temporaries get other stack slots and ToCStr is scheduled differently; register allocation
 // @0x142554660
 void FUN_142554660(VectorBase<Value>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_object& owner)
-{ VI::VectorSplice<VI::Vector_object, VT::Vector_object>(v, result, argc, argv, owner); }
-// MS2-FUNCTIONAL: splice: the RangeError's AsString temporaries get other stack slots and ToCStr is scheduled differently; register allocation
+{ VI::VectorSplice<VI::Vector_object, VT::Vector_object, false>(v, result, argc, argv, owner); }
+// MS2-FUNCTIONAL: splice: the VM load is hoisted above the RangeError's AsString calls, and the AsString temporary and the named Pickable swap stack slots
 // @0x142554880
 void FUN_142554880(VectorBase<UInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_uint& owner)
-{ VI::VectorSplice<VI::Vector_uint, VT::Vector_uint>(v, result, argc, argv, owner); }
+{ VI::VectorSplice<VI::Vector_uint, VT::Vector_uint, true>(v, result, argc, argv, owner); }
 
 
 // ==== Vector class traits (sfr19) ====================================================================================
