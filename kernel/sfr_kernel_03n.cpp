@@ -37,7 +37,8 @@ typedef Hash<UInt64, GFx::AMP::MovieFunctionStats::FuncStats> Sfr03nFuncStatsHas
 typedef decltype(Sfr03nFuncStatsHash::mHash)::BaseType Sfr03nFuncStatsSet;
 typedef decltype(HashLH<UInt64, Ptr<GFx::AMP::FunctionDesc> >::mHash)::BaseType Sfr03nFunctionDescSet;
 template<> void Sfr03nFunctionDescSet::Assign(void* pmemAddr, const Sfr03nFunctionDescSet& src);    // 0x142689aa0
-template<> template<> Sfr03nFuncStatsSet::Iterator Sfr03nFuncStatsSet::FindAlt<UInt64>(const UInt64& key);   // 0x14268a450
+// noalias: LTCG knows FindAlt keeps no pointer to its sret Iterator, so 0x142689640 keeps pHash/Index in registers across the hit.
+template<> template<> __declspec(noalias) Sfr03nFuncStatsSet::Iterator Sfr03nFuncStatsSet::FindAlt<UInt64>(const UInt64& key);   // 0x14268a450
 template<> void Sfr03nFuncStatsHash::Add(const UInt64& key, const GFx::AMP::MovieFunctionStats::FuncStats& value); // 0x1426899e0
 template<> Sfr03nFuncStatsSet::~HashSetBase();                                                       // 0x1426871f0
 template<> void GFx::AMP::FuncTreeItem::Visit<GFx::AMP::FunctionTreeVisitor>(GFx::AMP::FunctionTreeVisitor& visitor); // 0x142686440
@@ -228,7 +229,7 @@ struct Sfr21ImageGroup
 // Groups the records of a movie (array +0x18, each with a key at +0x10, data [+0x18, +0x20) and children +0x30) by
 // key, counting them and summing their sizes; records whose key's high word is not 1 count only when `all` is set.
 // Returns a new summary object (vftable 0x143192190) holding the groups and a copy of the movie's hash +0x30.
-// MS2-FUNCTIONAL: SDK-ordered Accumulate body, same calls and loops; the exe saves rbx/rbp by mov (shrink-wrap) and keeps the hash table loaded across the Find hit, ours pushes r12 and re-reads it.
+// MS2-FUNCTIONAL: SDK-ordered Accumulate body, same calls and loops; the exe saves rbx/rbp by mov (home slots) where ours pushes, and its Begin() scan re-reads SizeMask each step where ours hoists it (48 lines).
 // @0x142689640
 __declspec(noinline) void* FUN_142689640(void* movie, bool all)
 {
