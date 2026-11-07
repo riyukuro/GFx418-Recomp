@@ -117,54 +117,6 @@ void FUN_142971cc0(WithStackRef* pwith, const WithStackEntry& entry)
     pwith->pStack->PushBack(entry);
 }
 
-// The 'implements' opcode (ExecutionContext::ImplementsOpCode; the context is not modelled: +0 the environment,
-// +0x40 the logger, +0x62 the verbose flag): the constructor on top gets the count interfaces below it added to its
-// prototype.
-// MS2-FUNCTIONAL: the context is read by address
-// @0x14295dbe0
-void FUN_14295dbe0(void* pctx)
-{
-    UByte*        pc      = static_cast<UByte*>(pctx);
-    Environment*  penv    = *reinterpret_cast<Environment**>(pc);
-    ActionLogger* plog    = reinterpret_cast<ActionLogger*>(pc + 0x40);
-
-    Value ctorVal = penv->Top(0);
-    int   count   = penv->Top(1).ToInt32(penv);
-    penv->Drop2();
-    if (ctorVal.IsFunction())
-    {
-        FunctionRef ctorFunc = ctorVal.ToFunction(penv);
-        if (!ctorFunc.IsNull())
-        {
-            Value protoVal;
-            if (ctorFunc->GetMemberRaw(penv->GetSC(), penv->GetBuiltin(ASBuiltin_prototype), &protoVal))
-            {
-                Object* pproto = protoVal.ToObject(penv);
-                if (pproto)
-                {
-                    pproto->AddInterface(penv->GetSC(), count, 0);
-                    for (int i = 0; i < count; i++)
-                    {
-                        Value& intfVal = penv->Top(i);
-                        if (intfVal.IsFunction())
-                        {
-                            FunctionRef intf = intfVal.ToFunction(penv);
-                            if (!intf.IsNull())
-                                pproto->AddInterface(penv->GetSC(), i, intf.GetObjectPtr());
-                        }
-                    }
-                }
-            }
-            else if (pc[0x62] & 1)
-                plog->LogScriptError("The constructor function in 'implements' should have 'prototype'.");
-        }
-    }
-    else if (pc[0x62] & 1)
-        plog->LogScriptError("The parameter of 'implements' should be a function.");
-
-    penv->Drop(count);
-}
-
 // The ToFunction copy with SetLocalFrame expanded in place, as the exe inlines it into the instanceof opcode (the
 // same expansion as sfr_as2_05j's, under this unit's own tag).
 struct SetLocalFrameInlineTag06 {};
@@ -206,6 +158,133 @@ static SF_FORCEINLINE FunctionRef ValueToFunction06(const Value& v, const Enviro
     }
     return FunctionRef();
 }
+
+// RefCountBaseGC::AddRef as one read-modify-write of RefCount (+0x18): the exe loads, increments, clears the state
+// bits and stores in the implements opcode.
+static SF_FORCEINLINE void AddRefGC06(void* p)
+{
+    UInt32& rc = *reinterpret_cast<UInt32*>(static_cast<char*>(p) + 0x18);
+    rc = (rc + 1) & 0x8fffffffu;
+}
+static SF_FORCEINLINE void ImplementsSetLocalFrame06(FunctionRefBase* p, LocalFrame* localFrame, bool weakRef)
+{
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->Release();
+    p->pLocalFrame = localFrame;
+    if (weakRef)
+        p->Flags |= FunctionRefBase::FuncRef_Weak;
+    else
+        p->Flags &= ~FunctionRefBase::FuncRef_Weak;
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        AddRefGC06(p->pLocalFrame);
+}
+
+// Value::ToFunction as the exe inlines it into the implements opcode: the result is built in place.
+struct ImplementsFuncRef06 : FunctionRefBase
+{
+    SF_FORCEINLINE ImplementsFuncRef06(const Value& v, const Environment* penv)
+    {
+        switch (v.T.Type)
+        {
+        case Value::FUNCTIONNAME:
+            ::new (static_cast<void*>(this)) FunctionRef(static_cast<const ValueAccess06&>(v).ResolveFunctionName(penv));
+            return;
+        case Value::FUNCTION:
+            Flags    = 0;
+            Function = v.V.FunctionValue.Function;
+            if (Function)
+                AddRefGC06(Function);
+            pLocalFrame = 0;
+            if (v.V.FunctionValue.pLocalFrame)
+                ImplementsSetLocalFrame06(this, v.V.FunctionValue.pLocalFrame,
+                                          (v.V.FunctionValue.Flags & FuncRef_Weak) != 0);
+            return;
+        default:;
+        }
+        Init((FunctionObject*)0);
+    }
+    SF_FORCEINLINE ~ImplementsFuncRef06() { DropRefs(); }
+};
+
+// ExecutionContext (local to the SDK's AS2_Action.cpp) as far as the opcodes use it.
+struct ExecutionContextView06
+{
+    Environment* const       pEnv;            // +0x00
+    InteractiveObject* const pOriginalTarget; // +0x08
+    const UByte* const       pBuffer;         // +0x10
+    ActionLogger*            pPrevLog;        // +0x18
+    int                      StopPC;          // +0x20
+    int                      NextPC;          // +0x24
+    int                      PC;              // +0x28
+    WithStackRef             WithStack;       // +0x30
+    ActionLogger             LogF;            // +0x40
+    UInt8                    Version;         // +0x60
+    UInt8                    ExecType;        // +0x61
+    bool                     VerboseActionErrors : 1; // +0x62
+    bool                     VerboseAction       : 1;
+    bool                     IsFunction2         : 1;
+};
+
+// PagedStack::Top1 as in the SDK: the element below the top, or the previous page's top.
+static SF_FORCEINLINE Value* StackTop1_06s1(PagedStack<Value, 32>& s)
+{
+    return (s.pCurrent > s.pPageStart) ? (s.pCurrent - 1) : s.pPrevPageTop;
+}
+
+// The 'implements' opcode (ExecutionContext::ImplementsOpCode, SDK body over the ExecutionContextView06 layout): the
+// constructor on top gets the count interfaces below it added to its prototype.
+// MS2-FUNCTIONAL: 1181 vs 1170 bytes; the exe keeps ctorFuncVal's type byte in edi (saved in the prolog) across the
+// Drop calls, as if cl knew Value's copy ctor / DropRefs leave the local alone (cross-TU mod-ref); ours re-reads it
+// @0x14295dbe0
+void FUN_14295dbe0(void* pctx)
+{
+    ExecutionContextView06* ctx = static_cast<ExecutionContextView06*>(pctx);
+
+    Value ctorFuncVal(*ctx->pEnv->Stack.Top0());
+    int   intfNum = StackTop1_06s1(ctx->pEnv->Stack)->ToInt32(ctx->pEnv);
+    ctx->pEnv->Drop2();
+
+    if (ctorFuncVal.IsFunction())
+    {
+        ImplementsFuncRef06 ctorFunc(ctorFuncVal, ctx->pEnv);
+        if (!ctorFunc.IsNull())
+        {
+            Value protoVal;
+            if (ctorFunc->GetMemberRaw(ctx->pEnv->GetSC(), ctx->pEnv->GetBuiltin(ASBuiltin_prototype), &protoVal))
+            {
+                Object* proto = protoVal.ToObject(ctx->pEnv);
+                if (proto != 0)
+                {
+                    proto->AddInterface(ctx->pEnv->GetSC(), intfNum, NULL);
+                    for (int i = 0; i < intfNum; ++i)
+                    {
+                        const Value& intfVal = ctx->pEnv->Top(i);
+                        if (intfVal.IsFunction())
+                        {
+                            ImplementsFuncRef06 intfFunc(intfVal, ctx->pEnv);
+                            if (!intfFunc.IsNull())
+                            {
+                                proto->AddInterface(ctx->pEnv->GetSC(), i, intfFunc.GetObjectPtr());
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (ctx->VerboseActionErrors)
+                    ctx->LogF.LogScriptError("The constructor function in 'implements' should have 'prototype'.");
+            }
+        }
+    }
+    else
+    {
+        if (ctx->VerboseActionErrors)
+            ctx->LogF.LogScriptError("The parameter of 'implements' should be a function.");
+    }
+    ctx->pEnv->Drop(intfNum);
+}
+
 // The SDK's PagedStack::Top1: the element below the top, on the previous page when the top starts a page.
 static SF_FORCEINLINE Value& EnvTop1(Environment* e)
 {
