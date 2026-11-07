@@ -1388,8 +1388,7 @@ static __forceinline void Sfr27ThrowNullOrUndefined(VM& vm, const Value& v)
 }
 
 // The class operand popped: a value not convertible to its type becomes null.
-// MS2-FUNCTIONAL 0x142533300: same branch layout; our cl tail-merges the two ThrowTypeError tails, the exe keeps them
-// separate (re-reading the kind for the y release) and holds below in r14.
+// SDK VM::exec_astypelate shape: early returns from both ThrowTypeError calls.
 // @0x142533300
 void Sfr27ExecAsType(VM* vm)
 {
@@ -1399,12 +1398,18 @@ void Sfr27ExecAsType(VM* vm)
     y.Pick(stk);
     if (y.GetKind() != Value::kClass)
     {
-        if (!y.IsNullOrUndefined())
-            vm->ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x411), *vm));
-        else
-            Sfr27ThrowNullOrUndefined(*vm, y);
+        if (y.IsNullOrUndefined())
+        {
+            return vm->ThrowTypeError(VM::Error(
+                y.IsNull() ? static_cast<VM::ErrorID>(0x3f1) : static_cast<VM::ErrorID>(0x3f2),
+                *vm
+                ));
+        }
+
+        return vm->ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x411), *vm));
     }
-    else if (!FUN_1425146d0(vm, below, &y.AsClass().GetTraits()))
+
+    if (!FUN_1425146d0(vm, below, &y.AsClass().GetTraits()))
         below->SetNull();
 }
 
