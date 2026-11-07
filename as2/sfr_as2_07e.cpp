@@ -70,6 +70,12 @@ SF_FORCEINLINE ASString XmlConstString(Environment* penv, const char* pstr)
     return XmlConstString(penv->GetSC(), pstr);
 }
 
+SF_FORCEINLINE bool XmlSetConstMemberRaw(ObjectInterface& obj, ASStringContext* psc, const char* pname,
+                                         const Value& val, const PropFlags& flags)
+{
+    return obj.SetMemberRaw(psc, XmlConstString(psc, pname), val, flags);
+}
+
 // The movie shares one DOM object manager between its XML objects.
 SF_FORCEINLINE Ptr<XML::ObjectManager> GetXmlObjectManager(Environment* penv, MovieImpl* pmovieroot)
 {
@@ -326,7 +332,6 @@ XmlObject::XmlObject(Environment* penv) : XmlNodeObject(penv)
 }
 
 // The prototype holds the methods, the writable defaults of the XML properties and the default onData handler.
-// MS2-FUNCTIONAL: onData Value/name evaluation order
 // @0x1429a08f0
 XmlProto::XmlProto(ASStringContext* psc, Object* prototype, const FunctionRef& constructor)
     : Prototype<XmlObject>(psc, prototype, constructor)
@@ -341,10 +346,10 @@ XmlProto::XmlProto(ASStringContext* psc, Object* prototype, const FunctionRef& c
     Object::SetMemberRaw(psc, XmlConstString(psc, "loaded"), Value(), PropFlags(PropFlags::PropFlag_DontDelete));
     Object::SetMemberRaw(psc, XmlConstString(psc, "status"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
     Object::SetMemberRaw(psc, XmlConstString(psc, "xmlDecl"), Value(), PropFlags(PropFlags::PropFlag_DontDelete));
-    // Through the interface, as the exe calls it.
-    static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, XmlConstString(psc, "onData"),
-                                                      Value(psc, XmlProto::DefaultOnData),
-                                                      PropFlags(PropFlags::PropFlag_DontEnum));
+    // The SDK's ObjectInterface::SetConstMemberRaw (header inline, through the interface): the Value is built
+    // before the name.
+    XmlSetConstMemberRaw(*this, psc, "onData", Value(psc, XmlProto::DefaultOnData),
+                         PropFlags(PropFlags::PropFlag_DontEnum));
 }
 
 // @0x1429a0f00
