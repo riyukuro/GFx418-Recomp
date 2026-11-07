@@ -1120,39 +1120,49 @@ void BitmapDataCtorFunction::LoadBitmapA(const FnCall& fn)
 // Global parseInt(string, radix): the radix is 8 or 16 for a 0 / 0x prefix when not given, NaN for a radix outside 2..36
 // or text without digits.
 // @0x1428f70b0
-// MS2-FUNCTIONAL same logic; register allocation and argument-stack lookup scheduling differ
 void GAS_GlobalParseInt(const FnCall& fn)
 {
     if (fn.NArgs < 1)
         return;
-    ASString text = fn.Arg(0).ToString(fn.Env);
     int      radix = 10;
-    int      skip = 0;
+    ASString str(fn.Arg(0).ToString(fn.Env));
+    unsigned len = str.GetSize();
+    unsigned offset = 0;
     if (fn.NArgs >= 2)
     {
         radix = fn.Arg(1).ToInt32(fn.Env);
-        if (radix < 2 || radix > 36)
+        if ((radix < 2) || (radix > 36))
         {
             fn.Result->SetNumber(NumberUtil::NaN());
             return;
         }
     }
-    else if (text.GetSize() > 1 && text.ToCStr()[0] == '0')
+    else
     {
-        radix = 8;
-        skip = 1;
-        if (text.ToCStr()[1] == 'x' || text.ToCStr()[1] == 'X')
+        if (len > 1)
         {
-            radix = 16;
-            skip = 2;
+            if (str[offset] == '0')
+            {
+                offset++;
+                radix = 8;
+                if (len > offset)
+                {
+                    if ((str[offset] == 'x') || (str[offset] == 'X'))
+                    {
+                        radix = 16;
+                        offset++;
+                    }
+                }
+            }
         }
     }
-    char* pend = 0;
-    int   val = (int)strtol(text.ToCStr() + skip, &pend, radix);
-    if (text.ToCStr() + skip == pend && radix != 8)
-        fn.Result->SetNumber(NumberUtil::NaN());
+    const char* pstart = str.ToCStr() + offset;
+    char*       pstop  = 0;
+    long        result = strtol(str.ToCStr() + offset, &pstop, radix);
+    if (pstart != pstop || radix == 8)
+        fn.Result->SetInt(result);
     else
-        fn.Result->SetInt(val);
+        fn.Result->SetNumber(NumberUtil::NaN());
 }
 
 // Global ifFrameLoaded(frame): true when the frame has been loaded in this (or the target) clip.
