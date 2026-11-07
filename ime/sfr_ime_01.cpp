@@ -885,11 +885,71 @@ struct ImeSinkFirst { void* vftable; };
 struct ImeSinkSecond { void* vftable; };
 struct ImeSinkOwner : ImeSinkOwnerHead, ImeSinkFirst, ImeSinkSecond {};
 
+// The two TSF sink classes (see Ime01EmitTsfSinkVftables / Ime01EmitTsfUiSinkVftables at the end of the file).
+// Their overriders are the bodies below, tagged with the exe VAs.
+struct __declspec(novtable) Ime01CompartmentEventSink {
+    virtual HRESULT QueryInterface(const unsigned long long* iid, void** output) = 0;
+    virtual int AddRef() = 0;
+    virtual int Release() = 0;
+    virtual unsigned long long OnChange(const unsigned long long* guid) = 0;
+};
+struct __declspec(novtable) Ime01ProfileActivationSink {
+    virtual HRESULT QueryInterface(const unsigned long long* iid, void** output) = 0;
+    virtual int AddRef() = 0;
+    virtual int Release() = 0;
+    virtual unsigned long long OnActivated(int profileType, unsigned short language, long long* clsid,
+        long long* catid, long long* guidProfile, unsigned long long hkl) = 0;
+};
+class Ime01TsfSink : public Ime01CompartmentEventSink, public Ime01ProfileActivationSink {
+public:
+    HRESULT QueryInterface(const unsigned long long* iid, void** output) override;   // 0x1423d72a0
+    int AddRef() override;                                                         // 0x1423d5ae0
+    int Release() override;                                                        // 0x1423d7350
+    unsigned long long OnChange(const unsigned long long* guid) override;          // 0x1423d70d0
+    unsigned long long OnActivated(int profileType, unsigned short language, long long* clsid,
+        long long* catid, long long* guidProfile, unsigned long long hkl) override;  // 0x1423d6c10
+    unsigned cookie;
+    int refCount;
+};
+struct __declspec(novtable) Ime01ThreadMgrEventSink {
+    virtual HRESULT QueryInterface(const unsigned long long* iid, void** output) = 0;
+    virtual int AddRef() = 0;
+    virtual int Release() = 0;
+    virtual long long OnInitDocumentMgr(void* documentMgr) = 0;
+    virtual long long OnUninitDocumentMgr(void* documentMgr) = 0;
+    virtual long long OnSetFocus(void* focus, void* previousFocus) = 0;
+    virtual long long OnPushContext(void* context) = 0;
+    virtual long long OnPopContext(void* context) = 0;
+};
+struct __declspec(novtable) Ime01UIElementSink {
+    virtual HRESULT QueryInterface(const unsigned long long* iid, void** output) = 0;
+    virtual int AddRef() = 0;
+    virtual int Release() = 0;
+    virtual unsigned long long BeginUIElement(unsigned long long elementId, unsigned* show) = 0;
+    virtual unsigned long long UpdateUIElement(unsigned elementId) = 0;
+    virtual unsigned long long EndUIElement(int elementId) = 0;
+};
+class Ime01TsfUiSink : public Ime01ThreadMgrEventSink, public Ime01UIElementSink {
+public:
+    HRESULT QueryInterface(const unsigned long long* iid, void** output) override;           // 0x1423dadd0
+    int AddRef() override;                                                                 // 0x1423da420
+    int Release() override;                                                                // 0x1423daeb0
+    long long OnInitDocumentMgr(void* documentMgr) override;                               // 0x1423dad80
+    long long OnUninitDocumentMgr(void* documentMgr) override;                             // 0x1423dadc0
+    long long OnSetFocus(void* focus, void* previousFocus) override;                       // 0x1423dadb0
+    long long OnPushContext(void* context) override;                                       // 0x1423dada0
+    long long OnPopContext(void* context) override;                                        // 0x1423dad90
+    virtual void* DeletingDestructor(unsigned flags);                                      // 0x1423da2c0
+    unsigned long long BeginUIElement(unsigned long long elementId, unsigned* show) override;   // 0x1423da440
+    unsigned long long UpdateUIElement(unsigned elementId) override;                       // 0x1423db0c0
+    unsigned long long EndUIElement(int elementId) override;                               // 0x1423da730
+};
 // The QueryInterface of the sink embedded at +0x1a0 of its owner: IUnknown (DAT_1431c4828) and the interface at
 // DAT_14313b400 answer with the owner's +0x1a8 view, DAT_1431c5018 with the +0x1a0 view.
 // @0x1423d72a0
-__declspec(noinline) HRESULT FUN_1423d72a0(void* object, const unsigned long long* iid, void** output)
+__declspec(noinline) HRESULT Ime01TsfSink::QueryInterface(const unsigned long long* iid, void** output)
 {
+    void* object = this;
     if (!output) return E_INVALIDARG;
     *output = nullptr;
     const IID& riid = *reinterpret_cast<const IID*>(iid);
@@ -1170,8 +1230,9 @@ __declspec(noinline) void* FUN_1423da250(unsigned long long* object, unsigned lo
 
 // restores both vptrs, then the allocation flag and 0x110 sized-delete branch.
 // @0x1423da2c0
-void* FUN_1423da2c0(void* object, unsigned flags)
+void* Ime01TsfUiSink::DeletingDestructor(unsigned flags)
 {
+    void* object = this;
     auto* words = static_cast<unsigned long long*>(object);
     words[0] = reinterpret_cast<unsigned long long>(DAT_14313b920);
     words[1] = reinterpret_cast<unsigned long long>(DAT_14313b968);
@@ -1489,8 +1550,9 @@ __declspec(noinline) unsigned long long FUN_1423d9490(void* object, unsigned lon
 // TSF compartment change sink: for the watched compartment GUID, reads its VT_I4 value and passes it on (FUN_1423cc7c0).
 // As in the exe, the VARIANT is not initialised or cleared.
 // @0x1423d70d0
-unsigned long long FUN_1423d70d0(void* object, const unsigned long long* guid)
+unsigned long long Ime01TsfSink::OnChange(const unsigned long long* guid)
 {
+    void* object = this;
     // IsEqualGUID (memcmp) against the conversion-mode compartment GUID, compared as two 8-byte halves.
     if (memcmp(guid, &DAT_14313b410, 8) == 0 && memcmp(guid + 1, &DAT_14313b410 + 1, 8) == 0) {
         auto* bytes = static_cast<unsigned char*>(object);
@@ -1665,8 +1727,9 @@ __declspec(noinline) void FUN_1423d97d0(void* self, const char* enabled)
 }
 
 // @0x1423daeb0
-__declspec(noinline) int FUN_1423daeb0(long long* self)
+__declspec(noinline) int Ime01TsfUiSink::Release()
 {
+    long long* self = reinterpret_cast<long long*>(this);
     int count = *reinterpret_cast<int*>(reinterpret_cast<unsigned char*>(self) + 0x3c) - 1;
     *reinterpret_cast<int*>(reinterpret_cast<unsigned char*>(self) + 0x3c) = count;
     if (count == 0) {
@@ -2226,8 +2289,9 @@ struct ImeQiObject : ImeQiFirst, ImeQiSecond {};
 // The QueryInterface of an object with two interface views: IUnknown (DAT_1431c4828), DAT_1431c4d58, DAT_1431c4e08
 // and DAT_1431c4ee8 answer with the object itself, DAT_14313b8b8 with its +8 view.
 // @0x1423dadd0
-__declspec(noinline) HRESULT FUN_1423dadd0(long long* object, const unsigned long long* iid, void** output)
+__declspec(noinline) HRESULT Ime01TsfUiSink::QueryInterface(const unsigned long long* iid, void** output)
 {
+    long long* object = reinterpret_cast<long long*>(this);
     if (!output) return E_INVALIDARG;
     *output = nullptr;
     const IID& riid = *reinterpret_cast<const IID*>(iid);
@@ -2745,8 +2809,9 @@ void FUN_1423d5740(unsigned long long* self, const unsigned char* name)
 // Releases the active IME list/window by state index and updates the composition bookkeeping. The manager is reread
 // through self+8 each time and each Value is built before the movie lookup.
 // @0x1423da730
-unsigned long long FUN_1423da730(void* raw, int state)
+unsigned long long Ime01TsfUiSink::EndUIElement(int state)
 {
+    void* raw = reinterpret_cast<unsigned char*>(this) + 8;   // the Ime01UIElementSink view
     auto* self = static_cast<unsigned char*>(raw);
     unsigned char*& manager = *reinterpret_cast<unsigned char**>(self + 8);
     const unsigned mode = *reinterpret_cast<unsigned*>(manager + 0x98);
@@ -6014,9 +6079,10 @@ void FUN_1423cbe90(long long* manager, unsigned language)
 // left: register allocation (the exe spills the language and keeps hkl in r14), the GUID_NULL compares, the profile
 // slot (rbp+0x10 vs rbp+0) and the layout loop, which the exe does not strength-reduce.
 // @0x1423d6c10
-unsigned long long FUN_1423d6c10(long long raw, int profileType, unsigned short language,
+unsigned long long Ime01TsfSink::OnActivated(int profileType, unsigned short language,
                                 long long* clsid, long long* catid, long long* guidProfile, unsigned long long hkl)
 {
+    long long raw = reinterpret_cast<long long>(this) + 8;   // the Ime01ProfileActivationSink view
     static const GUID kIIDProfiles =
         {0x1f02b6c5, 0x7842, 0x4ee6, {0x8a, 0x0b, 0x9a, 0x24, 0x18, 0x3a, 0x95, 0xca}};
     static const GUID kIIDProfileMgr =
@@ -6514,8 +6580,9 @@ unsigned long long FUN_1423d64b0(long long raw)
 // RemoveList() and then CreateList(10.0, 1.0). It clears the sink's +0x55/+0x56 flags and walks the enumerator from
 // the first method of the thread manager's IID ba468c55 interface, calling each element's first method.
 // @0x1423da440
-unsigned long long FUN_1423da440(long long raw, unsigned long long, unsigned* result)
+unsigned long long Ime01TsfUiSink::BeginUIElement(unsigned long long, unsigned* result)
 {
+    long long raw = reinterpret_cast<long long>(this) + 8;   // the Ime01UIElementSink view
     typedef void (*InvokeFn)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned);
     static const GUID kProfileIid = { 0xba468c55, 0x9956, 0x4fb1, { 0xa5, 0x9d, 0x52, 0xa7, 0xdd, 0x7c, 0xc6, 0xaa } };
     auto* self = reinterpret_cast<unsigned char*>(raw);
@@ -6582,8 +6649,9 @@ __declspec(noinline) void Ime01KeepValueArrayDtor()
 // the GetUIElement result for GetPageIndex(NULL, 0, &n), GetUpdatedFlags and GetString, and the QI'd candidate
 // pointer for the rest.
 // @0x1423db0c0
-unsigned long long FUN_1423db0c0(long long raw, unsigned message)
+unsigned long long Ime01TsfUiSink::UpdateUIElement(unsigned message)
 {
+    long long raw = reinterpret_cast<long long>(this) + 8;   // the Ime01UIElementSink view
     typedef void (*InvokeFn)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned);
     static const GUID kUIElementMgrIid = { 0xea1ea135, 0x19df, 0x11d7, { 0xa6, 0xd2, 0x00, 0x06, 0x5b, 0x84, 0x43, 0x5c } };
     static const GUID kCandidateListIid = { 0xea1ea138, 0x19df, 0x11d7, { 0xa6, 0xd2, 0x00, 0x06, 0x5b, 0x84, 0x43, 0x5c } };
@@ -6828,15 +6896,15 @@ long long FUN_1423d0590(void*) { return 0; }
 // @0x1423d07d0
 long long FUN_1423d07d0(void*) { return 0; }
 // @0x1423dad80
-long long FUN_1423dad80(void*) { return 0; }
+long long Ime01TsfUiSink::OnInitDocumentMgr(void*) { return 0; }
 // @0x1423dad90
-long long FUN_1423dad90(void*) { return 0; }
+long long Ime01TsfUiSink::OnPopContext(void*) { return 0; }
 // @0x1423dada0
-long long FUN_1423dada0(void*) { return 0; }
+long long Ime01TsfUiSink::OnPushContext(void*) { return 0; }
 // @0x1423dadb0
-long long FUN_1423dadb0(void*) { return 0; }
+long long Ime01TsfUiSink::OnSetFocus(void*, void*) { return 0; }
 // @0x1423dadc0
-long long FUN_1423dadc0(void*) { return 0; }
+long long Ime01TsfUiSink::OnUninitDocumentMgr(void*) { return 0; }
 
 // Assigns the name string held at +0x20.
 // @0x1423d0f40
@@ -6879,8 +6947,9 @@ void FUN_1423d1890(void* self)
 
 // AddRef on the refcount at +0x14.
 // @0x1423d5ae0
-__declspec(noinline) int FUN_1423d5ae0(void* self)
+__declspec(noinline) int Ime01TsfSink::AddRef()
 {
+    void* self = this;
     return ++*(int*)((UByte*)self + 0x14);
 }
 
@@ -6904,8 +6973,9 @@ unsigned FUN_1423d7dc0(void* self, const char* name)
 
 // Release on the refcount at +0x14.
 // @0x1423d7350
-__declspec(noinline) int FUN_1423d7350(void* self)
+__declspec(noinline) int Ime01TsfSink::Release()
 {
+    void* self = this;
     return --*(int*)((UByte*)self + 0x14);
 }
 
@@ -6925,8 +6995,9 @@ const void* FUN_1423da240(void*)
 
 // AddRef on the refcount at +0x3c.
 // @0x1423da420
-__declspec(noinline) int FUN_1423da420(void* self)
+__declspec(noinline) int Ime01TsfUiSink::AddRef()
 {
+    void* self = this;
     return ++*(int*)((UByte*)self + 0x3c);
 }
 
@@ -6947,34 +7018,10 @@ void Ime01EmitAvmMovieClipVftables(void* p, const AS3::AvmMovieClip* pclip)
 // The TSF sink embedded at +0x1a0 of the IME manager: a compartment event sink (OnChange 0x1423d70d0) at +0 and a
 // profile activation sink (0x1423d6c10) at +8, with the cookie at +0x10 and the refcount at +0x14. The exe's
 // vftables 0x14313b5a0 / 0x14313b5c0 are cl's, and the second one's QueryInterface/AddRef/Release are cl's adjustor
-// thunks 0x1423d7344 / 0x1423d5aec / 0x1423d735c. The overriders are declared only and bound to their FUN_ VAs by
-// symbols-manual rows; Ime01EmitTsfSinkVftables copy-constructs one so cl emits the vftables and thunks here. The
+// thunks 0x1423d7344 / 0x1423d5aec / 0x1423d735c. The overriders are defined earlier in the file (class definition
+// before FUN_1423d72a0), each at its exe VA; Ime01EmitTsfSinkVftables copy-constructs one so cl emits the vftables and thunks here. The
 // manager's ctor FUN_1423d54d0 and dtor FUN_1423d56b0 store DAT_14313b5a0/5c0, bound to the tables below.
 namespace Scaleform { namespace GFx { namespace IME {
-struct __declspec(novtable) Ime01CompartmentEventSink {
-    virtual HRESULT QueryInterface(const unsigned long long* iid, void** output) = 0;
-    virtual int AddRef() = 0;
-    virtual int Release() = 0;
-    virtual unsigned long long OnChange(const unsigned long long* guid) = 0;
-};
-struct __declspec(novtable) Ime01ProfileActivationSink {
-    virtual HRESULT QueryInterface(const unsigned long long* iid, void** output) = 0;
-    virtual int AddRef() = 0;
-    virtual int Release() = 0;
-    virtual unsigned long long OnActivated(int profileType, unsigned short language, long long* clsid,
-        long long* catid, long long* guidProfile, unsigned long long hkl) = 0;
-};
-class Ime01TsfSink : public Ime01CompartmentEventSink, public Ime01ProfileActivationSink {
-public:
-    HRESULT QueryInterface(const unsigned long long* iid, void** output) override;   // 0x1423d72a0
-    int AddRef() override;                                                         // 0x1423d5ae0
-    int Release() override;                                                        // 0x1423d7350
-    unsigned long long OnChange(const unsigned long long* guid) override;          // 0x1423d70d0
-    unsigned long long OnActivated(int profileType, unsigned short language, long long* clsid,
-        long long* catid, long long* guidProfile, unsigned long long hkl) override;  // 0x1423d6c10
-    unsigned cookie;
-    int refCount;
-};
 void Ime01EmitTsfSinkVftables(void* p, const Ime01TsfSink* psink)
 {
     ::new (p) Ime01TsfSink(*psink);
@@ -6983,44 +7030,11 @@ void Ime01EmitTsfSinkVftables(void* p, const Ime01TsfSink* psink)
 // The TSF UI-element sink object built by FUN_1423da250 (0x110 bytes, refcount at +0x3c): a thread-manager event
 // sink at +0 (exe vftable 0x14313b920: QI 0x1423dadd0, AddRef 0x1423da420, Release 0x1423daeb0, the five S_OK
 // callbacks, then the deleting destructor 0x1423da2c0) and a UI-element sink at +8 (0x14313b968: cl's this-8
-// thunks 0x1423dae98 / 0x1423da42c / 0x1423daed8, then Begin/Update/EndUIElement). The overriders are declared only
-// and bound to their FUN_ VAs by symbols-manual rows. The destructor slot is declared as a plain virtual so the
-// hand-written ??_G body FUN_1423da2c0 (exact) stays the definition. Ime01EmitTsfUiSinkVftables copy-constructs one
+// thunks 0x1423dae98 / 0x1423da42c / 0x1423daed8, then Begin/Update/EndUIElement). The overriders are defined earlier
+// in the file at their exe VAs. The destructor slot is a plain virtual, DeletingDestructor, so the hand-written
+// ??_G body (0x1423da2c0, exact) stays the definition. Ime01EmitTsfUiSinkVftables copy-constructs one
 // so cl emits the vftables and thunks here.
 namespace Scaleform { namespace GFx { namespace IME {
-struct __declspec(novtable) Ime01ThreadMgrEventSink {
-    virtual HRESULT QueryInterface(const unsigned long long* iid, void** output) = 0;
-    virtual int AddRef() = 0;
-    virtual int Release() = 0;
-    virtual long long OnInitDocumentMgr(void* documentMgr) = 0;
-    virtual long long OnUninitDocumentMgr(void* documentMgr) = 0;
-    virtual long long OnSetFocus(void* focus, void* previousFocus) = 0;
-    virtual long long OnPushContext(void* context) = 0;
-    virtual long long OnPopContext(void* context) = 0;
-};
-struct __declspec(novtable) Ime01UIElementSink {
-    virtual HRESULT QueryInterface(const unsigned long long* iid, void** output) = 0;
-    virtual int AddRef() = 0;
-    virtual int Release() = 0;
-    virtual unsigned long long BeginUIElement(unsigned long long elementId, unsigned* show) = 0;
-    virtual unsigned long long UpdateUIElement(unsigned elementId) = 0;
-    virtual unsigned long long EndUIElement(int elementId) = 0;
-};
-class Ime01TsfUiSink : public Ime01ThreadMgrEventSink, public Ime01UIElementSink {
-public:
-    HRESULT QueryInterface(const unsigned long long* iid, void** output) override;           // 0x1423dadd0
-    int AddRef() override;                                                                 // 0x1423da420
-    int Release() override;                                                                // 0x1423daeb0
-    long long OnInitDocumentMgr(void* documentMgr) override;                               // 0x1423dad80
-    long long OnUninitDocumentMgr(void* documentMgr) override;                             // 0x1423dadc0
-    long long OnSetFocus(void* focus, void* previousFocus) override;                       // 0x1423dadb0
-    long long OnPushContext(void* context) override;                                       // 0x1423dada0
-    long long OnPopContext(void* context) override;                                        // 0x1423dad90
-    virtual void* DeletingDestructor(unsigned flags);                                      // 0x1423da2c0
-    unsigned long long BeginUIElement(unsigned long long elementId, unsigned* show) override;   // 0x1423da440
-    unsigned long long UpdateUIElement(unsigned elementId) override;                       // 0x1423db0c0
-    unsigned long long EndUIElement(int elementId) override;                               // 0x1423da730
-};
 void Ime01EmitTsfUiSinkVftables(void* p, const Ime01TsfUiSink* psink)
 {
     ::new (p) Ime01TsfUiSink(*psink);
