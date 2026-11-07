@@ -451,7 +451,6 @@ char* Sfr27SlotSetValueObj(const SlotInfo* si, char* ret, VM* vm, const Value* v
 char* Sfr27SetPropertyOfValue(char* ret, VM* vm, const Value* obj, const Multiname* mn, const Value* v);
 void  Sfr31TraceNoteJump(UPInt tr, SPInt base, UPInt blk, SInt32 off, SInt32 arg);
 __declspec(noinline) void Sfr31ValueToBool(Value* v);   // the exe calls it out of line
-__declspec(noinline) void Sfr31StoreSlotValue(UPInt vt, UPInt idx, const Value* v, int kind, const UPInt* name);
 void  Sfr31ButtonSwitchStateIntl(UPInt self, int state);
 char  Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state);
 void  Sfr31StateTraceOp(UPInt state, unsigned char op, UPInt* pos);
@@ -2582,9 +2581,9 @@ void Sfr31ShutdownRegistered(UPInt self)
 }
 
 // Runs the slot (kind bits 5..9 are not a getter unless the caller asked for one) through the invoke helper.
-// The store stays the free Sfr31StoreSlotValue (VTable::SetMethod): with SetMethod's const ASString& parameter this
-// caller reloads the name node after the call, where the exe keeps it in rbx. The ASString copy is written as a node
-// pointer whose copy is passed, because the callee chain makes an indirect call (String dtor) and an escaped local is reloaded.
+// The ASString copy is written as a node pointer whose copy is passed (as the const ASString& of VTable::SetMethod):
+// with a real ASString local the exe's rbx-kept node is reloaded after the call, since the callee chain makes an
+// indirect call (String dtor) and an escaped local is reloaded.
 // @0x1425311c0
 __declspec(noinline) void Traits::UpdateVT(const SlotInfo& si, const Value& v, SlotInfo::BindingType argc)
 {
@@ -2595,7 +2594,7 @@ __declspec(noinline) void Traits::UpdateVT(const SlotInfo& si, const Value& v, S
     {
         ASStringNode* const node = si.Name.GetPtr();   // ASString name(node): the copy below holds it, node stays in a register
         ASStringNode* name = node; node->AddRef();
-        Sfr31StoreSlotValue(traits, index, &v, argc, reinterpret_cast<const UPInt*>(&name)); node->Release();
+        reinterpret_cast<VTable*>(traits)->SetMethod(AbsoluteIndex(index), v, argc, reinterpret_cast<const ASString&>(name)); node->Release();
     }
 }
 
@@ -6105,11 +6104,9 @@ void Sfr31ExecCallSuperArgsA(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc) 
 // @0x142536660
 void Sfr31ExecCallSuperArgsB(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc) { Sfr31CallSuperBody(vmAddr, file, idx, argc, false); }
 // ---- batch 49
-// Stores the accessor-prefixed name for a slot: kind 0xb keeps the name, 0xc stores "get " + name at idx, 0xd stores "set " + name at idx + 1.
-// MS2-FUNCTIONAL 0x1425283c0: regalloc and CSE: the exe recomputes idx + 1 in the set case (ours keeps it in edi from the first Resize), so the registers and the set-path String slot differ
-// @0x1425283c0
+// VTable::SetMethodName's body over raw addresses (inlined into the member below).
 struct Sfr31VTNamesView { UPInt Pad[4]; Scaleform::Sfr19NamesData Names; };
-__declspec(noinline) void Sfr31StoreSlotName(UPInt vt, UInt32 idx, int kind, const UPInt* name)
+static SF_FORCEINLINE void Sfr31StoreSlotName(UPInt vt, UInt32 idx, int kind, const UPInt* name)
 {
 #define Names (reinterpret_cast<ArrayCC<ASString, StatMV_VM_VTable_Mem>&>(reinterpret_cast<Sfr31VTNamesView*>(vt)->Names))
     const ASString& nm = *reinterpret_cast<const ASString*>(name); const AbsoluteIndex ind(idx);
@@ -6142,10 +6139,16 @@ __declspec(noinline) void Sfr31StoreSlotName(UPInt vt, UInt32 idx, int kind, con
 #undef Names
 }
 
-// Records a value in the slot table: the name goes in through the accessor-name store, then the value cell at the slot (or slot + 1 for setters) is assigned.
-// A method index (kind 2) is stored as a kMethodInd Value bound to the table's traits. The exe calls the name store out of line.
-// @0x1425282d0
-void Sfr31StoreSlotValue(UPInt vt, UPInt idx, const Value* v, int kind, const UPInt* name)
+// Stores the accessor-prefixed name for a slot: kind 0xb keeps the name, 0xc stores "get " + name at idx, 0xd stores "set " + name at idx + 1.
+// MS2-FUNCTIONAL 0x1425283c0: regalloc and CSE: the exe recomputes idx + 1 in the set case (ours keeps it in edi from the first Resize), so the registers and the set-path String slot differ
+// @0x1425283c0
+__declspec(noinline) void VTable::SetMethodName(AbsoluteIndex ind, SlotInfo::BindingType dt, const ASString& name)
+{
+    Sfr31StoreSlotName(reinterpret_cast<UPInt>(this), static_cast<UInt32>(ind.Get()), dt, reinterpret_cast<const UPInt*>(&name));
+}
+
+// VTable::SetMethod's body over raw addresses (inlined into the member below).
+static SF_FORCEINLINE void Sfr31StoreSlotValue(UPInt vt, UPInt idx, const Value* v, int kind, const UPInt* name)
 {
     Value* cell = 0;
     switch (kind)
@@ -6158,19 +6161,21 @@ void Sfr31StoreSlotValue(UPInt vt, UPInt idx, const Value* v, int kind, const UP
         cell = reinterpret_cast<Value*>(Sfr31Rd(vt, 8) + static_cast<UPInt>(static_cast<UInt32>(idx) + 1) * 0x20);
         break;
     }
-    Sfr31StoreSlotName(vt, static_cast<UInt32>(idx), kind, name);
+    reinterpret_cast<VTable*>(vt)->SetMethodName(AbsoluteIndex(static_cast<SPInt>(idx)), static_cast<SlotInfo::BindingType>(kind), *reinterpret_cast<const ASString*>(name));
     if ((*reinterpret_cast<const UInt32*>(v) & 0x1f) == 2)
         cell->Assign(Value(*reinterpret_cast<const SInt32*>(reinterpret_cast<const char*>(v) + 0x10), *reinterpret_cast<const Traits*>(Sfr31Rd(vt, 0)),
                            Value::kMethodInd));
     else
         cell->Assign(*v);
 }
-// The two bodies above are VTable::SetMethodName and VTable::SetMethod (sfr_as3_16 calls them by those names); the
-// member names bind to them here. The hook DLL binds the member names by their symbols rows.
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:?SetMethodName@VTable@AS3@GFx@Scaleform@@QEAAXVAbsoluteIndex@234@W4BindingType@SlotInfo@234@AEBVASString@34@@Z=?Sfr31StoreSlotName@AS3@GFx@Scaleform@@YAX_KKHPEB_K@Z")
-#pragma comment(linker, "/alternatename:?SetMethod@VTable@AS3@GFx@Scaleform@@QEAAXVAbsoluteIndex@234@AEBVValue@234@W4BindingType@SlotInfo@234@AEBVASString@34@@Z=?Sfr31StoreSlotValue@AS3@GFx@Scaleform@@YAX_K0PEBVValue@123@HPEB_K@Z")
-#endif
+
+// Records a value in the slot table: the name goes in through the accessor-name store, then the value cell at the slot (or slot + 1 for setters) is assigned.
+// A method index (kind 2) is stored as a kMethodInd Value bound to the table's traits. The exe calls the name store out of line.
+// @0x1425282d0
+__declspec(noinline) void VTable::SetMethod(AbsoluteIndex ind, const Value& m, SlotInfo::BindingType dt, const ASString& name)
+{
+    Sfr31StoreSlotValue(reinterpret_cast<UPInt>(this), static_cast<UPInt>(ind.Get()), &m, dt, reinterpret_cast<const UPInt*>(&name));
+}
 // ---- batch 50
 // ArrayData::Resize, which cl keeps out of line here; the exe has it inline in both branches.
 static SF_INLINE void Sfr31ResizeStateChars(ArrayData<Button::CharToRec, AllocatorLH<Button::CharToRec, Stat_Default_Mem>, ArrayDefaultPolicy>& a, UPInt newSize)
