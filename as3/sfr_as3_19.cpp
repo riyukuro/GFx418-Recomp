@@ -6453,72 +6453,89 @@ char* Sfr31ValueToStringCheck(char* ret, VM* vm, Value* v, void* strOut)
     return ret;
 }
 
+// v = sm.CreateString(buf): the exe's LTCG knows Value::Assign does not write the ASString temp, so the temp's
+// release uses the node it already holds in a register; a separate node copy gives cl the same.
+static __forceinline void Sfr19AssignNewString(Value& v, StringManager& sm, const StringBuffer& buf)
+{
+    ASStringNode* const node = sm.GetStringManager()->CreateStringNode(buf.ToCStr(), buf.GetSize());
+    ASStringNode* tmp = node;
+    node->AddRef();
+    v.Assign(*reinterpret_cast<const ASString*>(&tmp));
+    node->Release();
+}
+
+// The exe inlines IsXMLObject/IsXMLListObject (sfr_as3_18) and XMLList::AS3toXMLString() here.
+static __forceinline bool Sfr19IsXMLKindObject(const Value& v, int tt)
+{
+    if (!v.IsObject())
+        return false;
+    Object* obj = v.GetObject();
+    return obj && static_cast<int>(obj->GetTraits().GetTraitsType()) == tt && obj->GetTraits().IsInstanceTraits();
+}
+
 // Converts a value in place to an XML-escaped string for element content. Null/undefined operands raise TypeError
 // 1009/1010.
-// MS2-FUNCTIONAL 0x14252fef0: raw-offset model; codegen differs from the exe
+// MS2-FUNCTIONAL 0x14252fef0: SDK XMLSupportImpl::ToXMLString shape; v/vm/result register roles are permuted vs the exe,
+// and the exe tests ToPrimitiveValue's returned CheckResult (the SDK form) where ours tests ok (that form re-merges the tails)
 // @0x14252fef0
-CheckResult XMLSupportImpl::ToXMLString(VM& vm, Value& val) const
+CheckResult XMLSupportImpl::ToXMLString(VM& vm, Value& v) const
 {
-    Value* v = &val;
-    const UPInt vp = reinterpret_cast<UPInt>(v);
-    const UPInt vmAddr = reinterpret_cast<UPInt>(&vm);
-    const UInt32 k = *reinterpret_cast<const UInt32*>(vp) & 0x1f;
-    ASStringManager* mgr = reinterpret_cast<ASStringManager*>(Sfr31Rd(Sfr31Rd(vmAddr, 0x10), 0x1e8));
-    if (k == 0 || (k - 0xc < 4 && Sfr31Rd(vp, 0x10) == 0))
+    if (v.IsNullOrUndefined())
     {
-        // null (an object kind with no object) is 1009, undefined 1010
-        vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(k - 0xc < 4 ? 0x3f1 : 0x3f2), vm));
+        vm.ThrowTypeError(VM::Error(
+            v.IsNull() ? VM::eConvertNullToObjectError : VM::eConvertUndefinedToObjectError,
+            vm
+            ));
         return false;
     }
-    if (k < 5)
+
+    StringManager& sm = vm.GetStringManager();
+    const Value::KindType k = v.GetKind();
+
+    switch (k)
     {
-        return v->ToStringValue(vm.GetStringManager());
-    }
-    if (k == 10)
-    {
-        // escaped into its own buffer, then falls through to be escaped again as a primitive (as the SDK does)
-        StringBuffer sbuf(Memory::pGlobalHeap);
-        ASString cur(reinterpret_cast<ASStringNode*>(Sfr31Rd(vp, 0x10)));
-        Instances::fl::XML::EscapeElementValue(sbuf, cur);
-        const char* c = sbuf.ToCStr();
-        ASString res(mgr->CreateStringNode(c ? c : "", sbuf.GetSize()));
-        *v = res;
-    }
-    StringBuffer buf(Memory::pGlobalHeap);
-    const UInt32 k2 = (*reinterpret_cast<const UInt32*>(vp) & 0x1f) - 0xc;
-    const UPInt obj = Sfr31Rd(vp, 0x10);
-    if (k2 < 4 && obj != 0 && *reinterpret_cast<const int*>(Sfr31Rd(obj, 0x20) + 0x70) == 0xd && !(*reinterpret_cast<const UInt8*>(Sfr31Rd(obj, 0x20) + 0x68) & 0x20))
-    {
-        typedef void (*ToStrFn)(UPInt, StringBuffer*, int, int, int);
-        reinterpret_cast<ToStrFn>(Sfr31Rd(Sfr31Rd(obj, 0), 0xd0))(obj, &buf, 0, 0, 0);
-    }
-    else if (k2 < 4 && obj != 0 && *reinterpret_cast<const int*>(Sfr31Rd(obj, 0x20) + 0x70) == 0xe && !(*reinterpret_cast<const UInt8*>(Sfr31Rd(obj, 0x20) + 0x68) & 0x20))
-    {
-        const UPInt m2 = Sfr31Rd(Sfr31Rd(Sfr31Rd(Sfr31Rd(obj, 0x20), 0x78), 0x10), 0x1e8);
-        ASString s(reinterpret_cast<ASStringNode*>(m2 + 0x40));
-        FUN_142403310(obj, &s);
-        *v = s;
-        return true;
-    }
-    else
-    {
-        UInt8 ok;
-        Sfr31ValueToPrimitive(v, &ok);
-        const UInt32 k3 = *reinterpret_cast<const UInt32*>(vp) & 0x1f;
-        if (!ok || (k3 > 4 && k3 != 10))
+    case Value::kBoolean:
+    case Value::kInt:
+    case Value::kUInt:
+    case Value::kNumber:
+        return v.ToStringValue(sm);
+    case Value::kString:
         {
-            return false;
+            StringBuffer buf;
+            Instances::fl::XML::EscapeElementValue(buf, v.AsString());
+            Sfr19AssignNewString(v, sm, buf);
         }
-        ASString e(reinterpret_cast<ASStringNode*>(Sfr31Rd(Sfr31Rd(vmAddr, 0x10), 0x1e8) + 0x40));
-        UPInt tn = 0;
-        if (*FUN_1424f1390(v, &tn, &e))
-            *v = e;
-        ASString cur(reinterpret_cast<ASStringNode*>(Sfr31Rd(vp, 0x10)));
-        Instances::fl::XML::EscapeElementValue(buf, cur);
+    default:
+        if (Sfr19IsXMLKindObject(v, Traits_XML))
+        {
+            Instances::fl::XML* xml = static_cast<Instances::fl::XML*>(v.GetObject());
+            StringBuffer buf;
+            xml->ToXMLString(buf, 0, NULL, NULL);
+            Sfr19AssignNewString(v, sm, buf);
+        }
+        else if (Sfr19IsXMLKindObject(v, Traits_XMLList))
+        {
+            Instances::fl::XMLList* xml_list = static_cast<Instances::fl::XMLList*>(v.GetObject());
+            ASString result(xml_list->GetTraits().GetVM().GetStringManager().CreateEmptyString());
+            xml_list->AS3toXMLString(result);
+            v = result;
+        }
+        else
+        {
+            UInt8 ok;
+            Sfr31ValueToPrimitive(&v, &ok);
+            if (!ok || !v.IsPrimitive())
+                return false;
+
+            v.ToStringValue(sm).DoNotCheck();
+
+            StringBuffer buf;
+            Instances::fl::XML::EscapeElementValue(buf, v.AsString());
+            Sfr19AssignNewString(v, sm, buf);
+        }
+        break;
     }
-    const char* c = buf.ToCStr();
-    ASString res(mgr->CreateStringNode(c ? c : "", buf.GetSize()));
-    *v = res;
+
     return true;
 }
 
