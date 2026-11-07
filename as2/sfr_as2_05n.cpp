@@ -21,11 +21,26 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
+// Value::ToCharacter, inlined in the exe for the parentMovie argument.
+static __forceinline InteractiveObject* FfToCharacter(const Value& v, const Environment* penv)
+{
+    if (v.GetType() == Value::CHARACTER && penv)
+    {
+        if (v.V.pCharHandle)
+        {
+            DisplayObject* dob = v.V.pCharHandle->ResolveCharacter(penv->GetTarget()->GetMovieImpl());
+            return (dob) ? (dob->IsInteractiveObject() ? static_cast<InteractiveObject*>(dob) : 0) : 0;
+        }
+    }
+    return 0;
+}
+
 // Selection.findFocus(keyName [, parentMovie [, loop [, startFrom [, includeFocusEnabled [, controllerIdx]]]]]):
 // the character the key would focus from startFrom (or the controller's focused character), kept within
 // parentMovie (null: the modal clip). With loop, when the key leads nowhere the first / last tabable character
 // (Tab) or the one at the far edge (arrows) is returned instead; otherwise null.
-// MS2-FUNCTIONAL: register allocation and stack layout differ.
+// MS2-FUNCTIONAL: register allocation and stack layout differ (the exe keeps the parentMovie Value type in r15b
+// and spills fn; its frame is 0x10 smaller, which shifts every rbp/rsp slot).
 // @0x142943ce0
 void SelectionCtorFunction::FindFocus(const FnCall& fn)
 {
@@ -42,30 +57,27 @@ void SelectionCtorFunction::FindFocus(const FnCall& fn)
     if (fn.NArgs >= 4 && !fn.Arg(3).IsUndefined() && !fn.Arg(3).IsNull())
         startChar = fn.Arg(3).ToCharacter(fn.Env);
     else
-        startChar = Ptr<InteractiveObject>(proot->FocusGroups[proot->FocusGroupIndexes[controllerIdx]].LastFocused);
+        startChar = proot->GetFocusedCharacter(controllerIdx).GetPtr();
 
-    bool includeFocusEnabled = false;
-    if (fn.NArgs >= 5)
-        includeFocusEnabled = fn.Arg(4).ToBool(fn.Env);
+    bool includeFocusEnabled = (fn.NArgs >= 5) ? fn.Arg(4).ToBool(fn.Env) : false;
 
-    ASString    directionStr = fn.Arg(0).ToString(fn.Env);
-    const char* pkey         = directionStr.ToCStr();
-    UInt32      keycode;
-    bool        shift = false;
-    if (strcmp(pkey, "up") == 0)
+    ASString     directionStr = fn.Arg(0).ToString(fn.Env);
+    short        keycode;
+    KeyModifiers specKeysState;
+    if (directionStr == "up")
         keycode = Key::Up;
-    else if (strcmp(pkey, "down") == 0)
+    else if (directionStr == "down")
         keycode = Key::Down;
-    else if (strcmp(pkey, "left") == 0)
+    else if (directionStr == "left")
         keycode = Key::Left;
-    else if (strcmp(pkey, "right") == 0)
+    else if (directionStr == "right")
         keycode = Key::Right;
-    else if (strcmp(pkey, "tab") == 0)
+    else if (directionStr == "tab")
         keycode = Key::Tab;
-    else if (strcmp(pkey, "shifttab") == 0)
+    else if (directionStr == "shifttab")
     {
         keycode = Key::Tab;
-        shift   = true;
+        specKeysState.SetShiftPressed(true);
     }
     else
         return;
@@ -75,20 +87,18 @@ void SelectionCtorFunction::FindFocus(const FnCall& fn)
     {
         Value context = fn.Arg(1);
         if (!context.IsNull() && !context.IsUndefined())
-            panelChar = context.ToCharacter(fn.Env);
+            panelChar = FfToCharacter(context, fn.Env);
         else
             panelChar = proot->GetModalClip(controllerIdx);
     }
 
-    bool looping = false;
-    if (fn.NArgs >= 3)
-        looping = fn.Arg(2).ToBool(fn.Env);
+    bool looping = (fn.NArgs >= 3) ? fn.Arg(2).ToBool(fn.Env) : false;
 
     ProcessFocusKeyInfo             focusInfo;
     InputEventsQueueEntry::KeyEntry ke;
     ke.KeyboardIndex = (UInt8)controllerIdx;
     ke.Code          = keycode;
-    ke.KeysState     = shift;
+    ke.KeysState     = specKeysState.States;
     FocusGroupDescr focusGroup(fn.Env->GetHeap());
     focusGroup.ModalClip   = panelChar ? panelChar->GetCharacterHandle() : NULL;
     focusGroup.LastFocused = startChar;
@@ -99,9 +109,9 @@ void SelectionCtorFunction::FindFocus(const FnCall& fn)
         fn.Result->SetAsCharacter(focusInfo.CurFocused);
     else if (!looping || focusGroup.TabableArray.GetSize() == 0)
         fn.Result->SetNull();
-    else if ((UInt16)keycode == Key::Tab)
+    else if (keycode == Key::Tab)
     {
-        if (!shift)
+        if (!specKeysState.IsShiftPressed())
             fn.Result->SetAsCharacter(focusGroup.TabableArray[0]);
         else
             fn.Result->SetAsCharacter(focusGroup.TabableArray[focusGroup.TabableArray.GetSize() - 1]);
@@ -119,7 +129,7 @@ void SelectionCtorFunction::FindFocus(const FnCall& fn)
             DisplayObject::Matrix mb;
             b->GetLevelMatrix(&mb);
             RectF bRect = mb.EncloseTransform(b->GetFocusRect());
-            switch ((UInt16)keycode)
+            switch (keycode)
             {
             case Key::Down: // the topmost
                 if (lastV == FLT_MIN || bRect.y1 < lastV)
