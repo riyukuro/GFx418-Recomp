@@ -1945,7 +1945,7 @@ CheckResult Object::SetProperty(const Multiname& prop_name, const Value& value)
     return CheckResult(false);
 }
 
-// MS2-FUNCTIONAL 0x142528810: regalloc (exe holds ret in rbx, _this in rdi) and a 0x10 larger frame (the SetSlotValue temps)
+// MS2-FUNCTIONAL 0x142528810: regalloc/slots only: the exe holds ret in rbx, _this and the result bool in rdi (ours swaps them), saves rbx in the rdx home and puts the error temps 0x10 higher; same frame size
 // setproperty on any value: special-property objects take it themselves, the rest go through the property lookup.
 static __forceinline CheckResult Sfr31SetPropertyInl(VM& vm, const Value& _this, const Multiname& prop_name, const Value& value)
 {
@@ -4095,7 +4095,8 @@ bool StrictEqual(const Value& x, const Value& y)
 }
 
 // Tracer ops taking the two counts of a call and pushing an object value.
-// MS2-FUNCTIONAL 0x142533cb0: behavior-equivalent recovery; codegen differs from exe
+// MS2-FUNCTIONAL 0x142533cb0: register/slot only: the exe saves rbx in the rdx home slot (ours the r9 home) and loads the
+// ReadArgs vm argument through rdx after lea rcx,[args]. An unused 4th parameter and a named VM& do not change either.
 // @0x142533cb0
 void Sfr31TraceCallPushObject(State* st, UInt32 a, UInt32 b)
 {
@@ -4108,7 +4109,8 @@ void Sfr31TraceCallPushObject(State* st, UInt32 a, UInt32 b)
     s.OpStack().PushBack(t.Get());
 }
 
-// MS2-FUNCTIONAL 0x142535540: behavior-equivalent recovery; codegen differs from exe
+// MS2-FUNCTIONAL 0x142535540: register/slot only: the exe saves rbx in the rdx home slot (ours the r9 home) and loads the
+// ReadArgs vm argument through rdx after lea rcx,[args]. An unused 4th parameter and a named VM& do not change either.
 // @0x142535540
 void Sfr31TraceCallPushObjectB(State* st, UInt32 a, UInt32 b)
 {
@@ -4371,9 +4373,8 @@ void Sfr31TraceFindPropA(State* st, UInt32 idx) { Sfr31TraceFindProp(st, idx, Va
 void Sfr31TraceFindPropB(State* st, UInt32 idx) { Sfr31TraceFindProp(st, idx, Value::NotNull); }
 
 // Tracer op: an operand of a type-describing kind becomes its instance traits, anything else is pushed back as it was.
-// MS2-FUNCTIONAL 0x142536dd0: the exe compiled TR::ReadArgs::ReadArgs and ~ReadArgs (0x1424d9640, 0x1424dea90; ours in
-// sfr_as3_15) in this TU, so it keeps ArgObject's kind and Flags in esi/ebx across PushBack and the weak-ref Free.
-// Ours reloads them from memory. With same-TU noinline stand-in bodies for the two, only the vm argument's load order differs.
+// MS2-FUNCTIONAL 0x142536dd0: scheduling only. With MS2_AS3_READARGS_NOALIAS only the ReadArgs ctor's vm argument load
+// order differs: the exe chains it through rcx and loads lea rcx,[args] last. A named VM& and a named State& do not move it.
 // @0x142536dd0
 void Sfr31TraceTypeOperand(State* st, UInt32 argc)
 {

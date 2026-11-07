@@ -2099,7 +2099,6 @@ void MovieRoot::AddNewLoadQueueEntry(Instances::fl_utils::ByteArray* bytes, Inst
 
 // An image protocol URL ("img://") loaded synchronously is processed at once; other URLs go to the loader thread
 // when there is a task manager.
-// MS2-FUNCTIONAL: the exe inlines the entry's ctor and keeps the TaskManager Ptr in a flag-guarded temporary
 // @0x1424e9090
 void MovieRoot::AddNewLoadQueueEntry(Instances::fl_net::URLRequest* urlRequest, Instances::fl_display::Loader* loader,
                                      GFx::LoadQueueEntry::LoadMethod method)
@@ -2172,7 +2171,6 @@ PropRef::operator bool() const
 }
 
 // The two ReadArgs variants own a heap-backed copy of their argument values.
-// MS2-FUNCTIONAL: the executable calls ArrayDH<Value>::~ArrayDH out of line; this TU inlines that release sequence.
 // @0x1424de9e0
 ReadArgs::~ReadArgs() = default;
 
@@ -2494,10 +2492,8 @@ void DestroyMovieRootDisplayObjects(void* set)
 {
     static_cast<SfrCx18DisplayObjectSet*>(set)->~HashSetBase();
 }
-// MS2-FUNCTIONAL: releases the occupied dynamic-property nodes and frees their table; template expansion changes unwind codegen.
 // @0x1424dce80
 template SfrCx18DynAttrsSet::~HashSetBase();
-// MS2-FUNCTIONAL: destroys occupied namespace intern entries and frees the hash table; template unwind code differs.
 // @0x1424dcf10
 template SfrCx18AbcNamespaceSet::~HashSetBase();
 // @0x1424e0480
@@ -2508,10 +2504,8 @@ template SfrCx18ClassTraitsSet::~HashSetBase();
 template SfrCx18GASRefSet::~HashSetBase();
 // @0x1424dd250
 template SfrCx18GlobalScriptSet::~HashSetBase();
-// MS2-FUNCTIONAL: releases the same cached format references and backing table; the template expansion has different unwind code.
 // @0x1424dd300
 template SfrCx18ParagraphFormatSet::~HashSetBase();
-// MS2-FUNCTIONAL: releases the same cached format references and backing table; the template expansion has different unwind code.
 // @0x1424dd3b0
 template SfrCx18TextFormatSet::~HashSetBase();
 // MS2-FUNCTIONAL: same code and size as the exe; only the loop index and table registers (rbx/rdi) are swapped.
