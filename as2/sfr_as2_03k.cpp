@@ -22,10 +22,28 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-// MS2-FUNCTIONAL scheduling of the Value/PropFlags temporaries around the unrolled member sets
+// SDK Object::SetConstMemberRaw (inline in the SDK header): the name, value and flags are temporaries.
+// The flags are SetMemberRaw's default argument.
+static inline bool KeySetConstMemberRaw(ObjectInterface* pobj, ASStringContext* psc, const char* pname, const Value& val)
+{
+    return pobj->SetMemberRaw(psc, ASString(psc->CreateConstString(pname)), val);
+}
+
+// CFunctionObject(psc, func) (0x142919df0) as the exe inlines it here: Object(psc) and Set__proto__ stay calls.
+inline FunctionObject::FunctionObject(ASStringContext* psc, ObjectInlineCtorTag)
+    : Object(psc)
+{
+}
+inline CFunctionObject::CFunctionObject(ASStringContext* psc, CFunctionPtr func, ObjectInlineCtorTag)
+    : FunctionObject(psc, ObjectInlineCtorTag()), pFunction(func)
+{
+    Set__proto__(psc, psc->pContext->GetPrototype(ASBuiltin_Function));
+}
+
+// MS2-FUNCTIONAL: same length as the exe (2559 bytes); this/this+0x20/psc rotate across rbx/rdi/rsi, and the pMovieRoot store sits before the vptr stores. No source form (body assign, pobj local, helper forms) reproduces the exe allocation.
 // @0x14291d1e0
 KeyCtorFunction::KeyCtorFunction(ASStringContext* psc, MovieImpl* pmovie)
-    : CFunctionObject(psc, GlobalCtor), pMovieRoot(pmovie)
+    : CFunctionObject(psc, GlobalCtor, ObjectInlineCtorTag()), pMovieRoot(pmovie)
 {
     for (int i = 0; i < 16; i++)
     {
@@ -37,97 +55,25 @@ KeyCtorFunction::KeyCtorFunction(ASStringContext* psc, MovieImpl* pmovie)
     if (pobj)
         NameFunction::AddConstMembers(pobj, psc, AsBroadcasterProto::FunctionTable, PropFlags::PropFlag_DontEnum);
     AsBroadcaster::InitializeInstance(psc, pobj);
-    {
-        PropFlags flags(0);
-        Value val(8);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("BACKSPACE"), val, flags);
-    }
-    {
-        PropFlags flags(0);
-        Value val(0x14);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("CAPSLOCK"), val, flags);
-    }
-    {
-        PropFlags flags(0);
-        Value val(0x11);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("CONTROL"), val, flags);
-    }
-    {
-        PropFlags flags(0);
-        Value val(0x2e);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("DELETEKEY"), val, flags);
-    }
-    {
-        PropFlags flags(0);
-        Value val(0x28);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("DOWN"), val, flags);
-    }
-    {
-        PropFlags flags(0);
-        Value val(0x23);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("END"), val, flags);
-    }
-    {
-        PropFlags flags(0);
-        Value val(0xd);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("ENTER"), val, flags);
-    }
-    {
-        PropFlags flags(0);
-        Value val(0x1b);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("ESCAPE"), val, flags);
-    }
-    {
-        PropFlags flags(0);
-        Value val(0x24);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("HOME"), val, flags);
-    }
-    {
-        PropFlags flags(0);
-        Value val(0x2d);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("INSERT"), val, flags);
-    }
-    {
-        PropFlags flags(0);
-        Value val(0x25);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("LEFT"), val, flags);
-    }
-    {
-        PropFlags flags(0);
-        Value val(0x22);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("PGDN"), val, flags);
-    }
-    {
-        PropFlags flags(0);
-        Value val(0x21);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("PGUP"), val, flags);
-    }
-    {
-        PropFlags flags(0);
-        Value val(0x27);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("RIGHT"), val, flags);
-    }
-    {
-        PropFlags flags(0);
-        Value val(0x10);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("SHIFT"), val, flags);
-    }
-    {
-        PropFlags flags(0);
-        Value val(0x20);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("SPACE"), val, flags);
-    }
-    {
-        PropFlags flags(0);
-        Value val(9);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("TAB"), val, flags);
-    }
-    {
-        PropFlags flags(0);
-        Value val(0x26);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("UP"), val, flags);
-    }
-    NameFunction::AddConstMembers(pobj, psc, FunctionTable, 0);
+    KeySetConstMemberRaw(this, psc, "BACKSPACE", Value(8));
+    KeySetConstMemberRaw(this, psc, "CAPSLOCK", Value(0x14));
+    KeySetConstMemberRaw(this, psc, "CONTROL", Value(0x11));
+    KeySetConstMemberRaw(this, psc, "DELETEKEY", Value(0x2e));
+    KeySetConstMemberRaw(this, psc, "DOWN", Value(0x28));
+    KeySetConstMemberRaw(this, psc, "END", Value(0x23));
+    KeySetConstMemberRaw(this, psc, "ENTER", Value(0xd));
+    KeySetConstMemberRaw(this, psc, "ESCAPE", Value(0x1b));
+    KeySetConstMemberRaw(this, psc, "HOME", Value(0x24));
+    KeySetConstMemberRaw(this, psc, "INSERT", Value(0x2d));
+    KeySetConstMemberRaw(this, psc, "LEFT", Value(0x25));
+    KeySetConstMemberRaw(this, psc, "PGDN", Value(0x22));
+    KeySetConstMemberRaw(this, psc, "PGUP", Value(0x21));
+    KeySetConstMemberRaw(this, psc, "RIGHT", Value(0x27));
+    KeySetConstMemberRaw(this, psc, "SHIFT", Value(0x10));
+    KeySetConstMemberRaw(this, psc, "SPACE", Value(0x20));
+    KeySetConstMemberRaw(this, psc, "TAB", Value(9));
+    KeySetConstMemberRaw(this, psc, "UP", Value(0x26));
+    NameFunction::AddConstMembers(this, psc, FunctionTable, 0);
     pmovie->SetKeyboardListener(this);
 }
 
@@ -144,3 +90,7 @@ void KeyCtorFunction::Finalize_GC()
 // MS2-PIN: ??_7KeyCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321c8c8
 // MS2-PIN: ??_7KeyCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321c950
 // MS2-PIN: ??_7KeyCtorFunction@AS2@GFx@Scaleform@@6B@ 0x14321c9f8
+// MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432156f0
+// MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215778
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432155c0
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215648
