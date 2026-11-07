@@ -6432,24 +6432,41 @@ void Sfr31VMRaiseError(UPInt vmAddr, const UInt32* err, UPInt classInfo)
 // ---- batch 56
 // Checks that a value converts to a string: null-ish operands convert directly; otherwise the object's public toString is invoked
 // and its result converted. Writes the success flag through ret.
-// MS2-FUNCTIONAL 0x14252f9b0: models the inlined "toString" multiname construction with the Multiname ctor
+// MS2-FUNCTIONAL 0x14252f9b0: SDK AS3::ToString body with the inlined Multiname(ns, Value) ctor; the r / name-temp /
+// Multiname stack slots are rotated vs the exe and the PostProcessName branch layout differs
 // @0x14252f9b0
 char* Sfr31ValueToStringCheck(char* ret, VM* vm, Value* v, void* strOut)
 {
-    UPInt tmpNode;
-    const UInt32 k = v->GetKind() & 0x1f;
-    if (k == 0 || (k - 0xc < 4 && Sfr31Rd(reinterpret_cast<UPInt>(v), 0x10) == 0))
+    // SDK AS3::ToString(VM&, const Value&, ASString&) (AS3_Object.cpp).
+    const Value& _this = *v;
+    ASString& result = *static_cast<ASString*>(strOut);
+    if (_this.IsNullOrUndefined())
     {
-        *ret = *FUN_1424f1390(v, &tmpNode, strOut) ? 1 : 0;
-        return ret;
+        if (!_this.Convert2String(result))
+        {
+            *ret = 0;
+            return ret;
+        }
     }
-    ASString nm(reinterpret_cast<ASStringManager*>(Sfr31Rd(Sfr31Rd(reinterpret_cast<UPInt>(vm), 0x10), 0x1e8))->CreateConstStringNode("toString", 8, 0));
-    Multiname mn(vm->GetPublicNamespace(), Value(nm));
-    Value res;
-    bool ok = *FUN_1424ff910(reinterpret_cast<char*>(&tmpNode), vm, &mn, v, &res, 0, 0) != 0;
-    if (ok && (res.GetKind() & 0x1f) != 10)
-        ok = *FUN_1424f1390(&res, &tmpNode, strOut) != 0;
-    *ret = ok ? 1 : 0;
+    else
+    {
+        Value r;
+        Multiname name(vm->GetPublicNamespace(), Value(vm->GetStringManager().CreateConstString("toString"), Value::InlineStr), Multiname::InlineAssignTag());
+
+        if (!ExecutePropertyUnsafe(*vm, name, _this, r, 0, NULL))
+        {
+            *ret = 0;
+            return ret;
+        }
+
+        if (!r.IsString() && !r.Convert2String(result))
+        {
+            *ret = 0;
+            return ret;
+        }
+    }
+
+    *ret = 1;
     return ret;
 }
 
