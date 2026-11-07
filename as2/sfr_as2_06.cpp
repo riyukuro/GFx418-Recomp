@@ -1722,8 +1722,9 @@ __forceinline GASLoadVarsLoaderCtorFunction::GASLoadVarsLoaderCtorFunction(ASStr
 __forceinline BitmapFilterObject::BitmapFilterObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
     : Object(psc, ObjectInlineCtorTag())
 {
+    // The exe calls SetMemberRaw virtually here ([vptr+0x50] on the ObjectInterface base).
     if (!pProto)
-        Object::SetMemberRaw(
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(
             psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
             Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
     pProto = pprototype;
@@ -1850,9 +1851,10 @@ static SF_FORCEINLINE GlobalContext::ClassRegEntry* Sfr06BuiltinRegistrarOf(Glob
 template<class CtorFunctionType, class ProtoType>
 static SF_FORCEINLINE FunctionRef RegisterFilterClassInline(GlobalContext* pgc, ASBuiltinType type)
 {
-    ASStringContext sc(pgc, 8);
-    if (!Sfr06BuiltinRegistrarOf(pgc, sc.GetBuiltin(ASBuiltin_BitmapFilter)))
+    if (!Sfr06BuiltinRegistrarOf(pgc, ((MovieRoot*)pgc->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin_BitmapFilter)))
         BitmapFilterCtorFunction::Register(pgc);
+
+    ASStringContext sc(pgc, 8);
     FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) CtorFunctionType(&sc, ObjectInlineCtorTag()));
     Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) ProtoType(&sc, pgc->GetPrototype(ASBuiltin_BitmapFilter), ctor, ObjectInlineCtorTag());
     SetBuiltinPrototype(pgc, type, proto);
@@ -1889,7 +1891,7 @@ FunctionRef AsBroadcasterCtorFunction::Register(GlobalContext* pgc)
     return RegisterBuiltinClassInline<AsBroadcasterCtorFunction, AsBroadcasterProto>(pgc, ASBuiltin_AsBroadcaster, ASBuiltin_Object, pgc->pGlobal);
 }
 
-// MS2-FUNCTIONAL ctors, proto ctors and the registrar lookup are inlined as in the exe; the frame is 0x10 larger and rdi/rsi are swapped
+// MS2-FUNCTIONAL ctors, proto ctors and the registrar lookup are inlined as in the exe, at the exe size; rsi/rdi are swapped, and the registrar name load uses r8 where the exe uses rbx
 // @0x142973f20
 FunctionRef BevelFilterCtorFunction::Register(GlobalContext* pgc)
 {
@@ -1911,14 +1913,14 @@ FunctionRef BitmapFilterCtorFunction::Register(GlobalContext* pgc)
     return RegisterBuiltinClassInline<BitmapFilterCtorFunction, BitmapFilterProto>(pgc, ASBuiltin_BitmapFilter, ASBuiltin_Object, pgc->FlashFiltersPackage);
 }
 
-// MS2-FUNCTIONAL ctors, proto ctors and the registrar lookup are inlined as in the exe; the frame is 0x10 larger and rdi/rsi are swapped
+// MS2-FUNCTIONAL ctors, proto ctors and the registrar lookup are inlined as in the exe, at the exe size; rsi/rdi are swapped, and the registrar name load uses r8 where the exe uses rbx
 // @0x142974d70
 FunctionRef BlurFilterCtorFunction::Register(GlobalContext* pgc)
 {
     return RegisterFilterClassInline<BlurFilterCtorFunction, BlurFilterProto>(pgc, ASBuiltin_BlurFilter);
 }
 
-// MS2-FUNCTIONAL ctors, proto ctors and the registrar lookup are inlined as in the exe; the frame is 0x10 larger and rdi/rsi are swapped
+// MS2-FUNCTIONAL ctors, proto ctors and the registrar lookup are inlined as in the exe, at the exe size; rsi/rdi are swapped, and the registrar name load uses r8 where the exe uses rbx
 // @0x1429763c0
 FunctionRef ColorMatrixFilterCtorFunction::Register(GlobalContext* pgc)
 {
@@ -1940,7 +1942,7 @@ FunctionRef DateCtorFunction::Register(GlobalContext* pgc)
     return ctor;
 }
 
-// MS2-FUNCTIONAL ctors, proto ctors and the registrar lookup are inlined as in the exe; the frame is 0x10 larger and rdi/rsi are swapped
+// MS2-FUNCTIONAL ctors, proto ctors and the registrar lookup are inlined as in the exe, at the exe size; rsi/rdi are swapped, and the registrar name load uses r8 where the exe uses rbx
 // @0x142977070
 FunctionRef DropShadowFilterCtorFunction::Register(GlobalContext* pgc)
 {
@@ -1961,7 +1963,7 @@ FunctionRef GASLoadVarsLoaderCtorFunction::Register(GlobalContext* pgc)
     return ctor;
 }
 
-// MS2-FUNCTIONAL ctors, proto ctors and the registrar lookup are inlined as in the exe; the frame is 0x10 larger and rdi/rsi are swapped
+// MS2-FUNCTIONAL ctors, proto ctors and the registrar lookup are inlined as in the exe, at the exe size; rsi/rdi are swapped, and the registrar name load uses r8 where the exe uses rbx
 // @0x142978240
 FunctionRef GlowFilterCtorFunction::Register(GlobalContext* pgc)
 {
