@@ -220,7 +220,7 @@ inline void FUN_1426150b0(Scaleform::UPInt doc) { reinterpret_cast<Scaleform::Re
 inline void FUN_1426150d0(Scaleform::UPInt doc) { reinterpret_cast<Scaleform::Render::Text::DocView*>(doc)->SetAutoSizeY(); }   // DocView::SetAutoSizeY
 inline void FUN_1425bc060(Scaleform::UPInt tf) { reinterpret_cast<Scaleform::GFx::TextField*>(tf)->SetDirtyFlag(); }   // TextField::SetDirtyFlag
 inline void FUN_142511b00(Scaleform::UPInt tracer, Scaleform::UPInt* now, Scaleform::UPInt* old) { reinterpret_cast<Scaleform::GFx::AS3::Tracer*>(tracer)->InitializeBlock(*reinterpret_cast<Scaleform::GFx::AS3::TR::Block*>(now), *reinterpret_cast<const Scaleform::GFx::AS3::TR::Block*>(old)); }   // Tracer: merge block states
-inline char* FUN_142516c40(Scaleform::UPInt tracer, void* buf, Scaleform::UPInt* now, Scaleform::UPInt* old) { ::new (buf) Scaleform::GFx::AS3::CheckResult(reinterpret_cast<Scaleform::GFx::AS3::Tracer*>(tracer)->MergeBlock(*reinterpret_cast<Scaleform::GFx::AS3::TR::Block*>(now), *reinterpret_cast<const Scaleform::GFx::AS3::TR::Block*>(old))); return static_cast<char*>(buf); }   // Tracer: merge, result flag
+char* FUN_142516c40(Scaleform::UPInt tracer, void* buf, Scaleform::UPInt* now, Scaleform::UPInt* old) { ::new (buf) Scaleform::GFx::AS3::CheckResult(reinterpret_cast<Scaleform::GFx::AS3::Tracer*>(tracer)->MergeBlock(*reinterpret_cast<Scaleform::GFx::AS3::TR::Block*>(now), *reinterpret_cast<const Scaleform::GFx::AS3::TR::Block*>(old))); return static_cast<char*>(buf); }   // Tracer: merge, result flag
 namespace Scaleform { namespace GFx { namespace AS3 { void Sfr31ClassTraitsCleanup(unsigned long long); } } }
 namespace Scaleform { namespace GFx { void ASUserData_SetLastObjectValue(ASUserData* puserData, void* pobjIfc, void* pdata, bool isdobj); } }
 inline void FUN_1425303b0(Scaleform::UPInt entry) { Scaleform::GFx::AS3::Sfr31ClassTraitsCleanup(entry); }
@@ -4590,55 +4590,72 @@ void Sfr31TraceOperandClassTraits(State* st)
         s.OpStack().PushBack(Value(TrITraits(tracer, 0x230), Value::NullOrNot));
 }
 
-// Traces the code of the block containing pos, merging block states, and keeps tracing opcodes until the code ends or a halt is raised.
-// MS2-FUNCTIONAL 0x142530220: raw-offset model; codegen differs from the exe
-// @0x142530220
-void Sfr31TraceBlock(UPInt tr, UPInt pos, UPInt block)
+// Tracer::GetBlock: the last block (+0x110) whose start (+0x20) is not after pos, walking back through +0.
+static __forceinline UPInt Sfr31GetBlock(UPInt tr, UPInt pos)
 {
     UPInt b = Sfr31Rd(tr, 0x110);
     while (b != 0 && pos < Sfr31Rd(b, 0x20))
         b = Sfr31Rd(b, 0);
-    Sfr31Wr(tr, 0x68, b);
-    UInt8 buf[8];
-    if ((*reinterpret_cast<const UInt8*>(b + 0x10) & 1) == 0)
-        FUN_142511b00(tr, reinterpret_cast<UPInt*>(b), reinterpret_cast<UPInt*>(block));
-    else if (b != block && *FUN_142516c40(tr, buf, reinterpret_cast<UPInt*>(b), reinterpret_cast<UPInt*>(block)) == 0)
-        return;
-    if (pos >= Sfr31Rd(tr, 0x58))
-        return;
-    while (*reinterpret_cast<const UInt8*>(TrVM(tr) + 0x180) == 0)
+    return b;
+}
+
+// Tracer::UpdateBlock: entering a block at pos merges or initializes its state from the current block (+0x68).
+static __forceinline bool Sfr31UpdateBlock(UPInt tr, UPInt pos)
+{
+    const UPInt prev = Sfr31Rd(tr, 0x68);
+    const UPInt next = Sfr31GetBlock(tr, pos);
+    if (next != 0 && Sfr31Rd(next, 0x20) == pos)
     {
-        const UPInt prev = Sfr31Rd(tr, 0x68);
-        for (UPInt p = Sfr31Rd(tr, 0x110); p != 0; p = Sfr31Rd(p, 0))
+        Sfr31Wr(tr, 0x68, next);
+        if (*reinterpret_cast<const UInt8*>(next + 0x10) & 1)
         {
-            if (Sfr31Rd(p, 0x20) <= pos)
+            if (next != prev)
             {
-                if (Sfr31Rd(p, 0x20) == pos)
-                {
-                    Sfr31Wr(tr, 0x68, p);
-                    if ((*reinterpret_cast<const UInt8*>(p + 0x10) & 1) == 0)
-                        FUN_142511b00(tr, reinterpret_cast<UPInt*>(p), reinterpret_cast<UPInt*>(prev));
-                    else if (p != prev && *FUN_142516c40(tr, buf, reinterpret_cast<UPInt*>(p), reinterpret_cast<UPInt*>(prev)) == 0)
-                        return;
-                }
-                break;
+                if (!reinterpret_cast<Tracer*>(tr)->MergeBlock(*reinterpret_cast<TR::Block*>(next), *reinterpret_cast<const TR::Block*>(prev)))
+                    return false;
             }
         }
-        FUN_14252c640(tr, &pos);
-        if (Sfr31Rd(tr, 0x58) <= pos)
-            return;
-        FUN_1425212f0(tr, pos);
-        const UInt8 op = *reinterpret_cast<const UInt8*>(pos + Sfr31Rd(tr, 0x50));
-        ++pos;
-        const UPInt state = Sfr31Rd(Sfr31Rd(tr, 0x68), 0x18);
-        if (Sfr31TracerCommonOp(tr, op, &pos, state) == 0)
+        else
+            FUN_142511b00(tr, reinterpret_cast<UPInt*>(next), reinterpret_cast<UPInt*>(prev));
+    }
+    return true;
+}
+
+// Traces the code of the block containing pos, merging block states, and keeps tracing opcodes until the code ends or a halt is raised.
+// @0x142530220
+void Sfr31TraceBlock(UPInt tr, UPInt pos, UPInt block)
+{
+    const UPInt b = Sfr31GetBlock(tr, pos);
+    Sfr31Wr(tr, 0x68, b);
+    if (*reinterpret_cast<const UInt8*>(b + 0x10) & 1)
+    {
+        if (b != block)
         {
-            if (*reinterpret_cast<const UInt8*>(TrVM(tr) + 0x180) != 0)
+            if (!reinterpret_cast<Tracer*>(tr)->MergeBlock(*reinterpret_cast<TR::Block*>(b), *reinterpret_cast<const TR::Block*>(block)))
                 return;
-            Sfr31StateTraceOp(state, op, &pos);
         }
-        if (Sfr31Rd(tr, 0x58) <= pos)
+    }
+    else
+        FUN_142511b00(tr, reinterpret_cast<UPInt*>(b), reinterpret_cast<UPInt*>(block));
+    // the SDK opcode (Code::OpCode, 32-bit): the op handlers are called through casts that take it at full width
+    UInt32 op = 0;
+    while (pos < Sfr31Rd(tr, 0x58))
+    {
+        if (*reinterpret_cast<const UInt8*>(TrVM(tr) + 0x180) != 0)
             return;
+        if (!Sfr31UpdateBlock(tr, pos))
+            return;
+        FUN_14252c640(tr, &pos);
+        if (pos >= Sfr31Rd(tr, 0x58))
+            break;
+        FUN_1425212f0(tr, pos);
+        const UInt8 byte_code = reinterpret_cast<const UInt8*>(Sfr31Rd(tr, 0x50))[pos++];
+        op = byte_code;
+        if (reinterpret_cast<char (*)(UPInt, UInt32, UPInt*, UPInt)>(&Sfr31TracerCommonOp)(tr, op, &pos, Sfr31Rd(Sfr31Rd(tr, 0x68), 0x18)))
+            continue;
+        if (*reinterpret_cast<const UInt8*>(TrVM(tr) + 0x180) != 0)
+            return;
+        reinterpret_cast<void (*)(UPInt, UInt32, UPInt*)>(&Sfr31StateTraceOp)(Sfr31Rd(Sfr31Rd(tr, 0x68), 0x18), op, &pos);
     }
 }
 // ---- batch 31
@@ -5110,39 +5127,20 @@ void Sfr31TraceClassTraitsFromIndex(State* st, UInt32 idx)
 }
 
 // Finds the class traits for a multiname; unregistered ones are looked up on the global object by name and cached in the hash.
-// MS2-FUNCTIONAL 0x142525270: raw-offset model; codegen differs from the exe
 // @0x142525270
 UPInt Sfr31FindClassTraitsByMn(UPInt vm, UPInt mn)
 {
     UPInt found = FUN_14250d760(vm, mn);
-    if (found != 0)
-        return found;
-    const UPInt mgr = Sfr31Rd(Sfr31Rd(vm, 0x10), 0x1e8);
-    ASString str(reinterpret_cast<ASStringNode*>(mgr + 0x40));
-    UInt8 tmp[8];
-    if (*FUN_1424f1390(reinterpret_cast<Value*>(mn + 0x10), tmp, &str) == 0)
-        return 0;
-    const UPInt node = Sfr31Rd(reinterpret_cast<UPInt>(&str), 0);
-    const UPInt ns = Sfr31Rd(mn, 8);
-    found = reinterpret_cast<UPInt>(FUN_142415520(reinterpret_cast<void*>(Sfr31Rd(vm, 0x298)), &str, reinterpret_cast<const Instances::Namespace*>(ns)));
-    if (found != 0)
+    if (found == 0)
     {
+        ASString str(reinterpret_cast<ASStringNode*>(Sfr31Rd(Sfr31Rd(vm, 0x10), 0x1e8) + 0x40));
+        if (!reinterpret_cast<const Value*>(mn + 0x10)->Convert2String(str))
+            return 0;
+        ClassTraits::Traits* ct = FUN_142415520(reinterpret_cast<void*>(Sfr31Rd(vm, 0x298)), &str, reinterpret_cast<const Instances::Namespace*>(Sfr31Rd(mn, 8)));
+        found = reinterpret_cast<UPInt>(ct);
         // the VM's class traits cache (+0x1c8): MultinameHash::Add copies the key (ASString + SPtr<Namespace>) and calls add<NodeRef> 0x1423eb030
-        reinterpret_cast<TClassTraitsCache*>(vm + 0x1c8)->Add(str, *reinterpret_cast<const Instances::Namespace*>(ns), reinterpret_cast<ClassTraits::Traits* const&>(found));
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
+        if (ct != 0)
+            reinterpret_cast<TClassTraitsCache*>(vm + 0x1c8)->Add(str, *reinterpret_cast<const Instances::Namespace*>(Sfr31Rd(mn, 8)), ct);
     }
     return found;
 }
