@@ -6885,7 +6885,9 @@ __forceinline Multiname::Multiname(Instances::Namespace& ns, const Value& name, 
         const Traits& tr = reinterpret_cast<Object*>(name.GetGASRefCountBase())->GetTraits();
         if (static_cast<int>(tr.TraitsType) == 0xc && (static_cast<UInt8>(~static_cast<UInt8>(static_cast<UInt8>(tr.Flags) >> 5)) & 1) != 0)
         {
-            Sfr27MultinameFromQName(this, &name);
+            // The address goes over as an integer: cl then keeps the name Value's kind and flags in registers
+            // across the call (the exe's LTCG knows the callee does not write it), with no reload from the frame.
+            reinterpret_cast<void (*)(Multiname*, UPInt)>(&Sfr27MultinameFromQName)(this, reinterpret_cast<UPInt>(&name));
             return;
         }
     }
@@ -6896,9 +6898,8 @@ __forceinline Multiname::Multiname(Instances::Namespace& ns, const Value& name, 
 // The error e as text through the UI: its getStackTrace() when it has one, else (or when that gives null) e
 // converted to a string.
 // The Multiname constructor (with PostProcessName) and the string Value are inlined, as in the exe.
-// MS2-FUNCTIONAL the exe keeps the name Value's flags and bonus in registers across the QName call (its LTCG sees
-// that the callee does not write it; ours reloads them), one AddRef arm of the name copy that cl threads, and
-// register allocation
+// MS2-FUNCTIONAL register allocation (the exe saves r13 too, uses r14 for the kind), one AddRef arm of the name
+// copy that cl threads, and the frame is 8 bytes smaller
 // @0x14251bdc0
 void VM::OutputError(const Value& e)
 {
@@ -7533,8 +7534,7 @@ static SF_FORCEINLINE SPtr<Instances::fl_display::DisplayObject> Sfr34_GetAS3Chi
 // The Multiname ctor and the string Value are the inline copies (InlineCtorTag, Value::InlineStr), and the
 // failure paths are inside if (!GetProperty), as in the SDK.
 // GetAS3ChildByName is the forceinline Sfr34 copy (inlined, as in the exe).
-// MS2-FUNCTIONAL: the exe saves all registers in the prolog (push form) and does not reload the name Value
-// after the QName call (LTCG), so registers and slots differ
+// MS2-FUNCTIONAL: the exe saves all registers in the prolog (push form), so registers and slots differ
 // @0x14250b4a0
 bool AS3ValueObjectInterface::GetMember(void* pdata, const char* name, GFx::Value* pval, bool isdobj) const
 {
@@ -7854,8 +7854,7 @@ static SF_FORCEINLINE SPtr<Instances::fl_display::DisplayObject> Sfr34_GetAS3Chi
 // ObjectInterface::HasMember: whether the AS3 object has a property of that public name or, as a display object
 // container, a child of that name (an exception of the child lookup is dropped).
 // The Multiname ctor and the string Value are the inline copies (InlineCtorTag, Value::InlineStr), as in the exe.
-// MS2-FUNCTIONAL: the exe keeps the name Value's flags and bonus in registers across the QName call (LTCG), so it
-// threads the string AddRef arm of the name copy; register allocation
+// MS2-FUNCTIONAL: the exe threads the string AddRef arm of the name copy; register allocation
 // @0x142510e70
 bool AS3ValueObjectInterface::HasMember(void* pdata, const char* name, bool isdobj) const
 {
