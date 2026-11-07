@@ -121,14 +121,6 @@ inline void  DocView_SetImageSubstitutor(void* pdoc, void* psubst) { *(void**)((
 inline void  DocView_SetReformatReq(void* pdoc) { *((unsigned char*)pdoc + 0x14b) |= 2; }
 
 namespace Scaleform {
-// DocView::LineMetrics, in twips.
-struct MS2_LineMetrics
-{
-    unsigned Width, Height;
-    unsigned Ascent, Descent;
-    int      FirstCharXOff;
-    int      Leading;
-};
 // StyledText::HTMLImageTagInfo: the same stand-in as sfr_as3_14 / sfr_as3_15 (the ArrayDataBase destructor
 // instantiation is the exe's 0x1424c7100).
 struct MS2_HTMLImageTagInfo // 0x40 bytes
@@ -2774,31 +2766,44 @@ void AvmTextField::AppendText(const FnCall& fn)
     ptf->SetDirtyFlag();
 }
 
+// The SDK's header-inline ObjectInterface::SetConstMemberRaw, which the exe inlines here.
+static SF_FORCEINLINE bool GlmSetConstMemberRaw(ObjectInterface& obj, ASStringContext* psc, const char* pname, const Value& val)
+{
+    return obj.SetMemberRaw(psc, ASString(psc->CreateConstString(pname)), val);
+}
+
 // getLineMetrics(lineIndex): an object with the line's ascent, descent, width, height, leading and x in pixels.
-// MS2-FUNCTIONAL register allocation and stack layout differ from the exe
 // @0x14290aac0
 void AvmTextField::GetLineMetrics(const FnCall& fn)
 {
-    if (!IsTextFieldTarget(fn))
-        return;
-    TextField* ptf = GetTextFieldTarget(fn);
-    if (fn.NArgs < 1)
-        return;
-    int             line = int(fn.Arg(0).ToNumber(fn.Env));
-    MS2_LineMetrics metrics;
-    if (line < 0 || !ptf->GetDocument()->GetLineMetrics(unsigned(line), reinterpret_cast<Render::Text::DocView::LineMetrics*>(&metrics)))
+    if (IsTextFieldTarget(fn))
     {
-        fn.Result->SetUndefined();
-        return;
+        TextField* pthis = GetTextFieldTarget(fn);
+        if (fn.NArgs >= 1)
+        {
+            int lineIndex = int(fn.Arg(0).ToNumber(fn.Env));
+            if (lineIndex < 0)
+                fn.Result->SetUndefined();
+            else
+            {
+                Render::Text::DocView::LineMetrics metrics;
+                bool rv = pthis->GetDocument()->GetLineMetrics(unsigned(lineIndex), &metrics);
+                if (rv)
+                {
+                    Ptr<Object> pobj = *SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);
+                    GlmSetConstMemberRaw(*pobj, fn.Env->GetSC(), "ascent", Value(Render::TwipsToPixels((Number)metrics.Ascent)));
+                    GlmSetConstMemberRaw(*pobj, fn.Env->GetSC(), "descent", Value(Render::TwipsToPixels((Number)metrics.Descent)));
+                    GlmSetConstMemberRaw(*pobj, fn.Env->GetSC(), "width", Value(Render::TwipsToPixels((Number)metrics.Width)));
+                    GlmSetConstMemberRaw(*pobj, fn.Env->GetSC(), "height", Value(Render::TwipsToPixels((Number)metrics.Height)));
+                    GlmSetConstMemberRaw(*pobj, fn.Env->GetSC(), "leading", Value(Render::TwipsToPixels((Number)metrics.Leading)));
+                    GlmSetConstMemberRaw(*pobj, fn.Env->GetSC(), "x", Value(Render::TwipsToPixels((Number)metrics.FirstCharXOff)));
+                    fn.Result->SetAsObject(pobj);
+                }
+                else
+                    fn.Result->SetUndefined();
+            }
+        }
     }
-    Ptr<Object> pobj = *SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);
-    pobj->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("ascent"), Value(Render::TwipsToPixels(Double(metrics.Ascent))));
-    pobj->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("descent"), Value(Render::TwipsToPixels(Double(metrics.Descent))));
-    pobj->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("width"), Value(Render::TwipsToPixels(Double(metrics.Width))));
-    pobj->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("height"), Value(Render::TwipsToPixels(Double(metrics.Height))));
-    pobj->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("leading"), Value(Render::TwipsToPixels(Double(metrics.Leading))));
-    pobj->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("x"), Value(Render::TwipsToPixels(Double(metrics.FirstCharXOff))));
-    fn.Result->SetAsObject(pobj);
 }
 
 // getLineText(lineIndex): undefined for a negative index, "" past the last line.
