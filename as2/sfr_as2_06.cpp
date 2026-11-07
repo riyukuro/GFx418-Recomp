@@ -1231,7 +1231,7 @@ static SF_FORCEINLINE FunctionRef RegisterBuiltinClass(GlobalContext* pgc, ASBui
     FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) CtorFunctionType(&sc));
     Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) ProtoType(&sc, pgc->GetPrototype(parentType), ctor);
     SetBuiltinPrototype(pgc, type, proto);
-    ptarget->SetMemberRaw(&sc, sc.GetBuiltin(type), Value(ctor));
+    ptarget->SetMemberRaw(&sc, ((MovieRoot*)pgc->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(type), Value(ctor));
     return ctor;
 }
 
@@ -1282,6 +1282,19 @@ __forceinline BooleanCtorFunction::BooleanCtorFunction(ASStringContext* psc, Obj
 // RegisterBuiltinClass with the CtorFunction and Proto ctors inlined down to Object(psc), as in the exe.
 template<class CtorFunctionType, class ProtoType>
 static SF_FORCEINLINE FunctionRef RegisterBuiltinClassInline(GlobalContext* pgc, ASBuiltinType type, ASBuiltinType parentType,
+                                                     Object* ptarget)
+{
+    ASStringContext sc(pgc, 8);
+    FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) CtorFunctionType(&sc, ObjectInlineCtorTag()));
+    Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) ProtoType(&sc, pgc->GetPrototype(parentType), ctor, ObjectInlineCtorTag());
+    SetBuiltinPrototype(pgc, type, proto);
+    ptarget->SetMemberRaw(&sc, ((MovieRoot*)pgc->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(type), Value(ctor));
+    return ctor;
+}
+
+// As RegisterBuiltinClassInline, with the name read through sc (Point keeps that shape in the exe).
+template<class CtorFunctionType, class ProtoType>
+static SF_FORCEINLINE FunctionRef RegisterBuiltinClassInlineSc(GlobalContext* pgc, ASBuiltinType type, ASBuiltinType parentType,
                                                      Object* ptarget)
 {
     ASStringContext sc(pgc, 8);
@@ -1809,7 +1822,7 @@ static SF_FORCEINLINE FunctionRef RegisterFilterClassInline(GlobalContext* pgc, 
     FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) CtorFunctionType(&sc, ObjectInlineCtorTag()));
     Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) ProtoType(&sc, pgc->GetPrototype(ASBuiltin_BitmapFilter), ctor, ObjectInlineCtorTag());
     SetBuiltinPrototype(pgc, type, proto);
-    pgc->FlashFiltersPackage->SetMemberRaw(&sc, sc.GetBuiltin(type), Value(ctor));
+    pgc->FlashFiltersPackage->SetMemberRaw(&sc, ((MovieRoot*)pgc->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(type), Value(ctor));
     return ctor;
 }
 
@@ -1934,7 +1947,7 @@ FunctionRef MovieClipLoaderCtorFunction::Register(GlobalContext* pgc)
 // @0x1429797e0
 FunctionRef PointCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClassInline<PointCtorFunction, PointProto>(pgc, ASBuiltin_Point, ASBuiltin_Object, pgc->FlashGeomPackage);
+    return RegisterBuiltinClassInlineSc<PointCtorFunction, PointProto>(pgc, ASBuiltin_Point, ASBuiltin_Object, pgc->FlashGeomPackage);
 }
 
 // MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
@@ -2288,7 +2301,7 @@ FunctionRef MathCtorFunction::Register(GlobalContext* pgc)
     FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) MathCtorFunction(&sc));
     Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) MathProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor, ObjectInlineCtorTag());
     SetBuiltinPrototype(pgc, ASBuiltin_Math, proto);
-    pgc->pGlobal->SetMemberRaw(&sc, sc.GetBuiltin(ASBuiltin_Math), Value(ctor));
+    pgc->pGlobal->SetMemberRaw(&sc, ((MovieRoot*)pgc->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin_Math), Value(ctor));
     return ctor;
 }
 
