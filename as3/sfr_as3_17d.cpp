@@ -939,6 +939,15 @@ struct Sfr17dValueInline
     static SF_FORCEINLINE void SetClassKind(Value& v) { v.SetKind(Value::kClass); }
     static SF_FORCEINLINE void InitClass(Value& v, Class* cl)
     { Value::VU tmp(cl); cl->AddRef(); v.Flags = Value::kClass; v.value = tmp; }
+    // Value::ReleaseInternal (0x142521f00) out of line, for a Value whose kind is known to be ref-counted.
+    static SF_FORCEINLINE void Release(Value& v) { v.ReleaseInternal(); }
+};
+// A Value slot with no destructor: released through Sfr17dValueInline::Release, as in the exe.
+struct Sfr17dRawValue
+{
+    union { Value v; };
+    Sfr17dRawValue() {}
+    ~Sfr17dRawValue() {}
 };
 }}} // namespace Scaleform::GFx::AS3
 
@@ -1336,11 +1345,56 @@ static SF_FORCEINLINE void Sfr17dThrow(AS3::VM* vm, const AS3::VM::Error& e, con
     ::FUN_14252ecb0(vm, &e, &ci);
 }
 
+// VM::Construct(gname, result) (SDK AS3_VM.cpp), inline here as in the exe: true when code has to run.
+static SF_FORCEINLINE bool Sfr17dConstruct(AS3::VM* vm, const StringDataPtr& className, AS3::Value& result)
+{
+    using namespace AS3;
+    using AS3::Value;
+    const UPInt callStackSize = vm->Unk070[1];
+    Class* cls = vm->GetClass(className);
+    if (cls)
+    {
+        Sfr17dRawValue cb;
+        Value& _class = cb.v;
+        Sfr17dValueInline::InitClass(_class, cls);
+        if (_class.IsNullOrUndefined())
+        {
+            Sfr17dThrow(vm, VM::Error(VM::ErrorID(1009) /* eConvertNullToObjectError */, *vm), fl::TypeErrorCI);
+            Sfr17dValueInline::Release(_class);
+            return false;
+        }
+        _class.GetObject()->Construct(result, 0, NULL, false);
+        if (vm->HandleException)
+        {
+            Sfr17dValueInline::Release(_class);
+            return false;
+        }
+        const bool need = vm->Unk070[1] > callStackSize;
+        Sfr17dValueInline::Release(_class);
+        return need;
+    }
+    if (!vm->HandleException)
+        Sfr17dThrow(vm, VM::Error(VM::ErrorID(1065) /* eUndefinedVarError */, *vm, className.ToCStr()),
+                    fl::ReferenceErrorCI);
+    return false;
+}
+
+// VM::CreateObject's tail (SDK AS3_VM.h): run the constructor code when needed; false on an exception.
+static SF_FORCEINLINE bool Sfr17dCreateObject(AS3::VM* vm, bool needExecute)
+{
+    if (vm->HandleException)
+        return false;
+    if (needExecute)
+        vm->ExecuteCode(1);
+    return !vm->HandleException;
+}
+
 // A new empty Sprite named instanceName at depth (the top when negative) of the container; its constructor runs
 // right away.
-// The class Value is declared before GetClass and set up in place (Value(Class*) inlined: VU temp, AddRef, kind).
-// MS2-FUNCTIONAL: Value::~Value is inlined in full (the exe knows the class kind and calls ReleaseInternal), and the
-// exe stores the VU temp before the null test; the length is 819 against the exe's 823
+// VM::Construct and CreateObject are inline here as in the exe. The class Value is a dtor-less slot set up in place
+// (Value(Class*) inlined) and released out of line on each exit. The nameSet result lives to the end.
+// MS2-FUNCTIONAL: frame layout only: the exe gives the 1065 Error its own slot and has a 0x10 larger frame, so every
+// local sits at another rbp offset (819 against 823 bytes)
 // @0x1424f33d0
 bool AS3ValueObjectInterface::CreateEmptyMovieClip(void* pdata, GFx::Value* pmc, const char* instanceName, SInt32 depth)
 {
@@ -1353,46 +1407,14 @@ bool AS3ValueObjectInterface::CreateEmptyMovieClip(void* pdata, GFx::Value* pmc,
     Value result;
     VM*   vm = root->pAVM;
     const StringDataPtr className("flash.display.Sprite", 0x14);
-    const UPInt callStackSize = vm->Unk070[1];
-    bool needExecute;
-    Value _class;
-    Class* cls = vm->GetClass(className);
-    if (cls)
-    {
-        Sfr17dValueInline::InitClass(_class, cls);
-        if (_class.IsNullOrUndefined())
-        {
-            Sfr17dThrow(vm, VM::Error(VM::ErrorID(1009) /* eConvertNullToObjectError */, *vm), fl::TypeErrorCI);
-            needExecute = false;
-        }
-        else
-        {
-            _class.GetObject()->Construct(result, 0, NULL, false);
-            needExecute = vm->HandleException ? false : vm->Unk070[1] > callStackSize;
-        }
-    }
-    else
-    {
-        if (!vm->HandleException)
-            Sfr17dThrow(vm, VM::Error(VM::ErrorID(1065) /* eUndefinedVarError */, *vm, className.ToCStr()),
-                        fl::ReferenceErrorCI);
-        needExecute = false;
-    }
-    if (vm->HandleException)
+    const bool needExecute = Sfr17dConstruct(vm, className, result);
+    if (!Sfr17dCreateObject(vm, needExecute))
         return false;
-    if (needExecute)
-    {
-        vm->ExecuteCode(1);
-        if (vm->HandleException)
-            return false;
-    }
     if (!Sfr17d_IsDisplayObject(result))
         return false;
     Instances::fl_display::DisplayObject* pnew = static_cast<Instances::fl_display::DisplayObject*>(result.GetObject());
-    {
-        Value r;
-        pnew->nameSet(r, ASString(root->GetStringManager418()->CreateStringNode(instanceName)));
-    }
+    Value r;
+    pnew->nameSet(r, ASString(root->BuiltinsMgr.GetStringManager()->CreateStringNode(instanceName)));
     AvmDisplayObjContainer* cont = Sfr17d_ToAvmContainer(pcont);
     if (depth < 0)
         depth = SInt32(cont->GetDisplayObjContainer()->mDisplayList.GetCount());
@@ -1435,7 +1457,7 @@ bool AS3ValueObjectInterface::AttachMovie(void* pdata, GFx::Value* pmc, const ch
             Instances::fl_display::DisplayObject* pnew =
                 static_cast<Instances::fl_display::DisplayObject*>(result.GetObject());
             Value r;
-            pnew->nameSet(r, ASString(root->GetStringManager418()->CreateStringNode(instanceName)));
+            pnew->nameSet(r, ASString(root->BuiltinsMgr.GetStringManager()->CreateStringNode(instanceName)));
             const Sfr17dMemberValueSet* args = reinterpret_cast<const Sfr17dMemberValueSet*>(initArgs);
             if (args)
             {
