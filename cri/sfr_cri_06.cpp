@@ -8838,33 +8838,27 @@ const cri_u1* FUN_140059ac0(const cri_u1* src, cri_u1* dst, int off, int stride,
   return src;
 }
 
-// MS2-FUNCTIONAL: the exe keeps a 64-bit trip count (mov rcx,rax) and indexes [d2 + dst]; ours counts h down in 32 bits.
+// MS2-FUNCTIONAL: the off == stride branch matches; in the else branch cl reads src relative to s2 (sub rcx,r10;
+// lea rax,[rdx+r10]) where the exe reads both sources relative to dst. Pointer, ptrdiff and operand-order forms did not move it.
 // SSE2 8-wide vertical half-pel average of src and src + off, then averaged into dst. When off == stride the exe
 // carries the previous row in a register. The exe walks dst only and reads the sources at a fixed distance from it.
 // @0x140059b80
 void FUN_140059b80(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
 {
-  int n = h;
   const cri_u1* s2 = src + off;
   if (off == stride) {
     __m128i a = _mm_loadl_epi64((const __m128i*)(src));
-    if (n > 0) {
-      __int64 d2 = s2 - dst;
-      do {
-        __m128i c = _mm_loadl_epi64((const __m128i*)(dst + d2));
-        _mm_storel_epi64((__m128i*)(dst), _mm_avg_epu8(_mm_avg_epu8(a, c), _mm_loadl_epi64((const __m128i*)(dst))));
-        dst += stride;
-        a = c;
-      } while (--n);
+    for (int i = 0; i < h; ++i) {
+      __m128i c = _mm_loadl_epi64((const __m128i*)(s2 + i * stride));
+      _mm_storel_epi64((__m128i*)(dst + i * stride), _mm_avg_epu8(_mm_avg_epu8(a, c), _mm_loadl_epi64((const __m128i*)(dst + i * stride))));
+      a = c;
     }
-  } else if (n > 0) {
-    __int64 d2 = s2 - dst;
-    __int64 d1 = src - dst;
-    do {
-      __m128i v = _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(dst + d1)), _mm_loadl_epi64((const __m128i*)(dst + d2)));
-      _mm_storel_epi64((__m128i*)(dst), _mm_avg_epu8(v, _mm_loadl_epi64((const __m128i*)(dst))));
-      dst += stride;
-    } while (--n);
+  } else {
+    const cri_u1* s3 = src + off;
+    for (int i = 0; i < h; ++i) {
+      __m128i v = _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(src + i * stride)), _mm_loadl_epi64((const __m128i*)(s3 + i * stride)));
+      _mm_storel_epi64((__m128i*)(dst + i * stride), _mm_avg_epu8(v, _mm_loadl_epi64((const __m128i*)(dst + i * stride))));
+    }
   }
 }
 
