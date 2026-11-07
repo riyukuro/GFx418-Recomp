@@ -43,15 +43,6 @@ const char* BlendModeNames[] = {"normal",     "normal", "layer",    "multiply", 
                                 "lighten",    "darken", "difference", "add",    "subtract",
                                 "invert",     "alpha",  "erase",    "overlay",  "hardlight"};
 
-// A watch on the built-in property of pobj may replace the value being set.
-SF_FORCEINLINE void InvokeMemberWatchpoint(Object* pobj, Environment* penv, AvmCharacter::StandardMember index,
-                                           Value& val)
-{
-    Value newVal;
-    if (pobj->InvokeWatchpoint(penv, penv->CreateConstString(AvmCharacter::MemberTable[index].pName), val, &newVal))
-        val = newVal;
-}
-
 // A Rectangle object's bounds in twips, for scale9Grid.
 SF_FORCEINLINE RectF RectangleToGridTwips(Object* pobj, Environment* penv)
 {
@@ -61,6 +52,40 @@ SF_FORCEINLINE RectF RectangleToGridTwips(Object* pobj, Environment* penv)
     const float y1 = Render::PixelsToTwips(float(r.y1));
     return RectF(x1, y1, Render::PixelsToTwips(float(r.x2 - r.x1)) + x1, Render::PixelsToTwips(float(r.y2 - r.y1)) + y1);
 }
+
+// GFx::Bool3W (0 undefined, 1 true, 2 false) over the byte fields that hold one.
+struct Bool3WView
+{
+    UByte Value;
+    Bool3WView() : Value(0) {}
+    Bool3WView& operator=(const Bool3WView& o) { Value = o.Value; return *this; }
+    Bool3WView& operator=(bool o) { Value = UByte(o ? 1 : 2); return *this; }
+};
+template <class T> SF_FORCEINLINE Bool3WView& AsBool3W(T& field) { return reinterpret_cast<Bool3WView&>(field); }
+
+SF_FORCEINLINE void SpriteSetLockRoot(Sprite* psprite, bool v)
+{
+    psprite->Flags = (UByte)((v) ? (psprite->Flags | Sprite::Flags_LockRoot) : (psprite->Flags & (~Sprite::Flags_LockRoot)));
+}
+
+SF_FORCEINLINE void SetTabChildrenDisabledFlag(InteractiveObject* pch, bool v)
+{
+    (v) ? pch->Flags |= InteractiveObject::Mask_TabChildrenDisabled : pch->Flags &= (~InteractiveObject::Mask_TabChildrenDisabled);
+}
+
+// Releases a held Value by the type read once up front (see AvmSprite::SetStandardMember).
+struct ValueTypeRelease
+{
+    Value&      V;
+    const UByte Type;
+    explicit ValueTypeRelease(Value& v) : V(v), Type(v.T.Type) {}
+    ~ValueTypeRelease()
+    {
+        if (Type >= Value::STRING)
+            V.DropRefs();
+    }
+    bool IsUndefined() const { return Type == Value::UNDEFINED || Type == Value::UNSET; }
+};
 
 } // namespace
 
@@ -380,16 +405,35 @@ bool AvmCharacter::SetStandardMember(StandardMember index, const Value& val, boo
 
 // The clip's watched properties go through its MovieClip object first; then the common setters and the sprite
 // ones: _lockroot, focusEnabled, tabChildren, scale9Grid / scrollRect (SWF 8), hitArea and hitTestDisable.
-// MS2-FUNCTIONAL: the exe builds the watched name inline from the member table
+// MS2-FUNCTIONAL: the exe lays out the shared return-true epilogue after the scale9Grid case (ours after
+// _lockroot), so it splits the _lockroot store and the scrollRect calls, and computes the member table index
+// before the watch value's ctor; same behavior
 // @0x14298b410
 bool AvmSprite::SetStandardMember(StandardMember index, const Value& origVal, bool opcodeFlag)
 {
-    Value        val(origVal);
+    union ValueHolder
+    {
+        Value v;
+        ValueHolder(const Value& o) : v(o) {}
+        ~ValueHolder() {}
+    } valHolder(origVal);
+    Value&       val  = valHolder.v;
     Environment* penv = GetASEnvironment();
-    if (index > M_BuiltInProperty_End && penv && pMovieClipObj && pMovieClipObj->pWatchpoints)
-        InvokeMemberWatchpoint(pMovieClipObj, penv, index, val);
+    if (index > M_BuiltInProperty_End)
+    {
+        if (penv && pMovieClipObj && pMovieClipObj->pWatchpoints)
+        {
+            Value newVal;
+            if (pMovieClipObj->InvokeWatchpoint(penv, penv->CreateConstString(AvmCharacter::MemberTable[index].pName),
+                                                val, &newVal))
+                val = newVal;
+        }
+    }
 
-    if (AvmCharacter::SetStandardMember(index, val, opcodeFlag))
+    const bool handled = AvmCharacter::SetStandardMember(index, val, opcodeFlag);
+    // The type of val is not changed below; the exe (LTCG) keeps it in a register for the tests and the release.
+    const ValueTypeRelease type(val);
+    if (handled)
         return true;
 
     switch (index)
@@ -400,56 +444,43 @@ bool AvmSprite::SetStandardMember(StandardMember index, const Value& origVal, bo
         return true;
 
     case M_lockroot:
-    {
-        Sprite* psprite = GetSprite();
-        if (val.ToBool(GetASEnvironment()))
-            psprite->Flags |= Sprite::Flags_LockRoot;
-        else
-            psprite->Flags &= ~Sprite::Flags_LockRoot;
+        SpriteSetLockRoot(GetSprite(), val.ToBool(GetASEnvironment()));
         return true;
-    }
 
     case M_focusEnabled:
-    {
-        Sprite* psprite = GetSprite();
-        if (val.IsUndefined())
-            psprite->FocusEnabled = 0;
+        if (!type.IsUndefined())
+            AsBool3W(GetSprite()->FocusEnabled) = val.ToBool(GetASEnvironment());
         else
-            psprite->FocusEnabled = val.ToBool(GetASEnvironment()) ? 1 : 2;
+            AsBool3W(GetSprite()->FocusEnabled) = Bool3WView();
         return true;
-    }
 
     case M_tabChildren:
-        if (val.IsUndefined())
-            Unrecovered_1f8 = 0;
-        else
+        if (!type.IsUndefined())
         {
-            const bool tabChildren = val.ToBool(GetASEnvironment());
-            *reinterpret_cast<UByte*>(&Unrecovered_1f8) = tabChildren ? 1 : 2;
-            if (tabChildren)
-                pDispObj->Flags &= ~InteractiveObject::Mask_TabChildrenDisabled;
-            else
-                pDispObj->Flags |= InteractiveObject::Mask_TabChildrenDisabled;
+            bool v = val.ToBool(GetASEnvironment());
+            AsBool3W(Unrecovered_1f8) = v;
+            SetTabChildrenDisabledFlag(GetSprite(), !v);
         }
+        else
+            AsBool3W(Unrecovered_1f8) = Bool3WView();
         return true;
 
-    case M_scale9Grid:
-    {
-        if (GetASEnvironment()->GetVersion() < 8)
-            return false;
-        Environment* penv = GetASEnvironment();
-        Object*      pobj = val.ToObject(penv);
-        if (pobj && pobj->GetObjectType() == Object::Object_Rectangle)
-            pDispObj->SetScale9Grid(RectangleToGridTwips(pobj, penv));
-        else
-            pDispObj->SetScale9Grid(RectF(0, 0, 0, 0));
-        return true;
-    }
+    case M_hitTestDisable:
+        if (GetASEnvironment()->CheckExtensions())
+        {
+            InteractiveObject* pch = pDispObj;
+            if (val.ToBool(GetASEnvironment()))
+                pch->Flags |= InteractiveObject::Mask_HitTestDisable;
+            else
+                pch->Flags &= ~InteractiveObject::Mask_HitTestDisable;
+            return true;
+        }
+        break;
 
     case M_hitArea:
     {
         Environment* penv = GetASEnvironment();
-        if (val.GetType() == Value::CHARACTER && penv && val.V.pCharHandle)
+        if (type.Type == Value::CHARACTER && penv && val.V.pCharHandle)
         {
             DisplayObject* pch = val.V.pCharHandle->ResolveCharacter(penv->GetTarget()->GetMovieImpl());
             if (pch)
@@ -466,40 +497,56 @@ bool AvmSprite::SetStandardMember(StandardMember index, const Value& origVal, bo
         return false;
     }
 
+    case M_scale9Grid:
+        if (GetASEnvironment()->GetVersion() >= 8)
+        {
+            Environment* penv = GetASEnvironment();
+            Object*      pobj = val.ToObject(penv);
+            RectF sg;
+            if (pobj && pobj->GetObjectType() == Object::Object_Rectangle)
+            {
+                ASRect gr(0, 0, 0, 0);
+                static_cast<RectangleObject*>(pobj)->GetProperties(penv, gr);
+                sg.x1 = Render::PixelsToTwips(float(gr.x1));
+                sg.y1 = Render::PixelsToTwips(float(gr.y1));
+                sg.SetWidth(Render::PixelsToTwips(float(gr.x2 - gr.x1)));
+                sg.SetHeight(Render::PixelsToTwips(float(gr.y2 - gr.y1)));
+            }
+            else
+                sg = RectF(0);
+            GetSprite()->SetScale9Grid(sg);
+            return true;
+        }
+        break;
+
     case M_scrollRect:
         if (GetASEnvironment()->GetVersion() >= 8)
         {
             Environment* penv = GetASEnvironment();
             Object*      pobj = val.ToObject(penv);
-            if (!pobj)
-                pDispObj->SetScrollRect(0);
-            else if (pobj->GetObjectType() == Object::Object_Rectangle)
+            if (pobj)
             {
-                ASRect r(0, 0, 0, 0);
-                static_cast<RectangleObject*>(pobj)->GetProperties(penv, r);
-                const Double x1 = Render::PixelsToTwips(r.x1);
-                const Double y1 = Render::PixelsToTwips(r.y1);
-                Render::RectD rt(x1, y1, Render::PixelsToTwips(r.x2 - r.x1) + x1, Render::PixelsToTwips(r.y2 - r.y1) + y1);
-                pDispObj->SetScrollRect(&rt);
+                if (pobj->GetObjectType() == Object::Object_Rectangle)
+                {
+                    ASRect gr(0, 0, 0, 0);
+                    static_cast<RectangleObject*>(pobj)->GetProperties(penv, gr);
+                    Render::RectD sg;
+                    sg.x1 = Render::PixelsToTwips(gr.x1);
+                    sg.y1 = Render::PixelsToTwips(gr.y1);
+                    sg.SetWidth(Render::PixelsToTwips(gr.x2 - gr.x1));
+                    sg.SetHeight(Render::PixelsToTwips(gr.y2 - gr.y1));
+                    GetSprite()->SetScrollRect(&sg);
+                }
             }
-        }
-        return false;
-
-    case M_hitTestDisable:
-        if (!GetASEnvironment()->CheckExtensions())
-            return false;
-        {
-            InteractiveObject* pch = pDispObj;
-            if (val.ToBool(GetASEnvironment()))
-                pch->Flags |= InteractiveObject::Mask_HitTestDisable;
             else
-                pch->Flags &= ~InteractiveObject::Mask_HitTestDisable;
+                pDispObj->SetScrollRect(0);
         }
-        return true;
+        break;
 
     default:
-        return false;
+        break;
     }
+    return false;
 }
 
 }}} // namespace Scaleform::GFx::AS2
