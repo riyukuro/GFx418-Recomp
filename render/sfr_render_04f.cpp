@@ -95,7 +95,6 @@ Image* PrimitiveFillManager::createGradientImage(GradientData* data, float morph
     return img;
 }
 
-// MS2-FUNCTIONAL: the exe reloads the hash table pointer after the out-of-line operator== call; ours keeps it in a register
 // @0x14266d040
 PrimitiveFill* PrimitiveFillManager::CreateFill(const PrimitiveFillData& data)
 {
@@ -269,9 +268,12 @@ PrimitiveFill* PrimitiveFillManager::CreateMergedFill(unsigned mergeFlags, const
 
 // Kept out of line: the shipped build calls it from the fill set lookup, and inlining it there would pull
 // CreateFill into CreateMergedFill.
+// The barrier hides the body's purity from cl's same-TU mod/ref info, so CreateFill reloads the fill set's table
+// after the call, as the exe does. It emits no code.
 // @0x14266c3f0
 SF_NOINLINE bool PrimitiveFillData::operator==(const PrimitiveFillData& o) const
 {
+    _ReadWriteBarrier();
     return Type == o.Type && SolidColor == o.SolidColor &&
            FillModes[0] == o.FillModes[0] && FillModes[1] == o.FillModes[1] &&
            Textures[0] == o.Textures[0] && Textures[1] == o.Textures[1] &&
