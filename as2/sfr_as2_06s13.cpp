@@ -4,6 +4,12 @@
 // MS2-UNIT: sfr_as2_06s13
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142962c90-0x142963315 .text$mn
+// WeakPtr<InteractiveObject>::operator Ptr<InteractiveObject> (0x1422b4770), which the exe calls out of line. The
+// header defines it inline, so a declared-only member specialization (ahead of the headers that use it) keeps the
+// call external here.
+#include "../include/kernel/sf_refcount.h"
+namespace Scaleform { namespace GFx { class InteractiveObject; } }
+namespace Scaleform { template<> WeakPtr<GFx::InteractiveObject>::operator Ptr<GFx::InteractiveObject>() const; }
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/as2/as2_intervaltimer.h"
@@ -28,9 +34,6 @@ static SF_FORCEINLINE UInt64 ItGetNextInterval(const IntervalTimer* pt, UInt64 c
     return (((currentTime - pt->InvokeTime) + interval) / interval) * interval;
 }
 
-// WeakPtr<InteractiveObject>::operator Ptr<InteractiveObject> (0x1422b4770), which the exe calls out of line, called
-// through a view of pTarget.
-struct Unk_ItWeakTarget { Ptr<InteractiveObject> FUN_1422b4770() const; };
 
 // Not yet due: false. Otherwise the callback runs with the timer's arguments, in the environment of its clip (or
 // _level0), and the next call is put a whole number of intervals after the last one, never sooner than a tenth of
@@ -67,7 +70,7 @@ bool IntervalTimer::Invoke(MovieImpl* proot, float frameTime)
             {
                 thisPtr = thisHolder;
             }
-            else if ((targetHolder = Ptr<InteractiveObject>(reinterpret_cast<const Unk_ItWeakTarget&>(pTarget).FUN_1422b4770().GetPtr())))
+            else if ((targetHolder = Ptr<InteractiveObject>(pTarget.operator Ptr<InteractiveObject>().GetPtr())))
             {
                 thisPtr = ToAvmCharacter(targetHolder);
                 penv    = ToAvmCharacter(targetHolder)->GetASEnvironment();
