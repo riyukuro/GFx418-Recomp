@@ -80,23 +80,30 @@ uint64_t* FUN_142742f70(uint64_t* destination, const uint64_t* source)
     return destination;
 }
 
+namespace {
+// the channel object's list link at +0x10 (vtable, next, prev) and the player's channel list sentinel at +0xb0
+struct Video03bChannelNode { void* Vtable; Video03bChannelNode* pNext; Video03bChannelNode* pPrev; };
+struct Video03bChannelList
+{
+    Video03bChannelNode Root;
+    void PushBack(Video03bChannelNode* p) { p->pPrev = Root.pPrev; p->pNext = &Root; Root.pPrev->pNext = p; Root.pPrev = p; }
+};
+}
+
 // sfr22: external linkage, sfr_as3_22b's sound-channel Start paths construct the same object.
-// MS2-FUNCTIONAL: initializes and links the per-channel callback object, then registers it with FMOD. Same
-// instructions as the exe except that r10 and r11 are swapped in the list-link sequence (local order and helper forms tried).
+// Initializes and links the per-channel callback object, then registers it with FMOD.
+// The link goes through the list's PushBack and the vtable-B store is a plain qword store, which gives the exe's
+// r10/r11 assignment and keeps the RefCount store ahead of it.
 // @0x142742fb0
 __declspec(noinline) uint64_t* FUN_142742fb0(uint64_t* object, void* player, uint64_t userData, void* channel)
 {
-    uint64_t* list = reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(player) + 0xb0);
-    uint64_t* node = object + 2;
+    Video03bChannelList* list = reinterpret_cast<Video03bChannelList*>(static_cast<unsigned char*>(player) + 0xb0);
     reinterpret_cast<Scaleform::RefCountImplCore*>(object)->Scaleform::RefCountImplCore::RefCountImplCore();
     *reinterpret_cast<void***>(object) = &VideoAudioVtableA;
-    *reinterpret_cast<void***>(node) = &VideoAudioVtableB;
-    node[2] = list[2];
-    node[1] = reinterpret_cast<uintptr_t>(list);
-    reinterpret_cast<uint64_t*>(list[2])[1] = reinterpret_cast<uintptr_t>(node);
-    list[2] = reinterpret_cast<uintptr_t>(node);
+    object[2] = reinterpret_cast<uintptr_t>(&VideoAudioVtableB);
+    list->PushBack(reinterpret_cast<Video03bChannelNode*>(object + 2));
     *reinterpret_cast<void***>(object) = &VideoAudioDeleteVtable;
-    *reinterpret_cast<void***>(node) = &VideoAudioSubVtable;
+    reinterpret_cast<Video03bChannelNode*>(object + 2)->Vtable = &VideoAudioSubVtable;
     object[8] = 0;
     uint64_t* fields = object + 5;
     fields[0] = reinterpret_cast<uintptr_t>(player); fields[1] = userData; fields[2] = reinterpret_cast<uintptr_t>(channel);
