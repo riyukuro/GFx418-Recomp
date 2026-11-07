@@ -2776,9 +2776,15 @@ template void ArrayDataBase<GFx::MovieImpl::LevelInfo, AllocatorLH<GFx::MovieImp
 template void Hash<GFx::AS3::GASRefCountBase*, GFx::AS3::WeakProxy*>::Remove(GFx::AS3::GASRefCountBase* const&);
 // MS2-FUNCTIONAL 0x142522350: RemoveAlt<Key> is inlined in both; the exe's inlined Key hash takes the namespace
 // half first and its probe loop re-reads the key's pNs->Uri on each compare (ours keeps it in a register)
-template void HashDH<GFx::AS3::MultinameHash<GFx::AS3::ClassTraits::Traits*, 329>::Key, GFx::AS3::ClassTraits::Traits*,
+// An explicit noinline specialization (the SDK body): RegisterUserDefinedClassTraits calls it out of line, and cl's
+// mod/ref sees that it does not write the key, as in the exe.
+template <>
+__declspec(dllexport) SF_NOINLINE void HashDH<GFx::AS3::MultinameHash<GFx::AS3::ClassTraits::Traits*, 329>::Key, GFx::AS3::ClassTraits::Traits*,
     GFx::AS3::MultinameHash<GFx::AS3::ClassTraits::Traits*, 329>::Key::HashFunctor, 329>::BaseType::Remove(
-    const GFx::AS3::MultinameHash<GFx::AS3::ClassTraits::Traits*, 329>::Key&);
+    const GFx::AS3::MultinameHash<GFx::AS3::ClassTraits::Traits*, 329>::Key& key)
+{
+    mHash.RemoveAlt(key);
+}
 // Clear goes through a member pointer: the exe tail-calls ResizeNoConstruct, which cl otherwise inlines.
 template <>
 __declspec(dllexport) void ArrayBase<ArrayData<WeakPtr<GFx::DisplayObject>, AllocatorLH<WeakPtr<GFx::DisplayObject>, 2>, ArrayDefaultPolicy> >::RemoveAt(UPInt index)
@@ -6966,8 +6972,9 @@ static SF_FORCEINLINE ClassTraits::Traits* Sfr18Resolve2CT(VM& vm, const ASStrin
         return *found;
     ClassTraits::Traits* ct = FUN_142415520(vm.GlobalObject.GetPtr(), name, ns);
     ClassTraits::Traits* added = ct;
-    if (ct != NULL)
-        vm.ClassTraitsSet.Add(name, ns, added);
+    if (ct == NULL)
+        return ct;
+    vm.ClassTraitsSet.Add(name, ns, added);
     return ct;
 }
 
@@ -6975,7 +6982,11 @@ static SF_FORCEINLINE ClassTraits::Traits* Sfr18Resolve2CT(VM& vm, const ASStrin
 // package's): ones known to the VM (cached, or from the global object, then cached) only add their file to the
 // children; the others are made, cached and kept as loaded classes. Then the new ones are initialized; on a failure
 // the error is output, the class uncached, the loaded classes unregistered and false returned.
-// MS2-FUNCTIONAL SDK statement structure (resolve helper, if/else, uninitialize tail, SDK return: no class made with classes present = false); left: the exe threads the inlined resolve's non-null result straight into the found-class block (we re-test ctr), keeps the Remove key's namespace in rdi with a plain release (ours a null-tested SPtr temp at rbp-0x38), and register numbering in the init loop. FUN_14250f9a0 is noinline, and Hash::Remove / ResizeNoConstruct are called out of line as in the exe
+// MS2-FUNCTIONAL SDK statement structure (resolve helper, if/else, uninitialize tail, SDK return: no class made with
+// classes present = false); left: after the inlined resolve adds a global class to the cache, the exe goes straight into
+// the found-class block, while we re-test ctr. That re-test shifts two jump encodings and one loop-alignment nop.
+// FUN_14250f9a0 is noinline, and Hash::Remove (a noinline specialization defined above, so cl knows it does not write
+// the key) and ResizeNoConstruct are called out of line as in the exe
 // @0x142521780
 bool VMAbcFile::RegisterUserDefinedClassTraits()
 {
@@ -7035,7 +7046,7 @@ bool VMAbcFile::RegisterUserDefinedClassTraits()
                 vm.ExceptionObj.SetUndefined();
             }
             typedef HashDH<TClassTraitsCache::Key, ClassTraits::Traits*, TClassTraitsCache::Key::HashFunctor, 329>::BaseType CacheHash;
-            (reinterpret_cast<CacheHash&>(vm.ClassTraitsSet.Entries).*&CacheHash::Remove)(TClassTraitsCache::Key(name, &ns));
+            reinterpret_cast<CacheHash&>(vm.ClassTraitsSet.Entries).Remove(TClassTraitsCache::Key(name, &ns));
             --made;
             uninitialize = true;
             break;
