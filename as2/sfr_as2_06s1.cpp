@@ -233,18 +233,20 @@ static SF_FORCEINLINE Value* StackTop1_06s1(PagedStack<Value, 32>& s)
 
 // The 'implements' opcode (ExecutionContext::ImplementsOpCode, SDK body over the ExecutionContextView06 layout): the
 // constructor on top gets the count interfaces below it added to its prototype.
-// MS2-FUNCTIONAL: 1181 vs 1170 bytes; the exe keeps ctorFuncVal's type byte in edi (saved in the prolog) across the
-// Drop calls, as if cl knew Value's copy ctor / DropRefs leave the local alone (cross-TU mod-ref); ours re-reads it
+// MS2-FUNCTIONAL: 1165 vs 1170 bytes; the exe keeps ctorFuncVal's type byte in edi (saved in the prolog) across the
+// Drop calls, as if cl knew Value's copy ctor / DropRefs leave the local alone (cross-TU mod-ref). Ours caches it in
+// ctorType before the calls, so it lives in esi and is read before ToInt32 instead of after Drop2
 // @0x14295dbe0
 void FUN_14295dbe0(void* pctx)
 {
     ExecutionContextView06* ctx = static_cast<ExecutionContextView06*>(pctx);
 
     Value ctorFuncVal(*ctx->pEnv->Stack.Top0());
+    UByte ctorType = ctorFuncVal.T.Type;
     int   intfNum = StackTop1_06s1(ctx->pEnv->Stack)->ToInt32(ctx->pEnv);
     ctx->pEnv->Drop2();
 
-    if (ctorFuncVal.IsFunction())
+    if (ctorType == Value::FUNCTION || ctorType == Value::FUNCTIONNAME)
     {
         ImplementsFuncRef06 ctorFunc(ctorFuncVal, ctx->pEnv);
         if (!ctorFunc.IsNull())
