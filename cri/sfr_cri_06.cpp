@@ -8678,13 +8678,18 @@ void FUN_140059340(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
     for (int j = 0; j < 8; ++j) dst[i * stride + j] = cri06_avg(src[i * stride + j], src[off + i * stride + j]);
 }
 
-// MS2-FUNCTIONAL: 8-wide horizontal half-pel average.
+// MS2-FUNCTIONAL: SSE2 8-wide horizontal half-pel average of src and src + 1, with dst as the only induction variable as
+// in the exe. What is left is the order of the two sub r,dst setups and the index operand order ([rdx+rcx] vs exe [rcx+rdx]).
+// Operand, temp and declaration order did not move it.
 // @0x1400593b0
 void FUN_1400593b0(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
 {
   (void)off;
-  for (int i = 0; i < h; ++i)
-    for (int j = 0; j < 8; ++j) dst[i * stride + j] = cri06_avg(src[i * stride + j], src[i * stride + j + 1]);
+  const cri_u1* r = src + 1;
+  for (int i = 0; i < h; ++i) {
+    cri_u1* d = dst + i * stride;
+    _mm_storel_epi64((__m128i*)d, _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(d + (src - dst))), _mm_loadl_epi64((const __m128i*)(d + (r - dst)))));
+  }
 }
 
 // 16-wide block copy (16 rows when h == 16, else 8): SSE2 8-byte halves, rows unrolled as in the exe.
