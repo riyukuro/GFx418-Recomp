@@ -40,17 +40,10 @@ inline CFunctionObject::CFunctionObject(ASStringContext* psc, CFunctionPtr func,
     Set__proto__(psc, psc->pContext->GetPrototype(ASBuiltin_Function));
 }
 
-// MS2-FUNCTIONAL: same length as the exe (2559 bytes); this/this+0x20/psc rotate across rbx/rdi/rsi, and the pMovieRoot store sits before the vptr stores. No source form (body assign, pobj local, helper forms) reproduces the exe allocation.
 // @0x14291d1e0
 KeyCtorFunction::KeyCtorFunction(ASStringContext* psc, MovieImpl* pmovie)
     : CFunctionObject(psc, GlobalCtor, ObjectInlineCtorTag()), pMovieRoot(pmovie)
 {
-    for (int i = 0; i < 16; i++)
-    {
-        States[i].LastKeyCode   = 0;
-        States[i].LastAsciiCode = 0;
-        States[i].LastWcharCode = 0;
-    }
     ObjectInterface* pobj = this;
     if (pobj)
         NameFunction::AddConstMembers(pobj, psc, AsBroadcasterProto::FunctionTable, PropFlags::PropFlag_DontEnum);

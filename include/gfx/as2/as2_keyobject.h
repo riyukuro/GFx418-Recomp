@@ -18,6 +18,8 @@ protected:
         int    LastKeyCode;   // +0x00
         UByte  LastAsciiCode; // +0x04
         UInt32 LastWcharCode; // +0x08
+
+        State() : LastKeyCode(0), LastAsciiCode(0), LastWcharCode(0) {}
     };
     State      States[16];  // +0x78
     MovieImpl* pMovieRoot;  // +0x138
