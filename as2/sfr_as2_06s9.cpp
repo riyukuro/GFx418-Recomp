@@ -139,7 +139,8 @@ SF_FORCEINLINE void AddBuiltinClassRegistry(GlobalContext* pgc, ASStringContext*
         pgc->BuiltinClassesRegistry.Add(name, entry);
     }
 
-    pdest->SetMemberRaw(psc, GlobalBuiltin(pgc, type), FunctionNameValue(GlobalBuiltin(pgc, type)));
+    PropFlags flags;
+    pdest->SetMemberRaw(psc, GlobalBuiltin(pgc, type), FunctionNameValue(GlobalBuiltin(pgc, type)), flags);
 }
 
 } // namespace
@@ -167,6 +168,13 @@ __forceinline Object::Object(ASStringContext* psc, Object* pprototype, ObjectInl
 // Object::Object(ASStringContext*) (0x14291f6f0), inlined.
 __forceinline Object::Object(ASStringContext* psc, ObjectInlineCtorTag)
     : ASRefCountBase<Object>(GcN(psc)), pWatchpoints(0), ArePropertiesSet(false), IsListenerSet(false)
+{
+    pProto = 0;
+}
+// The same with the collector through psc->GetGC(), as the out-of-line Object(psc): the CtorFunction ctors
+// keep their zero register for the byte/word stores this way.
+__forceinline Object::Object(ASStringContext* psc, ObjectDeepInlineCtorTag)
+    : ASRefCountBase<Object>(psc->GetGC()), pWatchpoints(0), ArePropertiesSet(false), IsListenerSet(false)
 {
     pProto = 0;
 }
@@ -234,7 +242,7 @@ SF_FORCEINLINE FunctionRef::FunctionRef(const FunctionRefBase& orig, Tag)
 
 // FunctionObject(psc) with Object(psc) inlined.
 __forceinline FunctionObject::FunctionObject(ASStringContext* psc, ObjectInlineCtorTag)
-    : Object(psc, ObjectInlineCtorTag())
+    : Object(psc, ObjectDeepInlineCtorTag())
 {
 }
 // CFunctionObject(psc, func) (0x142919df0) inlined, with its Set__proto__ (a virtual __proto__ store).
@@ -271,9 +279,8 @@ __forceinline StyleSheetProto::StyleSheetProto(ASStringContext* psc, Object* ppr
 }
 
 // The exe inlines the StyleSheetCtorFunction and StyleSheetProto ctors down to Object(psc).
-// MS2-FUNCTIONAL: register allocation floor (1317 vs 1307 bytes): the exe keeps zero in rdi and the
-// ObjectInterface vptr in rdx across the inlined CtorFunction Object(psc), so its byte/word zero stores
-// use dil/di; same instructions and order otherwise.
+// MS2-FUNCTIONAL: register allocation floor (same size): the exe keeps zero in rdi and the ctor/proto
+// objects in rsi, ours swaps the two; same instructions and order otherwise.
 // @0x14297b190
 FunctionRef StyleSheetCtorFunction::Register(GlobalContext* pgc)
 {
@@ -300,9 +307,9 @@ __forceinline TextFieldCtorFunction::TextFieldCtorFunction(ASStringContext* psc,
 }
 
 // The exe inlines the TextFieldCtorFunction ctor down to Object(psc); TextFieldProto stays a call.
-// MS2-FUNCTIONAL: register allocation floor (954 vs 950 bytes), the same one as StyleSheet's Register: the exe
-// keeps zero in rbx (the ctor object in rdi, pgc in r15), so its byte/word zero stores use bl/bx; same
-// instructions and order otherwise.
+// MS2-FUNCTIONAL: register allocation floor (951 vs 950 bytes): the exe keeps zero in rbx, the ctor object
+// in rdi and pgc in r15, ours swaps each pair; the class-registry FUNCTIONNAME value is also scheduled
+// one load earlier.
 // @0x14297b6b0
 FunctionRef TextFieldCtorFunction::Register(GlobalContext* pgc)
 {
@@ -339,9 +346,8 @@ __forceinline TextFormatProto::TextFormatProto(ASStringContext* psc, Object* ppr
 }
 
 // The exe inlines the TextFormatCtorFunction and TextFormatProto ctors down to Object(psc).
-// MS2-FUNCTIONAL: register allocation floor (1295 vs 1285 bytes), the same one as StyleSheet's Register:
-// in the inlined CtorFunction Object(psc) the exe keeps zero in rdi and both vptrs in rdx/r8 across the
-// GcN chain; same instructions and order otherwise.
+// MS2-FUNCTIONAL: register allocation floor (1283 vs 1285 bytes), the same one as StyleSheet's Register:
+// the exe keeps zero in rdi and the ctor object in rsi (ours swaps them) and pgc in r13.
 // @0x14297ba70
 FunctionRef TextFormatCtorFunction::Register(GlobalContext* pgc)
 {
