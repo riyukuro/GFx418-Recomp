@@ -1933,7 +1933,7 @@ static inline bool PropRefNotFound(const PropRef& p)
 // Object.SetProperty: a fixed slot, an existing dynamic value, or a new dynamic property.
 // LTCG knows the lookup only reads the this-Value, so the exe releases it without a kind test (dtor-less holder).
 union Sfr31SelfValueHolder { Value v; Sfr31SelfValueHolder(Object* o) : v(o, Value::InlineObj) {} ~Sfr31SelfValueHolder() {} };
-// MS2-FUNCTIONAL 0x142528a50: regalloc: same code shape; exe numbers the zero/traits register r15 and vm r13 (ours r12/r15)
+// MS2-FUNCTIONAL 0x142528a50: regalloc only: the exe holds value in r14 and the zero/traits register in r15 (ours swaps them)
 // @0x142528a50
 CheckResult Object::SetProperty(const Multiname& prop_name, const Value& value)
 {
@@ -1941,7 +1941,7 @@ CheckResult Object::SetProperty(const Multiname& prop_name, const Value& value)
     PropRef prop;
     {
         Sfr31SelfValueHolder self(this);
-        FUN_142501b00(&prop, &vm, &self.v, &prop_name, 1);
+        FUN_142501b00(&prop, &GetVM(), &self.v, &prop_name, 1);
         FUN_142521f00(&self.v);
     }
     const UPInt pv = reinterpret_cast<UPInt>(prop.pValue);
