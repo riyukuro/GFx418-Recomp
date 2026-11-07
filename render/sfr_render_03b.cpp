@@ -1330,9 +1330,10 @@ public:
             if (curPos <= pComposStr->GetPosition() && curPos + n >= pComposStr->GetPosition())
             {
                 step = Alg::PMin(pComposStr->GetPosition() - curPos, (UPInt)n);
-                if (ComposStrCurPos + (n - step) > pComposStr->GetLength())
+                UPInt rest = n - step;
+                if (ComposStrCurPos + rest > pComposStr->GetLength())
                 {
-                    step += ComposStrCurPos + (n - step) - pComposStr->GetLength();
+                    step += ComposStrCurPos + rest - pComposStr->GetLength();
                     ComposStrCurPos = pComposStr->GetLength();
                     NumChars += ComposStrCurPos;
                 }
@@ -1956,7 +1957,7 @@ bool ParagraphFormatter::CheckWordWrap()
 }
 
 // @0x142610b20
-// MS2-FUNCTIONAL: the exe calls an identical FindCharWithFlags copy from another TU (0x14267fce0) and keeps a /GS cookie; logic matches
+// MS2-FUNCTIONAL: the inlined CreateFontHandle flag ORs pair (bold | device) where the exe pairs the other way round
 void ParagraphFormatter::Format(const Paragraph& paragraph)
 {
     InitParagraph(paragraph);
