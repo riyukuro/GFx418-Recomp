@@ -2421,21 +2421,30 @@ namespace Instances { namespace fl
         return result;
     }
 
+    // SDK XMLList::MakeInstance(), which the exe inlines into AS3text
+    static __forceinline Pickable<XMLList> MS2_MakeXMLListLike(XMLList& self)
+    {
+        InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(self.GetInstanceTraits());
+
+        if (self.TargetNamespace && self.TargetObject && self.TargetProperty)
+            return itr.MakeInstance(itr, *self.TargetObject, ASString(self.TargetProperty), *self.TargetNamespace);
+
+        return MS2_MakeXMLList(itr);
+    }
+
     // A new list (with this list's target, when it has one) of the text children of every item.
-    // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
     // @0x1424019b0
     void XMLList::AS3text(SPtr<XMLList>& result)
     {
-        InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(GetInstanceTraits());
-        Pickable<XMLList> list;
-        if (TargetNamespace && TargetObject && TargetProperty)
-            list = itr.MakeInstance(itr, *TargetObject, ASString(TargetProperty), *TargetNamespace);
-        else
-            list = MS2_MakeXMLList(itr);
+        Pickable<XMLList> list = MS2_MakeXMLListLike(*this);
         result = list;
+
         const UPInt size = List.GetSize();
         for (UPInt i = 0; i < size; ++i)
-            List[i]->GetChildren(*list.GetPtr(), XML::kText);
+        {
+            XML* xml = List[i];
+            xml->GetChildren(*list, XML::kText);
+        }
     }
 }}
 
