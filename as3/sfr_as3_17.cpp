@@ -3173,7 +3173,7 @@ static __forceinline const Scaleform::GFx::AS3::SlotInfo& Sfr17SlotInfoFI(const 
 {
     if (ind < s.FirstOwnSlotNum)
         return s.Parent->GetSlotInfo(ind);
-    return s.VArray[ind.Get() - s.FirstOwnSlotNum].Value;
+    return s.VArray[static_cast<Scaleform::UInt32>(ind.Get()) - s.FirstOwnSlotNum].Value;
 }
 static __forceinline Scaleform::SPInt Sfr17PrevSlotFI(const Scaleform::GFx::AS3::Slots& s, Scaleform::SPInt ind)
 {
@@ -3183,8 +3183,8 @@ static __forceinline Scaleform::SPInt Sfr17PrevSlotFI(const Scaleform::GFx::AS3:
 }
 static __forceinline bool Sfr17IsQNameFI(const Scaleform::GFx::AS3::Multiname& mn)
 {
-    const unsigned bits = static_cast<Scaleform::UInt8>(mn.Kind) & 3;
-    return bits == 0 || bits == 1;
+    const Scaleform::UInt8 bits = static_cast<Scaleform::UInt8>(mn.Kind & 3);
+    return bits < 2;
 }
 
 // FindFixedSlot (0x1425011c0) without the on-demand object, inline here as in the exe.
@@ -3194,10 +3194,10 @@ static __forceinline const Scaleform::GFx::AS3::SlotInfo* Sfr17FindFixedSlotInl(
     using namespace Scaleform;
     using namespace Scaleform::GFx::AS3;
     const SlotInfo* sli_ptr = NULL;
-    const Abc::NamespaceKind kind = ns.GetKind();
     const UInt32* values = t.FindSlotValues(name);
     if (values != NULL)
     {
+        const Abc::NamespaceKind kind = ns.GetKind();
         for (SPInt ind = *values; ind >= 0; ind = Sfr17PrevSlotFI(t, ind))
         {
             index = static_cast<UPInt>(ind);
@@ -3244,9 +3244,9 @@ static __forceinline Scaleform::GFx::AS3::ClassTraits::Traits* Sfr17Resolve2CT(S
 }
 
 // The class traits for mn as seen from the scope traits t (SDK FindFixedTraits(vm, t, mn, appDomain)).
-// MS2-FUNCTIONAL 0x142501310: raw namespace-set and VM offsets; same calls per branch, but ours needs a 0x88 frame with an
-// rbp frame pointer and saves rbp/r12 by push where the exe has a 0x80 frame, pushes only r14 and schedules the
-// namespace-kind shift after the FindSlotValues call (971 vs 1010 bytes)
+// MS2-FUNCTIONAL 0x142501310: raw namespace-set and VM offsets. The frame (push r14, 0x80), the if/else layout and the
+// 32-bit slot index now match the exe, but cl hoists the FindSlotValues call that both branches start with above the
+// QName test (the exe calls it in each branch), so the registers differ from there on (1013 vs 1010 bytes)
 // @0x142501310
 void* FUN_142501310(Scaleform::GFx::AS3::VM& vm, void* scope, const Scaleform::GFx::AS3::Multiname& mn)
 {
@@ -3267,48 +3267,53 @@ void* FUN_142501310(Scaleform::GFx::AS3::VM& vm, void* scope, const Scaleform::G
         const SlotInfo* si = Sfr17FindFixedSlotInl(t, name, ns, index);
         if (si)
             result = Sfr33SlotDataType(si, *reinterpret_cast<VM* const*>(reinterpret_cast<const UByte*>(&t) + 0x78));
-        return const_cast<ClassTraits::Traits*>(result);
     }
-    const UByte* obj = reinterpret_cast<const UByte*>(mn.Obj.GetPtr());
-    const UInt32* values = t.FindSlotValues(name);
-    const UPInt size = *reinterpret_cast<const UPInt*>(obj + 0x28);
-    for (UPInt i = 0; i < size; ++i)
+    else
     {
-        const Instances::Namespace& ns =
-            **reinterpret_cast<Instances::Namespace* const*>(*reinterpret_cast<const UPInt*>(obj + 0x20) + i * 8);
-        if (values != NULL)
+        const ClassTraits::Traits* ctr = NULL;
+        const UByte* obj = reinterpret_cast<const UByte*>(mn.Obj.GetPtr());
+        const UInt32* values = t.FindSlotValues(name);
+        const UPInt size = *reinterpret_cast<const UPInt*>(obj + 0x28);
+        for (UPInt i = 0; i < size; ++i)
         {
-            for (SPInt ind = *values; ind >= 0; ind = Sfr17PrevSlotFI(t, ind))
+            const Instances::Namespace& ns =
+                **reinterpret_cast<Instances::Namespace* const*>(*reinterpret_cast<const UPInt*>(obj + 0x20) + i * 8);
+            if (values != NULL)
             {
-                const SlotInfo& si = Sfr17SlotInfoFI(t, AbsoluteIndex(ind));
-                const Instances::Namespace& cur_ns = *si.pNs;
-                if (cur_ns.GetKind() == ns.GetKind())
+                const Abc::NamespaceKind kind = ns.GetKind();
+                for (SPInt ind = *values; ind >= 0; ind = Sfr17PrevSlotFI(t, ind))
                 {
-                    bool found = false;
-                    switch (ns.GetKind())
+                    const SlotInfo& si = Sfr17SlotInfoFI(t, AbsoluteIndex(ind));
+                    const Instances::Namespace& cur_ns = *si.pNs;
+                    if (cur_ns.GetKind() == kind)
                     {
-                    case Abc::NS_Protected:
-                        found = true;
-                        break;
-                    case Abc::NS_Private:
-                        found = (&ns == &cur_ns);
-                        break;
-                    default:
-                        found = (cur_ns.GetUri().GetNode() == ns.GetUri().GetNode());
-                        break;
-                    }
-                    if (found)
-                    {
-                        result = Sfr33SlotDataType(&si, &vm);
-                        break;
+                        bool found = false;
+                        switch (kind)
+                        {
+                        case Abc::NS_Protected:
+                            found = true;
+                            break;
+                        case Abc::NS_Private:
+                            found = (&ns == &cur_ns);
+                            break;
+                        default:
+                            found = (cur_ns.GetUri().GetNode() == ns.GetUri().GetNode());
+                            break;
+                        }
+                        if (found)
+                        {
+                            ctr = Sfr33SlotDataType(&si, &vm);
+                            break;
+                        }
                     }
                 }
             }
+            if (!ctr)
+                ctr = Sfr17Resolve2CT(vm, name, ns);
+            if (ctr)
+                break;
         }
-        if (!result)
-            result = Sfr17Resolve2CT(vm, name, ns);
-        if (result)
-            break;
+        result = ctr;
     }
     return const_cast<ClassTraits::Traits*>(result);
 }
