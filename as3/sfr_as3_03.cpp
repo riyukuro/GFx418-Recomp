@@ -2130,22 +2130,20 @@ namespace Instances { namespace fl
         SA.ShiftLeft();
     }
 
-    // MS2-FUNCTIONAL: the exe keeps the inlined At's null select as a cmove
+    // MS2-FUNCTIONAL: SDK clamp order (start += size; Max; end += size; Min). Only register choice differs: the exe keeps
+    // this in rdi and the index in rsi (ours the reverse), and the inlined SparseArray ctor loads the heap via rcx/rdx.
     // @0x1423ff4d0
     void Array::AS3slice(SPtr<Instances::fl::Array>& result, SInt32 startIndex, SInt32 endIndex)
     {
         InstanceTraits::Traits& itr = GetInstanceTraits();
         Array* arr = new(itr.Alloc()) Array(itr);
         result.Pick(arr);
-        const SInt32 len = static_cast<SInt32>(SA.GetSize());
         if (startIndex < 0)
-            startIndex += len;
+            startIndex += static_cast<SInt32>(SA.GetSize());
+        startIndex = Alg::Max<SInt32>(0, startIndex);
         if (endIndex < 0)
-            endIndex += len;
-        if (endIndex > len)
-            endIndex = len;
-        if (startIndex < 0)
-            startIndex = 0;
+            endIndex += static_cast<SInt32>(SA.GetSize());
+        endIndex = Alg::Min<SInt32>(static_cast<SInt32>(SA.GetSize()), endIndex);
         for (SInt32 i = startIndex; i < endIndex; ++i)
             saPushBack03(arr->SA, saAt03(SA, i));
     }
