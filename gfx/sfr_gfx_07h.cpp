@@ -407,20 +407,69 @@ void FUN_14261ee70(U** self, void* ctx, NodeRef* ref, U hash)
     MovieHashAdd<RawCheckExpand<FUN_142624f80>, FUN_14261f440>(self, ctx, *ref->Key, *ref->Value, hash);
 }
 
-// MS2-FUNCTIONAL 0x14261f070: same raw-layout HashSet add; scheduling differs (439 bytes against 418)
+// HashSetBase::add in the SDK's statement order (hashValue &= SizeMask before EntryCount++), the key by reference.
+template<U Stride, class Ops, bool TailInBranch, void (*Grow)(U**, void*, U), class Arg>
+static __forceinline void RawHashAddSdk(U** self, void* ctx, const Arg& arg, U hashValue)
+{
+    RawCheckExpand<Grow>(self, ctx);
+    hashValue &= (*self)[1];
+    (*self)[0]++;
+    U* table = *self;
+    U home = hashValue;
+    char* e = RawEntry(table, home, Stride);
+    if (*(SPInt*)e == -2)
+    {
+        *(SPInt*)e = -1;
+        Ops::Construct(e + 0x10, arg);
+        if (TailInBranch)
+        {
+            *(U*)(e + 8) = home;
+            return;
+        }
+    }
+    else
+    {
+        U blank = home;
+        do
+            blank = (blank + 1) & table[1];
+        while (*(SPInt*)RawEntry(table, blank, Stride) != -2);
+        char* b = RawEntry(table, blank, Stride);
+        if (*(U*)(e + 8) == home)
+        {
+            *(SPInt*)b = *(SPInt*)e;
+            *(U*)(b + 8) = *(U*)(e + 8);
+            Ops::Copy(b + 0x10, e + 0x10);
+            Ops::Assign(e + 0x10, arg);
+            *(U*)e = blank;
+        }
+        else
+        {
+            U* link = (U*)RawEntry(table, *(U*)(e + 8), Stride);
+            while (*link != home)
+                link = (U*)RawEntry(table, *link, Stride);
+            *(SPInt*)b = *(SPInt*)e;
+            *(U*)(b + 8) = *(U*)(e + 8);
+            Ops::Copy(b + 0x10, e + 0x10);
+            *link = blank;
+            Ops::Assign(e + 0x10, arg);
+            *(SPInt*)e = -1;
+        }
+    }
+    *(U*)(e + 8) = home;
+}
+
+// MS2-FUNCTIONAL 0x14261f070: same raw-layout HashSet add in SDK order; prolog register choice and the shared hash-store tail differ (35 lines)
 // @0x14261f070
 void FUN_14261f070(U** self, void* ctx, KeyStringOps::Ref* ref, U hash)
 {
-    RawCheckExpand<FUN_1426251d0>(self, ctx);
-    RawHashAdd<0x20, KeyStringOps>(self, *ref, hash);
+    RawHashAddSdk<0x20, KeyStringOps, false, FUN_1426251d0>(self, ctx, *ref, hash);
 }
 
-// MS2-FUNCTIONAL 0x14261f220: same raw-layout HashSet add; scheduling differs (419 bytes against 440)
+// MS2-FUNCTIONAL 0x14261f220: same raw-layout HashSet add in SDK order; hash kept in rdi not rbp, shrink-wrapped rdi save differs (42 lines)
 // @0x14261f220
 void FUN_14261f220(U** self, void* ctx, StringKeyOps::Ref* ref, U hash)
 {
-    RawCheckExpand<FUN_1426255e0>(self, ctx);
-    RawHashAdd<0x20, StringKeyOps>(self, *ref, hash);
+    RawHashAddSdk<0x20, StringKeyOps, true, FUN_1426255e0>(self, ctx, *ref, hash);
 }
 
 // A hash entry's copy constructor (link, hash, key and a counted pointer).
