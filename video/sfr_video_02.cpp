@@ -237,6 +237,31 @@ static const Scaleform::GFx::AS2::NameFunction Video02ConnectFunctions[] = {   /
     {"connect", Video02NetConnectionConnect},
     {0, 0},
 };
+namespace Scaleform { namespace GFx { namespace AS2 {
+// The AS2 NetConnection object (vftables 0x1431b65f0 / +0x20 0x1431b6540): an Object with its own type tag. Its ??_G
+// 0x140011d10 calls the out-of-line ~Object; the ObjectInterface slot 0 is cl's adjustor thunk 0x140011d00.
+class NetConnection : public Object
+{
+public:
+    NetConnection(ASStringContext* psc, Object* pprototype) : Object(psc) { Set__proto__(psc, pprototype); }
+    virtual ObjectType GetObjectType() const;   // exe 0x140011b80 (FUN_140011b80, bound by /alternatename)
+};
+// constructor and __constructor__ from the prototype part (exe 0x140011de0, FUN_140011de0, bound by /alternatename)
+template<> bool Prototype<NetConnection>::GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
+// NetConnection's prototype (vftables 0x1431b6640 / +0x20 0x1431b6690 / +0x68 0x1431b6638). Its ??_G is 0x1400125e0;
+// the ObjectInterface / GASPrototypeBase slots are cl's adjustor thunks 0x140012580 / 0x140012590. The
+// Prototype<NetConnection> base's own vftables are 0x1431b64f0 / 0x1431b6440 / 0x1431b6430 (??_G 0x140011c00,
+// thunks 0x140011c70 / 0x140011c80).
+class NetConnectionProto : public Prototype<NetConnection>
+{
+public:
+    NetConnectionProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+        : Prototype<NetConnection>(psc, pprototype, constructor)
+    {
+        InitFunctionMembers(this, psc, Video02ConnectFunctions, PropFlags(1));
+    }
+};
+}}}
 static const Scaleform::GFx::AS2::NameFunction Video02VideoFunctions[] = {     // 0x1431b5800
     {"attachVideo", Scaleform::GFx::AS2::VideoProto::AttachVideo},
     {"clear", reinterpret_cast<Scaleform::GFx::AS2::CFunctionPtr>(&FUN_14000d330)},
@@ -1716,13 +1741,7 @@ void* FUN_140010e60(void** destination, void* const* source)
     return destination;
 }
 
-// @0x140011d10
-Scaleform::GFx::AS2::Object* FUN_140011d10(Scaleform::GFx::AS2::Object* object, unsigned flags)
-{
-    object->Object::~Object();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
-    if (flags & 1) Scaleform::Memory::Free(object);
-    return object;
-}
+// (0x140011d10 is NetConnection's ??_G, emitted by Video02EmitNetConnectionVftables)
 
 // @0x140011410
 void FUN_140011410(void* path)
@@ -3026,28 +3045,9 @@ void FUN_140016ac0(void*, void* instance, void* traits, void* context, int hasVa
     Video02TraitSet<double>(instance, traits, context, hasValue, value, DAT_143b275b8, DAT_143b275c0);
 }
 
-// finalizes the prototype subobject and then destroys Object. The exe's inline Prototype dtor stores its three vftables
-// first.
-// @0x140011b40
-void FUN_140011b40(Scaleform::GFx::AS2::Object* object)
-{
-    *reinterpret_cast<void**>(object) = &PTR_FUN_1431b64f0;
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6440;
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x68) = &PTR_LAB_1431b6430;
-    Scaleform::GFx::AS2::GASPrototypeBase* prototype = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
-        reinterpret_cast<char*>(object) + 0x68);
-    prototype->Scaleform::GFx::AS2::GASPrototypeBase::~GASPrototypeBase();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
-    object->Object::~Object();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
-}
+// (0x140011b40 is ~Prototype<NetConnection>, emitted by Video02EmitNetConnectionVftables)
 
-// scalar deleting form of the prototype and Object destruction
-// @0x140011c00
-Scaleform::GFx::AS2::Object* FUN_140011c00(Scaleform::GFx::AS2::Object* object, unsigned flags)
-{
-    FUN_140011b40(object);
-    if (flags & 1) Scaleform::Memory::Free(object);
-    return object;
-}
+// (0x140011c00 is Prototype<NetConnection>'s ??_G, emitted by Video02EmitNetConnectionVftables)
 
 // destroys the GASPrototypeBase subobject, releases its retained object, then destroys Object. The exe's inline
 // Prototype<VideoObject> dtor stores its three vftables (+0, +0x20, +0x70) first.
@@ -3117,28 +3117,9 @@ void FUN_140010cd0(void** buffer, unsigned __int64 requested)
     h->pLastPage->pEnd   = h->pLastPage->pStart + size;
 }
 
-// destroys the retained GASPrototypeBase subobject before the AS2 object base. The exe's inline Prototype dtor stores
-// its three vftables first, as in FUN_140011b40.
-// @0x1400125a0
-void FUN_1400125a0(Scaleform::GFx::AS2::Object* object)
-{
-    unsigned char* bytes = reinterpret_cast<unsigned char*>(object);
-    *reinterpret_cast<void**>(bytes) = &PTR_FUN_1431b64f0;
-    *reinterpret_cast<void**>(bytes + 0x20) = &PTR_LAB_1431b6440;
-    *reinterpret_cast<void**>(bytes + 0x68) = &PTR_LAB_1431b6430;
-    reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0x68)->GASPrototypeBase::~GASPrototypeBase();
-    object->Object::~Object();
-}
+// (0x1400125a0 is ~NetConnectionProto (implicit; it inlines ~Prototype<NetConnection>), emitted by Video02EmitNetConnectionVftables)
 
-// applies the prototype destructor (whose inline body stores the own vftables first) and conditionally frees the
-// object storage
-// @0x1400125e0
-Scaleform::GFx::AS2::Object* FUN_1400125e0(Scaleform::GFx::AS2::Object* object, unsigned flags)
-{
-    FUN_1400125a0(object);
-    if (flags & 1) Scaleform::Memory::Free(object);
-    return object;
-}
+// (0x1400125e0 is NetConnectionProto's ??_G, emitted by Video02EmitNetConnectionVftables)
 
 // @0x1400126b0
 Scaleform::GFx::AS2::CFunctionObject* FUN_1400126b0(
@@ -3611,40 +3592,15 @@ Scaleform::GFx::InteractiveObject* FUN_140010180(void* self, unsigned __int64 fl
     return FUN_140010530((Scaleform::GFx::InteractiveObject*)((Scaleform::UByte*)self - 0x18), flags);
 }
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 0x20) into FUN_140011c00.
-// @0x140011c70
-Scaleform::GFx::AS2::Object* FUN_140011c70(void* self, unsigned flags)
-{
-    return FUN_140011c00((Scaleform::GFx::AS2::Object*)((Scaleform::UByte*)self - 0x20), flags);
-}
+// (0x140011c70 is cl's adjustor thunk; see the NetConnection models)
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 0x68) into FUN_140011c00.
-// @0x140011c80
-Scaleform::GFx::AS2::Object* FUN_140011c80(void* self, unsigned flags)
-{
-    return FUN_140011c00((Scaleform::GFx::AS2::Object*)((Scaleform::UByte*)self - 0x68), flags);
-}
+// (0x140011c80 is cl's adjustor thunk; see the NetConnection models)
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 0x20) into FUN_140011d10.
-// @0x140011d00
-Scaleform::GFx::AS2::Object* FUN_140011d00(void* self, unsigned flags)
-{
-    return FUN_140011d10((Scaleform::GFx::AS2::Object*)((Scaleform::UByte*)self - 0x20), flags);
-}
+// (0x140011d00 is cl's adjustor thunk; see the NetConnection models)
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 0x20) into FUN_1400125e0.
-// @0x140012580
-Scaleform::GFx::AS2::Object* FUN_140012580(void* self, unsigned flags)
-{
-    return FUN_1400125e0((Scaleform::GFx::AS2::Object*)((Scaleform::UByte*)self - 0x20), flags);
-}
+// (0x140012580 is cl's adjustor thunk; see the NetConnection models)
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 0x68) into FUN_1400125e0.
-// @0x140012590
-Scaleform::GFx::AS2::Object* FUN_140012590(void* self, unsigned flags)
-{
-    return FUN_1400125e0((Scaleform::GFx::AS2::Object*)((Scaleform::UByte*)self - 0x68), flags);
-}
+// (0x140012590 is cl's adjustor thunk; see the NetConnection models)
 
 // MS2-FUNCTIONAL: adjustor thunk (this - 0x20) into FUN_1400126b0.
 // @0x1400126a0
@@ -3849,6 +3805,12 @@ void Video02EmitVideoCtorVftables(void* p, ASStringContext* psc)
 {
     ::new (p) VideoCtorFunction(psc);
 }
+
+// Emits the NetConnectionProto, Prototype<NetConnection> and NetConnection vftables with their ??_G and thunks.
+void Video02EmitNetConnectionVftables(void* p, ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+{
+    ::new (p) NetConnectionProto(psc, pprototype, constructor);
+}
 }}} // namespace Scaleform::GFx::AS2
 #ifndef MS2_HOOK_DLL
 // FUN_14000eb50 stores VideoProto's vftables through these names (the hook DLL binds them by their symbols rows).
@@ -3858,6 +3820,18 @@ void Video02EmitVideoCtorVftables(void* p, ASStringContext* psc)
 // FUN_14000ecc0 stores VideoCtorFunction's vftables through these names.
 #pragma comment(linker, "/alternatename:?PTR_LAB_1431b5f20@@3PEAXEA=??_7VideoCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
 #pragma comment(linker, "/alternatename:?PTR_LAB_1431b5fb0@@3PEAXEA=??_7VideoCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
+// FUN_140011ef0 / FUN_1400122e0 / FUN_140012440 store the NetConnection family vftables through these names.
+#pragma comment(linker, "/alternatename:?PTR_LAB_1431b65f0@@3PEAXEA=??_7NetConnection@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
+#pragma comment(linker, "/alternatename:?PTR_LAB_1431b6540@@3PEAXEA=??_7NetConnection@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
+#pragma comment(linker, "/alternatename:?PTR_FUN_1431b64f0@@3PEAXEA=??_7?$Prototype@VNetConnection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
+#pragma comment(linker, "/alternatename:?PTR_LAB_1431b6440@@3PEAXEA=??_7?$Prototype@VNetConnection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
+#pragma comment(linker, "/alternatename:?PTR_LAB_1431b6430@@3PEAXEA=??_7?$Prototype@VNetConnection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@")
+#pragma comment(linker, "/alternatename:?PTR_FUN_1431b6640@@3PEAXEA=??_7NetConnectionProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
+#pragma comment(linker, "/alternatename:?PTR_LAB_1431b6690@@3PEAXEA=??_7NetConnectionProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
+#pragma comment(linker, "/alternatename:?PTR_LAB_1431b6638@@3PEAXEA=??_7NetConnectionProto@AS2@GFx@Scaleform@@6B@")
+// NetConnection::GetObjectType and Prototype<NetConnection>::GetMemberRaw are the hand FUN_ bodies.
+#pragma comment(linker, "/alternatename:?GetObjectType@NetConnection@AS2@GFx@Scaleform@@UEBA?AW4ObjectType@ObjectInterface@234@XZ=?FUN_140011b80@@YAHPEAX@Z")
+#pragma comment(linker, "/alternatename:?GetMemberRaw@?$Prototype@VNetConnection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAA_NPEAVASStringContext@234@AEBVASString@34@PEAVValue@234@@Z=?FUN_140011de0@@YAXPEAVObject@AS2@GFx@Scaleform@@PEAVASStringContext@234@PEAVASString@34@PEAVValue@234@@Z")
 #endif
 
 // MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
@@ -3913,3 +3887,22 @@ void Video02EmitVideoCtorVftables(void* p, ASStringContext* psc)
 // MS2-PIN: ??_EVideoCtorFunction@AS2@GFx@Scaleform@@WCA@EAAPEAXI@Z 0x14000ed10
 // MS2-PIN: ??_7VideoCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b5f20
 // MS2-PIN: ??_7VideoCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b5fb0
+
+// MS2-PIN: ??_GNetConnection@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x140011d10
+// MS2-PIN: ??_ENetConnection@AS2@GFx@Scaleform@@WCA@EAAPEAXI@Z 0x140011d00
+// MS2-PIN: ??_7NetConnection@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b65f0
+// MS2-PIN: ??_7NetConnection@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b6540
+// MS2-PIN: ??_G?$Prototype@VNetConnection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x140011c00
+// MS2-PIN: ??1?$Prototype@VNetConnection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@UEAA@XZ 0x140011b40
+// MS2-PIN: ??_E?$Prototype@VNetConnection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@WCA@EAAPEAXI@Z 0x140011c70
+// MS2-PIN: ??_E?$Prototype@VNetConnection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@WGI@EAAPEAXI@Z 0x140011c80
+// MS2-PIN: ??_7?$Prototype@VNetConnection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b64f0
+// MS2-PIN: ??_7?$Prototype@VNetConnection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b6440
+// MS2-PIN: ??_7?$Prototype@VNetConnection@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x1431b6430
+// MS2-PIN: ??_GNetConnectionProto@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x1400125e0
+// MS2-PIN: ??1NetConnectionProto@AS2@GFx@Scaleform@@UEAA@XZ 0x1400125a0
+// MS2-PIN: ??_ENetConnectionProto@AS2@GFx@Scaleform@@WCA@EAAPEAXI@Z 0x140012580
+// MS2-PIN: ??_ENetConnectionProto@AS2@GFx@Scaleform@@WGI@EAAPEAXI@Z 0x140012590
+// MS2-PIN: ??_7NetConnectionProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b6640
+// MS2-PIN: ??_7NetConnectionProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b6690
+// MS2-PIN: ??_7NetConnectionProto@AS2@GFx@Scaleform@@6B@ 0x1431b6638
