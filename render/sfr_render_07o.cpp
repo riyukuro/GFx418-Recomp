@@ -1467,7 +1467,8 @@ bool TextMeshProvider::generateRectangle(Renderer2DImpl* ren, VertexOutput* verO
     return ok;
 }
 
-// MS2-FUNCTIONAL: frame 0x10 smaller than the exe, and the rect corners take other xmm registers through Intersect/IsEmpty/Transform
+// MS2-FUNCTIONAL: SDK 4.2 body, same length (1420 B); the frame is still 0x10 smaller than the exe (rsi saved in its
+// home slot), and the rect corners take other xmm registers through Intersect/IsEmpty/Transform
 // @0x1426e7a60
 bool TextMeshProvider::generateSelection(Renderer2DImpl* ren, VertexOutput* verOut, const TextMeshLayer& layer,
                                          const Matrix2F& mtx, unsigned meshGenFlags)
@@ -1480,20 +1481,19 @@ bool TextMeshProvider::generateSelection(Renderer2DImpl* ren, VertexOutput* verO
     // one style per selection rectangle, its colour at style - 1
     ArrayStaticBuffPOD<UInt32, 16> colors(Memory::GetGlobalHeap());
 
-    const ToleranceParams tol = ren->GetToleranceParams();
-    bool edgeAA = (meshGenFlags & (Mesh_EdgeAA | Mesh_Mask)) == Mesh_EdgeAA;
-    gen->mTess.SetEdgeAAWidth(edgeAA ? tol.EdgeAAScale * 0.5f : 0.0f);
-
-    float x, y;
+    const ToleranceParams param = ren->GetToleranceParams();
+    bool edgeAA = ((meshGenFlags & Mesh_EdgeAA) != 0 && (meshGenFlags & Mesh_Mask) == 0);
+    gen->mTess.SetEdgeAAWidth(edgeAA ? param.EdgeAAScale * 0.5f : 0.0f);
     for (unsigned i = 0; i < layer.Count; ++i)
     {
-        const TextMeshEntry& e   = Entries[layer.Start + i];
+        const TextMeshEntry& e   = Entries[i + layer.Start];
         const SelectionEnt&  sel = e.EntryData.SelectionData;
         RectF r(sel.Coord[0], sel.Coord[1], sel.Coord[2], sel.Coord[3]);
         if (Flags & BF_Clip)
             r.Intersect(ClipBox);
         if (!r.IsEmpty())
         {
+            float x, y;
             x = r.x1; y = r.y1; mtx.Transform(&x, &y); gen->mTess.AddVertex(x, y);
             x = r.x2; y = r.y1; mtx.Transform(&x, &y); gen->mTess.AddVertex(x, y);
             x = r.x2; y = r.y2; mtx.Transform(&x, &y); gen->mTess.AddVertex(x, y);
@@ -1512,7 +1512,7 @@ bool TextMeshProvider::generateSelection(Renderer2DImpl* ren, VertexOutput* verO
         Matrix2F toMesh = gen->mTess.StretchTo(-32768 + 4, -32768 + 4, 32768 - 4, 32768 - 4);
 
         VertexOutput::Fill fill = { gen->mTess.GetMeshVertexCount(0), gen->mTess.GetMeshTriangleCount(0) * 3,
-                                    &VertexXY16iCF32::Format, 0, 0, 0, 0 };
+                                    &VertexXY16iCF32::Format, 0, 0, 0 };
         ok = verOut->BeginOutput(&fill, 1, toMesh);
         if (ok)
         {
