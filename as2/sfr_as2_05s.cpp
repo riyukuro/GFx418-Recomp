@@ -47,10 +47,13 @@ struct ValueAccess : Value
 // Value::ToFunction with the FunctionRef copy's SetLocalFrame expanded.
 SF_FORCEINLINE FunctionRef ValueToFunction(const Value& v, const Environment* penv)
 {
-    if (v.GetType() == Value::FUNCTION)
+    switch (v.GetType())
+    {
+    case Value::FUNCTION:
         return FunctionRef(v.V.FunctionValue, SetLocalFrameInline05sTag());
-    else if (v.GetType() == Value::FUNCTIONNAME)
+    case Value::FUNCTIONNAME:
         return static_cast<const ValueAccess&>(v).ResolveFunctionName(penv);
+    }
     return FunctionRef();
 }
 
@@ -77,10 +80,12 @@ SF_FORCEINLINE FunctionRef::FunctionRef(const FunctionRefBase& orig, Tag)
 // With the GFx extensions the method gets the button, the roll-over count or the key flag, and the mouse as
 // arguments; a nested roll over / out of another mouse only reaches a method taking two or more arguments.
 // MS2-FUNCTIONAL: GetMovieImpl, ToFunction with SetLocalFrame and the Value releases are inlined as in the exe; the
-// frame is 8 bytes smaller and rbx is pushed where the exe saves it to its home slot
+// frame is 8 bytes smaller and rbx is pushed where the exe saves it to its home slot, so handlerFoundCnt is zeroed at
+// entry (the exe zeroes it in its r9 home slot after the key listeners) and the locals sit one slot off
 // @0x142940160
 bool AvmCharacter::ExecuteEvent(const EventId& id)
 {
+    int handlerFoundCnt = 0;
     // Keep the environment and its target alive during the calls.
     Ptr<InteractiveObject> thisPtr(GetDispObj());
     Environment*           env = GetASEnvironment();
@@ -93,7 +98,6 @@ bool AvmCharacter::ExecuteEvent(const EventId& id)
             proot->GetKeyboardState(id.KeyboardIndex)->UpdateListeners(id);
     }
 
-    int   handlerFoundCnt = 0;
     Value method;
 
     if (HasClipEventHandler(id) && id.RollOverCnt == 0)
