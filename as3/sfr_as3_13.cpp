@@ -1213,6 +1213,7 @@ namespace Instances { namespace fl_text
 
     // A text field made from script starts 100 x 100 pixels and empty.
     // @0x1424acee0
+    // MS2-FUNCTIONAL: 2 bytes; in the inlined CreateStageObject the exe loads AvmObjOffset into eax, ours into ecx (the out-of-line copy matches).
     void TextField::InitInstance(bool extCall)
     {
         if (extCall)
@@ -2632,9 +2633,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace Instances { namespace fl_text
 {
-    // Document view alignment bits (DocView+0x148, 0 left, 1 right, 2 center) and its reformat request
-    // (DocView+0x14b bit 0).
-    static inline UByte& ViewAlign(void* pdoc)    { return *((UByte*)pdoc + 0x148); }
+    // The document view's reformat request (DocView+0x14b bit 0).
     static inline void   RequestReformat(void* pdoc) { *((UByte*)pdoc + 0x14b) |= 1; }
 
     // UpdateAutosizeSettings, which the exe inlines into autoSizeSet (out of line at 0x1424af5f0).
@@ -2654,43 +2653,42 @@ namespace Instances { namespace fl_text
         FieldFlags(ptf) |= 0x2000;
         FUN_1425bc060(ptf);
     }
-    // DocView::GetAlignment / SetAlignment and TextField::IsAutoSize on the opaque display objects.
-    static __forceinline unsigned Sfr13GetAlign(void* ptf) { return ViewAlign(DocViewOf(ptf)) & 3; }
-    static __forceinline void Sfr13SetAlign(void* pdoc, unsigned a)
+    // GFx::TextField's SDK autosize and alignment inlines (GFx_TextField.h).
+    struct Sfr13TfView : Scaleform::GFx::TextField
     {
-        ViewAlign(pdoc) = (UByte)((ViewAlign(pdoc) & ~3) | a);
-        RequestReformat(pdoc);
-    }
-    static __forceinline bool Sfr13IsAutoSize(void* ptf) { return (*(UByte*)&FieldFlags(ptf) & 1) != 0; }
-
-    // An unknown mode turns auto-sizing on and keeps the alignment.
+        __forceinline void SdkSetAutoSize(bool v = true) { (v) ? Flags |= Flags_AutoSize : Flags &= ~Flags_AutoSize; }
+        __forceinline void SdkClearAutoSize() { SdkSetAutoSize(false); }
+        __forceinline bool SdkIsAutoSize() const { return (Flags & Flags_AutoSize) != 0; }
+        __forceinline Render::Text::DocView::ViewAlignment SdkGetAlignment() const { return pDocument->GetAlignment(); }
+        __forceinline void SdkSetAlignment(Render::Text::DocView::ViewAlignment a) { pDocument->SetAlignment(a); }
+    };
+    // An unknown mode turns auto-sizing on and keeps the alignment. The SDK body (AS3_Obj_Text_TextField.cpp) on the
+    // real TextField flags and DocView alignment accessors.
     // @0x1424afb10
-    // MS2-FUNCTIONAL: register allocation (the exe keeps the doc view in r9 and the flags in r8d; ours rdx/r9d)
     void TextField::autoSizeSet(const Value& result, const ASString& value)
     {
         SF_UNUSED(result);
-        void* ptf = DisplayTextField(this);
-        void* pdoc = DocViewOf(ptf);
-        unsigned oldAlignment = ViewAlign(pdoc) & 3;
-        bool oldAutoSize = Sfr13IsAutoSize(ptf);
+        Sfr13TfView* ptxtDisp = reinterpret_cast<Sfr13TfView*>(DisplayTextField(this));
+        Render::Text::DocView::ViewAlignment oldAlignment = ptxtDisp->SdkGetAlignment();
+        bool oldAutoSize = ptxtDisp->SdkIsAutoSize();
         if (value == "none")
         {
-            FieldFlags(ptf) &= ~1u;
-            Sfr13SetAlign(pdoc, 0);
+            ptxtDisp->SdkClearAutoSize();
+            ptxtDisp->SdkSetAlignment(Render::Text::DocView::Align_Left);
         }
         else
         {
-            FieldFlags(ptf) |= 1;
+            ptxtDisp->SdkSetAutoSize();
             if (value == "left")
-                Sfr13SetAlign(pdoc, 0);
+                ptxtDisp->SdkSetAlignment(Render::Text::DocView::Align_Left);
             else if (value == "right")
-                Sfr13SetAlign(pdoc, 1);
+                ptxtDisp->SdkSetAlignment(Render::Text::DocView::Align_Right);
             else if (value == "center")
-                Sfr13SetAlign(pdoc, 2);
+                ptxtDisp->SdkSetAlignment(Render::Text::DocView::Align_Center);
         }
-        if ((oldAlignment != Sfr13GetAlign(ptf)) || (oldAutoSize != Sfr13IsAutoSize(ptf)))
+        if ((oldAlignment != ptxtDisp->SdkGetAlignment()) || (oldAutoSize != ptxtDisp->SdkIsAutoSize()))
             Sfr13UpdateAutoSizeInl(this);
-        FUN_1425bc060(ptf);
+        FUN_1425bc060(ptxtDisp);
     }
 
     // "dynamic" makes an existing editor read-only; "input" creates the editor (unless a style sheet is set) and makes
