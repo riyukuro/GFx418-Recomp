@@ -8745,21 +8745,62 @@ void FUN_140059570(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
   _mm_storel_epi64((__m128i*)dst, x0); _mm_storel_epi64((__m128i*)(dst + 8), x1);
 }
 
-// MS2-FUNCTIONAL: 16-wide vertical half-pel average of src and src + off.
+// MS2-FUNCTIONAL: the exe keeps a 64-bit trip count (mov rcx,rax) and indexes [d2 + dst]; ours counts h down in 32 bits.
+// SSE2 16-wide vertical half-pel average of src and src + off (two pavgb per row). When off == stride the exe
+// carries the previous row in registers, so each row loads only src + off. The exe walks dst only and reads the
+// sources at a fixed distance from it.
 // @0x140059700
 void FUN_140059700(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
 {
-  for (int i = 0; i < h; ++i)
-    for (int j = 0; j < 16; ++j) dst[i * stride + j] = cri06_avg(src[i * stride + j], src[off + i * stride + j]);
+  int n = h;
+  const cri_u1* s2 = src + off;
+  if (off == stride) {
+    __m128i a = _mm_loadl_epi64((const __m128i*)(src));
+    __m128i b = _mm_loadl_epi64((const __m128i*)(src + 8));
+    if (n > 0) {
+      __int64 d2 = s2 - dst;
+      do {
+        __m128i c = _mm_loadl_epi64((const __m128i*)(dst + d2));
+        __m128i d = _mm_loadl_epi64((const __m128i*)(dst + d2 + 8));
+        _mm_storel_epi64((__m128i*)(dst), _mm_avg_epu8(a, c));
+        _mm_storel_epi64((__m128i*)(dst + 8), _mm_avg_epu8(b, d));
+        dst += stride;
+        a = c;
+        b = d;
+      } while (--n);
+    }
+  } else if (n > 0) {
+    __int64 d2 = s2 - dst;
+    __int64 d1 = src - dst;
+    do {
+      __m128i hi = _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(dst + d1 + 8)), _mm_loadl_epi64((const __m128i*)(dst + d2 + 8)));
+      __m128i lo = _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(dst + d1)), _mm_loadl_epi64((const __m128i*)(dst + d2)));
+      _mm_storel_epi64((__m128i*)(dst), lo);
+      _mm_storel_epi64((__m128i*)(dst + 8), hi);
+      dst += stride;
+    } while (--n);
+  }
 }
 
-// MS2-FUNCTIONAL: 16-wide horizontal half-pel average.
+// MS2-FUNCTIONAL: the exe keeps a 64-bit trip count (mov r9,r8) and indexes [d + dst]; ours counts h down in 32 bits.
+// SSE2 16-wide horizontal half-pel average. The exe walks dst only.
 // @0x1400597b0
 void FUN_1400597b0(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
 {
   (void)off;
-  for (int i = 0; i < h; ++i)
-    for (int j = 0; j < 16; ++j) dst[i * stride + j] = cri06_avg(src[i * stride + j], src[i * stride + j + 1]);
+  int n = h;
+  const cri_u1* s1 = src + 1;
+  if (n > 0) {
+    __int64 d1 = s1 - dst;
+    __int64 d0 = src - dst;
+    do {
+      __m128i hi = _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(dst + d0 + 8)), _mm_loadl_epi64((const __m128i*)(dst + d1 + 8)));
+      __m128i lo = _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(dst + d0)), _mm_loadl_epi64((const __m128i*)(dst + d1)));
+      _mm_storel_epi64((__m128i*)(dst), lo);
+      _mm_storel_epi64((__m128i*)(dst + 8), hi);
+      dst += stride;
+    } while (--n);
+  }
 }
 
 // SSE2 8-wide average of src into dst (8 rows when h == 8, else 4): one pavgb per row, unrolled as in the exe.
@@ -8797,13 +8838,34 @@ const cri_u1* FUN_140059ac0(const cri_u1* src, cri_u1* dst, int off, int stride,
   return src;
 }
 
-// MS2-FUNCTIONAL: 8-wide vertical half-pel average, then averaged into dst.
+// MS2-FUNCTIONAL: the exe keeps a 64-bit trip count (mov rcx,rax) and indexes [d2 + dst]; ours counts h down in 32 bits.
+// SSE2 8-wide vertical half-pel average of src and src + off, then averaged into dst. When off == stride the exe
+// carries the previous row in a register. The exe walks dst only and reads the sources at a fixed distance from it.
 // @0x140059b80
 void FUN_140059b80(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
 {
-  for (int i = 0; i < h; ++i)
-    for (int j = 0; j < 8; ++j)
-      dst[i * stride + j] = cri06_avg(cri06_avg(src[i * stride + j], src[off + i * stride + j]), dst[i * stride + j]);
+  int n = h;
+  const cri_u1* s2 = src + off;
+  if (off == stride) {
+    __m128i a = _mm_loadl_epi64((const __m128i*)(src));
+    if (n > 0) {
+      __int64 d2 = s2 - dst;
+      do {
+        __m128i c = _mm_loadl_epi64((const __m128i*)(dst + d2));
+        _mm_storel_epi64((__m128i*)(dst), _mm_avg_epu8(_mm_avg_epu8(a, c), _mm_loadl_epi64((const __m128i*)(dst))));
+        dst += stride;
+        a = c;
+      } while (--n);
+    }
+  } else if (n > 0) {
+    __int64 d2 = s2 - dst;
+    __int64 d1 = src - dst;
+    do {
+      __m128i v = _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(dst + d1)), _mm_loadl_epi64((const __m128i*)(dst + d2)));
+      _mm_storel_epi64((__m128i*)(dst), _mm_avg_epu8(v, _mm_loadl_epi64((const __m128i*)(dst))));
+      dst += stride;
+    } while (--n);
+  }
 }
 
 // SSE2 8-wide average of src + 1 into dst (the exe reads only the right-hand sample).
@@ -8993,21 +9055,59 @@ void FUN_140059dd0(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
   }
 }
 
-// MS2-FUNCTIONAL: 16-wide vertical half-pel average, then averaged into dst.
+// MS2-FUNCTIONAL: the exe keeps a 64-bit trip count (mov rcx,rax) and indexes [d2 + dst]; ours counts h down in 32 bits.
+// SSE2 16-wide vertical half-pel average of src and src + off, then averaged into dst. When off == stride the exe
+// carries the previous row in registers. The exe walks dst only and reads the sources at a fixed distance from it.
 // @0x14005a070
 void FUN_14005a070(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
 {
-  for (int i = 0; i < h; ++i)
-    for (int j = 0; j < 16; ++j)
-      dst[i * stride + j] = cri06_avg(cri06_avg(src[i * stride + j], src[off + i * stride + j]), dst[i * stride + j]);
+  int n = h;
+  const cri_u1* s2 = src + off;
+  if (off == stride) {
+    __m128i a = _mm_loadl_epi64((const __m128i*)(src));
+    __m128i b = _mm_loadl_epi64((const __m128i*)(src + 8));
+    if (n > 0) {
+      __int64 d2 = s2 - dst;
+      do {
+        __m128i c = _mm_loadl_epi64((const __m128i*)(dst + d2));
+        __m128i d = _mm_loadl_epi64((const __m128i*)(dst + d2 + 8));
+        _mm_storel_epi64((__m128i*)(dst), _mm_avg_epu8(_mm_avg_epu8(a, c), _mm_loadl_epi64((const __m128i*)(dst))));
+        _mm_storel_epi64((__m128i*)(dst + 8), _mm_avg_epu8(_mm_avg_epu8(b, d), _mm_loadl_epi64((const __m128i*)(dst + 8))));
+        dst += stride;
+        a = c;
+        b = d;
+      } while (--n);
+    }
+  } else if (n > 0) {
+    __int64 d2 = s2 - dst;
+    __int64 d1 = src - dst;
+    do {
+      _mm_storel_epi64((__m128i*)(dst), _mm_avg_epu8(_mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(dst + d1)), _mm_loadl_epi64((const __m128i*)(dst + d2))), _mm_loadl_epi64((const __m128i*)(dst))));
+      _mm_storel_epi64((__m128i*)(dst + 8), _mm_avg_epu8(_mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(dst + d1 + 8)), _mm_loadl_epi64((const __m128i*)(dst + d2 + 8))), _mm_loadl_epi64((const __m128i*)(dst + 8))));
+      dst += stride;
+    } while (--n);
+  }
 }
 
-// MS2-FUNCTIONAL: 16-wide horizontal half-pel average, then averaged into dst.
+// MS2-FUNCTIONAL: the exe keeps a 64-bit trip count (mov r9,r8) and indexes [d + dst]; ours counts h down in 32 bits.
+// SSE2 16-wide horizontal half-pel average, then averaged into dst. The exe walks dst only.
 // @0x14005a140
 void FUN_14005a140(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
 {
   (void)off;
-  for (int i = 0; i < h; ++i)
-    for (int j = 0; j < 16; ++j)
-      dst[i * stride + j] = cri06_avg(cri06_avg(src[i * stride + j], src[i * stride + j + 1]), dst[i * stride + j]);
+  int n = h;
+  const cri_u1* s1 = src + 1;
+  if (n > 0) {
+    __int64 d1 = s1 - dst;
+    __int64 d0 = src - dst;
+    do {
+      __m128i lo = _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(dst + d0)), _mm_loadl_epi64((const __m128i*)(dst + d1)));
+      __m128i hi = _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(dst + d0 + 8)), _mm_loadl_epi64((const __m128i*)(dst + d1 + 8)));
+      lo = _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)(dst)));
+      hi = _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(dst + 8)));
+      _mm_storel_epi64((__m128i*)(dst), lo);
+      _mm_storel_epi64((__m128i*)(dst + 8), hi);
+      dst += stride;
+    } while (--n);
+  }
 }
