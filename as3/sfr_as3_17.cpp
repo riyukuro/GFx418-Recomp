@@ -553,7 +553,6 @@ void ThunkInfo::EmptyFunc(const ThunkInfo& ti, VM& vm, const Value&, Value&, uns
 }
 
 // Calls func; an exception it raises is printed and dropped.
-// MS2-FUNCTIONAL: same call and exception reset; the exception branch is laid out inline in the exe.
 // @0x142500620
 void VM::Execute_IgnoreExceptionUnsafe(const Value& func, const Value& _this, Value& result, unsigned argc,
                                        const Value* argv)
@@ -7211,13 +7210,10 @@ using AS3ClassTraitsCacheNode = HashNode<GFx::AS3::TClassTraitsCache::Key, GFx::
                                          GFx::AS3::TClassTraitsCache::Key::HashFunctor>;
 template void HashsetCachedNodeEntry<AS3ClassTraitsCacheNode, AS3ClassTraitsCacheNode::NodeHashF>::Clear();
 
-// MS2-FUNCTIONAL ?Construct@?$ConstructorMov@VValue@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAXAEBVValue@AS3@GFx@2@@Z: element copy construction retains the same Value payloads; the exe uses an explicit tag/refcount sequence.
 // @0x1424f05a0
 template void ConstructorMov<GFx::AS3::Value>::Construct(void*, const GFx::AS3::Value&);
-// MS2-FUNCTIONAL ?DestructArray@?$ConstructorMov@VValue@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAVValue@AS3@GFx@2@_K@Z: Value destruction releases the same tagged references; the exe clears weak-reference fields explicitly.
 // @0x1424f6d50
 template void ConstructorMov<GFx::AS3::Value>::DestructArray(GFx::AS3::Value*, UPInt);
-// MS2-FUNCTIONAL ?ConstructArray@?$ConstructorMov@VValue@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAX_KPEBVValue@AS3@GFx@2@@Z: the recovered copy loop delegates each element to Value copy construction; the exe emits raw member copies followed by tag-based AddRef.
 // @0x1424f08d0
 template void ConstructorMov<GFx::AS3::Value>::ConstructArray(void*, UPInt, const GFx::AS3::Value*);
 }
