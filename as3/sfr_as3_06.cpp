@@ -1979,46 +1979,59 @@ namespace Instances { namespace fl_display
     // MovieRoot::GetLog (0x1424c90e0), inlined here: the Ptr<Log> temporary dies before the pointer is used
     static __forceinline Log* Sfr06RootLog(ASMovieRootBase* proot)
     {
-        return proot->GetMovieImpl()->GetLog();
+        return proot->GetMovieImpl()->GetStateBag()->GetLog();
+    }
+
+    // Ptr<C>::operator=(C*), inlined at every site as in the exe (cl outlines it at the second call site)
+    template <class C, class P> static __forceinline void Sfr06PtrAssign(Ptr<C>& d, P* p)
+    {
+        if (p) p->AddRef();
+        if (d.GetPtr()) d->Release();
+        *reinterpret_cast<C**>(&d) = p;
     }
 
     // Binds a BitmapData to a library bitmap: the given image resource, or else the one exported under the
     // object's class name from its movie. The exe returns false on every path.
     // @0x142441730
-    // MS2-FUNCTIONAL: written from the exe's control flow
     bool BindLibraryBitmap(BitmapData* pthis, Resource* pres, MovieDefImpl* pdefImpl)
     {
-        if (pthis->pImage)
-            return false;
-        if (pres)
+        if (!pthis->pImage)
         {
-            pthis->pImageResource = static_cast<ImageResource*>(pres);
-            pthis->pImage = static_cast<ImageResource*>(pres)->GetImage();
-            pthis->pDefImpl = pdefImpl;
-            return false;
-        }
-        VM& vm = pthis->GetVM();
-        MovieDefImpl* pobjDef = FUN_14250d8f0(vm, pthis);
-        if (!pobjDef || !pthis->GetTraits().IsAbcObject())
-            return false;
-        ASString name = pthis->GetTraits().GetQualifiedName(Traits::qnfWithDot);
-        ResourceBindData data;
-        if (!FUN_14256ec50(GetASRoot(vm)->GetMovieImpl(), pobjDef, &data, String(name.ToCStr())))
-        {
-            ASMovieRootBase* proot = GetASRoot(vm);
-            if (Sfr06RootLog(proot))
-                Sfr06RootLog(proot)->LogWarning("Attaching a bitmap with class '%s' failed", name.ToCStr());
-            return false;
-        }
-        if (data.pResource &&
-            (data.pResource->GetResourceTypeCode() & Resource::RT_TypeCode_Mask) == Resource::MakeTypeCode(Resource::RT_Image))
-        {
-            pthis->pImageResource = static_cast<ImageResource*>(data.pResource.GetPtr());
-            pthis->pImage = pthis->pImageResource->GetImage();
-            if (data.pBinding)
-                pthis->pDefImpl = data.pBinding->GetOwnerDefImpl();
+            if (pres)
+            {
+                pthis->pImageResource = static_cast<ImageResource*>(pres);
+                pthis->pImage = pthis->pImageResource->GetImage();
+                pthis->pDefImpl = pdefImpl;
+            }
             else
-                pthis->pDefImpl = pobjDef;
+            {
+                VM& vm = pthis->GetVM();
+                MovieDefImpl* pobjDef = FUN_14250d8f0(vm, pthis);
+                if (pobjDef && pthis->GetTraits().IsAbcObject())
+                {
+                    ASString name = pthis->GetTraits().GetQualifiedName(Traits::qnfWithDot);
+                    ResourceBindData data;
+                    if (!GetASRoot(vm)->GetMovieImpl()->FindExportedResource(pobjDef, &data, name.ToCStr()))
+                    {
+                        ASMovieRootBase* proot = GetASRoot(vm);
+                        if (Sfr06RootLog(proot))
+                            Sfr06RootLog(proot)->LogWarning("Attaching a bitmap with class '%s' failed", name.ToCStr());
+                        return false;
+                    }
+                    if (data.pResource)
+                    {
+                        if ((data.pResource->GetResourceTypeCode() & Resource::RT_TypeCode_Mask) == Resource::MakeTypeCode(Resource::RT_Image))
+                        {
+                            Sfr06PtrAssign(pthis->pImageResource, static_cast<ImageResource*>(data.pResource.GetPtr()));
+                            Sfr06PtrAssign(pthis->pImage, pthis->pImageResource->GetImage());
+                            if (data.pBinding)
+                                Sfr06PtrAssign(pthis->pDefImpl, data.pBinding->GetOwnerDefImpl());
+                            else
+                                Sfr06PtrAssign(pthis->pDefImpl, pobjDef);
+                        }
+                    }
+                }
+            }
         }
         return false;
     }
