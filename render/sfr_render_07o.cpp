@@ -1125,16 +1125,18 @@ bool TextMeshProvider::generateImageMesh(VertexOutput* verOut, const TextMeshLay
     Matrix2F uv(Matrix2F::NoInit);
     img->GetUVNormMatrix(&uv, pCache->GetTextureManager());
 
-    RectF tex(0, 0, 1, 1);
-    uv.Transform(&tex.x1, &tex.y1);
-    uv.Transform(&tex.x2, &tex.y2);
+    // SDK order (chr before tex); the exe reads Coord[0]/[1] again for the += after the transforms
+    const float& x0 = ent.Coord[0];
+    const float& y0 = ent.Coord[1];
 
-    float x0 = ent.Coord[0];
-    float y0 = ent.Coord[1];
     RectF chr(0, 0, ent.Coord[2] - x0, ent.Coord[3] - y0);
     uv.Transform(&chr.x1, &chr.y1);
     uv.Transform(&chr.x2, &chr.y2);
     chr += PointF(x0, y0);
+
+    RectF tex(0, 0, 1, 1);
+    uv.Transform(&tex.x1, &tex.y1);
+    uv.Transform(&tex.x2, &tex.y2);
 
     clipGlyphRect(chr, tex);
 
