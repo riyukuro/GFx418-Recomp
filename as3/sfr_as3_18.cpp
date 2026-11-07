@@ -3546,7 +3546,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // An object past its unload depth only drops its unload state. A timeline child (not named by an instance) is
 // taken off the parent's property of its name if that property still holds this object; the AS3 object is then
 // kept raw (no longer collectible).
-// MS2-FUNCTIONAL SDK if/else structure (Depth test, then the name/timeline flag test); both Multiname constructions use the inline copy (InlineStr, InlineCtorTag) as the exe inlines them; left: the exe uses rdi as its zero register and saves r12-r15 later (shrink-wrap), tests the flags via movzx/shr, keeps the Multiname local in another slot, and register allocation (ours 114 B longer)
+// MS2-FUNCTIONAL SDK if/else structure (Depth test, then the name/timeline flag test); both Multiname constructions use the inline copy (InlineStr, InlineCtorTag) as the exe inlines them; the parent's AS3 object gets the SDK's extra tag-bit strip (UPInt(as3par) & 1, a cmove in the exe); left: the exe keeps the name Value's kind in r15d and tests (kind & 0x1f) - 0xc generically where ours folds it per branch, uses rdi as its zero register and saves r12-r15 later (shrink-wrap), tests the flags via movzx/shr, and register allocation (ours 116 B longer)
 // @0x142519200
 void AvmDisplayObj::OnEventUnload()
 {
@@ -3559,6 +3559,8 @@ void AvmDisplayObj::OnEventUnload()
             {
                 AvmInteractiveObj*                    p      = GetAvmParent();
                 Instances::fl_display::DisplayObject* as3par = p->GetAS3Obj();
+                if (UPInt(as3par) & 1)
+                    as3par = (Instances::fl_display::DisplayObject*)((UPInt)as3par - 1);
                 ASString                              name   = pDispObj->GetName();
                 Value                                 v;
                 as3par->GetProperty(Multiname(AS3RootOf(pDispObj)->pAVM->GetPublicNamespace(), Value(name, Value::InlineStr),
