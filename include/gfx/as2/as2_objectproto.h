@@ -104,6 +104,8 @@ public:
     {
         Init(this, psc, constructor);
     }
+    // (appended) the second ctor as the exe inlines it (sfr_as2_05t extends opcode).
+    __forceinline Prototype(ASStringContext* psc, Object* pprototype, InlineCtorTag) : BaseClass(psc, pprototype) {}
 
     // constructor and __constructor__ come from the prototype part (defined in sfr_as2_05).
     virtual bool GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val);
@@ -230,6 +232,7 @@ public:
     ObjectProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x14291fb00
     ObjectProto(ASStringContext* psc, const FunctionRef& constructor);                    // exe 0x14291f9a0
     ObjectProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06s9
+    ObjectProto(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_05t
     static const NameFunction FunctionTable[];
 
     static void AddProperty(const FnCall& fn);

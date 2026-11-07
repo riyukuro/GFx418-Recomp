@@ -33,10 +33,74 @@ inline void* operator new(size_t, Scaleform::GFx::AS2::FunctionOpSizedAlloc a)
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
+struct ExtendsLocalFrameInlineTag {};
+
+// FunctionRefBase::SetLocalFrame (exe 0x142981e70), expanded in place as the exe has it in the extends opcode.
+static SF_FORCEINLINE void ExtendsFunctionRefSetLocalFrame(FunctionRefBase* p, LocalFrame* localFrame, bool weakRef)
+{
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->Release();
+    p->pLocalFrame = localFrame;
+    if (weakRef)
+        p->Flags |= FunctionRefBase::FuncRef_Weak;
+    else
+        p->Flags &= ~FunctionRefBase::FuncRef_Weak;
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->AddRef();
+}
+
+// FunctionRefBase::Init(orig) with the SetLocalFrame call expanded.
+template<>
+SF_FORCEINLINE FunctionRef::FunctionRef(const FunctionRefBase& orig, ExtendsLocalFrameInlineTag)
+{
+    Flags    = 0;
+    Function = orig.Function;
+    if (!(Flags & FuncRef_Internal) && Function)
+        Function->AddRef();
+    pLocalFrame = 0;
+    if (orig.pLocalFrame)
+        ExtendsFunctionRefSetLocalFrame(this, orig.pLocalFrame, (orig.Flags & FuncRef_Weak) != 0);
+}
+
+// Environment::Top() / Top1() as the SDK writes them (PagedStack::Top0 / Top1).
+static SF_FORCEINLINE Value& ExtendsTop0(Environment* penv)
+{
+    return *penv->Stack.pCurrent;
+}
+static SF_FORCEINLINE Value& ExtendsTop1(Environment* penv)
+{
+    PagedStack<Value, 32>& st = penv->Stack;
+    return *((st.pCurrent > st.pPageStart) ? (st.pCurrent - 1) : st.pPrevPageTop);
+}
+
+// ObjectProto(psc, pprototype) (exe 0x14291fa90), inlined in the extends opcode down to the Object ctor call.
+__forceinline ObjectProto::ObjectProto(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
+    : Prototype<Object>(psc, pprototype, Prototype<Object>::InlineCtorTag())
+{
+}
+
+// Value::ToFunction as the SDK writes it (a switch), with the copy above.
+struct ExtendsValueAccess : Value
+{
+    using Value::ResolveFunctionName;
+};
+static SF_FORCEINLINE FunctionRef ExtendsValueToFunction(const Value& v, const Environment* penv)
+{
+    switch (v.GetType())
+    {
+    case Value::FUNCTIONNAME:
+        return static_cast<const ExtendsValueAccess&>(v).ResolveFunctionName(penv);
+    case Value::FUNCTION:
+        return FunctionRef(v.V.FunctionValue, ExtendsLocalFrameInlineTag());
+    default:;
+    }
+    return FunctionRef();
+}
+
 // The 'extends' opcode (ExecutionContext::ExtendsOpCode; the context is not modelled: +0 the environment, +0x40 the
 // logger, +0x62 the verbose flag): the subclass below the superclass on top gets a new prototype whose __proto__ is
 // the superclass prototype and whose __constructor__ is the superclass.
-// MS2-FUNCTIONAL: the context is read by address; the ObjectProto constructor is inlined in the exe
+// MS2-FUNCTIONAL: the exe keeps the LTCG-inlined ToFunction FunctionRef in registers and re-reads pEnv from the context at each use
 // @0x142941680
 void FUN_142941680(void* pctx)
 {
@@ -44,10 +108,10 @@ void FUN_142941680(void* pctx)
     Environment*  penv = *reinterpret_cast<Environment**>(pc);
     ActionLogger* plog = reinterpret_cast<ActionLogger*>(pc + 0x40);
 
-    Value       superClassCtorVal = penv->Top(0);
-    Value       subClassCtorVal   = penv->Top(1);
-    FunctionRef superClassCtor    = superClassCtorVal.ToFunction(penv);
-    FunctionRef subClassCtor      = subClassCtorVal.ToFunction(penv);
+    Value       superClassCtorVal = ExtendsTop0(penv);
+    Value       subClassCtorVal   = ExtendsTop1(penv);
+    FunctionRef superClassCtor    = ExtendsValueToFunction(superClassCtorVal, penv);
+    FunctionRef subClassCtor      = ExtendsValueToFunction(subClassCtorVal, penv);
     if (!superClassCtor.IsNull() && !subClassCtor.IsNull())
     {
         Value superProtoVal;
@@ -62,7 +126,7 @@ void FUN_142941680(void* pctx)
             Ptr<Object>      superProto = superProtoVal.ToObject(penv);
             // An ObjectProto, so that implements and instanceof see the class.
             Ptr<ObjectProto> newSubclassProto =
-                *SF_HEAP_NEW(penv->GetHeap()) ObjectProto(penv->GetSC(), superProto);
+                *SF_HEAP_NEW(penv->GetHeap()) ObjectProto(penv->GetSC(), superProto, ObjectInlineCtorTag());
             subClassCtor->SetPrototype(penv->GetSC(), newSubclassProto);
             newSubclassProto->Set__constructor__(penv->GetSC(), superClassCtor);
         }
@@ -218,3 +282,10 @@ void FUN_142946390(void* pctx, ActionBuffer* pactions)
 }
 
 }}} // namespace Scaleform::GFx::AS2
+// MS2-PIN: ??_7GASPrototypeBase@AS2@GFx@Scaleform@@6B@ 0x1431b5028
+// MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143215f60
+// MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215fa8
+// MS2-PIN: ??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143216050
+// MS2-PIN: ??_7ObjectProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216058
+// MS2-PIN: ??_7ObjectProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432160a0
+// MS2-PIN: ??_7ObjectProto@AS2@GFx@Scaleform@@6B@ 0x143216148
