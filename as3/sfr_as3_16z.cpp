@@ -1407,9 +1407,6 @@ void* DeleteAs3_1424e4120(void* p, unsigned flags) { static_cast<Scaleform::GFx:
 
 // ==== AvmSprite::AddDisplayObject ====================================================================================
 
-// MovieDefImpl::GetCharacterCreateInfo(rid) with its hidden return slot spelled out (as in sfr_as2_01).
-typedef Scaleform::GFx::CharacterCreateInfo* (Scaleform::GFx::MovieDefImpl::*MS2_GetCreateInfoFn)(
-    Scaleform::GFx::CharacterCreateInfo* pret, const Scaleform::GFx::ResourceId* prid);
 extern "C" {
 void  FUN_1425dcaf0(void* sprite);                                            // Sprite::SetDirtyFlag (empty)
 void  FUN_1425f7f70(void* io);                                                // InteractiveObject::AddToPlayList
@@ -1438,230 +1435,294 @@ template <class R, class A> static inline R Sfr21VCall(void* obj, UPInt off, A a
 // The AS3 part of a display object (the byte at +0x6d holds its offset in dwords).
 static inline char* Sfr21Avm(void* obj) { return Sfr21At(obj, UPInt(*reinterpret_cast<UByte*>(Sfr21At(obj, 0x6d))) * 4); }
 
+}}} // namespace Scaleform::GFx::AS3
+Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str);   // Value = ASString (sfr_as3_19)
+namespace Scaleform { namespace GFx { namespace AS3 {
+void Sfr27MultinameFromQName(Multiname* mn, const Value* v);   // 0x1425273b0 (sfr_as3_19)
+
+// Multiname::PostProcessName(false) (0x14251cef0), as the exe inlines it into the constructor below.
+static __forceinline void Sfr16zPostProcessName(Multiname& mn)
+{
+    if (!mn.Name.IsString())
+        return;
+    ASString n = mn.Name.AsString();
+    if (n.GetSize() == 0)
+        return;
+    if (n[0] == '*')
+        FUN_1424e0d40(mn.Name, ASString(n.GetManager()->GetEmptyStringNode()));
+    else if (n[0] == '@')
+    {
+        mn.Kind = static_cast<Abc::MultinameKind>(mn.Kind | 8);
+        if (n.GetSize() == 2 && n[1] == '*')
+            FUN_1424e0d40(mn.Name, ASString(n.GetManager()->GetEmptyStringNode()));
+        else
+            FUN_1424e0d40(mn.Name, ASString(n.SubstringNode(1, n.GetSize())));
+    }
+}
+
+// Multiname(Namespace&, const Value&) (0x1424d8a90) with SetRTNameUnsafe and PostProcessName, as the exe inlines
+// them into AddDisplayObject (the same body as sfr_as3_19's copy).
+__forceinline Multiname::Multiname(Instances::Namespace& ns, const Value& name, InlineCtorTag)
+    : Kind(static_cast<Abc::MultinameKind>(0))
+    , Obj(&ns)
+{
+    const UInt32 k = static_cast<UInt32>(name.GetKind());
+    if (k - 0xc <= 3 && name.GetGASRefCountBase() != NULL)
+    {
+        const Traits& tr = reinterpret_cast<Object*>(name.GetGASRefCountBase())->GetTraits();
+        if (static_cast<int>(tr.TraitsType) == 0xc && (static_cast<UInt8>(~static_cast<UInt8>(static_cast<UInt8>(tr.Flags) >> 5)) & 1) != 0)
+        {
+            Sfr27MultinameFromQName(this, &name);
+            return;
+        }
+    }
+    Name.AssignUnsafe(name);
+    Sfr16zPostProcessName(*this);
+}
+
+// Value(const ASString&) (0x1424dbf70) as the exe inlines it here (the sfr_as3_17d copy).
+SF_FORCEINLINE Value::Value(const ASString& v, InlineStrType)
+    : Flags(kString)
+    , value(v.GetNode())
+{
+    if (v.GetNode() == v.GetManager()->GetNullStringNode())
+    {
+        SetKind(kObject);
+        value = (Object*)NULL;
+    }
+    else
+        value.VS._1.VStr->AddRef();
+}
+
+struct Sfr16zCCInfo { void* pCharDef; void* pBindDefImpl; void* pResource; };   // CharacterCreateInfo
+// ResourceId by value: its copy constructor makes the caller pass a pointer to a temporary.
+struct Sfr16zRId { unsigned Id; Sfr16zRId(unsigned id) : Id(id) {} Sfr16zRId(const Sfr16zRId& o) : Id(o.Id) {} };
+typedef Sfr16zCCInfo (Scaleform::GFx::MovieDefImpl::*Sfr16zGetCCIFn)(Sfr16zRId);
+
 // Places character pos.CharacterId at pos.Depth: an object of the same character, name and creation frame already there
 // is moved instead (its AS3 name property reset on the parent); else a new instance is created, named, added to the
 // display list, given its AS3 object (the name property set on this sprite before the constructor runs) and its
 // children, and told it was added.
 // CharPosInfo: ColorTransform +0, pFilters +0x40, Depth +0x4c, CharacterId +0x50, ClassName +0x58, BlendMode +0x64,
 // Flags +0x62 (0x08 HasCxform, 0x80 HasBlendMode, 0x100 HasClassName); 0x68 bytes.
-// MS2-FUNCTIONAL: written against raw display object offsets and the exe's helpers; the ASString counting is ours
+// The flag tests are written (UByte)(Flags >> N) & 1, which gives the exe's movzx/shr/test.
+// MS2-FUNCTIONAL: SDK 4.2 statement order on raw display object offsets. The exe also inlines Value::AssignUnsafe in
+// both Multiname constructors (cl tail-duplicates it and merges the AddRef arms), copies newPos member by member (ours
+// is a memcpy), and keeps createFrame on the stack (ours holds it in r12, so the saved registers differ).
 // @0x1424e7140
 DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASString& name,
                                                const ArrayLH<SwfEvent*, StatMD_Tags_Mem>*, const void*,
                                                unsigned createFrame, unsigned long addFlags,
                                                CharacterCreateInfo* pcharCreateOverride, InteractiveObject* origChar)
 {
-    const char* P       = reinterpret_cast<const char*>(&pos);
-    char*       spr     = reinterpret_cast<char*>(pDispObj);
-    char*       root    = static_cast<char*>(Sfr21Mem(spr, 0x20));
-    void*       defImpl = Sfr21Mem(spr, 0xb0);
-    VM*         vm      = static_cast<VM*>(Sfr21Mem(root, 0x48));
-    unsigned    id      = *reinterpret_cast<const unsigned*>(P + 0x50);
-    const bool  hasClassName = (*reinterpret_cast<const UInt16*>(P + 0x62) & 0x100) != 0;
-    const char* className    = *reinterpret_cast<const char* const*>(P + 0x58);
-    int         type    = 0;
+    const char* P        = reinterpret_cast<const char*>(&pos);
+    void*       pdefImpl = Sfr21Mem(pDispObj, 0xb0);
+    char*       thisSpr  = reinterpret_cast<char*>(pDispObj);
+    bool placeObject              = (addFlags & 4) != 0;
+    bool replaceIfDepthIsOccupied = (addFlags & 1) != 0;
 
-    struct CCInfo { void* pCharDef; void* pBindDefImpl; void* pResource; } cc;
+    int    type = 0;
+    Sfr16zCCInfo ccinfo;
     if (pcharCreateOverride)
-        memcpy(&cc, pcharCreateOverride, sizeof(cc));
+        ccinfo = *reinterpret_cast<Sfr16zCCInfo*>(pcharCreateOverride);
     else
+        ccinfo = (static_cast<Scaleform::GFx::MovieDefImpl*>(pdefImpl)->*reinterpret_cast<Sfr16zGetCCIFn>(
+            &Scaleform::GFx::MovieDefImpl::GetCharacterCreateInfo))(Sfr16zRId(*reinterpret_cast<const unsigned*>(P + 0x50)));
+    if (!ccinfo.pCharDef)
     {
-        CCInfo tmp;
-        memcpy(&cc, (static_cast<Scaleform::GFx::MovieDefImpl*>(defImpl)->*reinterpret_cast<MS2_GetCreateInfoFn>(
-            &Scaleform::GFx::MovieDefImpl::GetCharacterCreateInfo))(reinterpret_cast<Scaleform::GFx::CharacterCreateInfo*>(&tmp),
-            reinterpret_cast<const Scaleform::GFx::ResourceId*>(&id)), sizeof(cc));
-    }
-    if (!cc.pCharDef)
-    {
-        if (hasClassName)
+        if (*reinterpret_cast<const UByte*>(P + 0x63) & 1)
         {
-            struct { void* pResource; void* pBinding; } bind = { NULL, NULL };
+            struct { void* pResource; void* pBinding; } resBindData = { NULL, NULL };
             bool found;
             {
-                String symbol(className);
-                found = static_cast<MovieImpl*>(Sfr21Mem(root, 0x10))->FindExportedResource(static_cast<MovieDefImpl*>(defImpl), reinterpret_cast<ResourceBindData*>(&bind), symbol);
+                String className(*reinterpret_cast<const char* const*>(P + 0x58));
+                found = static_cast<MovieImpl*>(Sfr21Mem(Sfr21Mem(pDispObj, 0x20), 0x10))->FindExportedResource(static_cast<MovieDefImpl*>(pdefImpl),
+                    reinterpret_cast<ResourceBindData*>(&resBindData), className);
             }
             if (found)
             {
                 // Resource::RT_CharacterDef_Bit
-                if (Sfr21VCall<unsigned>(bind.pResource, 0x10) & 0x8000)
-                    cc.pCharDef = bind.pResource;
+                if (Sfr21VCall<unsigned>(resBindData.pResource, 0x10) & 0x8000)
+                    ccinfo.pCharDef = resBindData.pResource;
                 else
-                    cc.pResource = bind.pResource;
-                cc.pBindDefImpl = Sfr21Mem(bind.pBinding, 0x48);
+                    ccinfo.pResource = resBindData.pResource;
+                ccinfo.pBindDefImpl = Sfr21Mem(resBindData.pBinding, 0x48);
             }
-            if (bind.pResource)
-                reinterpret_cast<Scaleform::GFx::Resource*>(bind.pResource)->Release();
+            if (resBindData.pResource)
+                reinterpret_cast<Scaleform::GFx::Resource*>(resBindData.pResource)->Release();
         }
-        if (!cc.pCharDef)
+        if (!ccinfo.pCharDef)
         {
             // An image resource placed on the stage becomes a Bitmap character.
-            if (!cc.pResource || (Sfr21VCall<unsigned>(cc.pResource, 0x10) & 0xff00) != 0x100)
+            if (ccinfo.pResource && (Sfr21VCall<unsigned>(ccinfo.pResource, 0x10) & 0xff00) == 0x100)
             {
-                reinterpret_cast<DisplayObjectBase*>(spr)->LogError("Sprite::AddDisplayObject(): unknown cid = %d\n", unsigned(UInt16(id)));
+                type = 8;
+                if (!ccinfo.pBindDefImpl)
+                    ccinfo.pBindDefImpl = pdefImpl;
+            }
+            else
+            {
+                reinterpret_cast<DisplayObjectBase*>(pDispObj)->LogError("Sprite::AddDisplayObject(): unknown cid = %d\n",
+                    unsigned(*reinterpret_cast<const UInt16*>(P + 0x50)));
                 return NULL;
             }
-            type = 8;
-            if (!cc.pBindDefImpl)
-                cc.pBindDefImpl = defImpl;
         }
     }
 
     bool  markedForRemove = false;
-    char* ex = reinterpret_cast<char*>(reinterpret_cast<Scaleform::GFx::DisplayList*>(spr + 0xd8)->GetDisplayObjectAtDepth(*reinterpret_cast<const int*>(P + 0x4c), &markedForRemove));
-    if (createFrame == ~0u)
-        createFrame = Sfr21VCall<unsigned>(spr, 0x328);   // GetCurrentFrame
+    char* pexistingChar = reinterpret_cast<char*>(reinterpret_cast<Scaleform::GFx::DisplayList*>(thisSpr + 0xd8)->GetDisplayObjectAtDepth(
+        *reinterpret_cast<const int*>(P + 0x4c), &markedForRemove));
 
-    bool replace = (addFlags & 1) != 0;
-    if (!(addFlags & 4))
-        replace = true;
-    else
+    unsigned frame = (createFrame == ~0u) ? Sfr21VCall<unsigned>(thisSpr, 0x328) : createFrame;   // GetCurrentFrame
+    if (placeObject)
     {
         // AcceptAnimMoves +0x178, ContinueAnimation +0x180, SetAcceptAnimMoves +0x188
-        if (ex && !Sfr21VCall<bool>(ex, 0x178) && Sfr21VCall<bool>(ex, 0x180))
-            Sfr21VCall<void, bool>(ex, 0x188, true);
-        if (!markedForRemove && ex && !Sfr21VCall<bool>(ex, 0x178))
-            return NULL;
-        if (ex && *reinterpret_cast<int*>(ex + 0x2c) >= -1 && *reinterpret_cast<unsigned*>(ex + 0x28) == id)
+        if (pexistingChar)
         {
-            const bool    isInteractive = *reinterpret_cast<SByte*>(ex + 0x6a) < 0;
-            ASStringNode* orig;
-            if (isInteractive)
-                ::new (static_cast<void*>(&orig)) ASString(reinterpret_cast<Scaleform::GFx::DisplayObject*>(ex)->GetOriginalName());
-            else
-            {
-                orig = static_cast<ASStringNode*>(Sfr21Mem(root, 0x160));   // builtin ""
-                orig->AddRef();
-            }
-            bool same;
-            if (!isInteractive)
-                same = true;
-            else if (name.GetSize() == 0)
-                same = orig->Size == 0 || (*reinterpret_cast<UByte*>(ex + 0x88) & 2) != 0;   // instance-based name
-            else
-                same = orig == name.GetNode();
-            orig->Release();
+            if (!Sfr21VCall<bool>(pexistingChar, 0x178) && Sfr21VCall<bool>(pexistingChar, 0x180))
+                Sfr21VCall<void, bool>(pexistingChar, 0x188, true);
+        }
+        if (!markedForRemove && pexistingChar && !Sfr21VCall<bool>(pexistingChar, 0x178))
+            return NULL;
 
-            if (same)
+        if (pexistingChar && *reinterpret_cast<int*>(pexistingChar + 0x2c) >= -1 &&
+            *reinterpret_cast<unsigned*>(pexistingChar + 0x28) == *reinterpret_cast<const unsigned*>(P + 0x50))
+        {
+            ASString originalName(static_cast<ASStringNode*>(Sfr21Mem(Sfr21Mem(pDispObj, 0x20), 0x160)));   // builtin ""
+            if ((UByte)(*reinterpret_cast<UInt16*>(pexistingChar + 0x6a) >> 7) & 1)
+                originalName = reinterpret_cast<Scaleform::GFx::DisplayObject*>(pexistingChar)->GetOriginalName();
+
+            if (!((UByte)(*reinterpret_cast<UInt16*>(pexistingChar + 0x6a) >> 7) & 1) ||
+                (name.IsEmpty() && originalName.IsEmpty()) ||
+                (name.IsEmpty() && ((UByte)(*reinterpret_cast<UByte*>(pexistingChar + 0x88) >> 1) & 1)) ||   // instance-based name
+                (!name.IsEmpty() && originalName.GetNode() == name.GetNode()))
             {
-                if (*reinterpret_cast<unsigned*>(ex + 0x30) == createFrame)
+                if (*reinterpret_cast<unsigned*>(pexistingChar + 0x30) == frame)
                 {
-                    char np[0x68];
-                    memcpy(np, P, sizeof(np));
-                    if (void* filters = Sfr21Mem(np, 0x40))
+                    char newPos[0x68];
+                    memcpy(newPos, P, sizeof(newPos));
+                    if (void* filters = Sfr21Mem(newPos, 0x40))
                         reinterpret_cast<Scaleform::RefCountImpl*>(filters)->AddRef();
-                    UInt16& flags = *reinterpret_cast<UInt16*>(np + 0x62);
-                    if (!(flags & 0x80) && Sfr21VCall<int>(ex, 0x68))   // GetBlendMode
+                    if (!((UByte)(*reinterpret_cast<const UInt16*>(P + 0x62) >> 7) & 1) && Sfr21VCall<int>(pexistingChar, 0x68))   // GetBlendMode
                     {
-                        np[0x64] = 0;
-                        flags |= 0x80;
+                        *reinterpret_cast<UInt16*>(newPos + 0x62) |= 0x80;
+                        newPos[0x64] = 0;
                     }
-                    if (!(*reinterpret_cast<const UInt16*>(P + 0x62) & 8) && !reinterpret_cast<DisplayObjectBase*>(ex)->GetCxform().IsIdentity())
+                    if (!((UByte)(*reinterpret_cast<const UInt16*>(P + 0x62) >> 3) & 1) && !reinterpret_cast<DisplayObjectBase*>(pexistingChar)->GetCxform().IsIdentity())
                     {
-                        flags |= 8;
-                        reinterpret_cast<Scaleform::Render::Cxform*>(np)->SetIdentity();
+                        *reinterpret_cast<UInt16*>(newPos + 0x62) |= 8;
+                        reinterpret_cast<Scaleform::Render::Cxform*>(newPos)->SetIdentity();
                     }
-                    reinterpret_cast<Scaleform::GFx::DisplayObjContainer*>(spr)->MoveDisplayObject(*reinterpret_cast<const Scaleform::GFx::CharPosInfo*>(np));
+                    reinterpret_cast<Scaleform::GFx::DisplayObjContainer*>(thisSpr)->MoveDisplayObject(*reinterpret_cast<const Scaleform::GFx::CharPosInfo*>(newPos));
 
                     // The object is reused: its name property on the AS3 parent is set again.
-                    if (*reinterpret_cast<UByte*>(ex + 0x6b) & 1)
+                    if (*reinterpret_cast<UByte*>(pexistingChar + 0x6b) & 1)
                     {
-                        AvmDisplayObj* avm = reinterpret_cast<AvmDisplayObj*>(Sfr21Avm(ex));
-                        Instances::fl_display::DisplayObject* parent = avm->GetAS3Parent();
-                        if (!(*reinterpret_cast<UByte*>(ex + 0x88) & 2) && parent)
+                        AvmDisplayObj* avmEexistObj = reinterpret_cast<AvmDisplayObj*>(Sfr21Avm(pexistingChar));
+                        Instances::fl_display::DisplayObject* as3existObjParent = avmEexistObj->GetAS3Parent();
+                        if (!((UByte)(*reinterpret_cast<UByte*>(pexistingChar + 0x88) >> 1) & 1) && as3existObjParent)
                         {
-                            ASStringNode* nm;
-                            ::new (static_cast<void*>(&nm)) ASString(reinterpret_cast<Scaleform::GFx::DisplayObject*>(ex)->GetName());
-                            {
-                                Multiname mn(vm->GetPublicNamespace(), Value(ASString(nm)));
-                                reinterpret_cast<Object*>(parent)->SetProperty(
-                                    mn, Value(reinterpret_cast<Object*>(avm->GetAS3Obj())));
-                            }
-                            nm->Release();
+                            const ASString& nm = reinterpret_cast<Scaleform::GFx::DisplayObject*>(pexistingChar)->GetName();
+                            reinterpret_cast<Object*>(as3existObjParent)->SetProperty(
+                                Multiname(static_cast<VM*>(Sfr21Mem(Sfr21Mem(pDispObj, 0x20), 0x48))->GetPublicNamespace(), Value(nm, Value::InlineStr), Multiname::InlineCtorTag()),
+                                Value(reinterpret_cast<Object*>(avmEexistObj->GetAS3Obj())));
                         }
                     }
-                    if (void* filters = Sfr21Mem(np, 0x40))
+                    if (void* filters = Sfr21Mem(newPos, 0x40))
                         reinterpret_cast<Scaleform::RefCountImpl*>(filters)->Release();
                     return NULL;
                 }
-                replace = true;
+                replaceIfDepthIsOccupied = true;
             }
         }
     }
+    else
+        replaceIfDepthIsOccupied = true;
+    FUN_1425dcaf0(thisSpr);   // SetDirtyFlag
 
-    FUN_1425dcaf0(spr);
-    void* asSupport = Sfr21Mem(root, 0x18);
+    void* asSupport = Sfr21Mem(Sfr21Mem(pDispObj, 0x20), 0x18);
     char* ch = (*reinterpret_cast<char* (**)(void*, void*, void*, void*, const unsigned*, int)>(
-        *static_cast<char**>(asSupport) + 0x20))(asSupport, Sfr21Mem(root, 0x10), &cc, spr, &id, type);   // CreateCharacterInstance
-    char* io = *reinterpret_cast<SByte*>(ch + 0x6a) < 0 ? ch : NULL;
-    *reinterpret_cast<UInt16*>(ch + 0x6a) &= ~1;
-    bool nameSet = false;
-    if (io)
+        *static_cast<char**>(asSupport) + 0x20))(asSupport, Sfr21Mem(Sfr21Mem(pDispObj, 0x20), 0x10), &ccinfo, thisSpr,
+        reinterpret_cast<const unsigned*>(P + 0x50), type);   // CreateCharacterInstance
+    char* intObj  = ((UByte)(*reinterpret_cast<UInt16*>(ch + 0x6a) >> 7) & 1) ? ch : NULL;
+    bool  nameSet = false;
+    *reinterpret_cast<UInt16*>(ch + 0x6a) &= ~1;   // SetScale9GridExists(false)
+    if (intObj)
     {
-        nameSet = name.GetSize() != 0;
-        if (nameSet)
-            reinterpret_cast<DisplayObject*>(io)->SetOriginalName(name);
+        if (!name.IsEmpty())
+        {
+            reinterpret_cast<DisplayObject*>(intObj)->SetOriginalName(name);
+            nameSet = true;
+        }
         if (origChar)
-            Sfr21VCall<void, InteractiveObject*>(io, 0x2c0, origChar);   // CloneInternalData
+            Sfr21VCall<void, InteractiveObject*>(intObj, 0x2c0, origChar);   // CloneInternalData
     }
     if (!(addFlags & 4))
         Sfr21VCall<void, bool>(ch, 0x188, false);
     else
         *reinterpret_cast<UInt16*>(ch + 0x88) |= 1;   // timeline object
-    *reinterpret_cast<unsigned*>(ch + 0x30) = createFrame;
-    unsigned listFlags = unsigned(addFlags) & ~1u;
-    if (replace)
-        listFlags |= 1;
-    if (hasClassName)
-        reinterpret_cast<AvmDisplayObj*>(Sfr21Avm(ch))->InitClassName(className);
-    reinterpret_cast<DisplayList*>(spr + 0xd8)->AddDisplayObject(reinterpret_cast<DisplayObjectBase*>(spr), pos, reinterpret_cast<DisplayObjectBase*>(ch), listFlags);
+    *reinterpret_cast<unsigned*>(ch + 0x30) = frame;
 
-    AvmDisplayObj* avm = reinterpret_cast<AvmDisplayObj*>(Sfr21Avm(ch));
-    if (avm->CreateASInstanceNoCtor(false))
+    addFlags &= ~1u;
+    if (replaceIfDepthIsOccupied)
+        addFlags |= 1;
+    if (*reinterpret_cast<const UByte*>(P + 0x63) & 1)
+        reinterpret_cast<AvmDisplayObj*>(Sfr21Avm(ch))->InitClassName(*reinterpret_cast<const char* const*>(P + 0x58));
+    reinterpret_cast<DisplayList*>(thisSpr + 0xd8)->AddDisplayObject(reinterpret_cast<DisplayObjectBase*>(pDispObj), pos,
+        reinterpret_cast<DisplayObjectBase*>(ch), addFlags);
+
+    AvmDisplayObj* avmObj = reinterpret_cast<AvmDisplayObj*>(Sfr21Avm(ch));
+    if (avmObj->CreateASInstanceNoCtor(false))
     {
-        if (!(*reinterpret_cast<UByte*>(ch + 0x88) & 2) && avm->GetAS3Parent())
+        if (!((UByte)(*reinterpret_cast<UInt16*>(ch + 0x88) >> 1) & 1) && avmObj->GetAS3Parent())
         {
+            // init name property before calling ctor
+            reinterpret_cast<Object*>(GetAS3Obj())->SetProperty(
+                Multiname(static_cast<VM*>(Sfr21Mem(Sfr21Mem(pDispObj, 0x20), 0x48))->GetPublicNamespace(), Value(name, Value::InlineStr), Multiname::InlineCtorTag()),
+                Value(reinterpret_cast<Object*>(avmObj->GetAS3Obj())));
+            if (static_cast<VM*>(Sfr21Mem(Sfr21Mem(pDispObj, 0x20), 0x48))->IsException())
             {
-                Multiname mn(vm->GetPublicNamespace(), Value(name));
-                reinterpret_cast<Object*>(GetAS3Obj())->SetProperty(mn, Value(reinterpret_cast<Object*>(avm->GetAS3Obj())));
-            }
-            if (vm->IsException())
-            {
-                vm->OutputAndIgnoreException();
-                *reinterpret_cast<UInt16*>(spr + 0x88) |= 0x20;   // execution aborted
+                static_cast<VM*>(Sfr21Mem(Sfr21Mem(pDispObj, 0x20), 0x48))->OutputAndIgnoreException();
+                *reinterpret_cast<UInt16*>(reinterpret_cast<char*>(pDispObj) + 0x88) |= 0x20;   // execution aborted
             }
         }
-        avm->CallCtor(true);
+        avmObj->CallCtor(true);
 
         // A sprite gets its children now.
-        char* a = reinterpret_cast<char*>(avm);
-        if ((*reinterpret_cast<UInt16*>(ch + 0x6a) & 0x400) && !(a[0x60] & AvmSprite::Flag_ChildrenCreated))
+        if ((UByte)(*reinterpret_cast<UInt16*>(ch + 0x6a) >> 10) & 1)
         {
-            char* sp = static_cast<char*>(Sfr21Mem(a, 0x18));
-            char* parent = static_cast<char*>(Sfr21Mem(sp, 0x38));
-            if (!reinterpret_cast<InteractiveObject*>(sp)->IsInPlayList() && parent && reinterpret_cast<InteractiveObject*>(parent)->IsInPlayList())
+            char* a = Sfr21Avm(ch);
+            if (!(a[0x60] & AvmSprite::Flag_ChildrenCreated))
             {
-                avm->GetAvmParent()->InsertChildToPlayList(reinterpret_cast<InteractiveObject*>(sp));
-                reinterpret_cast<InteractiveObject*>(sp)->ModifyOptimizedPlayList();
+                char* sp = static_cast<char*>(Sfr21Mem(a, 0x18));
+                if (!reinterpret_cast<InteractiveObject*>(sp)->IsInPlayList() && Sfr21Mem(sp, 0x38) &&
+                    static_cast<InteractiveObject*>(Sfr21Mem(sp, 0x38))->IsInPlayList())
+                {
+                    reinterpret_cast<AvmDisplayObj*>(a)->GetAvmParent()->InsertChildToPlayList(reinterpret_cast<InteractiveObject*>(sp));
+                    reinterpret_cast<InteractiveObject*>(sp)->ModifyOptimizedPlayList();
+                }
+                if (!(sp[0x140] & 8))
+                    reinterpret_cast<Sprite*>(sp)->DefaultOnEventLoad();
+                if (*reinterpret_cast<UByte*>(sp + 0x6d))
+                {
+                    void* x = Sfr21VCall<void*>(Sfr21Avm(sp), 0x10);
+                    Sfr21VCall<void, bool>(x, 0xe0, false);
+                }
+                a[0x60] |= AvmSprite::Flag_ChildrenCreated;
             }
-            if (!(sp[0x140] & 8))
-                reinterpret_cast<Sprite*>(sp)->DefaultOnEventLoad();
-            if (*reinterpret_cast<UByte*>(sp + 0x6d))
-            {
-                void* x = Sfr21VCall<void*>(Sfr21Avm(sp), 0x10);
-                Sfr21VCall<void, bool>(x, 0xe0, false);
-            }
-            a[0x60] |= AvmSprite::Flag_ChildrenCreated;
         }
     }
 
     if (nameSet)
-        Sfr21VCall<void, void*>(root, 0xf0, io);   // ResolveStickyVariables
-    if (io)
+        Sfr21VCall<void, void*>(Sfr21Mem(pDispObj, 0x20), 0xf0, intObj);   // ResolveStickyVariables
+    if (intObj && nameSet)
     {
-        if (nameSet && name.GetNode() == Sfr21Mem(root, 0x1c8))   // builtin "hitArea"
-            reinterpret_cast<Sprite*>(spr)->SetHitArea(reinterpret_cast<Sprite*>(io));
-        char* base = Sfr21VCall<char*>(Sfr21Avm(io), 8);         // ToAvmInteractiveObjBase
+        if (name.GetNode() == Sfr21Mem(Sfr21Mem(pDispObj, 0x20), 0x1c8))   // builtin "hitArea"
+            reinterpret_cast<Sprite*>(thisSpr)->SetHitArea(reinterpret_cast<Sprite*>(intObj));
+    }
+    if (intObj)
+    {
+        char* base = Sfr21VCall<char*>(Sfr21Avm(intObj), 8);         // ToAvmInteractiveObjBase
         Sfr21VCall<void, bool>(base ? base - 0x30 : NULL, 0x98, true);   // OnAdded
     }
     reinterpret_cast<const Scaleform::RefCountNTSImpl*>(ch)->Release();
