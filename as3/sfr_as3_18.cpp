@@ -7952,14 +7952,19 @@ static SF_FORCEINLINE void Sfr18LoadedCtor(AvmDisplayObj* avm, const SPtr<Instan
     }
 }
 
-// MovieRoot::GetLogState (SDK SF_INLINE): the raw pointer of the movie's Ptr<LogState>, the temporary released.
-static SF_FORCEINLINE LogState* Sfr18RootLogState(MovieRoot* root) { return root->GetMovieImpl()->GetLogState().GetPtr(); }
+// DisplayObject::SetTimelineObjectFlag (SDK inline, not in our view): the ternary or/and of the flag.
+static SF_FORCEINLINE void Sfr18SetTimelineObjectFlag(GFx::DisplayObject* p, bool v)
+{
+    (v) ? p->Flags |= GFx::DisplayObject::Mask_TimelineObject : p->Flags &= (~GFx::DisplayObject::Mask_TimelineObject);
+}
+
+// MovieRoot::GetLogState (SDK SF_INLINE), called straight on the StateBag: the exe reads the pointer through the
+// returned sret address before the release, which the MovieImpl::GetLogState wrapper hides.
+static SF_FORCEINLINE LogState* Sfr18RootLogState(MovieRoot* root) { return root->GetMovieImpl()->GetStateBag()->GetLogState(); }
 
 // The loaded movie handed to its Loader while the preload task runs: open (once, after the version check), the
 // progress of its bytes, its first frame's sprite made the Loader's child (init), and at the end the bitmap of an
 // image (init) and complete; an error event when nothing could be loaded. True when the entry is done.
-// MS2-FUNCTIONAL: the exe reads the LogState pointer through the returned sret address (rax) and tests it after
-// the release, where cl threads the test through the slot; it loads the vptr before the Flags or; register allocation
 // @0x142515c60
 bool LoadQueueEntryMT_LoadMovie::LoadFinished()
 {
@@ -8025,7 +8030,7 @@ bool LoadQueueEntryMT_LoadMovie::LoadFinished()
                         pnewChar = *static_cast<Sprite*>(root->pASSupport->CreateCharacterInstance(
                             pMovieImpl, ccinfo, NULL, ResourceId(0), CharacterDef::Sprite));
                         pnewChar->SetLoadedSeparately(true);
-                        pnewChar->DisplayObject::Flags |= DisplayObject::Mask_TimelineObject;   // SetTimelineObjectFlag(true)
+                        Sfr18SetTimelineObjectFlag(pnewChar, true);
                         pnewChar->OnEventLoad();
                         pnewChar->AddToPlayList();
                         AvmSprite* avmSpr = static_cast<AvmSprite*>(ToAvmDisplayObj(pnewChar));
