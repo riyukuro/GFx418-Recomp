@@ -1013,7 +1013,6 @@ void FUN_1424df380(void* p);            // VM::~VM
 static inline char* Sfr21At(void* p, UPInt off) { return static_cast<char*>(p) + off; }
 static inline void* Sfr21Mem(void* p, UPInt off) { return *reinterpret_cast<void**>(Sfr21At(p, off)); }
 // The base vftables the inlined base destructors store before the out-of-line base destructor runs.
-extern const void* DAT_14317c9f8[];     // RefCountBase<ASIntervalTimerIntf, 323>
 extern const void* DAT_14317c9e0[];     // GFx::MovieDefRootNode
 extern const void* DAT_14317afe8[];     // empty interface (0x1424e2e70)
 extern const void* DAT_14317b750[];     // VMAbcFile
@@ -1191,8 +1190,7 @@ void* DeleteAs3_1424e2f10(void* p, unsigned flags)
     Memory::pGlobalHeap->Free(Sfr21Mem(p, 0x38));
     Sfr21GSPtr(p, 0x30);
     Sfr21GValue(p, 0x10);
-    Sfr21GVft(p, 0, DAT_14317c9f8);
-    static_cast<Scaleform::RefCountImplCore*>(p)->Scaleform::RefCountImplCore::~RefCountImplCore();
+    static_cast<ASIntervalTimerIntf*>(p)->ASIntervalTimerIntf::~ASIntervalTimerIntf();
     Sfr21GFree(p, flags, 0x70);
     return p;
 }
