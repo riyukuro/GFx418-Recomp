@@ -188,18 +188,13 @@ void CSSTextFormatLoader::Visit(const ASString& name, const Value& val, UByte fl
     }
 }
 
-static void SetStringMember(Environment* penv, Object* pobj, const char* pname, const ASString& str)
+// The SDK's ParagraphFormat::IsLeft/Center/RightAlignment, which test the present bit again.
+static SF_FORCEINLINE bool IsAlign(const Render::Text::ParagraphFormat& pf, Render::Text::ParagraphFormat::AlignType a)
 {
-    pobj->SetMember(penv, penv->CreateString(pname), Value(str));
+    return pf.IsAlignmentSet() && pf.GetAlignment() == a;
 }
 
-static void SetNumberMember(Environment* penv, Object* pobj, const char* pname, Number n)
-{
-    pobj->SetMember(penv, penv->CreateString(pname), Value(n));
-}
-
-// StyleSheet.prototype.getStyle(name): an object with the style's properties under their AS names, or undefined.
-// MS2-FUNCTIONAL: the member values are set through local helpers instead of the exe's inlined temporaries.
+// StyleSheet.prototype.getStyle(name): an object with the style's properties under their AS names, or null.
 // @0x1428f8720
 void StyleSheetProto::GetStyle(const FnCall& fn)
 {
@@ -213,77 +208,81 @@ void StyleSheetProto::GetStyle(const FnCall& fn)
         return;
     if (fn.NArgs < 1)
     {
-        fn.Result->SetUndefined();
+        fn.Result->SetNull();
         return;
     }
 
-    ASString name = fn.Arg(0).ToString(fn.Env);
-    StyleManagerBase* pmgr = (StyleManagerBase*)pthis->CSS.Data;
-    const Render::Text::Style* pstyle;
-    if (name.GetSize() != 0 && name.ToCStr()[0] == '.')
-        pstyle = pmgr->GetStyle(StyleManagerBase::CSS_Class, name.ToCStr() + 1, name.GetSize() - 1);
+    ASString stylename = fn.Arg(0).ToString(fn.Env);
+    const Render::Text::Style* pstyle = NULL;
+    if (stylename.GetSize() > 0 && stylename.ToCStr()[0] == '.')
+        pstyle = ((StyleManagerBase*)pthis->CSS.Data)->GetStyle(StyleManagerBase::CSS_Class, stylename.ToCStr() + 1, stylename.GetSize() - 1);
     else
-        pstyle = pmgr->GetStyle(StyleManagerBase::CSS_Tag, name.ToCStr(), name.GetSize());
+        pstyle = ((StyleManagerBase*)pthis->CSS.Data)->GetStyle(StyleManagerBase::CSS_Tag, stylename.ToCStr(), stylename.GetSize());
     if (!pstyle)
     {
-        fn.Result->SetUndefined();
+        fn.Result->SetNull();
         return;
     }
 
-    Environment* penv = fn.Env;
-    Ptr<Object>  pobj = *SF_HEAP_NEW(penv->GetHeap()) Object(penv);
+    Ptr<Object> pobj = *SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);
+    ASStringContext* psc = fn.Env->GetSC();
     const Render::Text::TextFormat&      tf = pstyle->mTextFormat;
     const Render::Text::ParagraphFormat& pf = pstyle->mParagraphFormat;
+    typedef Render::Text::ParagraphFormat PF;
 
     if (tf.IsColorSet())
     {
-        static const char hex[] = "0123456789ABCDEF";
-        String color;
-        color.AppendChar('#');
-        UInt32 c = tf.GetColor32();
-        color.AppendChar(hex[((c >> 16) & 0xff) >> 4]);
-        color.AppendChar(hex[(c >> 16) & 0xf]);
-        color.AppendChar(hex[((c >> 8) & 0xff) >> 4]);
-        color.AppendChar(hex[(c >> 8) & 0xf]);
-        color.AppendChar(hex[(c & 0xff) >> 4]);
-        color.AppendChar(hex[c & 0xf]);
-        SetStringMember(penv, pobj, "color", penv->CreateString(color.ToCStr(), color.GetSize()));
+        String colorStr;
+        colorStr.AppendChar('#');
+        UInt32 color = tf.GetColor32();
+        const char* refstr = "0123456789ABCDEF";
+        UByte comp = (UByte)(color >> 16);
+        colorStr.AppendChar(refstr[comp >> 4]);
+        colorStr.AppendChar(refstr[comp & 0x0F]);
+        comp = (UByte)(color >> 8);
+        colorStr.AppendChar(refstr[comp >> 4]);
+        colorStr.AppendChar(refstr[comp & 0x0F]);
+        comp = (UByte)color;
+        colorStr.AppendChar(refstr[comp >> 4]);
+        colorStr.AppendChar(refstr[comp & 0x0F]);
+        pobj->SetMember(fn.Env, psc->CreateString("color"), psc->CreateString(colorStr));
     }
     if (tf.IsFontListSet())
-    {
-        const String& fonts = tf.GetFontList();
-        SetStringMember(penv, pobj, "fontFamily", penv->CreateString(fonts.ToCStr(), fonts.GetSize()));
-    }
+        pobj->SetMember(fn.Env, psc->CreateString("fontFamily"),
+            psc->CreateString(tf.GetFontList()));
     if (tf.IsFontSizeSet())
-        SetNumberMember(penv, pobj, "fontSize", (Number)tf.GetFontSize());
+        pobj->SetMember(fn.Env, psc->CreateString("fontSize"),
+            (Number)tf.GetFontSize());
     if (tf.IsItalicSet())
-        SetStringMember(penv, pobj, "fontStyle", penv->CreateString(tf.IsItalic() ? "italic" : "normal"));
+        pobj->SetMember(fn.Env, psc->CreateString("fontStyle"),
+            tf.IsItalic() ? psc->CreateString("italic") : psc->CreateString("normal"));
     if (tf.IsBoldSet())
-        SetStringMember(penv, pobj, "fontWeight", penv->CreateString(tf.IsBold() ? "bold" : "normal"));
+        pobj->SetMember(fn.Env, psc->CreateString("fontWeight"),
+            tf.IsBold() ? psc->CreateString("bold") : psc->CreateString("normal"));
     if (tf.IsKerningSet())
-        SetStringMember(penv, pobj, "kerning", penv->CreateString(tf.IsKerning() ? "true" : "false"));
+        pobj->SetMember(fn.Env, psc->CreateString("kerning"),
+            tf.IsKerning() ? psc->CreateString("true") : psc->CreateString("false"));
     if (tf.IsLetterSpacingSet())
-        SetNumberMember(penv, pobj, "letterSpacing", (Number)(SInt16)(tf.GetLetterSpacingInFixp() / 20));
+        pobj->SetMember(fn.Env, psc->CreateString("letterSpacing"),
+            (Number)tf.GetLetterSpacing());
     if (pf.IsLeftMarginSet())
-        SetNumberMember(penv, pobj, "marginLeft", (Number)pf.GetLeftMargin());
+        pobj->SetMember(fn.Env, psc->CreateString("marginLeft"),
+            (Number)pf.GetLeftMargin());
     if (pf.IsRightMarginSet())
-        SetNumberMember(penv, pobj, "marginRight", (Number)pf.GetRightMargin());
+        pobj->SetMember(fn.Env, psc->CreateString("marginRight"),
+            (Number)pf.GetRightMargin());
     if (pf.IsAlignmentSet())
-    {
-        const char* palign;
-        switch (pf.GetAlignment())
-        {
-        case Render::Text::ParagraphFormat::Align_Left:   palign = "left"; break;
-        case Render::Text::ParagraphFormat::Align_Center: palign = "center"; break;
-        case Render::Text::ParagraphFormat::Align_Right:  palign = "right"; break;
-        default:                                          palign = "justify"; break;
-        }
-        SetStringMember(penv, pobj, "textAlign", penv->CreateString(palign));
-    }
+        pobj->SetMember(fn.Env, psc->CreateString("textAlign"),
+            IsAlign(pf, PF::Align_Left) ? psc->CreateString("left") :
+            IsAlign(pf, PF::Align_Center) ? psc->CreateString("center") :
+            IsAlign(pf, PF::Align_Right) ? psc->CreateString("right") :
+            psc->CreateString("justify"));
     if (tf.IsUnderlineSet())
-        SetStringMember(penv, pobj, "textDecoration", penv->CreateString(tf.IsUnderline() ? "underline" : "none"));
+        pobj->SetMember(fn.Env, psc->CreateString("textDecoration"),
+            tf.IsUnderline() ? psc->CreateString("underline") : psc->CreateString("none"));
     if (pf.IsIndentSet())
-        SetNumberMember(penv, pobj, "textIndent", (Number)pf.GetIndent());
+        pobj->SetMember(fn.Env, psc->CreateString("textIndent"),
+            (Number)pf.GetIndent());
 
     fn.Result->SetAsObject(pobj);
 }
