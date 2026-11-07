@@ -4439,12 +4439,11 @@ struct Sfr31ExecReadMnObject : Sfr31ExecStackReader
     const Value* obj;       // +0x48
 };
 
-// The exe calls Multiname's implicit destructor out of line here.
-extern "C" void FUN_1423f1060(void* multiname);    // Multiname::~Multiname
+// The exe calls Multiname's implicit destructor (0x1423f1060) out of line here.
 struct Sfr31MnBox
 {
     Sfr31MnBox(VMAbcFile& file, const Abc::Multiname& e) { ::new (&w0) Multiname(file, e); }
-    ~Sfr31MnBox() { FUN_1423f1060(&w0); }
+    ~Sfr31MnBox() { Get().Multiname::~Multiname(); }
     Multiname& Get() { return *reinterpret_cast<Multiname*>(&w0); }
     void* w0; void* w1; UPInt w2, w3, w4, w5;
 };
