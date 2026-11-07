@@ -388,7 +388,6 @@ __declspec(noinline) ASString Instances::fl::RegExp::GetFlags()
     return result;
 }
 
-// MS2-FUNCTIONAL: the exe keeps the inlined hash-node select as a cmove against a zero register; ours branches
 // @0x142425540
 ASString Instances::fl::Array::ToLocaleStringInternal() const
 {
@@ -412,7 +411,6 @@ ASString Instances::fl::Array::ToLocaleStringInternal() const
     return GetVM().GetStringManager().CreateString(buf.ToCStr(), buf.GetSize());
 }
 
-// MS2-FUNCTIONAL: the exe keeps the inlined hash-node select as a cmove against a zero register; ours branches
 // @0x142425b50
 ASString Instances::fl::Array::ToStringInternal(const ASString& sep) const
 {
@@ -2514,7 +2512,6 @@ namespace InstanceTraits
 
 namespace Classes
 {
-    // MS2-FUNCTIONAL: the exe inlines the ThunkFunction constructor
     // @0x14241c600
     Pickable<Instances::ThunkFunction> Function::MakeThunkFunction(const ThunkInfo& thunk, const Traits& ot) const
     {
@@ -2895,7 +2892,6 @@ void FUN_142423c10(Scaleform::GFx::AS3::Instances::Namespace* self, const Scalef
         v.Convert2String(const_cast<Scaleform::GFx::ASString&>(self->GetUri()));
 }
 // MultinameHash<ClassTraits::Traits*>::Get: the class traits cached under {name, ns}.
-// MS2-FUNCTIONAL: the exe builds the temporary key in another home slot
 // @0x142414ac0
 Scaleform::GFx::AS3::ClassTraits::Traits**
 FUN_142414ac0(Scaleform::GFx::AS3::TClassTraitsCache* self, const Scaleform::GFx::ASString& name,
@@ -3641,7 +3637,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
 
     // A node kind (and, for processing instructions, a name other than "" or "*") selects children; kNone takes
     // them all.
-    // MS2-FUNCTIONAL: the exe calls the ArrayLH copy-assignment out of line
     // @0x1424153c0
     void XMLElement::GetChildren(XMLList& list, Kind k, const ASString* name)
     {
@@ -5683,7 +5678,6 @@ namespace Scaleform { namespace GFx { namespace AS3
         }
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the trim and the AppendChild/PushBack choice differently
     // @0x142421d60
     void XMLParser::SetNodeKind(Kind k)
     {
