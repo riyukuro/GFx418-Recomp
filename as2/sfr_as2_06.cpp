@@ -215,6 +215,7 @@
 #include "../include/gfx/as2/as2_colortransform.h"
 #include "../include/gfx/as2/as2_matrixobject.h"
 #include "../include/gfx/as2/as2_intervaltimer.h"
+#include "../include/gfx/gfx_imageresource.h" // BitmapData tag ctor: Ptr<ImageResource> member
 #include "../include/kernel/sf_msgformat.h"
 #include "../include/kernel/sf_timer.h"
 #include "../include/gfx/gfx_input.h"
@@ -1545,6 +1546,60 @@ __forceinline SharedObjectCtorFunction::SharedObjectCtorFunction(ASStringContext
                                   PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
 }
 
+// Inlined in the exe (no out-of-line copy), as in sfr_as2_03, 03s and 04b; BitmapDataProto's vftable built here needs it.
+inline BitmapData::~BitmapData()
+{
+}
+
+// BitmapData(psc, pprototype), BitmapDataProto and BitmapDataCtorFunction (sfr_as2_03), inlined like the exe.
+__forceinline BitmapData::BitmapData(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
+    : Object(psc, ObjectInlineCtorTag())
+{
+    if (!pProto)
+        Object::SetMemberRaw(
+            psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
+            Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+    pProto = pprototype;
+}
+
+__forceinline BitmapDataProto::BitmapDataProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+    : Prototype<BitmapData>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+__forceinline BitmapDataCtorFunction::BitmapDataCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
+    : CFunctionObject(psc, GlobalCtor, t)
+{
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+// ArrayObject(psc, pprototype), ArrayProto and ArrayCtorFunction (sfr_as2_03), inlined like the exe.
+__forceinline ArrayObject::ArrayObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
+    : Object(psc, ObjectInlineCtorTag()), LogPtr(0), RecursionCount(0), LengthValueOverriden(false)
+{
+    if (!pProto)
+        Object::SetMemberRaw(
+            psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
+            Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+    pProto = pprototype;
+}
+
+__forceinline ArrayProto::ArrayProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag)
+    : Prototype<ArrayObject>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+    InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
+}
+
+__forceinline ArrayCtorFunction::ArrayCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t)
+    : CFunctionObject(psc, GlobalCtor, t)
+{
+    for (int i = 0; SortFlagTable[i].Name; i++)
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString(SortFlagTable[i].Name), Value(SortFlagTable[i].Number),
+                                                          PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete);
+}
+
 __forceinline MatrixObject::MatrixObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
     : Object(psc, ObjectInlineCtorTag())
 {
@@ -1645,11 +1700,12 @@ FunctionRef BevelFilterCtorFunction::Register(GlobalContext* pgc)
     return RegisterBuiltinClass<BevelFilterCtorFunction, BevelFilterProto>(pgc, ASBuiltin_BevelFilter, ASBuiltin_BitmapFilter, pgc->FlashFiltersPackage);
 }
 
-// MS2-FUNCTIONAL the exe inlines the BitmapDataCtorFunction and BitmapDataProto ctors (sfr_as2_03)
+// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x142974460
 FunctionRef BitmapDataCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClass<BitmapDataCtorFunction, BitmapDataProto>(pgc, ASBuiltin_BitmapData, ASBuiltin_Object, pgc->FlashDisplayPackage);
+    return RegisterBuiltinClassInline<BitmapDataCtorFunction, BitmapDataProto>(pgc, ASBuiltin_BitmapData, ASBuiltin_Object, pgc->FlashDisplayPackage);
 }
 
 // MS2-FUNCTIONAL the exe inlines the BitmapFilterCtorFunction and BitmapFilterProto ctors (sfr_as2_03)
@@ -1821,11 +1877,12 @@ FunctionRef ButtonCtorFunction::Register(GlobalContext* pgc)
     return RegisterBuiltinClassInline<ButtonCtorFunction, ButtonProto>(pgc, ASBuiltin_Button, ASBuiltin_Object, pgc->pGlobal);
 }
 
-// MS2-FUNCTIONAL the exe inlines the ArrayCtorFunction and ArrayProto ctors (sfr_as2_03)
+// MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the
+// ObjectInlineCtorTag ctors above, like the exe; it keeps zero in rdi and stores dil/di.
 // @0x142973500
 FunctionRef ArrayCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClass<ArrayCtorFunction, ArrayProto>(pgc, ASBuiltin_Array, ASBuiltin_Object, pgc->pGlobal);
+    return RegisterBuiltinClassInline<ArrayCtorFunction, ArrayProto>(pgc, ASBuiltin_Array, ASBuiltin_Object, pgc->pGlobal);
 }
 
 // MS2-FUNCTIONAL regalloc floor, as DateCtorFunction::Register: the ctors are inlined down to Object(psc) via the

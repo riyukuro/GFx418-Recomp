@@ -163,6 +163,7 @@ protected:
 
     // An array with the given __proto__ (exe 0x142917ed0).
     ArrayObject(ASStringContext* psc, Object* pprototype);
+    ArrayObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     friend class ArrayCtorFunction;
     // The elements from the arguments of a constructor call (exe 0x142961720).
@@ -238,6 +239,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x143213250
 
     ArrayProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x1429180c0
+    ArrayProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 };
 
 // The Array class.
@@ -246,6 +248,7 @@ class ArrayCtorFunction : public CFunctionObject
 public:
     // (appended for sfr_as2_06) The sort flag constants (CASEINSENSITIVE, ...) as members (exe 0x142917d80).
     ArrayCtorFunction(ASStringContext* psc);
+    ArrayCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
     static const NameNumber SortFlagTable[]; // exe 0x1432131e0
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429367a0

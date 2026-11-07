@@ -397,6 +397,7 @@ public:
     BitmapData(Environment* penv); // exe 0x142918ef0
     // The prototype instance has no image.
     inline BitmapData(ASStringContext* psc, Object* pprototype); // defined in sfr_as2_03 (needs the complete ImageResource)
+    BitmapData(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_06
     virtual ~BitmapData(); // inline, defined in sfr_as2_03 (needs the complete ImageResource)
 
     virtual ObjectType GetObjectType() const; // exe 0x1429541a0: Object_BitmapData
@@ -427,6 +428,7 @@ public:
     static const NameFunction FunctionTable[]; // exe 0x1432134b0
 
     BitmapDataProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor); // exe 0x142919100
+    BitmapDataProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor, ObjectInlineCtorTag); // inline in sfr_as2_06
 };
 class LoadVarsObject : public Object
 {
@@ -1414,6 +1416,7 @@ class BitmapDataCtorFunction : public CFunctionObject
 {
 public:
     BitmapDataCtorFunction(ASStringContext* psc); // exe 0x142919060
+    BitmapDataCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936930
 
