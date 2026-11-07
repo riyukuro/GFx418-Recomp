@@ -231,6 +231,7 @@ public:
     void SetSolidWidth(CoordType w)  { WidthLeft = WidthRight = w; }
     void SetEdgeAAWidth(CoordType w) { AaWidthLeft = AaWidthRight = w; }
     void SetLineJoin(LineJoinType lj)   { LineJoin = lj; }
+    void SetLineCap(LineCapType lc)      { StartLineCap = EndLineCap = lc; }
     void SetStartLineCap(LineCapType lc) { StartLineCap = lc; }
     void SetEndLineCap(LineCapType lc)   { EndLineCap = lc; }
     void SetMiterLimit(CoordType ml)  { MiterLimit = ml; }

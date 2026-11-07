@@ -1529,7 +1529,6 @@ bool TextMeshProvider::generateSelection(Renderer2DImpl* ren, VertexOutput* verO
     return ok;
 }
 
-// MS2-FUNCTIONAL: register allocation (verOut/mtx and the hoisted constants take other registers), code otherwise the same
 // @0x1426e7ff0
 bool TextMeshProvider::generateUnderlines(Renderer2DImpl* ren, VertexOutput* verOut, const TextMeshLayer& layer,
                                           const Matrix2F& mtx, unsigned meshGenFlags)
@@ -1541,129 +1540,124 @@ bool TextMeshProvider::generateUnderlines(Renderer2DImpl* ren, VertexOutput* ver
     gen->Clear();
 
     // underlines are stroked unclosed polylines with flat ends, solid in the middle and anti-aliased at the edges
-    unsigned   aaMode   = meshGenFlags & (Mesh_EdgeAA | Mesh_Mask);
-    StrokerAA& strokeAA = ren->GetMeshGen()->mStrokerAA;
-    strokeAA.SetStartLineCap(StrokerTypes::ButtCap);
-    strokeAA.SetEndLineCap(StrokerTypes::ButtCap);
-    strokeAA.SetLineJoin(StrokerTypes::MiterJoin);
-    float solid, edgeAA;
-    if (aaMode == Mesh_EdgeAA)
+    bool edgeAA = ((meshGenFlags & Mesh_EdgeAA) != 0 && (meshGenFlags & Mesh_Mask) == 0);
+    gen->mStrokerAA.SetLineCap(StrokerTypes::ButtCap);
+    gen->mStrokerAA.SetLineJoin(StrokerTypes::MiterJoin);
+    if (edgeAA)
     {
-        edgeAA = 0.96f;
-        solid  = 0.0f;
+        gen->mStrokerAA.SetSolidWidth(0.0f);
+        gen->mStrokerAA.SetEdgeAAWidth(0.96f);
     }
     else
     {
-        solid  = 0.5f;
-        edgeAA = 0.0f;
+        gen->mStrokerAA.SetSolidWidth(0.5f);
+        gen->mStrokerAA.SetEdgeAAWidth(0.0f);
     }
-    strokeAA.SetSolidWidth(solid);
-    strokeAA.SetEdgeAAWidth(edgeAA);
 
     for (unsigned i = 0; i < layer.Count; ++i)
     {
         const TextMeshEntry& e = Entries[layer.Start + i];
         const UnderlineEnt&  u = e.EntryData.UnderlineData;
-        if (aaMode == Mesh_EdgeAA)
+        if (edgeAA)
         {
-            strokeAA.SetSolidWidth(u.Style == TextUnderline_Thick || u.Style == TextUnderline_DottedThick ? 1.0f : 0.0f);
+            if (u.Style == TextUnderline_Thick || u.Style == TextUnderline_DottedThick)
+                gen->mStrokerAA.SetSolidWidth(1.0f);
+            else
+                gen->mStrokerAA.SetSolidWidth(0.0f);
             if (u.Style == TextUnderline_DitheredThick)
-                strokeAA.SetSolidWidth(0.25f);
-            strokeAA.SetEdgeAAWidth(u.Style == TextUnderline_Dithered ? 0.5f : 0.96f);
+                gen->mStrokerAA.SetSolidWidth(0.25f);
+            if (u.Style == TextUnderline_Dithered)
+                gen->mStrokerAA.SetEdgeAAWidth(0.5f);
+            else
+                gen->mStrokerAA.SetEdgeAAWidth(0.96f);
         }
         else
         {
-            strokeAA.SetSolidWidth(u.Style == TextUnderline_Thick || u.Style == TextUnderline_DottedThick ? 1.0f : 0.5f);
+            if (u.Style == TextUnderline_Thick || u.Style == TextUnderline_DottedThick)
+                gen->mStrokerAA.SetSolidWidth(1.0f);
+            else
+                gen->mStrokerAA.SetSolidWidth(0.5f);
             if (u.Style == TextUnderline_DitheredThick)
-                strokeAA.SetSolidWidth(0.75f);
-            strokeAA.SetEdgeAAWidth(0.0f);
+                gen->mStrokerAA.SetSolidWidth(0.75f);
+            gen->mStrokerAA.SetEdgeAAWidth(0.0f);
         }
-        strokeAA.SetStyleLeft(i + 1);
-        strokeAA.SetStyleRight(i + 1);
+        gen->mStrokerAA.SetStyleLeft(i + 1);
+        gen->mStrokerAA.SetStyleRight(i + 1);
         colors.PushBack(e.mColor);
 
-        float x1 = u.x * mtx.M[0][0] + u.y * mtx.M[0][1] + mtx.M[0][3];
-        float y1 = u.x * mtx.M[1][0] + u.y * mtx.M[1][1] + mtx.M[1][3];
-        float x2 = (u.x + u.Len) * mtx.M[0][0] + u.y * mtx.M[0][1] + mtx.M[0][3];
-        float y2 = (u.x + u.Len) * mtx.M[1][0] + u.y * mtx.M[1][1] + mtx.M[1][3];
+        float x1 = u.x;
+        float y1 = u.y;
+        float x2 = u.x + u.Len;
+        float y2 = y1;
+        mtx.Transform(&x1, &y1);
+        mtx.Transform(&x2, &y2);
 
         if (u.Style == TextUnderline_Single || u.Style == TextUnderline_Thick)
         {
             // on the middle of a pixel row
-            strokeAA.AddVertex(x1, floorf(y1) + 0.5f);
-            strokeAA.AddVertex(x2, floorf(y2) + 0.5f);
-            strokeAA.FinalizePath(0, 0, false, false);
+            gen->mStrokerAA.AddVertex(x1, floorf(y1) + 0.5f);
+            gen->mStrokerAA.AddVertex(x2, floorf(y2) + 0.5f);
+            gen->mStrokerAA.FinalizePath(0, 0, false, false);
         }
+        float x;
         if (u.Style == TextUnderline_Dotted || u.Style == TextUnderline_DottedThick)
         {
             // two pixel dots five pixels apart, each its own path
-            x1 = (float)(floor(x1) - 0.5);
-            x2 = (float)(floor(x2) + 0.5);
-            y1 = (float)(floor(y1) + 0.5);
-            y2 = (float)(floor(y2) + 0.5);
-            if (x1 <= x2)
+            x1 = floor(x1) - 0.5f;
+            x2 = floor(x2) + 0.5f;
+            y1 = floor(y1) + 0.5f;
+            y2 = floor(y2) + 0.5f;
+            for (x = x1; x <= x2; x += 5)
             {
-                float ya = floorf(y1) + 0.5f;
-                float yb = floorf(y2) + 0.5f;
-                float x  = x1;
-                do
-                {
-                    strokeAA.AddVertex(x, ya);
-                    strokeAA.AddVertex(x + 2.0f, yb);
-                    strokeAA.FinalizePath(0, 0, false, false);
-                    x += 5.0f;
-                } while (x <= x2);
+                gen->mStrokerAA.AddVertex(x, floorf(y1) + 0.5f);
+                gen->mStrokerAA.AddVertex(x + 2, floorf(y2) + 0.5f);
+                gen->mStrokerAA.FinalizePath(0, 0, false, false);
             }
         }
         if (u.Style == TextUnderline_Dithered || u.Style == TextUnderline_DitheredThick)
         {
             // a zigzag of one path across the row
-            x1 = (float)floor(x1);
-            x2 = (float)(floor(x2) + 1.0);
-            y1 = (float)(floor(y1) + 0.5);
-            y2 = (float)(floor(y2) + 0.5);
-            float step = 4.0f, half = 0.75f;
+            x1       = floor(x1);
+            x2       = floor(x2) + 1;
+            y1       = floor(y1) + 0.5f;
+            y2       = floor(y2) + 0.5f;
+            float dx = 4;
+            float dy = 0.75f;
             if (u.Style == TextUnderline_DitheredThick)
             {
-                step = 6.0f;
-                half = 1.25f;
+                dx = 6;
+                dy = 1.25f;
             }
-            if (x1 <= x2)
+            for (x = x1; x <= x2; x += dx)
             {
-                float ya  = floorf(y1) + half;
-                float yb  = floorf(y2) - half;
-                float seg = step * 0.5f;
-                float x   = x1;
-                do
-                {
-                    strokeAA.AddVertex(x, ya);
-                    strokeAA.AddVertex(x + seg, yb);
-                    x += step;
-                } while (x <= x2);
+                gen->mStrokerAA.AddVertex(x, floorf(y1) + dy);
+                gen->mStrokerAA.AddVertex(x + dx / 2, floorf(y2) - dy);
             }
-            strokeAA.FinalizePath(0, 0, false, false);
+            gen->mStrokerAA.FinalizePath(0, 0, false, false);
         }
     }
 
-    if (strokeAA.GetVertexCount())
+    bool ret = true;
+    if (gen->mStrokerAA.GetVertexCount())
     {
-        strokeAA.Transform(mtx.GetInverse());
-        Matrix2F toMesh = strokeAA.StretchTo(-32768 + 4, -32768 + 4, 32768 - 4, 32768 - 4);
+        gen->mStrokerAA.Transform(mtx.GetInverse());
+        Matrix2F toMesh = gen->mStrokerAA.StretchTo(-32768 + 4, -32768 + 4, 32768 - 4, 32768 - 4);
 
-        VertexOutput::Fill fill = { strokeAA.GetMeshVertexCount(0), strokeAA.GetMeshTriangleCount(0) * 3,
-                                    &VertexXY16iCF32::Format, 0, 0, 0, 0 };
-        if (verOut->BeginOutput(&fill, 1, toMesh))
+        VertexOutput::Fill fill = { gen->mStrokerAA.GetMeshVertexCount(0), gen->mStrokerAA.GetMeshTriangleCount(0) * 3,
+                                    &VertexXY16iCF32::Format, 0, 0, 0 };
+        ret = verOut->BeginOutput(&fill, 1, toMesh);
+        if (ret)
         {
             VertexCountType count;
-            setMeshData(&strokeAA, verOut, &colors[0], count);
+            setMeshData(&gen->mStrokerAA, verOut, &colors[0], count);
             verOut->EndOutput();
         }
     }
     else
-        generateNullVectorMesh(verOut);
+        ret = generateNullVectorMesh(verOut);
 
-    strokeAA.SetStyleLeft(1);
-    strokeAA.SetStyleRight(1);
+    gen->mStrokerAA.SetStyleLeft(1);
+    gen->mStrokerAA.SetStyleRight(1);
     gen->Clear();
     return true;
 }
