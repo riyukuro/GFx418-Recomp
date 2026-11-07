@@ -1137,11 +1137,11 @@ void FUN_142623560(char* self, U lineTime)
 // @0x1426237c0
 void FUN_1426237c0(char* self) { RawPublishTopScope(self); }
 
-// Sets (or refreshes) the cached description record for a key; with `useCurrent` stamps it with the current scope.
+// ViewStats::RegisterScriptFunction: registers a FunctionDesc for (swdHandle, swfOffset), or refreshes its file and line.
 // @0x142623820
 void FUN_142623820(char* self, unsigned hi, UInt32 lo, const char* text, int a, int b, char useCurrent)
 {
-    U key = ((U)hi << 32) + (lo & 0xffffffffULL);
+    U key = ((U)hi << 32) + lo;
     struct Iterator
     {
         U**   pHash;
@@ -1150,45 +1150,31 @@ void FUN_142623820(char* self, unsigned hi, UInt32 lo, const char* text, int a, 
         char* Entry() const { return (char*)(*pHash + 2) + Index * 0x20; }
     } it;
     FUN_142622160(RawFieldPtr<U*>(self, 0x18), (U*)&it, &key);
-    if (!it.IsEnd())
+    if (it.IsEnd())
     {
-        char* rec = RawField<char*>(it.Entry(), 0x18);
-        unsigned cnt = RawLocked<unsigned, 0x78, 0x70>(self);
-        if (useCurrent && cnt != 0)
+        AMP::FunctionDesc* pDesc = SF_HEAP_AUTO_NEW(self) AMP::FunctionDesc();
+        pDesc->Name = text;
+        pDesc->Length = a;
+        pDesc->ASVersion = b;
+        pDesc->FileId = useCurrent ? RawLocked<U, 0x78, 0x68>(self) : 0;
+        pDesc->FileLine = useCurrent ? RawLocked<unsigned, 0x78, 0x70>(self) : 0;
         {
-            U cur = RawLocked<U, 0x78, 0x68>(self);
-            unsigned old = RawField<unsigned>(rec, 0x28);
-            RawField<U>(rec, 0x20) = cur;
-            if (old != 0 && old < cnt)
-                cnt = old;
-            RawField<unsigned>(rec, 0x28) = cnt;
+            Ptr<AMP::FunctionDesc> value(*pDesc);
+            FUN_142624190(RawFieldPtr<U*>(self, 0x18), &key, (void* const*)&value);
         }
     }
     else
     {
-        char* rec = (char*)Memory::AllocAutoHeap(self, 0x30, AllocInfo(0x242, 0, 0));
-        U cur = 0;
-        unsigned curCount = 0;
-        if (rec)
+        AMP::FunctionDesc* pDesc = RawField<AMP::FunctionDesc*>(it.Entry(), 0x18);
+        UInt32 newLine = RawLocked<unsigned, 0x78, 0x70>(self);
+        if (useCurrent && newLine != 0)
         {
-            memset(rec + 8, 0, 0x28);
-            *(void**)rec = (void*)DAT_14318f030;
-            *(int*)(rec + 8) = 1;
-            new (rec + 0x10) String();
+            pDesc->FileId = RawLocked<U, 0x78, 0x68>(self);
+            if (pDesc->FileLine != 0)
+                pDesc->FileLine = Alg::Min(pDesc->FileLine, newLine);
+            else
+                pDesc->FileLine = newLine;
         }
-        RawField<String>(rec, 0x10) = text;
-        RawField<int>(rec, 0x18) = a;
-        RawField<int>(rec, 0x2c) = b; // FunctionDesc::ASVersion
-        if (useCurrent)
-            cur = RawLocked<U, 0x78, 0x68>(self);
-        RawField<U>(rec, 0x20) = cur;
-        if (useCurrent)
-            curCount = RawLocked<unsigned, 0x78, 0x70>(self);
-        RawField<unsigned>(rec, 0x28) = curCount;
-        void* value = rec;
-        FUN_142624190(RawFieldPtr<U*>(self, 0x18), &key, &value);
-        if (value)
-            FUN_14257dcb0(value);
     }
 }
 
@@ -1261,3 +1247,5 @@ template void Scaleform::ArrayDataBase<Scaleform::GFx::AmpCallInfoSlot, Scalefor
 // MS2-PIN: ??_7AmpBufferInstructionTimes@GFx@Scaleform@@6B@ 0x14318f060
 // MS2-PIN: ??_7?$RefCountBase@UAmpBufferInstructionTimes@GFx@Scaleform@@$0CEG@@Scaleform@@6B@ 0x14318f060
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0CEG@@Scaleform@@6B@ 0x14318f060
+// MS2-PIN: ??_7FunctionDesc@AMP@GFx@Scaleform@@6B@ 0x14318f030
+// MS2-PIN: ??_7?$RefCountBase@UFunctionDesc@AMP@GFx@Scaleform@@$0CEC@@Scaleform@@6B@ 0x14318f030
