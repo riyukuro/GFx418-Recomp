@@ -68,10 +68,16 @@ static SF_FORCEINLINE InteractiveObject* Sfr05gb_GetLevelMovie(const MovieImpl* 
     return 0;
 }
 
-// The strings of the holder are at least one.
-static inline void Sfr05gb_ResizeStringArray(MovieImpl::ReturnValueHolder* h, unsigned n)
+// The strings of the holder are at least one (ArrayDataCC::Resize, inlined in the exe).
+typedef ArrayDataCC<ASString, AllocatorLH<ASString, 0x147>, ArrayDefaultPolicy> Sfr05gbStringData;
+static SF_FORCEINLINE void Sfr05gb_ResizeStringArray(MovieImpl::ReturnValueHolder* h, unsigned n)
 {
-    h->StringArray.Resize(Alg::Max(1u, n));
+    Sfr05gbStringData& d       = reinterpret_cast<Sfr05gbStringData&>(h->StringArray);
+    const UPInt        newSize = Alg::Max(1u, n);
+    const UPInt        oldSize = d.Size;
+    d.ResizeNoConstruct(&d, newSize);
+    if (newSize > oldSize)
+        AllocatorLH<ASString, 0x147>::ConstructArray(d.Data + oldSize, newSize - oldSize, d.DefaultValue);
 }
 
 // The shared generator, unless the movie runs under a test stream: recording writes each value out as "random",
@@ -521,7 +527,7 @@ bool AvmSprite::GetStandardMember(StandardMember index, Value* val, bool opcodeF
 // count elements of the AS2 array at the path from index on, into the host's array of ints, doubles, floats,
 // strings (kept alive by the movie's return value holder), wide strings (in its character buffer) or values.
 // Missing elements give 0 (NULL for strings). False when the path is not an array.
-// MS2-FUNCTIONAL a 4.1.18 virtual of the root; register allocation differs
+// MS2-FUNCTIONAL 6 bytes: the first level scan's index copy is in r9 in the exe, r8 here (the rest matches); no source form found
 // @0x142957270
 bool MovieRoot::GetVariableArray(SetArrayTypeArg type, const char* ppathToVar, unsigned index, void* pdata,
                                  unsigned count)
@@ -531,128 +537,141 @@ bool MovieRoot::GetVariableArray(SetArrayTypeArg type, const char* ppathToVar, u
     AvmDisplayObjBase* pavm = Sfr05gb_GetLevelMovie(pMovieImpl, 0)->GetAvmObjImpl();
     Environment* penv = static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pavm))->GetASEnvironment();
     ASString path(penv->CreateString(ppathToVar));
-    Value    retVal;
-    if (!penv->GetVariable(path, &retVal) || !retVal.IsObject())
-        return false;
-    Object* pobj = retVal.ToObject(penv);
-    if (!pobj || pobj->GetObjectType() != Object::Object_Array)
-        return false;
 
-    ArrayObject*                  parray   = static_cast<ArrayObject*>(pobj);
-    MovieImpl::ReturnValueHolder* rvHolder = pMovieImpl->GetRetValHolder();
-    rvHolder->StringArrayPos = 0;
-    Sfr05gb_ResizeStringArray(rvHolder, 0);
-    const unsigned arrSize = parray->GetSize();
-    switch (type)
+    Value retVal;
+    if (penv->GetVariable(path, &retVal) && retVal.IsObject())
     {
-    case 0: // SA_Int
-    {
-        int*           parr = static_cast<int*>(pdata);
-        const unsigned n    = Alg::Min(arrSize, count);
-        for (unsigned i = 0; i < n; ++i)
+        Object* pobj = retVal.ToObject(penv);
+        if (pobj && pobj->GetObjectType() == Object::Object_Array)
         {
-            const Value* pval = parray->GetElementPtr(i + index);
-            parr[i] = pval ? (int)pval->ToNumber(penv) : 0;
-        }
-        break;
-    }
-    case 1: // SA_Double
-    {
-        Double*        parr = static_cast<Double*>(pdata);
-        const unsigned n    = Alg::Min(arrSize, count);
-        for (unsigned i = 0; i < n; ++i)
-        {
-            const Value* pval = parray->GetElementPtr(i + index);
-            parr[i] = pval ? pval->ToNumber(penv) : 0.0;
-        }
-        break;
-    }
-    case 2: // SA_Float
-    {
-        float*         parr = static_cast<float*>(pdata);
-        const unsigned n    = Alg::Min(arrSize, count);
-        for (unsigned i = 0; i < n; ++i)
-        {
-            const Value* pval = parray->GetElementPtr(i + index);
-            parr[i] = pval ? (float)pval->ToNumber(penv) : 0.0f;
-        }
-        break;
-    }
-    case 3: // SA_String
-    {
-        const char**   parr = static_cast<const char**>(pdata);
-        const unsigned n    = Alg::Min(arrSize, count);
-        Sfr05gb_ResizeStringArray(rvHolder, n);
-        for (unsigned i = 0; i < n; ++i)
-        {
-            const Value* pval = parray->GetElementPtr(i + index);
-            if (pval)
+            MovieImpl::ReturnValueHolder* rvHolder = pMovieImpl->GetRetValHolder();
+            rvHolder->StringArrayPos = 0;
+            Sfr05gb_ResizeStringArray(rvHolder, 0);
+
+            ArrayObject* parray  = static_cast<ArrayObject*>(pobj);
+            unsigned     arrSize = parray->GetSize();
+            switch (type)
             {
-                ASString str = pval->ToString(penv);
-                parr[i]      = str.ToCStr();
-                rvHolder->StringArray[rvHolder->StringArrayPos++] = str;
-            }
-            else
-                parr[i] = NULL;
-        }
-        break;
-    }
-    case 4: // SA_StringW
-    {
-        const wchar_t** parr    = static_cast<const wchar_t**>(pdata);
-        unsigned        bufSize = 0;
-        const unsigned  n       = Alg::Min(arrSize, count);
-        Sfr05gb_ResizeStringArray(rvHolder, n);
-        for (unsigned i = 0; i < arrSize; ++i)
-        {
-            const Value* pval = parray->GetElementPtr(i + index);
-            if (pval)
+            case 0: // SA_Int
             {
-                ASString str             = pval->ToString(penv);
-                rvHolder->StringArray[i] = str;
-                bufSize += str.GetLength() + 1;
+                int* parr = static_cast<int*>(pdata);
+                for (unsigned i = 0, n = Alg::Min(arrSize, count); i < n; ++i)
+                {
+                    Value* pval = parray->GetElementPtr(i + index);
+                    if (pval)
+                        parr[i] = (int)pval->ToNumber(penv);
+                    else
+                        parr[i] = 0;
+                }
             }
+            break;
+            case 2: // SA_Float
+            {
+                float* parr = static_cast<float*>(pdata);
+                for (unsigned i = 0, n = Alg::Min(arrSize, count); i < n; ++i)
+                {
+                    Value* pval = parray->GetElementPtr(i + index);
+                    if (pval)
+                        parr[i] = (float)pval->ToNumber(penv);
+                    else
+                        parr[i] = 0;
+                }
+            }
+            break;
+            case 1: // SA_Double
+            {
+                Double* parr = static_cast<Double*>(pdata);
+                for (unsigned i = 0, n = Alg::Min(arrSize, count); i < n; ++i)
+                {
+                    Value* pval = parray->GetElementPtr(i + index);
+                    if (pval)
+                        parr[i] = (Double)pval->ToNumber(penv);
+                    else
+                        parr[i] = 0;
+                }
+            }
+            break;
+            case 5: // SA_Value
+            {
+                GFx::Value* parr = static_cast<GFx::Value*>(pdata);
+                for (unsigned i = 0, n = Alg::Min(arrSize, count); i < n; ++i)
+                {
+                    Value*      pval     = parray->GetElementPtr(i + index);
+                    GFx::Value* pdestVal = &parr[i];
+                    pdestVal->SetUndefined();
+                    if (pval)
+                        ASValue2GFxValue(penv, *pval, pdestVal);
+                }
+            }
+            break;
+            case 3: // SA_String
+            {
+                const char** parr = static_cast<const char**>(pdata);
+                unsigned     n    = Alg::Min(arrSize, count);
+                Sfr05gb_ResizeStringArray(rvHolder, n);
+                for (unsigned i = 0; i < n; ++i)
+                {
+                    Value* pval = parray->GetElementPtr(i + index);
+                    if (pval)
+                    {
+                        ASString str = pval->ToString(penv);
+                        parr[i]      = str.ToCStr();
+                        rvHolder->StringArray[rvHolder->StringArrayPos++] = str;
+                    }
+                    else
+                        parr[i] = NULL;
+                }
+            }
+            break;
+            case 4: // SA_StringW
+            {
+                const wchar_t** parr = static_cast<const wchar_t**>(pdata);
+                unsigned        i, bufSize = 0;
+                unsigned        n = Alg::Min(arrSize, count);
+                Sfr05gb_ResizeStringArray(rvHolder, n);
+                for (i = 0; i < arrSize; ++i)
+                {
+                    Value* pval = parray->GetElementPtr(i + index);
+                    if (pval)
+                    {
+                        ASString str             = pval->ToString(penv);
+                        rvHolder->StringArray[i] = str;
+                        bufSize += str.GetLength() + 1;
+                    }
+                }
+                const unsigned size = (bufSize * unsigned(sizeof(wchar_t)) + 4095) & ~4095u;
+                if (rvHolder->CharBufferSize < size ||
+                    (rvHolder->CharBufferSize > size && rvHolder->CharBufferSize - size > 4096))
+                {
+                    if (rvHolder->CharBuffer)
+                        rvHolder->CharBuffer = static_cast<char*>(SF_REALLOC(rvHolder->CharBuffer, size, 0x147));
+                    else
+                        rvHolder->CharBuffer = static_cast<char*>(SF_ALLOC(size, 0x147));
+                    rvHolder->CharBufferSize = size;
+                }
+                wchar_t* pwBuffer = reinterpret_cast<wchar_t*>(rvHolder->CharBuffer);
+
+                for (i = 0; i < n; ++i)
+                {
+                    const char* psrcStr  = rvHolder->StringArray[i].ToCStr();
+                    wchar_t*    pwdstStr = pwBuffer;
+                    UInt32      code;
+                    while ((code = UTF8Util::DecodeNextChar(&psrcStr)) != 0)
+                    {
+                        *pwBuffer++ = (wchar_t)code;
+                    }
+                    *pwBuffer++ = 0;
+
+                    parr[i] = pwdstStr;
+                }
+                Sfr05gb_ResizeStringArray(rvHolder, 0);
+            }
+            break;
+            }
+            return true;
         }
-        const unsigned size = (bufSize * unsigned(sizeof(wchar_t)) + 4095) & ~4095u;
-        if (rvHolder->CharBufferSize < size ||
-            (rvHolder->CharBufferSize > size && rvHolder->CharBufferSize - size > 4096))
-        {
-            if (rvHolder->CharBuffer)
-                rvHolder->CharBuffer = static_cast<char*>(SF_REALLOC(rvHolder->CharBuffer, size, 0x147));
-            else
-                rvHolder->CharBuffer = static_cast<char*>(SF_ALLOC(size, 0x147));
-            rvHolder->CharBufferSize = size;
-        }
-        wchar_t* pwBuffer = reinterpret_cast<wchar_t*>(rvHolder->CharBuffer);
-        for (unsigned i = 0; i < n; ++i)
-        {
-            const char* psrcStr  = rvHolder->StringArray[i].ToCStr();
-            wchar_t*    pwdstStr = pwBuffer;
-            UInt32      code;
-            while ((code = UTF8Util::DecodeNextChar(&psrcStr)) != 0)
-                *pwBuffer++ = wchar_t(code);
-            *pwBuffer++ = 0;
-            parr[i]     = pwdstStr;
-        }
-        Sfr05gb_ResizeStringArray(rvHolder, 0);
-        break;
     }
-    case 5: // SA_Value
-    {
-        GFx::Value*    parr = static_cast<GFx::Value*>(pdata);
-        const unsigned n    = Alg::Min(arrSize, count);
-        for (unsigned i = 0; i < n; ++i)
-        {
-            const Value* pval     = parray->GetElementPtr(i + index);
-            GFx::Value*  pdestVal = &parr[i];
-            pdestVal->SetUndefined();
-            if (pval)
-                ASValue2GFxValue(penv, *pval, pdestVal);
-        }
-        break;
-    }
-    }
-    return true;
+    return false;
 }
 
 // The movie logs every action (LogAction's check; as sfr_as2_06n).
