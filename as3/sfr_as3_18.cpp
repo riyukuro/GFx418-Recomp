@@ -3,7 +3,10 @@
 // as3_marshalling.h; they call through ThunkFuncN<...>::Method, defined in the sfr_as3di_* units.
 // MS2-UNIT: sfr_as3_18
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x142509d40-0x142523170 .text$mn
+// MS2-RANGE: 0x142509d40-0x14250a660 .text$mn
+// MS2-RANGE: 0x14250a6c0-0x14250a6f0 .text$mn
+// MS2-RANGE: 0x14250a700-0x14250a710 .text$mn
+// MS2-RANGE: 0x14250a720-0x142523170 .text$mn
 #define SF_AS3_AVMBUTTON_MODEL
 #define SF_AS3_SHAPEOBJECT_MODEL   // ShapeObject / AvmBitmap from the SDK MI layout (as3_avm.h)
 #define MS2_AS3_ASSIGN_NOALIAS

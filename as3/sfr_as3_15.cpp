@@ -6,6 +6,11 @@
 // MS2-RANGE: 0x1424c9700-0x1424d9220 .text$mn
 // MS2-RANGE: 0x1424d93a0-0x1424dbf70 .text$mn
 // MS2-RANGE: 0x1424dbfc0-0x1424dc870 .text$mn
+// MS2-RANGE: 0x142505e10-0x142505e40 .text$mn
+// MS2-RANGE: 0x1425080b0-0x1425080c0 .text$mn
+// MS2-RANGE: 0x14250a660-0x14250a6c0 .text$mn
+// MS2-RANGE: 0x14250a6f0-0x14250a700 .text$mn
+// MS2-RANGE: 0x14250a710-0x14250a720 .text$mn
 // MS2-RANGE: 0x1424dd500-0x1424dda00 .text$mn   (unit move from sfr_as3_16: the implicit ~ASVM is emitted here)
 // MS2-RANGE: 0x1424e2330-0x1424e2390 .text$mn   (unit move from sfr_as3_16: ASVM's scalar deleting dtor, with the vftable)
 // MS2-PIN: ??_GASVM@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2330
