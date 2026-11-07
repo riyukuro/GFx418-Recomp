@@ -1937,6 +1937,7 @@ namespace Instances { namespace fl_text
 
     // @0x1424ae6b0
     // the SDK body; the render formats are raw storage here
+    // MS2-FUNCTIONAL: register allocation differs (the exe keeps the flag accumulator in edi and the bit masks in ebx; ours ebx/eax).
     void TextFormat::SetTextFormat(const Render::Text::ParagraphFormat* parafmt, const Render::Text::TextFormat* fmt)
     {
         const ParagraphFormatStorage& para = *reinterpret_cast<const ParagraphFormatStorage*>(parafmt);
@@ -1963,26 +1964,26 @@ namespace Instances { namespace fl_text
         }
         else
             alignSet(r, NullString);
-        blockIndentSet(r, (pp.BlockIndent) ? Value((UInt32)para.BlockIndent) : n);
-        boldSet(r, (fp.Bold) ? Value(ff.Bold != 0) : n);
-        italicSet(r, (fp.Italic) ? Value(ff.Italic != 0) : n);
-        underlineSet(r, (fp.Underline) ? Value(ff.Underline != 0) : n);
+        blockIndentSet(r, ((UByte)(para.PresentMask >> 1) & 1) ? Value((UInt32)para.BlockIndent) : n);
+        boldSet(r, ((UByte)(tf.PresentMask >> 4) & 1) ? Value(ff.Bold != 0) : n);
+        italicSet(r, ((UByte)(tf.PresentMask >> 5) & 1) ? Value(ff.Italic != 0) : n);
+        underlineSet(r, ((UByte)(tf.PresentMask >> 6) & 1) ? Value(ff.Underline != 0) : n);
 
-        bulletSet(r, (pp.Bullet)
+        bulletSet(r, ((UByte)(para.PresentMask >> 7) & 1)
             ? Value((para.PresentMask & (Para_BulletOn | Para_Bullet)) == (Para_BulletOn | Para_Bullet)) : n);
         colorSet(r, (fp.Color) ? Value(Value::Number(tf.ColorV & 0xFFFFFFu)) : n);
-        fontSet(r, (fp.FontList) ? sm.CreateString(FUN_142606750(fmt)) : NullString);
-        indentSet(r, (pp.Indent) ? Value(Value::Number(para.Indent)) : n);
-        kerningSet(r, (fp.Kerning) ? Value(ff.Kerning != 0) : n);
-        leadingSet(r, (pp.Leading) ? Value(Value::Number(para.Leading)) : n);
-        leftMarginSet(r, (pp.LeftMargin) ? Value(Value::Number(para.LeftMargin)) : n);
-        letterSpacingSet(r, (fp.LetterSpacing) ? Value(Value::Number((SInt16)(tf.LetterSpacing / 20))) : n);
-        rightMarginSet(r, (pp.RightMargin) ? Value(Value::Number(para.RightMargin)) : n);
-        sizeSet(r, (fp.FontSize) ? Value(Value::Number((float)tf.FontSize * 0.05f)) : n);
+        fontSet(r, ((UByte)(tf.PresentMask >> 2) & 1) ? sm.CreateString(FUN_142606750(fmt)) : NullString);
+        indentSet(r, ((UByte)(para.PresentMask >> 2) & 1) ? Value(Value::Number(para.Indent)) : n);
+        kerningSet(r, ((UByte)(tf.PresentMask >> 7) & 1) ? Value(ff.Kerning != 0) : n);
+        leadingSet(r, ((UByte)(para.PresentMask >> 3) & 1) ? Value(Value::Number(para.Leading)) : n);
+        leftMarginSet(r, ((UByte)(para.PresentMask >> 4) & 1) ? Value(Value::Number(para.LeftMargin)) : n);
+        letterSpacingSet(r, ((UByte)(tf.PresentMask >> 1) & 1) ? Value(Value::Number((SInt16)(tf.LetterSpacing / 20))) : n);
+        rightMarginSet(r, ((UByte)(para.PresentMask >> 5) & 1) ? Value(Value::Number(para.RightMargin)) : n);
+        sizeSet(r, ((UByte)(tf.PresentMask >> 3) & 1) ? Value(Value::Number((float)tf.FontSize * 0.05f)) : n);
         targetSet(r, NullString);
         const String& purl = *reinterpret_cast<const String*>(&tf.Url);
         urlSet(r, ((tf.PresentMask & Fmt_Url) != 0 && purl.GetLength() != 0) ? sm.CreateString(purl) : NullString);
-        if (pp.TabStops)
+        if ((UByte)(para.PresentMask >> 6) & 1)
         {
             unsigned num = 0;
             const unsigned* ptabStops = FUN_142606b20(parafmt, &num);
