@@ -1170,5 +1170,4 @@ inline ComplexFill::ComplexFill() : BindIndex(~0u) {}
 #ifndef MS2_HOOK_DLL
 #pragma comment(linker, "/alternatename:?TreeShapeNodeDataVTable@Render@Scaleform@@3QBQEBXB=??_7NodeData@TreeShape@Render@Scaleform@@6B@")
 #pragma comment(linker, "/alternatename:?TreeShapeNodeDataMixinVTable@Render@Scaleform@@3QBQEBXB=??_7?$ContextData_ImplMixin@VNodeData@TreeShape@Render@Scaleform@@V1TreeNode@34@@ContextImpl@Render@Scaleform@@6B@")
-#pragma comment(linker, "/alternatename:?DAT_14317bc40@AS3@GFx@Scaleform@@3PAPEBXA=??_7NodeData@TreeShape@Render@Scaleform@@6B@")
 #endif
