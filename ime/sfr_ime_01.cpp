@@ -6884,13 +6884,6 @@ __declspec(noinline) int FUN_1423d5ae0(void* self)
     return ++*(int*)((UByte*)self + 0x14);
 }
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the AddRef at 0x1423d5ae0. The exe has a compiler-generated thunk (sub rcx,N); a hand-written one gives add rcx,-N. The target is noinline so the thunk stays a jmp.
-// @0x1423d5aec
-int FUN_1423d5aec(void* self)
-{
-    return FUN_1423d5ae0((UByte*)self - 8);
-}
-
 // MS2-FUNCTIONAL: returns the language code of the named IME, else of the current input language.
 // @0x1423d61c0
 unsigned FUN_1423d61c0(void* self, const char* name)
@@ -6914,20 +6907,6 @@ unsigned FUN_1423d7dc0(void* self, const char* name)
 __declspec(noinline) int FUN_1423d7350(void* self)
 {
     return --*(int*)((UByte*)self + 0x14);
-}
-
-// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the QueryInterface at 0x1423d72a0. The exe has a compiler-generated thunk (sub rcx,N); a hand-written one gives add rcx,-N. The target is noinline so the thunk stays a jmp.
-// @0x1423d7344
-HRESULT FUN_1423d7344(void* self, const unsigned long long* iid, void** output)
-{
-    return FUN_1423d72a0((UByte*)self - 8, iid, output);
-}
-
-// MS2-FUNCTIONAL: adjustor thunk (this - 8) to the Release at 0x1423d7350. The exe has a compiler-generated thunk (sub rcx,N); a hand-written one gives add rcx,-N. The target is noinline so the thunk stays a jmp.
-// @0x1423d735c
-int FUN_1423d735c(void* self)
-{
-    return FUN_1423d7350((UByte*)self - 8);
 }
 
 // MS2-FUNCTIONAL: refreshes the conversion-state labels with every conversion bit set.
@@ -6985,6 +6964,47 @@ void Ime01EmitAvmMovieClipVftables(void* p, const AS3::AvmMovieClip* pclip)
     ::new (p) AS3::AvmMovieClip(*pclip);
 }
 }}}
+
+// The TSF sink embedded at +0x1a0 of the IME manager: a compartment event sink (OnChange 0x1423d70d0) at +0 and a
+// profile activation sink (0x1423d6c10) at +8, with the cookie at +0x10 and the refcount at +0x14. The exe's
+// vftables 0x14313b5a0 / 0x14313b5c0 are cl's, and the second one's QueryInterface/AddRef/Release are cl's adjustor
+// thunks 0x1423d7344 / 0x1423d5aec / 0x1423d735c. The overriders are declared only and bound to their FUN_ VAs by
+// symbols-manual rows; Ime01EmitTsfSinkVftables copy-constructs one so cl emits the vftables and thunks here. The
+// manager's ctor FUN_1423d54d0 and dtor FUN_1423d56b0 store DAT_14313b5a0/5c0, bound to the tables below.
+namespace Scaleform { namespace GFx { namespace IME {
+struct __declspec(novtable) Ime01CompartmentEventSink {
+    virtual HRESULT QueryInterface(const unsigned long long* iid, void** output) = 0;
+    virtual int AddRef() = 0;
+    virtual int Release() = 0;
+    virtual unsigned long long OnChange(const unsigned long long* guid) = 0;
+};
+struct __declspec(novtable) Ime01ProfileActivationSink {
+    virtual HRESULT QueryInterface(const unsigned long long* iid, void** output) = 0;
+    virtual int AddRef() = 0;
+    virtual int Release() = 0;
+    virtual unsigned long long OnActivated(int profileType, unsigned short language, long long* clsid,
+        long long* catid, long long* guidProfile, unsigned long long hkl) = 0;
+};
+class Ime01TsfSink : public Ime01CompartmentEventSink, public Ime01ProfileActivationSink {
+public:
+    HRESULT QueryInterface(const unsigned long long* iid, void** output) override;   // 0x1423d72a0
+    int AddRef() override;                                                         // 0x1423d5ae0
+    int Release() override;                                                        // 0x1423d7350
+    unsigned long long OnChange(const unsigned long long* guid) override;          // 0x1423d70d0
+    unsigned long long OnActivated(int profileType, unsigned short language, long long* clsid,
+        long long* catid, long long* guidProfile, unsigned long long hkl) override;  // 0x1423d6c10
+    unsigned cookie;
+    int refCount;
+};
+void Ime01EmitTsfSinkVftables(void* p, const Ime01TsfSink* psink)
+{
+    ::new (p) Ime01TsfSink(*psink);
+}
+}}}
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:DAT_14313b5a0=??_7Ime01TsfSink@IME@GFx@Scaleform@@6BIme01CompartmentEventSink@123@@")
+#pragma comment(linker, "/alternatename:DAT_14313b5c0=??_7Ime01TsfSink@IME@GFx@Scaleform@@6BIme01ProfileActivationSink@123@@")
+#endif
 // MS2-PIN: ??_7MemoryContextImpl@AS3@GFx@Scaleform@@6B@ 0x14313c0a8
 // MS2-PIN: ??_7HeapLimit@MemoryContextImpl@AS3@GFx@Scaleform@@6B@ 0x14313c090
 // MS2-PIN: ??_7MemoryContext@GFx@Scaleform@@6B@ 0x14313ba60
@@ -7008,3 +7028,24 @@ void Ime01EmitAvmMovieClipVftables(void* p, const AS3::AvmMovieClip* pclip)
 // MS2-PIN: ??_EAvmMovieClip@AS3@GFx@Scaleform@@WDA@EAAPEAXI@Z 0x1423db880
 // MS2-PIN: ??_EAvmMovieClip@AS3@GFx@Scaleform@@WEA@EAAPEAXI@Z 0x1423db88c
 // MS2-PIN: ??_EAvmMovieClip@AS3@GFx@Scaleform@@WEI@EAAPEAXI@Z 0x1423db898
+// Ime01TsfSink's vftables and the adjustor thunks of its profile activation sink.
+// MS2-PIN: ??_7Ime01TsfSink@IME@GFx@Scaleform@@6BIme01CompartmentEventSink@123@@ 0x14313b5a0
+// MS2-PIN: ??_7Ime01TsfSink@IME@GFx@Scaleform@@6BIme01ProfileActivationSink@123@@ 0x14313b5c0
+// MS2-PIN: ?QueryInterface@Ime01TsfSink@IME@GFx@Scaleform@@W7EAAJPEB_KPEAPEAX@Z 0x1423d7344
+// MS2-PIN: ?AddRef@Ime01TsfSink@IME@GFx@Scaleform@@W7EAAHXZ 0x1423d5aec
+// MS2-PIN: ?Release@Ime01TsfSink@IME@GFx@Scaleform@@W7EAAHXZ 0x1423d735c
+// AvmMovieClip's base-class vftables, emitted here through its copy-construct anchor.
+// MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
+// MS2-PIN: ??_7AvmInteractiveObjBase@GFx@Scaleform@@6B@ 0x14317bfe8
+// MS2-PIN: ??_7AvmDisplayObjContainerBase@GFx@Scaleform@@6B@ 0x14317c0a0
+// MS2-PIN: ??_7AvmSpriteBase@GFx@Scaleform@@6B@ 0x14317c898
+// MS2-PIN: ??_7AvmDisplayObj@AS3@GFx@Scaleform@@6B@ 0x14317c160
+// MS2-PIN: ??_7AvmInteractiveObj@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ca60
+// MS2-PIN: ??_7AvmInteractiveObj@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317cb30
+// MS2-PIN: ??_7AvmDisplayObjContainer@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317cbe8
+// MS2-PIN: ??_7AvmDisplayObjContainer@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317cce0
+// MS2-PIN: ??_7AvmDisplayObjContainer@AS3@GFx@Scaleform@@6B@ 0x14317cd98
+// MS2-PIN: ??_7AvmSprite@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ce80
+// MS2-PIN: ??_7AvmSprite@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317cf78
+// MS2-PIN: ??_7AvmSprite@AS3@GFx@Scaleform@@6BAvmDisplayObjContainer@123@@ 0x14317d030
+// MS2-PIN: ??_7AvmSprite@AS3@GFx@Scaleform@@6BAvmSpriteBase@23@@ 0x14317d0f0
