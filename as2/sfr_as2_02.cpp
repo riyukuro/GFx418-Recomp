@@ -2360,10 +2360,31 @@ void AvmSprite::SpriteCreateTextField(const FnCall& fn)
     }
 }
 
+// MovieImpl::SetNormalizedScreenCoords as the SDK player builds it (through the ScreenToWorld member).
+static SF_FORCEINLINE void HitTestSetScreenCoords(MovieImpl* proot, const Render::PointF& mousePos)
+{
+    float nsx = 2.f * ((mousePos.x - Render::PixelsToTwips(proot->ViewOffsetX)) / proot->VisibleFrameRect.Width()) - 1.0f;
+    float nsy = 2.f * ((mousePos.y - Render::PixelsToTwips(proot->ViewOffsetY)) / proot->VisibleFrameRect.Height()) - 1.0f;
+    proot->GetScreenToWorld().SetNormalizedScreenCoords(nsx, nsy);
+}
+// DisplayObjectBase::GetLevelMatrix() / GetWorldMatrix() by value (the SDK header inlines).
+static SF_FORCEINLINE Matrix2F HitTestLevelMatrix(const DisplayObjectBase* pobj)
+{
+    Matrix2F m;
+    pobj->GetLevelMatrix(&m);
+    return m;
+}
+static SF_FORCEINLINE Matrix2F HitTestWorldMatrix(const DisplayObjectBase* pobj)
+{
+    Matrix2F m;
+    pobj->GetWorldMatrix(&m);
+    return m;
+}
+
 #pragma strict_gs_check(push, on)
 // hitTest(x, y[, shapeFlag[, ...]]) tests a stage point (pixels) against the bounds or the shapes, 3D clips through
 // the movie's screen-to-world state; hitTest(target) tests the world bounds of both clips for overlap.
-// MS2-FUNCTIONAL: the exe calls FnCall::Arg out of line for the optional arguments and the target
+// MS2-FUNCTIONAL: same length and schedule as the exe; only the xmm6/xmm7 assignment of pt.x/pt.y differs
 // @0x1429049b0
 void AvmSprite::SpriteHitTest(const FnCall& fn)
 {
@@ -2376,21 +2397,20 @@ void AvmSprite::SpriteHitTest(const FnCall& fn)
         return;
     if (fn.NArgs >= 2)
     {
-        float x = (float)fn.Arg(0).ToNumber(fn.Env) * 20.0f;
-        float y = (float)fn.Arg(1).ToNumber(fn.Env) * 20.0f;
         UByte mask = 0;
-        if (fn.NArgs >= 3 && ArgCopy(&fn, 2)->ToBool(fn.Env))
-            mask = 1;
+        Render::PointF pt(Render::PixelsToTwips(float(fn.Arg(0).ToNumber(fn.Env))),
+                          Render::PixelsToTwips(float(fn.Arg(1).ToNumber(fn.Env))));
+        if (fn.NArgs >= 3)
+            mask |= ArgCopy(&fn, 2)->ToBool(fn.Env) ? 1 : 0;
         if (fn.NArgs >= 4)
             mask |= ArgCopy(&fn, 3)->ToBool(fn.Env) ? 2 : 0;
-        Render::PointF pt(x, y);
         MovieImpl* proot = psprite->GetMovieImpl();
         if (proot && psprite->Is3D(true))
         {
-            proot->SetNormalizedScreenCoords(pt);
+            HitTestSetScreenCoords(proot, pt);
+            Render::ScreenToWorld& stw = proot->GetScreenToWorld();
             Matrix3F view;
             Matrix4F proj;
-            Render::ScreenToWorld& stw = proot->GetScreenToWorld();
             if (psprite->GetProjectionMatrix3D(&proj))
                 stw.SetProjection(proj);
             if (psprite->GetViewMatrix3D(&view))
@@ -2398,58 +2418,55 @@ void AvmSprite::SpriteHitTest(const FnCall& fn)
             Matrix3F world;
             psprite->GetWorldMatrix3D(&world);
             stw.SetWorld(world);
-            stw.GetWorldPoint(&pt);
-            fn.Result->SetBool(psprite->PointTestLocal(pt, mask));
+            // The SDK's Point() leaves x/y uninitialized.
+            float pp[2];
+            stw.GetWorldPoint(reinterpret_cast<Render::PointF*>(pp));
+            fn.Result->SetBool(psprite->PointTestLocal(*reinterpret_cast<Render::PointF*>(pp), mask));
             return;
         }
-        Matrix2F level;
-        psprite->GetLevelMatrix(&level);
-        Render::PointF local = level.TransformByInverse(pt);
-        bool hit = false;
-        if (!(psprite->DisplayObjectBase::Flags & GFx::DisplayObjectBase::Mask_Scale9GridExists))
+        Render::PointF ptSpr = HitTestLevelMatrix(psprite).TransformByInverse(pt);
+        if (psprite->DisplayObjectBase::Flags & GFx::DisplayObjectBase::Mask_Scale9GridExists)
         {
-            if (bounds.Contains(local))
-            {
-                if (!(mask & 1))
-                {
-                    fn.Result->SetBool(true);
-                    return;
-                }
-                hit = psprite->PointTestLocal(local, mask);
-            }
+            fn.Result->SetBool(psprite->PointTestLocal(ptSpr, mask));
         }
         else
-            hit = psprite->PointTestLocal(local, mask);
-        fn.Result->SetBool(hit);
+        {
+            if (bounds.Contains(ptSpr))
+            {
+                if (!(mask & 1))
+                    fn.Result->SetBool(true);
+                else
+                    fn.Result->SetBool(psprite->PointTestLocal(ptSpr, mask));
+            }
+            else
+                fn.Result->SetBool(false);
+        }
     }
     else if (fn.NArgs == 1)
     {
-        InteractiveObject* ptarget = 0;
-        const Value& arg = fn.Arg(0);
+        const Value&       arg     = fn.Arg(0);
+        InteractiveObject* ptarget = NULL;
         if (arg.IsCharacter())
+        {
             ptarget = arg.ToCharacter(fn.Env);
+        }
         else
         {
-            Value val;
-            if (fn.Env->GetVariable(arg.ToString(fn.Env), &val))
-                ptarget = ResolveCharacterValue(val, fn.Env);
+            ASString varName = arg.ToString(fn.Env);
+            Value    result;
+            if (fn.Env->GetVariable(varName, &result))
+            {
+                ptarget = ResolveCharacterValue(result, fn.Env);
+            }
         }
         if (!ptarget)
             return;
+
         RectF tbounds = ptarget->GetBounds(Matrix2F());
         if (tbounds.IsNull())
             return;
-        RectF world1, world2;
-        {
-            Matrix2F m;
-            psprite->GetWorldMatrix(&m);
-            m.EncloseTransform(&world1, bounds);
-        }
-        {
-            Matrix2F m;
-            ptarget->GetWorldMatrix(&m);
-            m.EncloseTransform(&world2, tbounds);
-        }
+        RectF world1 = HitTestWorldMatrix(psprite).EncloseTransform(bounds);
+        RectF world2 = HitTestWorldMatrix(ptarget).EncloseTransform(tbounds);
         fn.Result->SetBool(world1.Intersects(world2));
     }
 }
