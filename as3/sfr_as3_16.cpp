@@ -581,46 +581,87 @@ extern "C" void FUN_1424dfaf0(void* self)
             Scaleform::Memory::pGlobalHeap, page);
 }
 
-// ValueStack teardown: release live values and free each distinct current or reserved page once.
-// MS2-FUNCTIONAL 0x1424dfbf0: pointer bookkeeping uses a temporary vector instead of the exe's local hash table.
+// ValueStack teardown (the exe's SDK frees each distinct page once): the reserved pages and every page of the
+// current chain go into a pointer set, the live values are popped, and the set's pages are freed at the end.
+// The layout view stands in for ValueStack, whose members are private.
+struct Sfr16ValueStackView
+{
+    typedef Scaleform::GFx::AS3::ValueStack::Page Page;
+    Scaleform::UInt16           ReservedNum;
+    Scaleform::GFx::AS3::Value* pCurrent;
+    Scaleform::GFx::AS3::Value* pStack;
+    Page*                       pCurrentPage;
+    Page*                       pReserved;
+
+    void PopBack()
+    {
+        pCurrent->~Value();
+        --pCurrent;
+    }
+};
+
+// The exe inlines the page set's Set into the teardown below; ours keeps it out of line unless forced.
+// (Its setRawCapacity is folded with HashSet<const void*>'s, 0x142540c40.)
+namespace Scaleform {
+typedef GFx::AS3::ValueStack::Page Sfr16Page;
+typedef HashSetBase<Sfr16Page*, FixedSizeHash<Sfr16Page*>, FixedSizeHash<Sfr16Page*>, AllocatorGH<Sfr16Page*>,
+                    HashsetCachedEntry<Sfr16Page*, FixedSizeHash<Sfr16Page*> > > Sfr16PageSetBase;
+template<> template<> __forceinline void Sfr16PageSetBase::Set<Sfr16Page*>(void* pheapAddr, Sfr16Page* const& key)
+{
+    UPInt h   = FixedSizeHash<Sfr16Page*>()(key);
+    SPInt idx = (SPInt)-1;
+    if (pTable != 0)
+        idx = findIndexCore(key, h & pTable->SizeMask);
+    if (idx >= 0)
+        E(idx).Value = key;
+    else
+        add(pheapAddr, key, h);
+}
+} // namespace Scaleform
+
+// MS2-FUNCTIONAL 0x1424dfbf0: 1661 bytes, exe 1669. Same blocks and calls; cl orders the terms of the unrolled
+// SDBM page-pointer hash differently in the Find and the second Set (so the hoisted hash constants sit in other
+// registers), and the exe pads the epilog label.
 // @0x1424dfbf0
 extern "C" void FUN_1424dfbf0(void* self)
 {
-    auto* bytes = static_cast<unsigned char*>(self);
-    using Page = Scaleform::GFx::AS3::ValueStack::Page;
-    std::vector<Page*> pages;
+    using Page = Sfr16ValueStackView::Page;
+    Sfr16ValueStackView& vs = *static_cast<Sfr16ValueStackView*>(self);
+    Scaleform::HashSet<Page*> pages;
 
-    Page* page = *reinterpret_cast<Page**>(bytes + 0x20);
-    while (page)
+    // Take care of pReserved.
+    while (vs.pReserved)
     {
-        Page* next = page->pNext;
-        if (std::find(pages.begin(), pages.end(), page) == pages.end())
-            pages.push_back(page);
-        page = next;
+        Page* p = vs.pReserved;
+        vs.pReserved = p->pNext;
+        pages.Set(p);
     }
 
-    page = *reinterpret_cast<Page**>(bytes + 0x18);
-    auto* top = *reinterpret_cast<Scaleform::GFx::AS3::Value**>(bytes + 8);
-    while (page)
+    // Take care of pCurrentPage.
+    while (vs.pCurrentPage)
     {
-        auto* first = page->Values;
-        while (reinterpret_cast<Scaleform::UPInt>(top) >= reinterpret_cast<Scaleform::UPInt>(first))
-        {
-            top->~Value();
-            --top;
-        }
-        // a page already on the reserved list ends the walk
-        if (std::find(pages.begin(), pages.end(), page) != pages.end())
+        // Clean up the stack.
+        while (vs.pCurrent >= vs.pCurrentPage->Values)
+            vs.PopBack();
+
+        if (!pages.Find(vs.pCurrentPage).IsEnd())
             break;
-        pages.push_back(page);
-        page = page->pPrev;
-        if (page)
-            top = page->pCurrent;
+
+        Page* p = vs.pCurrentPage;
+
+        vs.pCurrentPage = vs.pCurrentPage->pPrev;
+        if (vs.pCurrentPage)
+        {
+            // Restore stored pCurrent and pFirst.
+            vs.pCurrent = vs.pCurrentPage->pCurrent;
+            vs.pStack = vs.pCurrentPage->pFirst;
+        }
+
+        pages.Set(p);
     }
 
-    auto** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
-    for (Page* owned : pages)
-        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(Scaleform::Memory::pGlobalHeap, owned);
+    for (Scaleform::HashSet<Page*>::Iterator it = pages.Begin(); !it.IsEnd(); ++it)
+        SF_FREE(*it);
 }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
