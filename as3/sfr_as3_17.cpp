@@ -13,13 +13,13 @@
 // MS2-RANGE: 0x1424f3710-0x1424f3e60 .text$mn
 // MS2-RANGE: 0x1424f3f40-0x1424f4000 .text$mn
 // MS2-RANGE: 0x1424f41f0-0x1424f6f50 .text$mn
-// MS2-RANGE: 0x1424f7190-0x1424f9570 .text$mn
+// MS2-RANGE: 0x1424f7180-0x1424f9570 .text$mn
 // MS2-RANGE: 0x1424f96c0-0x1424f9d60 .text$mn
 // MS2-RANGE: 0x1424fa320-0x1424fa5b0 .text$mn
 // MS2-RANGE: 0x1424fe5b0-0x1424fe620 .text$mn
 // MS2-RANGE: 0x1424feab0-0x142500770 .text$mn
 // MS2-RANGE: 0x1425008e0-0x142501920 .text$mn
-// MS2-RANGE: 0x142501a80-0x142502e70 .text$mn
+// MS2-RANGE: 0x142501a60-0x142502e70 .text$mn
 // MS2-RANGE: 0x142503660-0x142505e10 .text$mn
 // MS2-RANGE: 0x142505e40-0x142507730 .text$mn
 // MS2-RANGE: 0x1425078e0-0x142507910 .text$mn
@@ -7609,7 +7609,9 @@ const char* VMAbcFile::GetAS3ObjectType() const
 InteractiveObject* AvmInteractiveObj::FindInsertToPlayList(InteractiveObject* ch)
 {
     InteractiveObject* parent = ch->GetParent();
-    return parent ? parent->pPlayPrev : NULL;
+    if (parent && parent->pPlayPrev)
+        return parent->pPlayPrev;
+    return NULL;
 }
 
 // @0x142508530
