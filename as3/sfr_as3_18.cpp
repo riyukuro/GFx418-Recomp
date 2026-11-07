@@ -597,6 +597,26 @@ struct ValueAssignCopies
         v.value.VS._1.VObj = p;
         p->AddRef();
     }
+    // Value::AssignUnsafe(const Value&) (sfr_as3_17), which the exe inlines in Object::GetProperty.
+    static SF_FORCEINLINE void AssignUnsafeValueInline18(Value& v, const Value& other)
+    {
+        if (&other != &v)
+        {
+            SIMD::PrefetchObj(&other);
+            memcpy(&v, &other, sizeof(Value));
+            v.AddRef();
+        }
+    }
+    // Value(this) built in place: flags first, then the bonus and the pointer.
+    static SF_INLINE void InitObjectInline18(Value& v, Object* p)
+    {
+        v.Flags            = Value::kObject;
+        v.Bonus.pWeakProxy = NULL;
+        v.value.VS._1.VObj = p;
+        p->AddRef();
+    }
+    // The release of a Value known to hold a strong object (no kind or weak-ref test).
+    static SF_INLINE void ReleaseStrongInline18(Value& v) { v.ReleaseInternal(); }
 };
 
 // The value of a traced pointer: a null object when it is empty.
@@ -7017,22 +7037,30 @@ bool IntervalTimer::Invoke(MovieImpl* proot, float frameTime)
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// Value(this) whose release is known to be a strong object's: the exe's LTCG knows FindObjProperty leaves it
+// alone, so its dtor is a bare ReleaseInternal call.
+struct Sfr18SelfValue
+{
+    union { Value V; };
+    explicit Sfr18SelfValue(Object* p) { ValueAssignCopies::InitObjectInline18(V, p); }
+    ~Sfr18SelfValue() { ValueAssignCopies::ReleaseStrongInline18(V); }
+};
+
 // The property prop_name of this object (its slot or dynamic value, getters run) swapped into value; false when
 // there is none or it could not be read.
-// MS2-FUNCTIONAL PropRef::GetSlotValueUnsafe written out (the exe inlines it; the shared header defines it out of line);
-// the Value(this) temp and the case-2 object assign are inlined by hand; block layout after FindObjProperty differs
+// MS2-FUNCTIONAL scheduling only: PropRef::GetSlotValueUnsafe written out (the exe inlines it); the case-1 Value copy
+// loads both halves before storing them, the exe stores the first half before loading the second
 // @0x14250cc60
 CheckResult Object::GetProperty(const Multiname& prop_name, Value& value)
 {
     VM&     vm = GetVM();
     PropRef prop;
     {
-        Value self;
-        ValueAssignCopies::AssignUnsafeObjectInline18(self, this);
-        FUN_142501b00(prop, vm, self, prop_name, 0);
+        Sfr18SelfValue self(this);
+        FUN_142501b00(prop, vm, self.V, prop_name, 0);
     }
     const UPInt bits = reinterpret_cast<UPInt>(prop.pValue);
-    if (!(prop.This.IsUndefined() || bits == 1 || ((bits & 2) != 0 && (bits & ~UPInt(2)) == 0)))
+    if (!(prop.This.IsUndefined() || bits == 1 || (((UByte)(bits >> 1) & 1) && (bits & ~UPInt(2)) == 0)))
     {
         Value v;
         bool  result = true;
@@ -7040,12 +7068,12 @@ CheckResult Object::GetProperty(const Multiname& prop_name, Value& value)
         {
         case 0:
         {
-            CheckResult r(false);
+            UByte r;   // written by the slot reader
             result = *FUN_14250e2d0(prop.pSI, &r, &vm, &v, &prop.This, NULL, 0);
             break;
         }
         case 1:
-            v.AssignUnsafe(*reinterpret_cast<const Value*>(bits & ~UPInt(1)));
+            ValueAssignCopies::AssignUnsafeValueInline18(v, *reinterpret_cast<const Value*>(bits & ~UPInt(1)));
             break;
         case 2:
             ValueAssignCopies::AssignUnsafeInline18(v, Value::kObject, reinterpret_cast<Object*>(bits & ~UPInt(2)));
@@ -7055,7 +7083,7 @@ CheckResult Object::GetProperty(const Multiname& prop_name, Value& value)
         }
         if (result)
         {
-            value.Swap(v);
+            Sfr18ValueSwap::Swap(value, v);
             return true;
         }
     }
