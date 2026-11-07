@@ -4821,41 +4821,15 @@ void Sfr31ExecAsTypeNamed(UPInt vmAddr, UPInt file, UInt32 idx)
 }
 
 // Raises verify error 0x42c naming two conflicting objects; an object whose name is the empty string is reported as null.
-// MS2-FUNCTIONAL 0x14252efe0: raw-offset model; codegen differs from the exe
+// SDK Tracer::ThrowMergeTypeError shape: the Values are temporaries of the Error, built right to left.
 // @0x14252efe0
 void Sfr31RaiseNameConflict(UPInt tr, UPInt a, UPInt b)
 {
-    const UPInt vm = TrVM(tr);
-    UPInt nodeB = 0, nodeA = 0;
-    Sfr31VFnName fb = *reinterpret_cast<Sfr31VFnName*>(Sfr31Rd(b, 0) + 0x38);
-    UPInt* pb = fb(b, &nodeB);
-    Sfr31RawTraitsVal vb = {10, 0, *pb, 0};
-    if (*pb == Sfr31Rd(*pb, 8) + 0x68)
-    {
-        vb.w0 = 0xc;
-        vb.w2 = 0;
-    }
-    else
-        ++*reinterpret_cast<int*>(vb.w2 + 0x18);
-    Sfr31VFnName fa = *reinterpret_cast<Sfr31VFnName*>(Sfr31Rd(a, 0) + 0x38);
-    UPInt* pa = fa(a, &nodeA);
-    Sfr31RawTraitsVal va = {10, 0, *pa, 0};
-    if (*pa == Sfr31Rd(*pa, 8) + 0x68)
-    {
-        va.w0 = 0xc;
-        va.w2 = 0;
-    }
-    else
-        ++*reinterpret_cast<int*>(va.w2 + 0x18);
-    {
-        VM& v = *reinterpret_cast<VM*>(vm);
-        Sfr31Err e(static_cast<VM::ErrorID>(0x42c), v, *reinterpret_cast<const Value*>(&va), *reinterpret_cast<const Value*>(&vb));
-        v.ThrowVerifyError(e);
-    }
-    reinterpret_cast<Value*>(&va)->~Value();
-    Sfr31ReleaseStr(nodeA);
-    reinterpret_cast<Value*>(&vb)->~Value();
-    Sfr31ReleaseStr(nodeB);
+    VM& vm = *reinterpret_cast<VM*>(TrVM(tr));
+    const Traits& ta = *reinterpret_cast<const Traits*>(a);
+    const Traits& tb = *reinterpret_cast<const Traits*>(b);
+    vm.ThrowVerifyError(VM::Error(static_cast<VM::ErrorID>(0x42c), vm,
+        Value(ta.GetName(), Value::InlineStr), Value(tb.GetName(), Value::InlineStr)));
 }
 // ---- batch 35
 // Native with a required object argument: the popped value is handed to the owner's helper through its virtual call along with the remaining arguments.
