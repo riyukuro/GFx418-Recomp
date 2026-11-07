@@ -2061,17 +2061,22 @@ namespace TR {
 // slot, the return type of a getter, else the slot's declared type (its class for a Class-typed or class-bound slot).
 // An unknown declared type raises VerifyError 1014 (false).
 // MS2-FUNCTIONAL 0x14250cf20: raw-offset model of the ABC type multiname ("Class" in the public namespace) test
-// (left: the exe keeps the error value's cleared fields after its weak release, the method-slot GetVT call per
-// branch, register allocation)
+// (left: the exe keeps the error value's cleared fields after its weak release, its "Class" compare and
+// class-type test shapes, a larger frame, register allocation)
 // @0x14250cf20
 __declspec(safebuffers) CheckResult State::GetPropertyType(const Traits* obj_traits, const SlotInfo& si, Value& type) const
 {
-    if (si.BindType >= SlotInfo::BT_Code && si.ValueInd >= 0)
+    if (si.BindType > SlotInfo::BT_Code - 1 && si.ValueInd >= 0)
     {
         if (si.BindType == SlotInfo::BT_Code)
         {
             // Retrieve function type.
-            InstanceTraits::Traits& tr = GetFunctType(obj_traits->GetVT().GetValue(AbsoluteIndex(si.ValueInd)));
+            InstanceTraits::Traits* ptr;
+            {
+                const Value& fv = obj_traits->GetVT().GetValue(AbsoluteIndex(si.ValueInd));
+                ptr = &GetFunctType(fv);
+            }
+            InstanceTraits::Traits& tr = *ptr;
             type = Value(tr, CanBeNull(tr));
         }
         else
