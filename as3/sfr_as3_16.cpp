@@ -1710,7 +1710,7 @@ void Traits::Add2VT(const ClassInfo& ci, const ThunkInfo& func)
     VM& vm = GetVM();
 
     if (!Sfr16RegisterWithVT(*this, method_name,
-                             SlotInfo(GetMethodNamespace(vm, ci, func), NULL, SlotInfo::aDontEnum, method_name.GetNode()),
+                             SlotInfo(GetMethodNamespace(vm, ci, func), NULL, SlotInfo::aDontEnum, method_name.GetNode(), SlotInfo::SdkFlagsInBody),
                              Value(func), Sfr16GetDataType(func.GetCodeType())))
     {
         vm.ThrowVerifyError(VM::Error(VM::eIllegalOverrideError, vm, method_name.ToCStr(), GetName().ToCStr()));
@@ -1735,7 +1735,7 @@ SlotInfo& Traits::AddSetSlot(RelativeIndex ind, const ASString& name, Pickable<c
     else
     {
         const SlotInfo& v = SlotInfo(ns, file, ti, (const_ ? (SlotInfo::aDontEnum | SlotInfo::aReadOnly) : SlotInfo::aDontEnum),
-                                     name.GetNode());
+                                     name.GetNode(), SlotInfo::SdkFlagsInBody);
         GetOwnSlotInfo(result) = v;
         SetKey(result, name);
     }
@@ -1743,43 +1743,37 @@ SlotInfo& Traits::AddSetSlot(RelativeIndex ind, const ASString& name, Pickable<c
     return GetOwnSlotInfo(result);
 }
 
-// MS2-FUNCTIONAL: same operations; the exe allocates registers and schedules the inlined SlotInfo bit-field
-// build differently (it also stores the flag word earlier).
+// MS2-FUNCTIONAL: register allocation only: the exe copies name to r10 and builds the flag word in edx/r8d.
 // @0x1424e9670
 AbsoluteIndex Traits::AddSlot(const ASString& name, Pickable<const Instances::Namespace> ns, VMAbcFile& file,
                               const Abc::TraitInfo& ti, bool const_)
 {
     int attr = const_ ? (SlotInfo::aDontEnum | SlotInfo::aReadOnly) : SlotInfo::aDontEnum;
 
-    return Add(name, SlotInfo(ns, file, ti, attr, name.GetNode()));
+    return Add(name, SlotInfo(ns, file, ti, attr, name.GetNode(), SlotInfo::SdkFlagsInBody));
 }
 
-// MS2-FUNCTIONAL: same operations; the exe allocates registers and schedules the inlined SlotInfo bit-field
-// build differently (it also stores the flag word earlier).
 // @0x1424e9740
 void Traits::AddSlot(const ASString& name, Pickable<const Instances::Namespace> ns, const ClassTraits::Traits* tr,
                      SlotInfo::BindingType dt, AbsoluteIndex offset, bool const_)
 {
     int attr = const_ ? (SlotInfo::aDontEnum | SlotInfo::aReadOnly) : SlotInfo::aDontEnum;
 
-    const AbsoluteIndex ind = Add(name, SlotInfo(ns, tr, attr, name.GetNode()));
+    const AbsoluteIndex ind = Add(name, SlotInfo(ns, tr, attr, name.GetNode(), SlotInfo::SdkFlagsInBody));
     GetOwnSlotInfo(ind).Bind(dt, offset);
 }
 
-// MS2-FUNCTIONAL: same operations; the exe allocates registers and schedules the inlined SlotInfo bit-field
-// build differently (it also stores the flag word earlier).
 // @0x1424e9830
 void Traits::AddSlot(const ASString& name, Pickable<const Instances::Namespace> ns, SlotInfo::BindingType dt,
                      AbsoluteIndex offset, bool const_)
 {
     int attr = const_ ? (SlotInfo::aDontEnum | SlotInfo::aReadOnly) : SlotInfo::aDontEnum;
 
-    const AbsoluteIndex ind = Add(name, SlotInfo(ns, NULL, attr, name.GetNode()));
+    const AbsoluteIndex ind = Add(name, SlotInfo(ns, NULL, attr, name.GetNode(), SlotInfo::SdkFlagsInBody));
     GetOwnSlotInfo(ind).Bind(dt, offset);
 }
 
-// MS2-FUNCTIONAL: same operations; the exe allocates registers and schedules the inlined SlotInfo bit-field
-// build differently (it also stores the flag word earlier).
+// MS2-FUNCTIONAL: register allocation only: the exe reads the binding word into ecx (ours r8d).
 // @0x1424e9910
 void Traits::AddSlot(const MemberInfo& mi)
 {
@@ -1790,12 +1784,10 @@ void Traits::AddSlot(const MemberInfo& mi)
 
     const AbsoluteIndex ind =
         Add(name, SlotInfo(Pickable<const Instances::Namespace>(vm.PublicNamespace.GetPtr(), PickValue), NULL, attr,
-                           name.GetNode()));
+                           name.GetNode(), SlotInfo::SdkFlagsInBody));
     GetOwnSlotInfo(ind).Bind(static_cast<SlotInfo::BindingType>(mi.BT), AbsoluteIndex(mi.Offset));
 }
 
-// MS2-FUNCTIONAL: same operations; the exe allocates registers and schedules the inlined SlotInfo bit-field
-// build differently (it also stores the flag word earlier).
 // @0x1424e9a50
 void Traits::AddSlotCPP(const ASString& name, Pickable<const Instances::Namespace> ns, const ClassTraits::Traits* tr,
                         SlotInfo::BindingType dt, AbsoluteIndex offset, bool const_)
@@ -1803,7 +1795,7 @@ void Traits::AddSlotCPP(const ASString& name, Pickable<const Instances::Namespac
     int attr = const_ ? (SlotInfo::aDontEnum | SlotInfo::aReadOnly) : SlotInfo::aDontEnum;
     attr |= SlotInfo::aCppBinding;
 
-    const AbsoluteIndex ind = Add(name, SlotInfo(ns, tr, attr, name.GetNode()));
+    const AbsoluteIndex ind = Add(name, SlotInfo(ns, tr, attr, name.GetNode(), SlotInfo::SdkFlagsInBody));
     GetOwnSlotInfo(ind).Bind(dt, offset);
 }
 

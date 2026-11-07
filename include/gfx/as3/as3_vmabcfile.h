@@ -154,6 +154,30 @@ inline SlotInfo::SlotInfo(Pickable<const Instances::Namespace> ns, VMAbcFile& fi
 {
 }
 
+inline SlotInfo::SlotInfo(Pickable<const Instances::Namespace> ns, const ClassTraits::Traits* ctraits, int a,
+                          const Ptr<ASStringNode>& name, SdkFlagsBody)
+    : ReadOnly(false), DontEnum(false), DontDelete(false), Internal(false), CppBinding(false), BindType(BT_Unknown),
+      ValueInd(-1), pNs(ns), CTraits(ctraits), File(NULL), TI(NULL), Name(name)
+{
+    ReadOnly = (a & aReadOnly) != 0;
+    DontEnum = (a & aDontEnum) != 0;
+    DontDelete = (a & aDontDelete) != 0;
+    Internal = (a & aInternal) != 0;
+    CppBinding = (a & aCppBinding) != 0;
+}
+
+inline SlotInfo::SlotInfo(Pickable<const Instances::Namespace> ns, VMAbcFile& file, const Abc::TraitInfo& ti, int a,
+                          const Ptr<ASStringNode>& name, SdkFlagsBody)
+    : ReadOnly(false), DontEnum(false), DontDelete(false), Internal(false), CppBinding(false), BindType(BT_Unknown),
+      ValueInd(-1), pNs(ns), CTraits(NULL), File(&file), TI(&ti), Name(name)
+{
+    ReadOnly = (a & aReadOnly) != 0;
+    DontEnum = (a & aDontEnum) != 0;
+    DontDelete = (a & aDontDelete) != 0;
+    Internal = (a & aInternal) != 0;
+    CppBinding = (a & aCppBinding) != 0;
+}
+
 }}} // Scaleform::GFx::AS3
 
 #endif

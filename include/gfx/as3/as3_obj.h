@@ -201,6 +201,13 @@ public:
     // (appended, sfr19) a slot declared by trait ti of an ABC file. Inline body in as3_vmabcfile.h.
     inline SlotInfo(Pickable<const Instances::Namespace> ns, VMAbcFile& file, const Abc::TraitInfo& ti,
                     int a = aDontEnum, const Ptr<ASStringNode>& name = NULL);
+    // (appended, fe28) the SDK AS3_Slot.cpp form of the two ctors above: flags cleared in the init list and set from a in the body,
+    // so the flag word is stored after Name (Traits::AddSlot 0x1424e9670..). Inline bodies in as3_vmabcfile.h.
+    enum SdkFlagsBody { SdkFlagsInBody };
+    inline SlotInfo(Pickable<const Instances::Namespace> ns, const ClassTraits::Traits* ctraits, int a,
+                    const Ptr<ASStringNode>& name, SdkFlagsBody);
+    inline SlotInfo(Pickable<const Instances::Namespace> ns, VMAbcFile& file, const Abc::TraitInfo& ti, int a,
+                    const Ptr<ASStringNode>& name, SdkFlagsBody);
 
     // (appended, sfr19) where the value lives: binding kind and index.
     void Bind(BindingType dt, AbsoluteIndex offset)
