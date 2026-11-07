@@ -116,6 +116,17 @@ static SF_FORCEINLINE InteractiveObject* FindLevelMovie(const MovieImpl* pmovieI
     return 0;
 }
 
+// MovieRoot::GetLevelMovie as the SDK writes it (the exe inlines it): the level search through the root.
+static SF_FORCEINLINE InteractiveObject* RootLevelMovie(const MovieRoot* proot, int level)
+{
+    for (unsigned i = 0; i < proot->pMovieImpl->MovieLevelsSize; i++)
+    {
+        if (proot->pMovieImpl->pMovieLevels[i].Level == level)
+            return proot->pMovieImpl->pMovieLevels[i].pSprite;
+    }
+    return 0;
+}
+
 // The script environment of _level0 (it must exist).
 static SF_FORCEINLINE Environment* Level0Env(const MovieImpl* pmovieImpl)
 {
@@ -123,95 +134,102 @@ static SF_FORCEINLINE Environment* Level0Env(const MovieImpl* pmovieImpl)
     return static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pavm))->GetASEnvironment();
 }
 
-// The Array the path names, else a new one; the caller holds a reference.
-static SF_FORCEINLINE ArrayObject* MovieRoot_FindOrNewArray(MovieImpl* pmovieImpl, Environment* penv,
-                                                            const ASString& path, Value* pcur)
-{
-    Object* pobj;
-    if (penv->GetVariable(path, pcur) && pcur->IsObject() && (pobj = pcur->ToObject(penv)) != 0 &&
-        pobj->GetObjectType() == Object::Object_Array)
-    {
-        pobj->AddRef();
-        return static_cast<ArrayObject*>(pobj);
-    }
-    return SF_HEAP_NEW(pmovieImpl->GetMovieHeap()) ArrayObject(Level0Env(pmovieImpl));
-}
-
-// Stores the array under the path on _level0, or (sticky / permanent) keeps it until the target exists.
-static SF_FORCEINLINE bool MovieRoot_StoreArray(MovieRoot* proot, const ASString& path, ArrayObject* parray,
-                                                MovieRoot::SetVarTypeArg setType)
-{
-    Value asval;
-    asval.SetAsObject(parray);
-    bool ok = Level0Env(proot->pMovieImpl)->SetVariable(path, asval, 0, setType == Movie::SV_Normal);
-    if ((!ok && setType != Movie::SV_Normal) || setType == Movie::SV_Permanent)
-        proot->AddStickyVariable(path, asval, setType);
-    return ok;
-}
-
 // Writes count host values of one type into the array at path from index on, growing it as needed; a missing
 // or non-array variable becomes a new Array.
-// MS2-FUNCTIONAL: the level lookups and the value releases are inlined differently
+// MS2-FUNCTIONAL: SDK body; in the string cases the exe merges the ASString and Value AddRefs into one add 2 after
+// the Value stores (cl knows the out-of-TU callees keep the temp's address), ours does two incs around them
 // @0x14298d1e0
 bool MovieRoot::SetVariableArray(SetArrayTypeArg type, const char* ppathToVar, unsigned index, const void* pdata,
                                  unsigned count, SetVarTypeArg setType)
 {
-    if (!FindLevelMovie(pMovieImpl, 0))
+    if (!RootLevelMovie(this, 0))
         return false;
+
     Environment* penv = Level0Env(pMovieImpl);
     ASString     path(penv->CreateString(ppathToVar));
-    Value        cur;
-    ArrayObject* parray = MovieRoot_FindOrNewArray(pMovieImpl, penv, path, &cur);
-    if ((unsigned)parray->GetSize() < index + count)
-        parray->Resize((int)(index + count));
+
+    Ptr<ArrayObject> parray;
+    Value            retVal;
+    if (penv->GetVariable(path, &retVal) && retVal.IsObject())
+    {
+        Object* pobj = retVal.ToObject(penv);
+        if (pobj && pobj->GetObjectType() == Object::Object_Array)
+            parray = static_cast<ArrayObject*>(pobj);
+    }
+
+    if (!parray)
+        parray = *SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) ArrayObject(Level0Env(pMovieImpl));
+    if (count + index > unsigned(parray->GetSize()))
+        parray->Resize(count + index);
+
     switch (type)
     {
     case Movie::SA_Int:
-        for (unsigned i = 0; i < count; i++)
-            parray->SetElement((int)(index + i), Value((int)static_cast<const int*>(pdata)[i]));
-        break;
-    case Movie::SA_Double:
-        for (unsigned i = 0; i < count; i++)
-            parray->SetElement((int)(index + i), Value((Number) static_cast<const double*>(pdata)[i]));
-        break;
+        {
+            const int* parr = static_cast<const int*>(pdata);
+            for (unsigned i = 0; i < count; ++i)
+                parray->SetElement(i + index, Value(parr[i]));
+            break;
+        }
     case Movie::SA_Float:
-        for (unsigned i = 0; i < count; i++)
-            parray->SetElement((int)(index + i), Value((Number) static_cast<const float*>(pdata)[i]));
-        break;
-    case Movie::SA_String:
-        for (unsigned i = 0; i < count; i++)
         {
-            ASString str(GetStringManager()->CreateString(static_cast<const char* const*>(pdata)[i]));
-            parray->SetElement((int)(index + i), Value(str));
+            const float* parr = static_cast<const float*>(pdata);
+            for (unsigned i = 0; i < count; ++i)
+                parray->SetElement(i + index, Value(Number(parr[i])));
+            break;
         }
-        break;
-    case Movie::SA_StringW:
-        for (unsigned i = 0; i < count; i++)
+    case Movie::SA_Double:
         {
-            ASString str(GetStringManager()->CreateString(static_cast<const wchar_t* const*>(pdata)[i]));
-            parray->SetElement((int)(index + i), Value(str));
+            const Double* parr = static_cast<const Double*>(pdata);
+            for (unsigned i = 0; i < count; ++i)
+                parray->SetElement(i + index, Value(Number(parr[i])));
+            break;
         }
-        break;
     case Movie::SA_Value:
-        for (unsigned i = 0; i < count; i++)
         {
-            Value asval;
-            Value2ASValue(static_cast<const GFx::Value*>(pdata)[i], &asval);
-            parray->SetElement((int)(index + i), asval);
+            const GFx::Value* parr = static_cast<const GFx::Value*>(pdata);
+            for (unsigned i = 0; i < count; ++i)
+            {
+                Value asVal;
+                Value2ASValue(parr[i], &asVal);
+                parray->SetElement(i + index, asVal);
+            }
+            break;
         }
-        break;
+    case Movie::SA_String:
+        {
+            const char* const* parr = static_cast<const char* const*>(pdata);
+            for (unsigned i = 0; i < count; ++i)
+                parray->SetElement(i + index, Value(GetStringManager()->CreateString(parr[i])));
+            break;
+        }
+    case Movie::SA_StringW:
+        {
+            const wchar_t* const* parr = static_cast<const wchar_t* const*>(pdata);
+            for (unsigned i = 0; i < count; ++i)
+                parray->SetElement(i + index, Value(GetStringManager()->CreateString(parr[i])));
+            break;
+        }
     }
-    bool ok = MovieRoot_StoreArray(this, path, parray, setType);
-    parray->Release();
-    return ok;
+
+    Value val;
+    val.SetAsObject(parray);
+
+    bool setResult = static_cast<AvmCharacter*>(
+                         static_cast<AvmInteractiveObjBase*>(FindLevelMovie(pMovieImpl, 0)->GetAvmObjImpl()))
+                         ->GetASEnvironment()
+                         ->SetVariable(path, val, 0, (setType == Movie::SV_Normal));
+
+    if ((!setResult && (setType != Movie::SV_Normal)) || (setType == Movie::SV_Permanent))
+        AddStickyVariable(path, val, setType);
+    return setResult;
 }
 
 // Resizes the array at path; a missing or non-array variable becomes a new Array of that size.
-// MS2-FUNCTIONAL: SDK body; only the first level search differs (cl keeps the loop index in r8, the exe in r9).
 // @0x14298d760
 bool MovieRoot::SetVariableArraySize(const char* ppathToVar, unsigned count, SetVarTypeArg setType)
 {
-    if (!FindLevelMovie(pMovieImpl, 0))
+    if (!RootLevelMovie(this, 0))
         return false;
 
     Environment* penv = Level0Env(pMovieImpl);
