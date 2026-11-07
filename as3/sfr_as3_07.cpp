@@ -4839,7 +4839,7 @@ namespace Instances { namespace fl_display
 #pragma strict_gs_check(pop)
 
 #pragma strict_gs_check(push, on)
-    // MS2-FUNCTIONAL: stack slot order of the rect/points and the error temporaries differs (register allocation)
+    // MS2-FUNCTIONAL: stack slot order differs (the exe puts the alpha point lowest and the rect and Error temporaries at +0x50); same code otherwise
     // @0x142449440
     void BitmapData::copyPixels(const Value& result, Instances::fl_display::BitmapData* sourceBitmapData,
                                 Instances::fl_geom::Rectangle* sourceRect, Instances::fl_geom::Point* destPoint,
@@ -4851,39 +4851,40 @@ namespace Instances { namespace fl_display
         {
             VM& vm = GetVM();
             vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
+            return;
         }
-        else if (!sourceBitmapData)
+        if (!sourceBitmapData)
         {
             VM& vm = GetVM();
             vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "sourceBitmapData"));
+            return;
         }
-        else if (!sourceRect)
+        if (!sourceRect)
         {
             VM& vm = GetVM();
             vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "sourceRect"));
+            return;
         }
-        else if (!destPoint)
+        if (!destPoint)
         {
             VM& vm = GetVM();
             vm.ThrowArgumentError(VM::Error(VM::eNullPointerError, vm, "destPoint"));
+            return;
         }
-        else
         {
-            Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
-            Render::ImageBase* palpha = alphaBitmapData ? alphaBitmapData->pImage.GetPtr() : NULL;
-            if (!sourceBitmapData->pImage || !pimage)
-                return;
+            Render::DrawableImage* pimage = !this ? NULL : reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr());
+            Render::DrawableImage* palpha = alphaBitmapData ? Render::AsDrawableImage(alphaBitmapData->pImage.GetPtr()) : NULL;
+            Render::DrawableImage* psource = Render::AsDrawableImage(sourceBitmapData->pImage);
             // The alpha point is left unset without an alphaPoint; the image only reads it with an alpha source.
             Render::Point<SInt32> ap(Render::Point<SInt32>::NoInit);
+            if (!psource || !pimage)
+                return;
             if (alphaPoint)
-            {
-                ap.x = (SInt32)alphaPoint->x;
-                ap.y = (SInt32)alphaPoint->y;
-            }
-            Render::Point<SInt32> dp((SInt32)destPoint->x, (SInt32)destPoint->y);
-            Render::Rect<SInt32> rect((SInt32)sourceRect->x, (SInt32)sourceRect->y,
-                                      (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height));
-            pimage->CopyPixels(Render::AsDrawableImage(sourceBitmapData->pImage), rect, dp, Render::AsDrawableImage(palpha), &ap, mergeAlpha);
+                ap = Render::Point<SInt32>((SInt32)alphaPoint->x, (SInt32)alphaPoint->y);
+            pimage->CopyPixels(psource,
+                               Render::Rect<SInt32>((SInt32)sourceRect->x, (SInt32)sourceRect->y,
+                                                    (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height)),
+                               Render::Point<SInt32>((SInt32)destPoint->x, (SInt32)destPoint->y), palpha, &ap, mergeAlpha);
         }
     }
 #pragma strict_gs_check(pop)
