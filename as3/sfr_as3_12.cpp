@@ -2244,26 +2244,39 @@ namespace Instances { namespace fl_net
 
 namespace Classes { namespace fl_net
 {
+    // SDK Instances::fl_net::SharedObject::SetDataObject(Object*): DataObj = pobj, inlined in getLocal.
+    static SF_INLINE void Sfr12SetDataObject(Instances::fl_net::SharedObject* pthis, Instances::fl::Object* pobj)
+    {
+        SPtr<Instances::fl::Object>& data = pthis->Data;
+        if (pobj != data.GetPtr())
+        {
+            data.~SPtr();   // SPtr::Release()
+            if (pobj)
+                pobj->AddRef();
+            data.GetRawRef() = pobj;
+        }
+    }
+
     // The shared object localPath:name, made once per movie and filled from the shared object manager's store; null
     // for an invalid name or when nothing could be loaded.
-    // MS2-FUNCTIONAL: the exe inlines the SharedObject constructor (out of line in sfr_as3_11) and the name check
     // @0x14249b710
     void SharedObject::getLocal(SPtr<Instances::fl_net::SharedObject>& result, const ASString& name,
                                 const ASString& localPath, bool secure)
     {
         SF_UNUSED(secure);
         ASString key = GetVM().GetStringManager().CreateString(localPath.ToCStr());
-        key.Append(":", 1);
-        key.Append(name);
-        if (SPtr<Instances::fl_net::SharedObject>* pfound = SharedObjects.Get(key))
+        key += ":";
+        key += name;
+        auto& objs = SharedObjects;
+        SPtr<Instances::fl_net::SharedObject>* pfound = objs.Get(key);
+        if (pfound)
         {
             result = *pfound;
             return;
         }
 
-        InstanceTraits::Traits& itr = GetInstanceTraits();
-        SPtr<Instances::fl_net::SharedObject> pso =
-            Pickable<Instances::fl_net::SharedObject>(new(itr.Alloc()) Instances::fl_net::SharedObject(itr));
+        InstanceTraits::fl_net::SharedObject& itr = static_cast<InstanceTraits::fl_net::SharedObject&>(GetInstanceTraits());
+        SPtr<Instances::fl_net::SharedObject> pso = itr.MakeInstance(itr);
         if (!pso->SetNameAndLocalPath(name, localPath))
         {
             result = NULL;
@@ -2276,17 +2289,20 @@ namespace Classes { namespace fl_net
         ASSharedObjectLoader loader(&vm, pdata);
         Ptr<SharedObjectManagerBase> psomgr =
             *static_cast<SharedObjectManagerBase*>(proot->GetStateBag()->GetStateAddRef(State::State_SharedObject));
-        Ptr<FileOpenerBase> pfileOpener = proot->GetStateBag()->GetFileOpener();
+        FileOpenerBase* pfileOpener = proot->GetStateBag()->GetFileOpener();
         String sname(name.ToCStr());
         String spath(localPath.ToCStr());
-        if (psomgr && psomgr->LoadSharedObject(sname, spath, &loader, pfileOpener))
+        if (!psomgr || !psomgr->LoadSharedObject(sname, spath, &loader, pfileOpener))
         {
-            pso->Data = pdata;
-            result = pso;
-            SharedObjects.Add(key, pso);
+            result = NULL;
+            return;
         }
         else
-            result = NULL;
+        {
+            Sfr12SetDataObject(pso, pdata);
+            result = pso;
+            objs.Add(key, pso);
+        }
     }
 }}
 
