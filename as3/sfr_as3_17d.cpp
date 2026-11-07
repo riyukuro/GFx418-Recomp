@@ -1209,15 +1209,24 @@ bool AvmDisplayObj::CreateASInstanceNoCtor(bool)
     return result;
 }
 
+// CreateASInstanceNoCtor ignores its bool, and the exe's LTCG calls it without one: called through the shorter
+// signature (the same symbol).
+static SF_FORCEINLINE bool Sfr17dCreateNoCtor(AvmDisplayObj& avm)
+{
+    bool (AvmDisplayObj::*const pf)() = reinterpret_cast<bool (AvmDisplayObj::*)()>(&AvmDisplayObj::CreateASInstanceNoCtor);
+    return (avm.*pf)();
+}
+
 // MS2-FUNCTIONAL 0x1424f2010: SDK nested ifs, written from the exe's control flow (the exe inlines AvmDisplayObj::CreateASInstance).
-// Regalloc differs, the exe calls CreateASInstanceNoCtor without the bool, and its SPtr dtor skips a marked pointer (no store back)
+// Regalloc differs, the exe keeps the String in the high slot and the SPtr in the low one, and its SPtr dtor skips a marked
+// pointer (no store back)
 // @0x1424f2010
 unsigned AvmBitmap::CreateASInstance(bool execute)
 {
     // AvmDisplayObj::CreateASInstance (0x1424f2400), which the exe inlines here
     unsigned rv = 1;
     if (!AvmDisplayObj::GetAS3Obj())
-        rv = (!pAS3RawPtr && !pAS3CollectiblePtr && CreateASInstanceNoCtor(execute)) ? CallCtor(execute) : 0;
+        rv = (!pAS3RawPtr && !pAS3CollectiblePtr && Sfr17dCreateNoCtor(*this)) ? CallCtor(execute) : 0;
     if (AvmDisplayObj::GetAS3Obj())
     {
         Instances::fl_display::Bitmap* as3bmp = static_cast<Instances::fl_display::Bitmap*>(AvmDisplayObj::GetAS3Obj());
