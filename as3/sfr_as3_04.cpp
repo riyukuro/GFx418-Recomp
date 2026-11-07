@@ -3068,11 +3068,10 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return false;
     }
 
-    // E4X [[Put]] on an element. An attribute name sets (or adds) that attribute to value's string, a list
-    // joining its items with spaces; any further attributes of that name are deleted. An element name
-    // replaces the last matching child (the others are removed) or appends one; a primitive value becomes
-    // the text of that child, a new element of the name when there was none.
-    // MS2-FUNCTIONAL: the exe inlines the XMLAttr constructor and SPtr copies; register allocation differs
+    // E4X [[Put]] on an element. An attribute name sets (or adds) that attribute to value's string, a list joining its items
+    // with spaces; any further attributes of that name are deleted. An element name replaces the last matching child (the
+    // others are removed) or appends one; a primitive value becomes the text of that child, a new element when there was none.
+    // MS2-FUNCTIONAL: same length as the exe; only the attribute-name IsQName test differs (exe and al,3 / cmp al,1, ours dword)
     // @0x1424220e0
     CheckResult XMLElement::SetProperty(const Multiname& prop_name, const Value& value)
     {
@@ -3116,8 +3115,8 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
             }
             else if (IsXMLObject(c))
             {
-                ASString s = sm.CreateEmptyString();
-                static_cast<XML*>(c.GetObject())->AS3toString(s);
+                XML* cXML = static_cast<XML*>(c.GetObject());
+                ASString s = sm.CreateEmptyString(); cXML->AS3toString(s);
                 c = s;
             }
             else
@@ -3137,13 +3136,15 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
 
             if (a.GetPtr() == NULL)
             {
+                InstanceTraits::fl::XML& itr = static_cast<InstanceTraits::fl::XML&>(GetInstanceTraits());
                 Instances::Namespace* ns = prop_name.IsQName() ? &prop_name.GetNamespace() : vm.GetDefXMLNamespace();
-                if (ns == NULL)
-                    ns = &vm.GetPublicNamespace();
-
-                a = Pickable<XMLAttr>(new(GetVM().GetMemoryHeap()) XMLAttr(GetInstanceTraits(), *ns,
-                                      prop_name.Name.AsString(), c.AsString(), this));
-                Attrs.PushBack(a);
+                if (ns == NULL) ns = &vm.GetPublicNamespace();
+                a = itr.MakeInstanceAttr(itr, *ns,
+                                      prop_name.Name.AsString(), c.AsString(), this);
+                // Attrs.PushBack(a) via an out-of-line ResizeNoConstruct; the exe calls the SPtr<Traits> copy 0x142420100, ours the identical XML one (Traits keeps FUN_142415520 inlined)
+                typedef SPtr<Instances::fl::XML> CtPtr; typedef Scaleform::ArrayData<CtPtr, Scaleform::AllocatorLH<CtPtr>, Scaleform::ArrayDefaultPolicy> CtData;
+                CtData* d = reinterpret_cast<CtData*>(&Attrs); d->ResizeNoConstruct(d, d->Size + 1);
+                ::new (reinterpret_cast<SPtr<XMLAttr>*>(d->Data) + d->Size - 1) SPtr<XMLAttr>(a);
                 AddInScopeNamespace(*ns);
             }
 
@@ -3152,7 +3153,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         }
 
         bool result = true;
-        Value i;
+        Value i; i.SetUndefined();
 
         ASString propName = sm.CreateEmptyString();
         if (!prop_name.Name.Convert2String(propName))
@@ -3180,11 +3181,10 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
                 InstanceTraits::fl::XML& itr = static_cast<InstanceTraits::fl::XML&>(GetInstanceTraits());
                 Instances::Namespace* ns = prop_name.IsQName() && !prop_name.IsAnyNamespace() ?
                                            &prop_name.GetNamespace() : vm.GetDefXMLNamespace();
-                if (ns == NULL)
-                    ns = &vm.GetPublicNamespace();
+                if (ns == NULL) ns = &vm.GetPublicNamespace();
 
                 SPtr<XMLElement> y = itr.MakeInstanceElement(itr, *ns, prop_name.Name.AsString(), this);
-                if (!Replace(static_cast<UPInt>(i.AsInt()), Value(y.GetPtr())))
+                if (!Replace(static_cast<UPInt>(i.AsInt()), Value(y)))
                     return false;
                 y->AddInScopeNamespace(*ns);
             }
