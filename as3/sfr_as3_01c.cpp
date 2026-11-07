@@ -2561,7 +2561,8 @@ namespace InstanceTraits { namespace fl
     }
 
     // ECMA 15.5.4.7; generic: this and the search string are converted to strings first.
-    // MS2-FUNCTIONAL: inliner choice differs (exe inlines the found/not-found SetSInt32 tail, calls it out of line elsewhere)
+    // The found and not-found results use the SF_INLINE Assign(SInt32), which the exe inlines and tail-merges; the other
+    // results call SetSInt32 out of line.
     // @0x1423e7490
     void String::AS3indexOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
@@ -2610,7 +2611,7 @@ namespace InstanceTraits { namespace fl
                 }
                 if (c2 == 0)
                 {
-                    result.SetSInt32(i);
+                    result.Assign(SInt32(i));
                     return;
                 }
                 if (c1 == 0)
@@ -2620,7 +2621,7 @@ namespace InstanceTraits { namespace fl
                 }
             }
         }
-        result.SetSInt32(-1);
+        result.Assign(SInt32(-1));
     }
 
     // True when the object _this is the prototype object of cls. The class is looked up before _this is read (the exe loads
