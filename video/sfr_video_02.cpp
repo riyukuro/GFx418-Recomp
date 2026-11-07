@@ -390,27 +390,7 @@ void FUN_140014730(void* object, void*, double value)
         ((::Scaleform::GFx::AS3::VideoProviderNetStream*)(*reinterpret_cast<void**>(bytes + 0x50)))->SetSubtitleChannel(static_cast<int>(value) - 1);
 }
 
-// @0x1400104d0
-void FUN_1400104d0(Scaleform::GFx::InteractiveObject* object)
-{
-    char* bytes = reinterpret_cast<char*>(object);
-    *reinterpret_cast<void**>(bytes) = &PTR_FUN_1431b6060;
-    *reinterpret_cast<void**>(bytes + 0x18) = &PTR_LAB_1431b63f8;
-    if (void* provider = *reinterpret_cast<void**>(bytes + 0x100))
-        reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(provider))[2])(provider);
-    int* refs = *reinterpret_cast<int**>(bytes + 0xf8);
-    if (refs && --*refs == 0) Scaleform::Memory::Free(refs);
-    object->InteractiveObject::~InteractiveObject();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
-}
-
-// scalar deleting form of the recovered VideoCharacter base destruction.
-// @0x140010530
-Scaleform::GFx::InteractiveObject* FUN_140010530(Scaleform::GFx::InteractiveObject* object, unsigned flags)
-{
-    FUN_1400104d0(object);
-    if (flags & 1) Scaleform::Memory::Free(object);
-    return object;
-}
+// (0x1400104d0 / 0x140010530 are Video02Character's ~Video02Character and ??_G, emitted by its out-of-line dtor below)
 
 // (0x14000ed20 is VideoCtorFunction's ??_G, emitted by Video02EmitVideoCtorVftables)
 
@@ -3438,12 +3418,7 @@ void FUN_140011ac0(Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::Env
 
 // (0x14000ed10, this - 0x20 into 0x14000ed20, is cl's adjustor thunk of VideoCtorFunction's ??_G)
 
-// MS2-FUNCTIONAL: adjustor thunk (this - 0x18) into FUN_140010530.
-// @0x140010180
-Scaleform::GFx::InteractiveObject* FUN_140010180(void* self, unsigned __int64 flags)
-{
-    return FUN_140010530((Scaleform::GFx::InteractiveObject*)((Scaleform::UByte*)self - 0x18), flags);
-}
+// (0x140010180, this - 0x18 into 0x140010530, is cl's adjustor thunk of Video02Character's ??_E)
 
 // (0x140011c70 is cl's adjustor thunk; see the NetConnection models)
 
@@ -3766,7 +3741,40 @@ void Video02EmitNetConnectionCtorVftables(void* p, ASStringContext* psc)
     ::new (p) NetConnectionCtorFunction(psc);
 }
 }}} // namespace Scaleform::GFx::AS2
+namespace Scaleform { namespace GFx {
+// VideoCharacter's vftables: 0x1431b6060 (115 slots, InteractiveObject's with five overrides) and the LogBase table
+// 0x1431b63f8 at +0x18. FUN_140010000 stores them. Slots 1/55/59/75 are the hand FUN_ bodies, bound by their
+// symbols-manual rows; the dtor below is 0x1400104d0 and cl's ??_G (0x140010530) and ??_E thunk (0x140010180)
+// come with its vftable.
+class Video02Character : public InteractiveObject
+{
+public:
+    virtual ~Video02Character();
+    virtual Ptr<Render::TreeNode> CreateRenderNode(Render::ContextImpl::Context& context) const;  // 0x140011610
+    virtual RectF GetBounds(const Matrix& t) const;                                               // 0x140010200
+    virtual CharacterDef* GetCharacterDef() const;                                                // 0x140010130
+    virtual CharacterDef::CharacterDefType GetType() const;                                       // 0x140010140
+    RectF Bounds;        // +0xe0
+    void* pDef;          // +0xf0
+    int* pRefs;          // +0xf8
+    void* pProvider;     // +0x100
+};
+static_assert(offsetof(Video02Character, Bounds) == 0xe0, "Video02Character layout");
+static_assert(offsetof(Video02Character, pProvider) == 0x100, "Video02Character layout");
+
+// @0x1400104d0
+Video02Character::~Video02Character()
+{
+    if (pProvider)
+        reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(pProvider))[2])(pProvider);
+    int* refs = pRefs;
+    if (refs && --*refs == 0) Memory::Free(refs);
+}
+}} // namespace Scaleform::GFx
 #ifndef MS2_HOOK_DLL
+// FUN_140010000 stores Video02Character's vftables through these names.
+#pragma comment(linker, "/alternatename:?PTR_FUN_1431b6060@@3PEAXEA=??_7Video02Character@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@2@@")
+#pragma comment(linker, "/alternatename:?PTR_LAB_1431b63f8@@3PEAXEA=??_7Video02Character@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@12@@")
 // FUN_14000eb50 stores VideoProto's vftables through these names (the hook DLL binds them by their symbols rows).
 #pragma comment(linker, "/alternatename:?PTR_FUN_1431b5e20@@3PEAXEA=??_7VideoProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
 #pragma comment(linker, "/alternatename:?PTR_LAB_1431b5e70@@3PEAXEA=??_7VideoProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
@@ -3867,3 +3875,7 @@ void Video02EmitNetConnectionCtorVftables(void* p, ASStringContext* psc)
 // MS2-PIN: ??_7NetConnectionCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1431b67d0
 // MS2-PIN: ??_GNetConnectionCtorFunction@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x1400126b0
 // MS2-PIN: ??_ENetConnectionCtorFunction@AS2@GFx@Scaleform@@WCA@EAAPEAXI@Z 0x1400126a0
+// MS2-PIN: ??_7Video02Character@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@2@@ 0x1431b6060
+// MS2-PIN: ??_7Video02Character@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@12@@ 0x1431b63f8
+// MS2-PIN: ??_GVideo02Character@GFx@Scaleform@@UEAAPEAXI@Z 0x140010530
+// MS2-PIN: ??_EVideo02Character@GFx@Scaleform@@WBI@EAAPEAXI@Z 0x140010180
