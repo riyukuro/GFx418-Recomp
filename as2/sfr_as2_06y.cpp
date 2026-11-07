@@ -16,127 +16,183 @@ template<class T> SF_INLINE T Lerp(T a, T b, T f) { return (b - a) * f + a; }
 }}
 #include "../include/render/render_gradients.h"
 #include "../include/render/render_shapedata.h"
+#include "../include/render/render_twips.h"
+#include "../include/gfx/gfx_asutils.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 namespace {
-// A "box" matrix maps the 32768 twips square of the gradient onto the given pixel size.
-const float GradientBoxScale = 20.0f / 32768.0f;
+// GASGradientBoxMagicNumber: a "box" matrix maps the 32768 twips square of the gradient onto the given pixel size.
+const float GradientBoxScale = 1.0f / 1638.4f;
+
+// The SDK's header-inline ObjectInterface::GetConstMemberRaw.
+SF_FORCEINLINE bool GetConstMemberRawInline(ObjectInterface& obj, ASStringContext* psc, const char* pname, Value* val)
+{
+    return obj.GetMemberRaw(psc, ASString(psc->CreateConstString(pname)), val);
 }
 
-// Arguments: fillType, colors, alphas, ratios, matrix [, spreadMethod, interpolationMethod]. The matrix is a
-// Matrix object, a {matrixType: "box", x, y, w, h, r} object or an {a, b, d, e, g, h} object (3x3 form, pixels).
-// The fill gets the gradient and the inverse of the matrix in twips, prefixed by the gradient square.
-// MS2-FUNCTIONAL: the exe calls the matrix rotation and prepend out of line and keeps the matrix halves in xmm pairs
-// @0x14298efe0
-void AvmSprite::SpriteCreateGradient(const FnCall& fn, Render::ComplexFill* pfill)
+// The SDK's Alg::Clamp (Max(minVal, Min(v, maxVal))).
+template<class T> SF_INLINE const T ClampT(const T v, const T minVal, const T maxVal)
 {
-    if (fn.NArgs < 1)
-        return;
-    ASString fillType = fn.Arg(0).ToString(fn.Env);
-    if (fn.NArgs < 2)
-        return;
-    Object* pcolors = fn.Arg(1).ToObject(fn.Env);
-    if (!pcolors || pcolors->GetObjectType() != Object::Object_Array || fn.NArgs < 3)
-        return;
-    Object* palphas = fn.Arg(2).ToObject(fn.Env);
-    if (!palphas || palphas->GetObjectType() != Object::Object_Array || fn.NArgs < 4)
-        return;
-    Object* pratios = fn.Arg(3).ToObject(fn.Env);
-    if (!pratios || pratios->GetObjectType() != Object::Object_Array || fn.NArgs < 5)
-        return;
-    ArrayObject* colors = static_cast<ArrayObject*>(pcolors);
-    ArrayObject* alphas = static_cast<ArrayObject*>(palphas);
-    ArrayObject* ratios = static_cast<ArrayObject*>(pratios);
-    int          count  = colors->GetSize();
-    if (count < 1 || count != alphas->GetSize() || count != ratios->GetSize())
-        return;
+    return Alg::PMax<T>(minVal, Alg::PMin<T>(v, maxVal));
+}
+}
 
-    Environment*     penv = fn.Env;
-    ASStringContext* psc  = penv->GetSC();
-    Render::Matrix2F matrix;
-    Value            v;
-    Object*          pmatrixObj = fn.Arg(4).ToObject(penv);
-    if (pmatrixObj->GetObjectType() == Object::Object_Matrix)
-        matrix = static_cast<MatrixObject*>(pmatrixObj)->GetMatrix(penv);
-    else if (pmatrixObj->GetMemberRaw(psc, psc->CreateConstString("matrixType"), &v) &&
-             v.ToString(fn.Env) == "box")
+// Arguments: fillType, colors, alphas, ratios, matrix [, spreadMethod, interpolationMethod, focalPointRatio]. The
+// matrix is a Matrix object, a {matrixType: "box", x, y, w, h, r} object or an {a, b, d, e, g, h} object (3x3 form,
+// pixels). The fill gets the gradient and the inverse of the matrix in twips, prefixed by the gradient square.
+// MS2-FUNCTIONAL: SDK body, 26 bytes short: box-path xmm10/xmm11 swap and fillTypeStr/matrix frame slots differ.
+// @0x14298efe0
+void AvmSprite::SpriteCreateGradient(const FnCall& fn, Render::ComplexFill* complexFill)
+{
+    Object* arg = 0;
+    if (fn.NArgs > 0)
     {
-        float x = 0, y = 0, w = 100, h = 100, r = 0;
-        if (pmatrixObj->GetMemberRaw(psc, psc->CreateConstString("x"), &v))
-            x = (float)v.ToNumber(fn.Env);
-        if (pmatrixObj->GetMemberRaw(psc, psc->CreateConstString("y"), &v))
-            y = (float)v.ToNumber(fn.Env);
-        if (pmatrixObj->GetMemberRaw(psc, psc->CreateConstString("w"), &v))
-            w = (float)v.ToNumber(fn.Env);
-        if (pmatrixObj->GetMemberRaw(psc, psc->CreateConstString("h"), &v))
-            h = (float)v.ToNumber(fn.Env);
-        if (pmatrixObj->GetMemberRaw(psc, psc->CreateConstString("r"), &v))
-            r = (float)v.ToNumber(fn.Env);
-        float sx = w * GradientBoxScale;
-        float sy = h * GradientBoxScale;
-        matrix.AppendRotation(r);
-        matrix.M[0][0] *= sx; matrix.M[0][1] *= sx; matrix.M[0][2] *= sx;
-        matrix.M[1][0] *= sy; matrix.M[1][1] *= sy; matrix.M[1][2] *= sy;
-        matrix.Tx() = matrix.Tx() * sx + w * 0.5f + x;
-        matrix.Ty() = matrix.Ty() * sy + h * 0.5f + y;
-    }
-    else
-    {
-        if (pmatrixObj->GetMemberRaw(psc, psc->CreateConstString("a"), &v))
-            matrix.Sx() = (float)v.ToNumber(fn.Env) * GradientBoxScale;
-        if (pmatrixObj->GetMemberRaw(psc, psc->CreateConstString("d"), &v))
-            matrix.Shx() = (float)v.ToNumber(fn.Env) * GradientBoxScale;
-        if (pmatrixObj->GetMemberRaw(psc, psc->CreateConstString("g"), &v))
-            matrix.Tx() = (float)v.ToNumber(fn.Env);
-        if (pmatrixObj->GetMemberRaw(psc, psc->CreateConstString("b"), &v))
-            matrix.Shy() = (float)v.ToNumber(fn.Env) * GradientBoxScale;
-        if (pmatrixObj->GetMemberRaw(psc, psc->CreateConstString("e"), &v))
-            matrix.Sy() = (float)v.ToNumber(fn.Env) * GradientBoxScale;
-        if (pmatrixObj->GetMemberRaw(psc, psc->CreateConstString("h"), &v))
-            matrix.Ty() = (float)v.ToNumber(fn.Env);
-    }
+        ASString fillTypeStr(fn.Arg(0).ToString(fn.Env));
 
-    // The spread method is read but not used; only linearRGB interpolation is.
-    bool linearRGB = false;
-    if (fn.NArgs > 5)
-    {
-        ASString spreadMethod = fn.Arg(5).ToString(fn.Env);
-        if (fn.NArgs > 6)
+        if (fn.NArgs > 1 && (arg = fn.Arg(1).ToObject(fn.Env)) != NULL &&
+            arg->GetObjectType() == ObjectInterface::Object_Array)
         {
-            ASString interpolation = fn.Arg(6).ToString(fn.Env);
-            linearRGB              = strcmp(interpolation.ToCStr(), "linearRGB") == 0;
+            const ArrayObject* colors = (const ArrayObject*)arg;
+            if (fn.NArgs > 2 && (arg = fn.Arg(2).ToObject(fn.Env)) != NULL &&
+                arg->GetObjectType() == ObjectInterface::Object_Array)
+            {
+                const ArrayObject* alphas = (const ArrayObject*)arg;
+                if (fn.NArgs > 3 && (arg = fn.Arg(3).ToObject(fn.Env)) != NULL &&
+                    arg->GetObjectType() == ObjectInterface::Object_Array)
+                {
+                    const ArrayObject* ratios = (const ArrayObject*)arg;
+                    if (fn.NArgs > 4 &&
+                        colors->GetSize() > 0 &&
+                        colors->GetSize() == alphas->GetSize() &&
+                        colors->GetSize() == ratios->GetSize())
+                    {
+                        Render::Matrix2F matrix;
+                        Value v;
+                        ASStringContext *psc = fn.Env->GetSC();
+
+                        arg = fn.Arg(4).ToObject(fn.Env);
+
+                        if (arg->GetObjectType() == ObjectInterface::Object_Matrix)
+                        {
+                            matrix = ((MatrixObject*)arg)->GetMatrix(fn.Env);
+                        }
+                        else
+                        {
+                            if (GetConstMemberRawInline(*arg, psc, "matrixType", &v) &&
+                                v.ToString(fn.Env) == "box")
+                            {
+                                float x = 0;
+                                float y = 0;
+                                float w = 100;
+                                float h = 100;
+                                float r = 0;
+                                if (GetConstMemberRawInline(*arg, psc, "x", &v)) x = (float)v.ToNumber(fn.Env);
+                                if (GetConstMemberRawInline(*arg, psc, "y", &v)) y = (float)v.ToNumber(fn.Env);
+                                if (GetConstMemberRawInline(*arg, psc, "w", &v)) w = (float)v.ToNumber(fn.Env);
+                                if (GetConstMemberRawInline(*arg, psc, "h", &v)) h = (float)v.ToNumber(fn.Env);
+                                if (GetConstMemberRawInline(*arg, psc, "r", &v)) r = (float)v.ToNumber(fn.Env);
+
+                                x += w / 2;
+                                y += h / 2;
+                                w *= GradientBoxScale;
+                                h *= GradientBoxScale;
+
+                                // The exe calls AppendRotation (0x1425f0ec0) out of line.
+                                Render::Matrix2F& (Render::Matrix2F::*const appendRotation)(float) =
+                                    &Render::Matrix2F::AppendRotation;
+                                (matrix.*appendRotation)(r);
+                                matrix.AppendScaling(w, h);
+                                matrix.AppendTranslation(x, y);
+                            }
+                            else
+                            {
+                                // The matrix is transposed: a d g / b e h; c, f and i are not used.
+                                if (GetConstMemberRawInline(*arg, psc, "a", &v)) matrix.Sx() = (float)v.ToNumber(fn.Env) * GradientBoxScale;
+                                if (GetConstMemberRawInline(*arg, psc, "d", &v)) matrix.Shx() = (float)v.ToNumber(fn.Env) * GradientBoxScale;
+                                if (GetConstMemberRawInline(*arg, psc, "g", &v)) matrix.Tx() = (float)v.ToNumber(fn.Env);
+                                if (GetConstMemberRawInline(*arg, psc, "b", &v)) matrix.Shy() = (float)v.ToNumber(fn.Env) * GradientBoxScale;
+                                if (GetConstMemberRawInline(*arg, psc, "e", &v)) matrix.Sy() = (float)v.ToNumber(fn.Env) * GradientBoxScale;
+                                if (GetConstMemberRawInline(*arg, psc, "h", &v)) matrix.Ty() = (float)v.ToNumber(fn.Env);
+                            }
+                        }
+
+                        // The spread method is read but not used.
+                        bool  linearRGB       = false;
+                        float focalPointRatio = 0;
+                        if (fn.NArgs > 5)
+                        {
+                            ASString str(fn.Arg(5).ToString(fn.Env));
+
+                            if (fn.NArgs > 6)
+                            {
+                                linearRGB = fn.Arg(6).ToString(fn.Env) == "linearRGB";
+                                if (fn.NArgs > 7)
+                                {
+                                    if (NumberUtil::IsNaN(focalPointRatio))
+                                        focalPointRatio = 0;
+                                    else if (focalPointRatio < -1) focalPointRatio = -1;
+                                    else if (focalPointRatio >  1) focalPointRatio =  1;
+                                }
+                            }
+                        }
+
+                        // Create the gradient itself.
+                        Render::GradientType gradType = Render::GradientLinear;
+                        if (fillTypeStr == "radial")
+                        {
+                            gradType = Render::GradientRadial;
+                            if (focalPointRatio != 0)
+                                gradType = Render::GradientFocalPoint;
+                        }
+                        // The gradient data lives in the global heap: it is a ResourceLib key.
+                        complexFill->pGradient = *SF_NEW Render::GradientData(gradType, (UInt16)colors->GetSize(), linearRGB);
+
+                        if (complexFill->pGradient)
+                        {
+                            complexFill->pGradient->SetFocalRatio(focalPointRatio);
+
+                            for (int i = 0; i < colors->GetSize(); i++)
+                            {
+                                unsigned rgba = colors->GetElementPtr(i)->ToUInt32(fn.Env) | 0xFF000000;
+
+                                // Alpha is clamped to the 0 to 100 range.
+                                float alpha = ((float)alphas->GetElementPtr(i)->ToNumber(fn.Env)) * 255.0f / 100.0f;
+                                rgba &= 0xFFFFFF;
+                                rgba |= unsigned(ClampT(alpha, 0.0f, 255.0f)) << 24;
+
+                                float ratio = (float)ratios->GetElementPtr(i)->ToNumber(fn.Env);
+                                ratio = ClampT(ratio, 0.0f, 255.0f);
+
+                                Render::GradientRecord& record = complexFill->pGradient->At(i);
+                                record.Ratio = (UByte)ratio;
+                                record.ColorV = rgba;
+                            }
+
+                            matrix.Tx() = Render::PixelsToTwips(matrix.Tx());
+                            matrix.Ty() = Render::PixelsToTwips(matrix.Ty());
+                            complexFill->ImageMatrix.SetIdentity();
+
+                            if (gradType == Render::GradientLinear)
+                            {
+                                complexFill->ImageMatrix.AppendScaling(1.0f / 32768.F);
+                                complexFill->ImageMatrix.AppendTranslation(0.5F, 0.F);
+                            }
+                            else
+                            {
+                                complexFill->ImageMatrix.AppendScaling(1.0f / 32768.F);
+                                complexFill->ImageMatrix.AppendTranslation(0.5F, 0.5F);
+                            }
+                            // The exe calls Prepend (0x142445bc0) out of line.
+                            Render::Matrix2F& (Render::Matrix2F::*const prepend)(const Render::Matrix2F&) =
+                                &Render::Matrix2F::Prepend;
+                            (complexFill->ImageMatrix.*prepend)(matrix.GetInverse());
+                        }
+                    }
+                }
+            }
         }
     }
-
-    bool radial = fillType == "radial";
-    pfill->pGradient =
-        *SF_NEW Render::GradientData(radial ? Render::GradientRadial : Render::GradientLinear, (UInt16)count, linearRGB);
-    Render::GradientData* pgradient = pfill->pGradient;
-    if (!pgradient)
-        return;
-    pgradient->SetFocalRatio(0);
-    for (int i = 0; i < colors->GetSize(); i++)
-    {
-        UInt32 rgb   = colors->GetElementPtr(i)->ToUInt32(fn.Env);
-        float  alpha = (float)alphas->GetElementPtr(i)->ToNumber(fn.Env) * 255.0f / 100.0f;
-        if (alpha >= 255.0f)
-            alpha = 255.0f;
-        float ratio = (float)ratios->GetElementPtr(i)->ToNumber(fn.Env);
-        if (ratio >= 255.0f)
-            ratio = 255.0f;
-        Render::GradientRecord& rec = pgradient->At(i);
-        rec.Ratio                   = (UByte)(int)(ratio >= 0.0f ? ratio : 0.0f);
-        rec.ColorV.Raw              = ((UInt32)(SInt64)(alpha >= 0.0f ? alpha : 0.0f) << 24) | (rgb & 0xFFFFFF);
-    }
-
-    matrix.Tx() *= 20.0f;
-    matrix.Ty() *= 20.0f;
-    pfill->ImageMatrix.SetIdentity();
-    pfill->ImageMatrix.AppendScaling(1.0f / 32768.0f);
-    pfill->ImageMatrix.Tx() += 0.5f;
-    pfill->ImageMatrix.Ty() += radial ? 0.5f : 0.0f;
-    pfill->ImageMatrix.Prepend(matrix.GetInverse());
 }
 
 }}} // namespace Scaleform::GFx::AS2
