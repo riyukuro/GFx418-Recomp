@@ -747,32 +747,30 @@ bool FUN_1426229d0(char* self)
     return ((Fn*)RawField<void**>(self, 0x178))[1](self + 0x178) == 0;
 }
 
-// Returns the per-key record array for (a, b), creating it with `count` zeroed words on first use.
+// ViewStats::BufferInstructionTimes: one counted array of per-offset times.
+struct AmpBufferInstructionTimes : public RefCountBase<AmpBufferInstructionTimes, 0x246>
+{
+    AmpBufferInstructionTimes(UInt32 size) : Times(size)
+    {
+        memset(&Times[0], 0, size * sizeof(Times[0]));
+    }
+    ArrayLH<UInt64, 0x246> Times;
+};
+
+// ViewStats::LockBufferInstructionTimes: returns the per-key record array for (a, b), creating it with `count` zeroed words on first use.
+// MS2-FUNCTIONAL: the unrolled SDBM key hash sums its bytes in another order (exe 6,7,4,5, ours 4,5,7,6 after 3,2,1); same size and blocks
 // @0x1426229f0
-char* FUN_1426229f0(char* self, unsigned a, U b, unsigned count)
+char* FUN_1426229f0(char* self, unsigned a, UInt32 b, unsigned count)
 {
     reinterpret_cast<Mutex*>(self + 0xa8)->DoLock();
     U** set = RawFieldPtr<U*>(self, 0xa0);
-    U key = ((U)a << 32) + (b & 0xffffffffULL);
+    U key = ((U)a << 32) + b;
     U it[2];
     FUN_142622030(set, it, &key);
     if (!RawFound(it))
     {
-        char* rec = (char*)Memory::AllocAutoHeap(self, 0x28, AllocInfo(0x246, 0, 0));
-        if (rec)
-        {
-            *(void**)rec = (void*)DAT_14318f060;
-            *(int*)(rec + 8) = 1;
-            RawField<U>(rec, 0x18) = 0;
-            RawField<U>(rec, 0x10) = 0;
-            RawField<U>(rec, 0x20) = 0;
-            U n = (U)(SPInt)(int)count;
-            if (RawField<U>(rec, 0x18) <= n)
-                FUN_142623f80(RawFieldPtr<U>(rec, 0x10), rec + 0x10, n + (n >> 2));
-            RawField<U>(rec, 0x18) = n;
-            memset(RawField<void*>(rec, 0x10), 0, (U)count << 3);
-        }
-        void* value = rec;
+        AmpBufferInstructionTimes* pBuffer = SF_HEAP_AUTO_NEW(self) AmpBufferInstructionTimes(count);
+        void* value = pBuffer;
         NodeRef ref = { &key, &value };
         U hash = FixedSizeHash<U>()(key);
         SPInt idx = -1;
@@ -780,19 +778,21 @@ char* FUN_1426229f0(char* self, unsigned a, U b, unsigned count)
             idx = RawFindKey8Core(*set, key, hash & (*set)[1]);
         if (idx >= 0)
         {
-            char* payload = (char*)*set + 0x10 + idx * 0x20;
-            RawField<U>(payload, 0x10) = key;
-            if (rec)
-                FUN_14257dc30(rec);
-            if (RawField<void*>(payload, 0x18))
-                FUN_14257dcb0(RawField<void*>(payload, 0x18));
-            RawField<void*>(payload, 0x18) = value;
+            char* payload = (char*)*set + (idx + 1) * 0x20;
+            RawField<U>(payload, 0) = key;
+            if (value)
+                FUN_14257dc30(value);
+            if (RawField<void*>(payload, 8))
+                FUN_14257dcb0(RawField<void*>(payload, 8));
+            RawField<void*>(payload, 8) = value;
         }
         else
             FUN_14261ec70(set, set, &ref, hash);
         if (value)
             FUN_14257dcb0(value);
-        FUN_142622030(set, it, &key);
+        U tmp[2];
+        U* r = FUN_142622030(set, tmp, &key);
+        memcpy(it, r, sizeof(it));
     }
     return *(char**)(*(U*)it[0] + 0x10 + it[1] * 0x20 + 0x18) + 0x10;
 }
@@ -1258,3 +1258,6 @@ template void Scaleform::ArrayDataBase<Scaleform::GFx::AmpCallInfoSlot, Scalefor
 //
 //
 // (namespace Scaleform::GFx closed above the 0x142623b10 instantiation)
+// MS2-PIN: ??_7AmpBufferInstructionTimes@GFx@Scaleform@@6B@ 0x14318f060
+// MS2-PIN: ??_7?$RefCountBase@UAmpBufferInstructionTimes@GFx@Scaleform@@$0CEG@@Scaleform@@6B@ 0x14318f060
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0CEG@@Scaleform@@6B@ 0x14318f060
