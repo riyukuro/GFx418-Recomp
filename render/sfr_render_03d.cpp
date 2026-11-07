@@ -1471,7 +1471,8 @@ bool ShapeMeshProvider::GetData(MeshBase* mesh, VertexOutput* out, unsigned mesh
     return tessellateStroke(s9g, strokeStyle, layer, mesh, out, meshGenFlags);
 }
 
-// MS2-FUNCTIONAL: the inlined in-place inverse of the 9-grid adjustment allocates its xmm registers differently
+// The adjustment is prepended as an inverse copy, and a missing fill gives a default-constructed matrix, as the SDK has
+// them; the in-place Invert() and SetIdentity() forms allocate the xmm registers differently.
 // @0x14262b560
 void ShapeMeshProvider::GetFillMatrix(MeshBase* mesh, Matrix2F* matrix, unsigned layer, unsigned fillIndex,
                                       unsigned meshGenFlags)
@@ -1504,8 +1505,7 @@ void ShapeMeshProvider::GetFillMatrix(MeshBase* mesh, Matrix2F* matrix, unsigned
         {
             Matrix2F mtx;
             computeImgAdjustMatrix(s9g, layer, imgFillStyle, &mtx);
-            mtx.Invert();
-            matrix->Prepend(mtx);
+            matrix->Prepend(mtx.GetInverse());
         }
         if (fill->pImage)
         {
@@ -1516,7 +1516,7 @@ void ShapeMeshProvider::GetFillMatrix(MeshBase* mesh, Matrix2F* matrix, unsigned
         }
     }
     else
-        matrix->SetIdentity();
+        *matrix = Matrix2F();
 }
 
 // a fill style that is not a solid color
