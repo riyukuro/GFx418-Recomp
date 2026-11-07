@@ -36,7 +36,9 @@ struct Unk_ItWeakTarget { Ptr<InteractiveObject> FUN_1422b4770() const; };
 // _level0), and the next call is put a whole number of intervals after the last one, never sooner than a tenth of
 // the frame time. A timer whose object or clip is gone stops; a timeout stops after its call.
 // MS2-FUNCTIONAL: register allocation and block layout differ; the exe also keeps the converted target in a register
-// where ours reloads it from the temporary before releasing it.
+// where ours reloads it from the temporary before releasing it. Not a floor: ours is 1579 bytes against the exe's 1669.
+// Both make the same 26 direct calls. The gap is layout: the exe duplicates the GetASEnvironment vcall on the null
+// GetLevelMovie(0) path, picks the level clip with a cmov, and joins the penv paths through extra jmp tails.
 // @0x142962c90
 bool IntervalTimer::Invoke(MovieImpl* proot, float frameTime)
 {
