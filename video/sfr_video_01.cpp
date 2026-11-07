@@ -16,6 +16,7 @@
 #include "../include/gfx/gfx_sprite.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
+#include "../include/video/video_as2avmvideocharacter.h"
 #include "../include/gfx/as2/as2_objectproto.h"
 #include "../include/gfx/gfx_loaderimpl.h"
 
@@ -2644,7 +2645,7 @@ void FUN_14000d330(void* wrapper)
 
 // AvmVideoCharacter vtable 0x1431b5cb0 [34]: a constant id.
 // @0x14000d320
-unsigned FUN_14000d320(void*) { return 0x7027cf; }
+unsigned Scaleform::GFx::AS2::AvmVideoCharacter::GetStandardMemberBitMask() const { return 0x7027cf; }
 
 // @0x14000a730
 void FUN_14000a730(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
