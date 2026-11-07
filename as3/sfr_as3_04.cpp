@@ -3071,7 +3071,8 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     // E4X [[Put]] on an element. An attribute name sets (or adds) that attribute to value's string, a list joining its items
     // with spaces; any further attributes of that name are deleted. An element name replaces the last matching child (the
     // others are removed) or appends one; a primitive value becomes the text of that child, a new element when there was none.
-    // MS2-FUNCTIONAL: same length as the exe; only the attribute-name IsQName test differs (exe and al,3 / cmp al,1, ours dword)
+    // IsQName written as a switch: the exe tests the attribute name type with a dword load and and al,3 / cmp al,1
+    static SF_FORCEINLINE bool Sfr04IsQName(const Multiname& mn) { switch (mn.Kind & 3) { case 0: case 1: return true; default: return false; } }
     // @0x1424220e0
     CheckResult XMLElement::SetProperty(const Multiname& prop_name, const Value& value)
     {
@@ -3137,7 +3138,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
             if (a.GetPtr() == NULL)
             {
                 InstanceTraits::fl::XML& itr = static_cast<InstanceTraits::fl::XML&>(GetInstanceTraits());
-                Instances::Namespace* ns = prop_name.IsQName() ? &prop_name.GetNamespace() : vm.GetDefXMLNamespace();
+                Instances::Namespace* ns = Sfr04IsQName(prop_name) ? &prop_name.GetNamespace() : vm.GetDefXMLNamespace();
                 if (ns == NULL) ns = &vm.GetPublicNamespace();
                 a = itr.MakeInstanceAttr(itr, *ns,
                                       prop_name.Name.AsString(), c.AsString(), this);
@@ -3179,8 +3180,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
             if (primitiveAssign)
             {
                 InstanceTraits::fl::XML& itr = static_cast<InstanceTraits::fl::XML&>(GetInstanceTraits());
-                Instances::Namespace* ns = prop_name.IsQName() && !prop_name.IsAnyNamespace() ?
-                                           &prop_name.GetNamespace() : vm.GetDefXMLNamespace();
+                Instances::Namespace* ns = prop_name.IsQName() && !prop_name.IsAnyNamespace() ? &prop_name.GetNamespace() : vm.GetDefXMLNamespace();
                 if (ns == NULL) ns = &vm.GetPublicNamespace();
 
                 SPtr<XMLElement> y = itr.MakeInstanceElement(itr, *ns, prop_name.Name.AsString(), this);
