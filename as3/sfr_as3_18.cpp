@@ -2055,21 +2055,33 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 namespace {
 // SlotInfo::IsClassType: the slot's declared type (TraitInfo::GetTypeName: a slot or const trait's type multiname,
 // else the name of the class it binds) is "Class" in the public namespace.
+// TraitInfo::IsSlotOrConst / GetTypeName (AS3_Abc.h).
+SF_FORCEINLINE bool TrIsSlotOrConst(const Abc::TraitInfo& ti)
+{
+    Abc::TraitInfo::Type type = ti.GetType();
+    return (type == Abc::TraitInfo::tSlot || type == Abc::TraitInfo::tConst);
+}
+SF_FORCEINLINE const Abc::Multiname& TrGetTypeName(const Abc::TraitInfo& ti, const Abc::File& f)
+{
+    if (TrIsSlotOrConst(ti))
+        return f.Const_Pool.GetMultiname(ti.Ind);
+    return f.Const_Pool.GetMultiname(f.AS3_Classes.Info[ti.Ind]->inst_info.name_ind);
+}
 SF_FORCEINLINE bool TrIsClassTypeSlot(const SlotInfo& si)
 {
-    if (si.File.GetPtr() == NULL || si.TI == NULL)
-        return false;
-    const Abc::File&      f  = si.File->GetAbcFile();
-    const Abc::ConstPool& cp = f.Const_Pool;
-    const Abc::TraitInfo& ti = *si.TI;
-    const Abc::Multiname& mn = ti.GetType() == Abc::TraitInfo::tSlot || ti.GetType() == Abc::TraitInfo::tConst
-                                   ? cp.GetMultiname(ti.Ind)
-                                   : cp.GetMultiname(f.AS3_Classes.Info[ti.Ind]->inst_info.name_ind);
-    const Abc::NamespaceInfo& ns = mn.Ind ? cp.ConstNamespace[mn.Ind] : cp.any_namespace;
-    const StringDataPtr       tn = cp.GetString(mn.NameIndex);
-    // NamespaceInfo::IsPublic (public or explicit) with an empty URI
-    return tn.ToCStr() && strncmp(tn.ToCStr(), "Class", 5) == 0 && (static_cast<UInt32>(ns.Kind) & ~4u) == 0 &&
-           ns.NameURI.GetSize() == 0;
+    bool result = false;
+    if (si.File.GetPtr() != NULL && si.TI != NULL)
+    {
+        const Abc::Multiname&     mn = TrGetTypeName(*si.TI, si.File->GetAbcFile());
+        const Abc::ConstPool&     cp = si.File->GetAbcFile().Const_Pool;
+        const Abc::NamespaceInfo& ns = mn.Ind == 0 ? cp.any_namespace : cp.ConstNamespace[mn.Ind];
+        const StringDataPtr       tn = cp.GetString(mn.NameIndex);
+        // NamespaceInfo::IsPublic (public or explicit) with an empty URI
+        if (tn.ToCStr() && strncmp(tn.ToCStr(), "Class", 5) == 0 && (static_cast<UInt32>(ns.Kind) & ~4u) == 0 &&
+            ns.NameURI.GetSize() == 0)
+            result = true;
+    }
+    return result;
 }
 
 // VM::ThrowVerifyError: ThrowErrorInternal with the VerifyError class.
@@ -2083,9 +2095,9 @@ namespace TR {
 // The traced type of a property read through the slot si of obj_traits, into type: the function type of a method
 // slot, the return type of a getter, else the slot's declared type (its class for a Class-typed or class-bound slot).
 // An unknown declared type raises VerifyError 1014 (false).
-// MS2-FUNCTIONAL 0x14250cf20: raw-offset model of the ABC type multiname ("Class" in the public namespace) test
-// (left: the exe keeps the error value's cleared fields after its weak release, its "Class" compare and
-// class-type test shapes, a larger frame, register allocation)
+// MS2-FUNCTIONAL 0x14250cf20: the exe packs every Value temp into one stack slot with a shared type= tail
+// and duplicates the slot-trait GetMultiname branch; ours keeps the BT_Code temp apart in a 0x10-larger frame
+// (left: slot offsets, the NameIndex load width, register allocation)
 // @0x14250cf20
 __declspec(safebuffers) CheckResult State::GetPropertyType(const Traits* obj_traits, const SlotInfo& si, Value& type) const
 {
@@ -2094,12 +2106,7 @@ __declspec(safebuffers) CheckResult State::GetPropertyType(const Traits* obj_tra
         if (si.BindType == SlotInfo::BT_Code)
         {
             // Retrieve function type.
-            InstanceTraits::Traits* ptr;
-            {
-                const Value& fv = obj_traits->GetVT().GetValue(AbsoluteIndex(si.ValueInd));
-                ptr = &GetFunctType(fv);
-            }
-            InstanceTraits::Traits& tr = *ptr;
+            InstanceTraits::Traits& tr = GetFunctType(obj_traits->GetVT().GetValue(AbsoluteIndex(si.ValueInd)));
             type = Value(tr, CanBeNull(tr));
         }
         else
@@ -2117,11 +2124,7 @@ __declspec(safebuffers) CheckResult State::GetPropertyType(const Traits* obj_tra
     ClassTraits::Traits* ctr = FUN_1425085b0(&si, &vm);
     if (ctr == NULL)
     {
-        struct { UPInt node; } nb;   // raw storage: GetDataTypeName constructs the name in it
-        ASString& name = *reinterpret_cast<ASString*>(&nb);
-        FUN_142508720(&si, &name, &vm);
-        TrThrowVerifyError(vm, VM::Error(VM::ErrorID(1014) /* eClassNotFoundError */, vm, Value(name, Value::InlineStr)));
-        name.~ASString();
+        TrThrowVerifyError(vm, VM::Error(VM::ErrorID(1014) /* eClassNotFoundError */, vm, Value(si.GetDataTypeName(vm), Value::InlineStr)));
         return false;
     }
 
