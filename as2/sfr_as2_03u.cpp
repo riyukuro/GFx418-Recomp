@@ -9,15 +9,79 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-// MS2-FUNCTIONAL: the exe builds the function ref by hand (type switch, copy and release of both halves) before
-// assigning it; this goes through ToFunction and the ref's assignment
+// The LTCG-folded temp ref: no clearing dtor, released by hand.
+union FnCallRefHolder
+{
+    FunctionRefBase v;
+    SF_FORCEINLINE FnCallRefHolder() {}
+    SF_FORCEINLINE ~FnCallRefHolder() {}
+};
+struct FnCallValueAccess : Value
+{
+    using Value::ResolveFunctionName;
+};
+
+// MS2-FUNCTIONAL: the function ref is built by hand in a union temp, as the exe (LTCG) folds ToFunction and
+// ~FunctionRef, and its fields are kept in locals across Assign. Left: the exe takes the weak flag as a setne bool
+// and keeps the default case's fields as reloads from the zeroed temp; ours folds both (regalloc and flag stores).
 // @0x14291be60
 FnCall::FnCall(Value* res, const Value& thisVal, Environment* penv, int nargs, int firstArgBottomIndex)
     : Result(res), ThisPtr(thisVal.ToObjectInterface(penv)), Env(penv), NArgs(nargs),
       FirstArgBottomIndex(firstArgBottomIndex)
 {
     if (thisVal.GetType() == Value::FUNCTION || thisVal.GetType() == Value::FUNCTIONNAME)
-        ThisFunctionRef = thisVal.ToFunction(penv);
+    {
+        FnCallRefHolder h;
+        FunctionObject* f;
+        LocalFrame*     lf;
+        UByte           fl;
+        switch (thisVal.GetType())
+        {
+        case Value::FUNCTION:
+        {
+            const FunctionRefBase& orig = thisVal.V.FunctionValue;
+            f  = orig.Function;
+            fl = 0;
+            h.v.Flags    = fl;
+            h.v.Function = f;
+            if (f)
+                f->AddRef();
+            lf = 0;
+            h.v.pLocalFrame = lf;
+            if (orig.pLocalFrame)
+            {
+                lf = orig.pLocalFrame;
+                h.v.pLocalFrame = lf;
+                if (orig.Flags & FunctionRefBase::FuncRef_Weak)
+                    fl |= FunctionRefBase::FuncRef_Weak;
+                else
+                    fl &= ~FunctionRefBase::FuncRef_Weak;
+                h.v.Flags = fl;
+                if (!(fl & FunctionRefBase::FuncRef_Weak))
+                    lf->AddRef();
+            }
+            break;
+        }
+        case Value::FUNCTIONNAME:
+
+            ::new (&h.v) FunctionRef(static_cast<const FnCallValueAccess&>(thisVal).ResolveFunctionName(penv));
+            fl = h.v.Flags;
+            lf = h.v.pLocalFrame;
+            f  = h.v.Function;
+            break;
+        default:
+            ::new (&h.v) FunctionRef();
+            fl = h.v.Flags;
+            lf = h.v.pLocalFrame;
+            f  = h.v.Function;
+            break;
+        }
+        ThisFunctionRef.Assign(h.v);
+        if (!(fl & FunctionRefBase::FuncRef_Internal) && f)
+            f->Release();
+        if (!(fl & FunctionRefBase::FuncRef_Weak) && lf)
+            lf->Release();
+    }
 }
 
 }}} // namespace Scaleform::GFx::AS2
