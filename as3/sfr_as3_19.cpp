@@ -42,6 +42,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_tracer.h"
 #include "ms2/scaleform/include/gfx/gfx_rendertree.h"
 #include "ms2/scaleform/include/kernel/sf_simd.h"
+#include "ms2/scaleform/include/gfx/gfx_valueinfo.h"
 #include <cmath>
 
 namespace Scaleform {
@@ -7445,44 +7446,141 @@ static UPInt Sfr31AvmObjOfDisplay(UPInt dobj)
 }}} // namespace Scaleform::GFx::AS3
 namespace Scaleform { namespace GFx {
 
+// Slots::GetSlotNameNode / GetSlotInfo (SDK AS3_Traits.h inlines): a parent's slot goes through the parent's out-of-line copy.
+static __forceinline ASStringNode* Sfr19SlotNameNode(const AS3::Slots& s, AS3::AbsoluteIndex ind)
+{
+    if (ind < s.FirstOwnSlotNum)
+        return s.Parent->GetSlotNameNode(ind);
+    return s.VArray[static_cast<UInt32>(ind.Get()) - s.FirstOwnSlotNum].Key;
+}
+// AvmDisplayObjContainer::GetAS3ChildAt (0x142505cc0, sfr_as3_17), inlined by the exe; the SPtr result is a temporary.
+static __forceinline AS3::SPtr<AS3::Instances::fl_display::DisplayObject> Sfr19GetAS3ChildAtSPtr(AS3::AvmDisplayObjContainer* pcurr, unsigned index)
+{
+    DisplayObjectBase* ch = pcurr->GetDisplayObjContainer()->GetChildAt(index);
+    if (ch)
+    {
+        AS3::AvmDisplayObj* pavm = AS3::ToAvmDisplayObj(ch);
+        pavm->CreateASInstance(true);
+        return pavm->GetAS3Obj();
+    }
+    return NULL;
+}
+static __forceinline AS3::Instances::fl_display::DisplayObject* Sfr19GetAS3ChildAt(AS3::AvmDisplayObjContainer* pcurr, unsigned index)
+{
+    return Sfr19GetAS3ChildAtSPtr(pcurr, index);
+}
+// SPtr::Release: a tagged pointer is untagged in place, else the object released.
+static __forceinline void Sfr19ReleaseSPtrSlot(AS3::Object*& p)
+{
+    if (reinterpret_cast<UPInt>(p) & 1)
+        p = reinterpret_cast<AS3::Object*>(reinterpret_cast<UPInt>(p) - 1);
+    else if (p)
+        p->Release();
+}
+// Value(Object*) whose dtor expands Value::ReleaseInternal in place (the exe's LTCG inlines it here).
+struct Sfr19ObjectValue
+{
+    union
+    {
+        UPInt Align;
+        UByte Buf[sizeof(AS3::Value)];
+    };
+    __forceinline explicit Sfr19ObjectValue(AS3::Object* p) { ::new (Buf) AS3::Value(p); }
+    AS3::Value& Get() { return *reinterpret_cast<AS3::Value*>(Buf); }
+    __forceinline ~Sfr19ObjectValue()
+    {
+        AS3::Value& v = Get();
+        if (!v.IsRefCounted())
+            return;
+        if (v.IsWeakRef())
+        {
+            // Value::ReleaseWeakRefSCU
+            AS3::WeakProxy*& wp = *reinterpret_cast<AS3::WeakProxy**>(Buf + 0x08);
+            wp->Release();
+            wp = NULL;
+            *reinterpret_cast<UPInt*>(Buf + 0x10) = 0;
+            *reinterpret_cast<UPInt*>(Buf + 0x18) = 0;
+            *reinterpret_cast<UInt32*>(Buf) &= ~0x200u;
+            *reinterpret_cast<UInt32*>(Buf) &= ~0x1fu;
+            return;
+        }
+        switch (v.GetKind())
+        {
+        case AS3::Value::kString:
+            (*reinterpret_cast<ASStringNode**>(Buf + 0x10))->Release();
+            break;
+        case AS3::Value::kNamespace:
+        case AS3::Value::kObject:
+        case AS3::Value::kClass:
+        case AS3::Value::kFunction:
+        case AS3::Value::kThunkFunction:
+            Sfr19ReleaseSPtrSlot(*reinterpret_cast<AS3::Object**>(Buf + 0x10));
+            break;
+        case AS3::Value::kThunkClosure:
+        case AS3::Value::kVTableIndClosure:
+            Sfr19ReleaseSPtrSlot(*reinterpret_cast<AS3::Object**>(Buf + 0x18));
+            break;
+        default:
+            break;
+        }
+    }
+};
+// Traits::CIterator::operator++: stops at the end.
+static __forceinline void Sfr19NextSlot(const AS3::Slots& s, AS3::AbsoluteIndex& ind)
+{
+    if (ind < s.GetSlotInfoNum())
+        ind = AS3::AbsoluteIndex(ind.Get() + 1);
+}
+static __forceinline const AS3::SlotInfo& Sfr19SlotInfo(const AS3::Slots& s, AS3::AbsoluteIndex ind)
+{
+    if (ind < s.FirstOwnSlotNum)
+        return s.Parent->GetSlotInfo(ind);
+    return s.VArray[static_cast<UInt32>(ind.Get()) - s.FirstOwnSlotNum].Value;
+}
+
 // AS3ValueObjectInterface::VisitMembers: the visitor receives the dynamic members, the public non-method slots (when it asks for them)
 // and, for a display object container, its children by name.
-// MS2-FUNCTIONAL 0x142531630: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// MS2-FUNCTIONAL 0x142531630: SDK VisitMembers shape with the exe's inlined slot accessors, GetAS3ChildAt and ~Value; regalloc, stack slots and the inline Value(Object*) ctor differ
 // @0x142531630
-void AS3ValueObjectInterface::VisitMembers(void* pdata, ObjVisitor* pvisitor, bool) const
+void AS3ValueObjectInterface::VisitMembers(void* pdata, ObjVisitor* visitor, bool) const
 {
     using namespace AS3;
     const UPInt self = reinterpret_cast<UPInt>(this);
-    Object* obj = static_cast<Object*>(pdata);
-    const UPInt visitor = reinterpret_cast<UPInt>(pvisitor);
-    typedef void (*VisitFn)(UPInt, const char*, const void*);
-    typedef bool (*WantFn)(UPInt);
     const UPInt root = Sfr31Rd(Sfr31Rd(self, 8), 0x18);
-    const VisitFn visit = reinterpret_cast<VisitFn>(Sfr31Rd(Sfr31Rd(visitor, 0), 0x10));
-    const Object::DynAttrsType& attrs = *obj->GetDynamicAttrs();
-    for (Object::DynAttrsType::ConstIterator it = attrs.Begin(); !it.IsEnd(); ++it)
+    Object* obj = static_cast<Object*>(pdata);
+
+    const Object::DynAttrsType* dynAttrs = obj->GetDynamicAttrs();
+    if (dynAttrs)
     {
-        GFx::Value gv;
-        FUN_1424e42c0(root, &it->Second, &gv);
-        visit(visitor, it->First.Name.ToCStr(), &gv);
-    }
-    if (reinterpret_cast<WantFn>(Sfr31Rd(Sfr31Rd(visitor, 0), 8))(visitor))
-    {
-        const Traits& tr = obj->GetTraits();
-        const UPInt n = tr.GetSlotInfoNum();
-        for (UPInt i = 0; i < n; ++i)
+        Object::DynAttrsType::ConstIterator it = dynAttrs->Begin();
+        for (; !it.IsEnd(); ++it)
         {
-            ASString name(tr.GetSlotNameNode(AbsoluteIndex(i)));
-            const SlotInfo& si = tr.GetSlotInfo(AbsoluteIndex(i));
-            const int bt = static_cast<int>(si.BindType);
-            if (bt == 0xb || bt > 0xc || static_cast<int>(si.pNs->GetKind()) != 0)
+            GFx::Value val;
+            const ASString& name = it->First.Name;
+            const AS3::Value& asval = it->Second;
+            FUN_1424e42c0(root, &asval, &val);
+            visitor->Visit(name.ToCStr(), val);
+        }
+    }
+
+    if (visitor->IncludeAS3PublicMembers())
+    {
+        const Traits& t = obj->GetTraits();
+        for (AbsoluteIndex ind(0); !(static_cast<UInt32>(ind.Get()) >= t.GetSlotInfoNum()); Sfr19NextSlot(t, ind))
+        {
+            GFx::Value val;
+            ASString name(Sfr19SlotNameNode(t, ind));
+            const SlotInfo& slotInfo = Sfr19SlotInfo(t, ind);
+            const int bt = static_cast<int>(slotInfo.BindType);
+            if (bt == 0xb || bt > 0xc)
                 continue;
-            AS3::Value v;
+            if (static_cast<int>(slotInfo.pNs->GetKind()) != 0)
+                continue;
+            AS3::Value asval;
             char ok;
-            FUN_14250e770(&si, &ok, &v, obj);
-            GFx::Value gv;
-            FUN_1424e42c0(root, &v, &gv);
-            visit(visitor, name.ToCStr(), &gv);
+            FUN_14250e770(&slotInfo, &ok, &asval, obj);
+            FUN_1424e42c0(root, &asval, &val);
+            visitor->Visit(name.ToCStr(), val);
         }
     }
     const UPInt otraits = Sfr31Rd(reinterpret_cast<UPInt>(obj), 0x20);
@@ -7491,28 +7589,16 @@ void AS3ValueObjectInterface::VisitMembers(void* pdata, ObjVisitor* pvisitor, bo
     UPInt dobj = Sfr31Rd(reinterpret_cast<UPInt>(obj), 0x58);
     if (dobj != 0 && !((*reinterpret_cast<const UInt16*>(dobj + 0x6a) >> 9) & 1))
         dobj = 0;
-    UPInt owner = 0x18;
-    if (dobj != 0)
+    AvmDisplayObjContainer* pcurr = dobj != 0
+        ? AvmDisplayObjContainer::FromBase(reinterpret_cast<DisplayObjContainer*>(dobj)->GetAvmDispContainer()) : NULL;
+    for (unsigned i = 0; i < static_cast<unsigned>(pcurr->GetDisplayObjContainer()->mDisplayList.GetCount()); i++)
     {
-        const UPInt sub = dobj + *reinterpret_cast<const UByte*>(dobj + 0x6d) * 4;
-        typedef UPInt (*GetAvmFn)(UPInt);
-        const UPInt avm = reinterpret_cast<GetAvmFn>(Sfr31Rd(Sfr31Rd(sub, 0), 0x28))(sub);
-        owner = avm != 0 ? avm - 0x28 : 0x18;
-    }
-    const UPInt container = Sfr31Rd(owner, 0);
-    for (UInt32 i = 0; i < *reinterpret_cast<const UInt32*>(container + 0xe0); ++i)
-    {
-        const UPInt child = FUN_1425fc530(container, i);
-        if (child == 0)
-            continue;
-        const UPInt avmObj = Sfr31AvmObjOfDisplay(child);
-        if (avmObj == 0)
-            continue;
-        ASString name = reinterpret_cast<DisplayObject*>(Sfr31Rd(avmObj, 0x58))->GetName();
-        AS3::Value v(reinterpret_cast<Object*>(avmObj));
-        GFx::Value gv;
-        FUN_1424e42c0(root, &v, &gv);
-        visit(visitor, name.ToCStr(), &gv);
+        Instances::fl_display::DisplayObject* pchild = Sfr19GetAS3ChildAt(pcurr, i);
+        ASString name = pchild->pDispObj->GetName();
+        Sfr19ObjectValue asval(pchild);
+        GFx::Value val;
+        FUN_1424e42c0(root, &asval.Get(), &val);
+        visitor->Visit(name.ToCStr(), val);
     }
 }
 
