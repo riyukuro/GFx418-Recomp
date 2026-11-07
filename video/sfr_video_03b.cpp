@@ -151,8 +151,8 @@ uint64_t* FUN_142743050(uint64_t* object, void* player, void* streamState, void*
 }
 
 // MS2-FUNCTIONAL: initializes the FMOD streaming sound, computes its PCM format, and creates the sound handle.
-// Left: the exe picks format/sampleBits with two cmoves and keeps stereo and rate in one register (ours branches and needs
-// one more callee-saved register), and the field stores are scheduled differently.
+// Left: two stores are scheduled one slot later than the exe's: object[8] = 0 lands after the channels argument load, and
+// object[8] = stream lands after the stereo test. Store order, store types and the placement of the format cmoves were all tried.
 // @0x142743240
 uint64_t* FUN_142743240(uint64_t* object, void* owner, void* stream, int stereo, uint32_t rate, uint32_t channels)
 {
@@ -178,15 +178,15 @@ uint64_t* FUN_142743240(uint64_t* object, void* owner, void* stream, int stereo,
     if (stream) FUN_14257dc30(stream);
     if (object[8]) FUN_14257dcb0(reinterpret_cast<void*>(object[8]));
     object[8] = reinterpret_cast<uintptr_t>(stream);
+    const uint32_t format = stereo == 0 ? 2 : 5;
+    const uint32_t sampleBits = stereo == 0 ? 0x10 : 0x20;
     const uint32_t soundChannels = *reinterpret_cast<uint32_t*>(reinterpret_cast<unsigned char*>(object) + 0x4c);
     const uint32_t soundRate = reinterpret_cast<uint32_t*>(object)[18];
-    uint32_t format = 5;
-    uint32_t sampleBits = 0x20;
-    if (stereo == 0) { format = 2; sampleBits = 0x10; }
     reinterpret_cast<uint32_t*>(object)[0x1a] = format;
     reinterpret_cast<uint32_t*>(object)[0x14] = sampleBits;
     const int32_t pcmBytes = static_cast<int32_t>((soundChannels / 1000) * (sampleBits >> 3) * soundRate * 0x5dc);
     *reinterpret_cast<int32_t*>(reinterpret_cast<unsigned char*>(object) + 100) = pcmBytes;
+    unsigned int length;
     FMOD_CREATESOUNDEXINFO info;
     memset(&info, 0, sizeof(info));
     uint32_t* infoWords = reinterpret_cast<uint32_t*>(&info);
@@ -197,7 +197,7 @@ uint64_t* FUN_142743240(uint64_t* object, void* owner, void* stream, int stereo,
     infoWords[5] = format;
     if (static_cast<FMOD::System*>(*reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(object[5]) + 0x10))->createSound(0, 0x442, &info, reinterpret_cast<FMOD::Sound**>(sound)) != 0) *sound = 0;
     else {
-        unsigned int length = 0;
+        length = 0;
         reinterpret_cast<FMOD::Sound*>(*sound)->getLength(&length, 4);
     }
     return object;
