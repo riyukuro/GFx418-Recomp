@@ -103,7 +103,10 @@ bool GFxAS2LoadQueueEntryMT_LoadMovie::IsPreloadingFinished()
 // Polled by the movie until the loader thread has the movie: then the new sprite takes the place of the old clip
 // (or level) once, the movie clip loader hears of the progress, and frame 0 runs when the first frame (with the
 // extensions on) or the whole file is in. False while there is more to wait for.
-// MS2-FUNCTIONAL: register allocation and block layout differ.
+// MS2-FUNCTIONAL: register allocation only (2492 vs 2493 bytes). At the three null-tested ToAvmCharacter vcalls the exe
+// merges the 0 into rax (mov rax,rbx) and loads the vtable into r9/rdx; ours merges into rcx. The version-mismatch
+// warning also computes the URL argument before `this`. ToAvmCharacter, ternary, local and if-return forms and a
+// named URL or log local do not move either.
 // @0x142966650
 bool GFxAS2LoadQueueEntryMT_LoadMovie::LoadFinished()
 {
@@ -333,16 +336,18 @@ bool GFxAS2LoadQueueEntryMT_LoadMovie::LoadFinished()
     {
         // The load failed or was canceled.
         Environment* penv = LmAvmChar(pOldChar)->GetASEnvironment();
-        pmovieClipLoader->NotifyOnLoadError(
-            penv, pOldChar, pdefImpl->GetDataDef()->GetLoadState() == MovieDataDef::LS_LoadError ? "Error" : "Canceled",
-            0);
+        if (pdefImpl->GetDataDef()->GetLoadState() == MovieDataDef::LS_LoadError)
+            pmovieClipLoader->NotifyOnLoadError(penv, pOldChar, "Error", 0);
+        else
+            pmovieClipLoader->NotifyOnLoadError(penv, pOldChar, "Canceled", 0);
     }
     return true;
 }
 
 // A loadMovie / unloadMovie into a clip or a level: the new sprite takes the place (id, depth, name) of the old
 // one, then the movie clip loader of the request hears how it went.
-// MS2-FUNCTIONAL: register allocation and block layout differ (one large body, the level searches inlined).
+// MS2-FUNCTIONAL: block layout and inlining differ (one large body, the level searches inlined); ours is 3319 bytes
+// against the exe's 3203, so some inlined helper is still out of shape.
 // @0x1429706b0
 void MovieRoot::ProcessLoadMovieClip(GFx::LoadQueueEntry* p_entry, LoadStates* pls)
 {
