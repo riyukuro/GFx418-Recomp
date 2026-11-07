@@ -2392,7 +2392,7 @@ Scaleform::GFx::AS2::Object* FUN_140012510(
     return Video02ConnectProtoInit(object, context, prototype, constructor);
 }
 
-// the exe inlines the builder into both of its callers.
+// The exe builds the native function and prototype inline in both registration functions below.
 namespace Scaleform { namespace GFx { namespace AS2 {
 Value* FUN_142923b90(Value* pthis, const FunctionRef& func);
 }}}
@@ -2402,76 +2402,8 @@ struct Video02ValueStorage
     std::uint64_t Raw0, Raw1, Raw2, Raw3;
 };
 
-static __forceinline Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
-    Scaleform::GFx::AS2::FunctionRef* result, Scaleform::GFx::AS2::GlobalContext* context,
-    Scaleform::GFx::AS2::CFunctionPtr callback, void* functionVtable, void* functionInterfaceVtable,
-    unsigned prototypeSize, unsigned prototypeType, unsigned stringOffset, bool connectPrototype)
-{
-    Scaleform::GFx::AS2::ASStringContext stringContext(context, 8);
-    Scaleform::GFx::AS2::CFunctionObject* function = static_cast<Scaleform::GFx::AS2::CFunctionObject*>(context->pHeap->Alloc(0x70));
-    if (function)
-    {
-        function->Scaleform::GFx::AS2::CFunctionObject::CFunctionObject(&stringContext, callback);
-        *reinterpret_cast<void**>(function) = functionVtable;
-        *reinterpret_cast<void**>(reinterpret_cast<char*>(function) + 0x20) = functionInterfaceVtable;
-    }
-    else
-        function = 0;
-    result->Init(*function);   // adopts the new function's reference
-
-    Scaleform::GFx::AS2::Object* prototype = static_cast<Scaleform::GFx::AS2::Object*>(context->pHeap->Alloc(prototypeSize));
-    if (prototype)
-    {
-        if (connectPrototype)
-            Video02ConnectProtoInit(prototype, &stringContext,
-                context->GetPrototype(Scaleform::GFx::AS2::ASBuiltin_Object), result);
-        else
-        {
-            Scaleform::GFx::AS2::FUN_14000e1e0(prototype, &stringContext,
-                context->GetPrototype(Scaleform::GFx::AS2::ASBuiltin_Object), *result);
-            *reinterpret_cast<void**>(reinterpret_cast<char*>(prototype) + 0x20) = &PTR_LAB_1431b5e70;
-            *reinterpret_cast<void**>(reinterpret_cast<char*>(prototype) + 0x70) = &PTR_LAB_1431b5e18;
-            *reinterpret_cast<void**>(prototype) = &PTR_FUN_1431b5e20;
-            const Scaleform::GFx::AS2::PropFlags flags(1);
-            reinterpret_cast<Video02PrototypeAccess*>(reinterpret_cast<char*>(prototype) + 0x70)->InitFunctionMembers(
-                prototype, &stringContext, Video02VideoFunctions, flags);
-        }
-        unsigned* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
-        *count = (*count + 1) & 0x8fffffff;
-    }
-    else
-        prototype = 0;
-    extern void FUN_14000c280(void*, unsigned, void**);
-    {
-        void* prototypeSlot = prototype;
-        FUN_14000c280(context, prototypeType, &prototypeSlot);
-    }
-
-    Scaleform::GFx::AS2::PropFlags flags;
-    Scaleform::GFx::AS2::Object* global = context->pGlobal;
-    Scaleform::GFx::AS2::StringManager* manager = context->GetStringManager();
-    const Scaleform::GFx::ASString& name = *reinterpret_cast<const Scaleform::GFx::ASString*>(
-        reinterpret_cast<char*>(manager) + stringOffset);
-    // The exe builds and destroys the member value out of line (0x142923b90 / 0x1429260b0).
-    Video02ValueStorage valueStorage;
-    global->SetMemberRaw(&stringContext, name,
-        *Scaleform::GFx::AS2::FUN_142923b90(reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage), *result),
-        flags);
-    reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage)->Scaleform::GFx::AS2::Value::~Value();
-    if (prototype)
-    {
-        unsigned* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
-        if ((*count & 0x03ffffffu) != 0)
-        {
-            --*count;
-            reinterpret_cast<Scaleform::GFx::AS2::Video02GCAccess*>(prototype)->ReleaseInternal();
-        }
-    }
-    return result;
-}
-
 // MS2-FUNCTIONAL: creates and registers the attachVideo native function and prototype (VideoCtorFunction::Register),
-// written out rather than through CreateVideo02Builtin so the temps share the rcx home slot like the exe. Left: our
+// written out in full so the temps share the rcx home slot like the exe. Left: our
 // placement new tests result for null (the exe does not; without the test the result/prototype registers swap), the
 // prototype vptr stores are scheduled differently, and global/manager sit in rbx/rsi.
 // @0x14000ed60
@@ -2534,14 +2466,61 @@ Scaleform::GFx::AS2::FunctionRef* FUN_14000ed60(
     return result;
 }
 
-// MS2-FUNCTIONAL: creates and registers the Connect native function and prototype. Same calls and order as the exe;
-// the rest is register and frame layout (the exe uses an r11 frame, VC9 style).
+// MS2-FUNCTIONAL: creates and registers the Connect native function and prototype, written out in full with the
+// exe's in-place Init of the result. Left: global/manager sit in rbx/rsi (exe rsi/rbx) and the default PropFlags
+// byte is stored after the GetStringManager call (exe before it; a named local fixes the order but takes a new slot).
 // @0x1400126f0
 Scaleform::GFx::AS2::FunctionRef* FUN_1400126f0(
     Scaleform::GFx::AS2::FunctionRef* result, Scaleform::GFx::AS2::GlobalContext* context)
 {
-    return CreateVideo02Builtin(result, context, FUN_140012340, &PTR_LAB_1431b6740,
-        &PTR_LAB_1431b67d0, 0xa8, 0x22, 0x110, true);
+    Scaleform::GFx::AS2::ASStringContext stringContext(context, 8);
+    Scaleform::GFx::AS2::CFunctionObject* function = static_cast<Scaleform::GFx::AS2::CFunctionObject*>(context->pHeap->Alloc(0x70));
+    if (function)
+    {
+        function->Scaleform::GFx::AS2::CFunctionObject::CFunctionObject(&stringContext, FUN_140012340);
+        *reinterpret_cast<void**>(function) = &PTR_LAB_1431b6740;
+        *reinterpret_cast<void**>(reinterpret_cast<char*>(function) + 0x20) = &PTR_LAB_1431b67d0;
+    }
+    else
+        function = 0;
+    result->Init(*function);   // adopts the new function's reference
+
+    Scaleform::GFx::AS2::Object* prototype = static_cast<Scaleform::GFx::AS2::Object*>(context->pHeap->Alloc(0xa8));
+    if (prototype)
+    {
+        Video02ConnectProtoInit(prototype, &stringContext,
+            context->GetPrototype(Scaleform::GFx::AS2::ASBuiltin_Object), result);
+        unsigned* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
+        *count = (*count + 1) & 0x8fffffff;
+    }
+    else
+        prototype = 0;
+    extern void FUN_14000c280(void*, unsigned, void**);
+    {
+        void* prototypeSlot = prototype;
+        FUN_14000c280(context, 0x22, &prototypeSlot);
+    }
+
+    Scaleform::GFx::AS2::Object* global = context->pGlobal;
+    Scaleform::GFx::AS2::StringManager* manager = context->GetStringManager();
+    const Scaleform::GFx::ASString& name = *reinterpret_cast<const Scaleform::GFx::ASString*>(
+        reinterpret_cast<char*>(manager) + 0x110);
+    // The exe builds and destroys the member value out of line (0x142923b90 / 0x1429260b0).
+    Video02ValueStorage valueStorage;
+    global->SetMemberRaw(&stringContext, name,
+        *Scaleform::GFx::AS2::FUN_142923b90(reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage), *result),
+        Scaleform::GFx::AS2::PropFlags());
+    reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage)->Scaleform::GFx::AS2::Value::~Value();
+    if (prototype)
+    {
+        unsigned* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
+        if ((*count & 0x03ffffffu) != 0)
+        {
+            --*count;
+            reinterpret_cast<Scaleform::GFx::AS2::Video02GCAccess*>(prototype)->ReleaseInternal();
+        }
+    }
+    return result;
 }
 
 // Replaces the player event relay and its associated VideoPlayerImpl state object.
