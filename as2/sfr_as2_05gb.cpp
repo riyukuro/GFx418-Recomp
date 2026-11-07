@@ -68,6 +68,15 @@ static SF_FORCEINLINE InteractiveObject* Sfr05gb_GetLevelMovie(const MovieImpl* 
     return 0;
 }
 
+// MovieRoot::GetLevelMovie: the same scan, read through the root each time.
+static SF_FORCEINLINE InteractiveObject* Sfr05gb_RootLevelMovie(const MovieRoot* proot, int level)
+{
+    for (unsigned i = 0; i < proot->pMovieImpl->MovieLevelsSize; i++)
+        if (proot->pMovieImpl->pMovieLevels[i].Level == level)
+            return proot->pMovieImpl->pMovieLevels[i].pSprite;
+    return 0;
+}
+
 // The strings of the holder are at least one (ArrayDataCC::Resize, inlined in the exe).
 typedef ArrayDataCC<ASString, AllocatorLH<ASString, 0x147>, ArrayDefaultPolicy> Sfr05gbStringData;
 static SF_FORCEINLINE void Sfr05gb_ResizeStringArray(MovieImpl::ReturnValueHolder* h, unsigned n)
@@ -527,12 +536,12 @@ bool AvmSprite::GetStandardMember(StandardMember index, Value* val, bool opcodeF
 // count elements of the AS2 array at the path from index on, into the host's array of ints, doubles, floats,
 // strings (kept alive by the movie's return value holder), wide strings (in its character buffer) or values.
 // Missing elements give 0 (NULL for strings). False when the path is not an array.
-// MS2-FUNCTIONAL 6 bytes: the first level scan's index copy is in r9 in the exe, r8 here (the rest matches); no source form found
+// The first check goes through the root (MovieRoot::GetLevelMovie), which gives the exe's index register.
 // @0x142957270
 bool MovieRoot::GetVariableArray(SetArrayTypeArg type, const char* ppathToVar, unsigned index, void* pdata,
                                  unsigned count)
 {
-    if (!Sfr05gb_GetLevelMovie(pMovieImpl, 0))
+    if (!Sfr05gb_RootLevelMovie(this, 0))
         return false;
     AvmDisplayObjBase* pavm = Sfr05gb_GetLevelMovie(pMovieImpl, 0)->GetAvmObjImpl();
     Environment* penv = static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pavm))->GetASEnvironment();
