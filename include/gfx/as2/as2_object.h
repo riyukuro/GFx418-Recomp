@@ -276,6 +276,8 @@ public:
 // The CreateNewObject natives (sfr_as2_04) inline some object ctors; the tag overloads
 // give them that inline body without a second copy of the out-of-line ctor.
 struct ObjectInlineCtorTag {};
+// FunctionObject(psc) with Object(psc) inlined too (the Register functions in sfr_as2_06).
+struct ObjectDeepInlineCtorTag {};
 
 // Script object: GC base at +0, ObjectInterface at +0x20. 0x68 bytes.
 class Object : public ASRefCountBase<Object>, public ObjectInterface
@@ -393,6 +395,7 @@ protected:
     FunctionObject(ASRefCountCollector* pcc);
     FunctionObject(ASStringContext* psc); // exe 0x14291c090
     FunctionObject(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_04
+    FunctionObject(ASStringContext* psc, ObjectDeepInlineCtorTag); // inline in sfr_as2_06
     FunctionObject(Environment* penv); // exe 0x14291c0c0
     FunctionObject(Environment* penv, ObjectInlineCtorTag); // inline in sfr_as2_05
 };

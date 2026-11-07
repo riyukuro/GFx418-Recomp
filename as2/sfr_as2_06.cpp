@@ -1175,6 +1175,38 @@ void UserDefinedFunctionObject::Invoke(const FnCall& fn, LocalFrame*, const char
         InvokeImpl(fn);
 }
 
+// ASStringContext::GetGC through GlobalContext::GetGC, both inlined (as in sfr_as2_06s9).
+static __forceinline ASRefCountCollector* Sfr06GcG(GlobalContext* p)
+{
+    return p->pMovieRoot ? ((MovieRoot*)p->pMovieRoot->pASMovieRoot)->GetASGC() : 0;
+}
+static __forceinline ASRefCountCollector* Sfr06GcN(ASStringContext* psc)
+{
+    return psc->pContext ? Sfr06GcG(psc->pContext) : 0;
+}
+// Object::Object(ASStringContext*) (0x14291f6f0), inlined (the same body as sfr_as2_06s9's).
+__forceinline Object::Object(ASStringContext* psc, ObjectInlineCtorTag)
+    : ASRefCountBase<Object>(Sfr06GcN(psc)), pWatchpoints(0), ArePropertiesSet(false), IsListenerSet(false)
+{
+    pProto = 0;
+}
+__forceinline FunctionObject::FunctionObject(ASStringContext* psc, ObjectDeepInlineCtorTag)
+    : Object(psc, ObjectInlineCtorTag())
+{
+}
+// CFunctionObject(psc, func) (0x142919df0) inlined down to Object(psc), with its Set__proto__ (a virtual
+// __proto__ store).
+__forceinline CFunctionObject::CFunctionObject(ASStringContext* psc, CFunctionPtr func, ObjectInlineCtorTag)
+    : FunctionObject(psc, ObjectDeepInlineCtorTag()), pFunction(func)
+{
+    Object* pprototype = psc->pContext->GetPrototype(ASBuiltin_Function);
+    if (!pProto)
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(
+            psc, ((MovieRoot*)psc->pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin___proto__),
+            Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+    pProto = pprototype;
+}
+
 // Built-in class registration: the constructor function, its prototype stored in the context's prototype table
 // (the table takes over the passed reference) and the constructor published as a member of the global object or
 // of a package object.
@@ -1335,11 +1367,17 @@ FunctionRef TextSnapshotCtorFunction::Register(GlobalContext* pgc)
     return RegisterBuiltinClass<TextSnapshotCtorFunction, TextSnapshotProto>(pgc, ASBuiltin_TextSnapshot, ASBuiltin_Object, pgc->pGlobal);
 }
 
-// MS2-FUNCTIONAL the exe inlines the ColorTransformCtorFunction ctor
+// MS2-FUNCTIONAL regalloc floor: ctor inlined down to Object(psc) like the exe (731 vs 730 B); pgc lives in r13
+// where the exe uses r15, and the Object zero stores are immediates where the exe stores dil/di.
 // @0x142976900
 FunctionRef ColorTransformCtorFunction::Register(GlobalContext* pgc)
 {
-    return RegisterBuiltinClass<ColorTransformCtorFunction, ColorTransformProto>(pgc, ASBuiltin_ColorTransform, ASBuiltin_Object, pgc->FlashGeomPackage);
+    ASStringContext sc(pgc, 8);
+    FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) ColorTransformCtorFunction(&sc, ObjectInlineCtorTag()));
+    Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) ColorTransformProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor);
+    SetBuiltinPrototype(pgc, ASBuiltin_ColorTransform, proto);
+    pgc->FlashGeomPackage->SetMemberRaw(&sc, sc.GetBuiltin(ASBuiltin_ColorTransform), Value(ctor));
+    return ctor;
 }
 
 // MS2-FUNCTIONAL the exe inlines the RectangleCtorFunction ctor
@@ -3333,3 +3371,9 @@ void ClassHash_RemoveCaseCheck(ASStringHash<FunctionRef>* phash, const ASString&
 // data_rdata_sf_b names these vftable slots by their address
 #pragma comment(linker, "/alternatename:?FUN_14295d440@@YAXXZ=?CSSHolder_HasStyleSheet@GFx@Scaleform@@YA_NPEBX@Z")
 #pragma comment(linker, "/alternatename:?FUN_142966210@@YAXXZ=?LocalFrame_VSlot4@AS2@GFx@Scaleform@@YA_NPEBX@Z")
+
+// MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS2@GFx@Scaleform@@6B@ 0x143215370
+// MS2-PIN: ??_7ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215410
+// MS2-PIN: ??_7?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@AS2@GFx@Scaleform@@6B@ 0x1432154b8
+// MS2-PIN: ??_7Object@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432154d0
+// MS2-PIN: ??_7Object@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215518

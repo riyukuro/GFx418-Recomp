@@ -54,6 +54,7 @@ class ColorTransformCtorFunction : public CFunctionObject
 public:
     // (appended for sfr_as2_06) Inlined into Register in the exe.
     ColorTransformCtorFunction(ASStringContext* psc) : CFunctionObject(psc, GlobalCtor) {}
+    __forceinline ColorTransformCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t) : CFunctionObject(psc, GlobalCtor, t) {} // sfr_as2_06
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x142936c00
 
