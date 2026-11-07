@@ -4387,35 +4387,6 @@ static inline void Sfr31TakeTop(UPInt vmAddr, Sfr31RawTraitsVal& out)
     Sfr31Wr(vmAddr, 0x50, top - 0x20);
 }
 
-// getsuper: reads the named property of the object on top of the stack through the current frame's super traits.
-// MS2-FUNCTIONAL 0x14253a430: raw-offset model; codegen differs from the exe
-// @0x14253a430
-void Sfr31ExecGetSuper(UPInt vmAddr, UPInt file, UInt32 idx)
-{
-    const UPInt cvm = Sfr31Rd(file, 0x20);
-    Sfr31ExecMnCtx ctx = {cvm, cvm + 0x48, file};
-    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
-    FUN_1425201f0(&ctx, &mn);
-    UPInt top = Sfr31Rd(ctx.stack, 8);
-    Sfr31ThrowIfNullOperand(cvm, reinterpret_cast<const UInt32*>(top));
-    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
-    {
-        Sfr31RawTraitsVal obj;
-        for (int i = 0; i < 8; ++i)
-            reinterpret_cast<UInt32*>(&obj)[i] = reinterpret_cast<const UInt32*>(top)[i];
-        *reinterpret_cast<UInt32*>(top) = 0;
-        const UPInt n = Sfr31Rd(vmAddr, 0x78) - 1;
-        const UPInt frame = Sfr31Rd(Sfr31Rd(vmAddr, 0x90), (n >> 6) * 8) + 0x40 + (n & 0x3f) * 0xa8;
-        UInt8 ret[16];
-        UInt8* r = FUN_14250ef80(ret, vmAddr, Sfr31Rd(frame, 0), reinterpret_cast<void*>(top), &obj, &mn, 0);
-        if (*r == 0)
-        {
-            VM::Error e(static_cast<VM::ErrorID>(0x40b), *reinterpret_cast<VM*>(vmAddr));
-            reinterpret_cast<VM*>(vmAddr)->ThrowReferenceError(e);
-        }
-        reinterpret_cast<Value*>(&obj)->~Value();
-    }
-}
 // ---- batch 29
 typedef UPInt* (*Sfr31VFnName)(UPInt self, UPInt* out);
 
@@ -4573,6 +4544,49 @@ void Sfr31ExecSetProperty(UPInt vmAddr, UPInt file, UInt32 idx)
     char result;    // the setter's CheckResult return slot, not read
     Sfr27SetPropertyOfValue(&result, &vm, &args.ArgObject, &args.ArgMN.Get(), &args.ArgValue);
     --inInitializer;
+}
+
+// The SDK ReadMnObjectRef: the file, the multiname read off the stack, then a reference to the object on top of the stack
+// (null or undefined throws).
+struct Sfr31ExecReadMnS : public Scaleform::GFx::AS3::StackReader
+{
+    __forceinline Sfr31ExecReadMnS(UPInt link, UInt32 idx)
+        : Scaleform::GFx::AS3::StackReader(*reinterpret_cast<VM*>(Sfr31Rd(link, 0x20))), File(*reinterpret_cast<VMAbcFile*>(link))
+        , ArgMN(File, Sfr31MnEntryW(reinterpret_cast<UPInt>(&File), idx))
+    {
+        FUN_1425201f0(this, &ArgMN.Get());
+    }
+    VMAbcFile& File;        // +0x10 (MnReader)
+    Sfr31MnBox ArgMN;       // +0x18
+};
+struct Sfr31ExecReadMnObjectRef : public Sfr31ExecReadMnS
+{
+    __forceinline Sfr31ExecReadMnObjectRef(UPInt link, UInt32 idx) : Sfr31ExecReadMnS(link, idx), ArgObject(*OpStack.GetTopPtr())
+    {
+        CheckObject(ArgObject);
+    }
+    SF_INLINE void CheckObject(const Value& v) const
+    {
+        if (v.IsNullOrUndefined())
+            GetVM().ThrowTypeError(VM::Error(v.IsNull() ? VM::eConvertNullToObjectError : VM::eConvertUndefinedToObjectError, GetVM()));
+    }
+    Value& ArgObject;       // +0x48
+};
+
+// getsuper: replaces the object on top of the stack with its named property, read through the current frame's super traits.
+// MS2-FUNCTIONAL 0x14253a430: 508 B vs the exe 506; the exe keeps zero in rsi (saved in the prolog) where ours uses immediates
+// @0x14253a430
+void Sfr31ExecGetSuper(UPInt vmAddr, UPInt file, UInt32 idx)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    Sfr31ExecReadMnObjectRef args(file, idx);
+    if (vm.IsException())
+        return;
+    Value _this(args.ArgObject, PickValue);
+    const UPInt n = Sfr31Rd(vmAddr, 0x78) - 1;
+    const Traits* ot = *reinterpret_cast<const Traits* const*>(Sfr31Rd(Sfr31Rd(vmAddr, 0x90), (n >> 6) * 8) + 0x40 + (n & 0x3f) * 0xa8);
+    if (!GetSuperProperty(vm, ot, args.ArgObject, _this, args.ArgMN.Get()))
+        vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x40b), vm, *reinterpret_cast<const Value*>(&args.ArgMN.w2)));
 }
 
 // ---- batch 30
