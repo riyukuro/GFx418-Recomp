@@ -5836,58 +5836,65 @@ void Sfr31ExecNewObject(UPInt vmAddr, UInt32 n)
     ExecPushCopy(reinterpret_cast<VM*>(vmAddr), result);
 }
 // ---- batch 48
-// callsuper body shared by the two instantiations: pops the receiver, reads the named property through the frame's super traits
-// and calls it with the popped arguments.
-static void Sfr31CallSuperBody(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
+// The SDK ReadArgsMn: the call arguments, the file, then the multiname read off the stack.
+struct Sfr31ReadArgsMn : public AS3::ReadArgs
 {
-    const UPInt cvm = Sfr31Rd(file, 0x20);
-    UInt8 raBuf[0x140];
-    FUN_1424d9530(raBuf, reinterpret_cast<VM*>(cvm), argc);
-    const UPInt frame0 = Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 8);
-    Sfr31ExecMnCtx ctx = {cvm, frame0, file};
-    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
-    FUN_1425201f0(&ctx, &mn);
-    const UPInt top = Sfr31Rd(frame0, 8);
-    Sfr31RawTraitsVal obj;
-    for (int i = 0; i < 8; ++i)
-        reinterpret_cast<UInt32*>(&obj)[i] = reinterpret_cast<const UInt32*>(top)[i];
-    Sfr31Wr(frame0, 8, top - 0x20);
-    Sfr31ThrowIfNullOperand(cvm, reinterpret_cast<const UInt32*>(&obj));
-    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
+    __forceinline Sfr31ReadArgsMn(UPInt link, UInt32 argc, UInt32 idx)
+        : AS3::ReadArgs(*reinterpret_cast<VM*>(Sfr31Rd(link, 0x20)), argc), File(*reinterpret_cast<VMAbcFile*>(link))
+        , ArgMN(File, Sfr31MnEntryW(reinterpret_cast<UPInt>(&File), idx))
     {
-        Value callee;
-        const UPInt n = Sfr31Rd(vmAddr, 0x78) - 1;
-        const UPInt frame = Sfr31Rd(Sfr31Rd(vmAddr, 0x90), (n >> 6) * 8) + 0x40 + (n & 0x3f) * 0xa8;
-        UInt8 ret[16];
-        UInt8* r = FUN_14250ef80(ret, vmAddr, Sfr31Rd(frame, 0), &callee, &obj, &mn, 0);
-        if (*r != 0)
+        FUN_1425201f0(this, &ArgMN.Get());
+    }
+    VMAbcFile& File;        // +0x140
+    Sfr31MnBox ArgMN;       // +0x148
+};
+// The SDK ReadArgsMnObject: then the object the call is made on, popped (null or undefined throws).
+struct Sfr31ReadArgsMnObject : public Sfr31ReadArgsMn
+{
+    __forceinline Sfr31ReadArgsMnObject(UPInt link, UInt32 argc, UInt32 idx) : Sfr31ReadArgsMn(link, argc, idx), ArgObject(OpStack)
+    {
+        CheckObject(ArgObject);
+    }
+    void CheckObject(const Value& v) const
+    {
+        if (v.IsNullOrUndefined())
         {
-            Value result(Value::GetUndefined());
-            const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
-            const void* args = cnt > 8 ? reinterpret_cast<const void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<const void*>(raBuf + 0x18);
-            FUN_1424fef00(reinterpret_cast<void*>(vmAddr), &callee, &obj, &result, argc, args, 1);
-        }
-        else
-        {
-            alignas(8) char eb[sizeof(VM::Error)];
-            FUN_1424d6f40(eb, 0x42e, reinterpret_cast<void*>(vmAddr), reinterpret_cast<UInt8*>(&mn) + 0x10);
-            reinterpret_cast<VM*>(vmAddr)->ThrowReferenceError(*reinterpret_cast<VM::Error*>(eb));
-            reinterpret_cast<VM::Error*>(eb)->~Error();
+            const VM::ErrorID id = v.IsNull() ? static_cast<VM::ErrorID>(0x3f1) : static_cast<VM::ErrorID>(0x3f2);
+            VM& vm = VMRef;
+            Sfr31ReadArgsObjectRef::ThrowTypeError(vm, VM::Error(id, vm));
         }
     }
-    reinterpret_cast<Value*>(&obj)->~Value();
-    FUN_1424de9e0(raBuf);
+    const Value* GetCallArgs() const { return ArgNum > 8 ? CallArgs.GetDataPtr() : FixedArgs; }
+    Value ArgObject;        // +0x178
+};
+
+// callsuper (VM::exec_callsuper), shared by the two instantiations: pops the arguments, the multiname and the receiver, reads
+// the named property through the frame's super traits and calls it (callsupervoid discards the result, callsuper keeps it).
+static __forceinline void Sfr31CallSuperBody(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc, bool discard)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    Sfr31ReadArgsMnObject args(file, argc, idx);
+    if (vm.IsException())
+        return;
+    Value func;
+    const UPInt n = Sfr31Rd(vmAddr, 0x78) - 1;
+    const Traits* ot = *reinterpret_cast<const Traits* const*>(Sfr31Rd(Sfr31Rd(vmAddr, 0x90), (n >> 6) * 8) + 0x40 + (n & 0x3f) * 0xa8);
+    if (!GetSuperProperty(vm, ot, func, args.ArgObject, args.ArgMN.Get(), SlotInfo::valExecute))
+        return vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x42e), vm, *reinterpret_cast<const Value*>(&args.ArgMN.w2)));
+    {
+        const Value* argv = args.GetCallArgs();
+        Value result(Value::GetUndefined());
+        vm.ExecuteInternalUnsafe(func, args.ArgObject, result, argc, argv, discard);
+    }
 }
 
-// callsuper opcode: calls a method of the super class on the popped receiver.
-// MS2-FUNCTIONAL 0x142535af0: raw-offset model; codegen differs from the exe
+// callsupervoid opcode: calls a method of the super class on the popped receiver and discards the result.
 // @0x142535af0
-void Sfr31ExecCallSuperArgsA(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc) { Sfr31CallSuperBody(vmAddr, file, idx, argc); }
+void Sfr31ExecCallSuperArgsA(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc) { Sfr31CallSuperBody(vmAddr, file, idx, argc, true); }
 
-// callsuper opcode, second instantiation (same body).
-// MS2-FUNCTIONAL 0x142536660: raw-offset model; codegen differs from the exe
+// callsuper opcode: the same call, keeping the result.
 // @0x142536660
-void Sfr31ExecCallSuperArgsB(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc) { Sfr31CallSuperBody(vmAddr, file, idx, argc); }
+void Sfr31ExecCallSuperArgsB(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc) { Sfr31CallSuperBody(vmAddr, file, idx, argc, false); }
 // ---- batch 49
 // Stores the accessor-prefixed name for a slot: kind 0xb keeps the name, 0xc stores "get " + name at idx, 0xd stores "set " + name at idx + 1.
 // MS2-FUNCTIONAL 0x1425283c0: raw-offset model; the string concatenation goes through the string manager directly
