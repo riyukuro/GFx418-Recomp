@@ -3760,21 +3760,24 @@ UPInt Sfr31WriteVarint(UPInt** arr, UInt32 v)
 }
 
 // Record writer: emits a leading 0 byte on the first record, then a 1 tag and three varints.
-// MS2-FUNCTIONAL 0x14252c8b0: raw-offset model; codegen differs from the exe
+// ShapeDataFloatEncoder::StartLayer: the layer tag written through an encoder of its own.
+static SF_FORCEINLINE void Sfr31StartLayer(UPInt self)
+{
+    UPInt* encoder = reinterpret_cast<UPInt*>(Sfr31Rd(self, 0x48));
+    Sfr31PushByteRef(encoder, UInt8(0));
+    *reinterpret_cast<int*>(self + 0x10) = 1;
+}
+// ShapeDataFloatEncoder::StartPath: encoder is the PathDataEncoder's Data pointer; the path tag goes through it too.
 // @0x14252c8b0
 void Sfr31WriteRecord3(UPInt self, UInt32 a, UInt32 b, UInt32 c)
 {
-    UPInt* arr = reinterpret_cast<UPInt*>(Sfr31Rd(self, 0x48));
-    UPInt* cur = arr;
+    UPInt* encoder = reinterpret_cast<UPInt*>(Sfr31Rd(self, 0x48));
     if (*reinterpret_cast<int*>(self + 0x10) == 0)
-    {
-        Sfr31PushByte(arr, 0);
-        *reinterpret_cast<int*>(self + 0x10) = 1;
-    }
-    Sfr31PushByte(arr, 1);
-    Sfr31WriteVarint(&cur, a);
-    Sfr31WriteVarint(&cur, b);
-    Sfr31WriteVarint(&cur, c);
+        Sfr31StartLayer(self);
+    Sfr31PushByteRef(encoder, UInt8(1));
+    Sfr31WriteVarint(&encoder, a);
+    Sfr31WriteVarint(&encoder, b);
+    Sfr31WriteVarint(&encoder, c);
     *reinterpret_cast<int*>(self + 0x10) = 2;
 }
 
