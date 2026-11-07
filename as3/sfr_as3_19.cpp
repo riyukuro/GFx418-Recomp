@@ -5505,63 +5505,93 @@ static inline void Sfr31DynNodeAssign(UPInt dst, UPInt src)
 }
 
 // ---- batch 42
-// Resolves the class traits matching a value's kind and hands them to the instance-traits setup of the given traits.
-// MS2-FUNCTIONAL 0x142531260: raw-offset model; codegen differs from the exe
+// Tracer::ValueIsOfType(const Value&, const ClassTraits::Traits&): class traits and classes test their class traits,
+// any other value the instance traits Tracer::GetInstanceTraits gives it (VM::GetInstanceTraits inlined; the cases are
+// in the exe's block order).
 // @0x142531260
 bool Sfr31SetTraitsForValue(UPInt st, const UInt32* v, UPInt traits)
 {
-    const UInt32 k = v[0] & 0x1f;
-    const UPInt obj = Sfr31Rd(reinterpret_cast<UPInt>(v), 0x10);
-    const UPInt dst = Sfr31Rd(traits, 0xc0);
-    if (k == 9)
-    {
-        return FUN_1425149a0(traits, obj);
-    }
-    if (k == 0xd)
-    {
-        return FUN_1425149a0(traits, Sfr31Rd(obj, 0x20));
-    }
-    const UPInt vm = Sfr31Rd(Sfr31Rd(Sfr31Rd(st, 0x20), 0x28), 0x20);
-    if (k - 0xc < 4 && obj == 0)
-    {
-        return FUN_142514560(Sfr31Rd(vm, 0x270), dst);
-    }
-    if (k == 0)
-    {
-        return FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x1f0), 0xc0), dst);
-    }
-    if (k == 8)
-    {
-        return FUN_142514560(obj, dst);
-    }
+    // Tracer::ValueIsOfType with Tracer::GetInstanceTraits and VM::GetInstanceTraits inlined.
+    const UPInt pv = reinterpret_cast<UPInt>(v);
+    const int k = static_cast<int>(v[0] & 0x1f);
     switch (k)
     {
-    case 1: return FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x210), 0xc0), dst);
-    case 2: return FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x220), 0xc0), dst);
-    case 3: return FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x228), 0xc0), dst);
-    case 4: return FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x218), 0xc0), dst);
-    case 5:
-    case 0x10: return FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x208), 0xc8), dst);
-    case 7:
-    case 0x11: return FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x208), 0xe0), dst);
-    case 10:
-        if (obj != 0)
-        {
-            return FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x230), 0xc0), dst);
-        }
+    case 9:     // kClassTraits
+        return FUN_1425149a0(traits, Sfr31Rd(pv, 0x10));
+    case 0xd:   // kClass
+        return FUN_1425149a0(traits, Sfr31Rd(Sfr31Rd(pv, 0x10), 0x20));
+    default:
         break;
-    case 0xb: return FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x200), 0xc0), dst);
-    case 0xc:
-    case 0xe:
-    case 0xf:
-        if (obj != 0)
-        {
-            return FUN_142514560(Sfr31Rd(obj, 0x20), dst);
-        }
-        break;
-    default: return FUN_142514560(Sfr31Rd(vm, 0x278), dst);
     }
-    return FUN_142514560(Sfr31Rd(Sfr31Rd(vm, 0x1f8), 0xc0), dst);
+    UPInt itr;
+    if ((k >= 0xc && k <= 0xf) && Sfr31Rd(pv, 0x10) == 0)
+        itr = Sfr31Rd(Sfr31Rd(Sfr31Rd(Sfr31Rd(st, 0x20), 0x28), 0x20), 0x270);   // Tracer null type
+    else
+    {
+        switch (k)
+        {
+        case 0:     // kUndefined: the class type
+            itr = Sfr31Rd(Sfr31Rd(Sfr31Rd(Sfr31Rd(Sfr31Rd(st, 0x20), 0x28), 0x20), 0x1f0), 0xc0);
+            break;
+        case 8:     // kInstanceTraits
+            itr = Sfr31Rd(pv, 0x10);
+            break;
+        case 9:     // kClassTraits
+            itr = Sfr31Rd(Sfr31Rd(pv, 0x10), 0xc0);
+            break;
+        default:
+        {
+            const UPInt vm = Sfr31Rd(Sfr31Rd(Sfr31Rd(st, 0x20), 0x28), 0x20);
+            switch (k)
+            {
+            case 1: itr = Sfr31Rd(Sfr31Rd(vm, 0x210), 0xc0); break;
+            case 2: itr = Sfr31Rd(Sfr31Rd(vm, 0x220), 0xc0); break;
+            case 3: itr = Sfr31Rd(Sfr31Rd(vm, 0x228), 0xc0); break;
+            case 4: itr = Sfr31Rd(Sfr31Rd(vm, 0x218), 0xc0); break;
+            case 10:
+                if (Sfr31Rd(pv, 0x10) != 0)
+                    itr = Sfr31Rd(Sfr31Rd(vm, 0x230), 0xc0);
+                else
+                    itr = Sfr31Rd(Sfr31Rd(vm, 0x1f8), 0xc0);
+                break;
+            case 0xb: itr = Sfr31Rd(Sfr31Rd(vm, 0x200), 0xc0); break;
+            case 0xc:
+            case 0xe:
+            case 0xf:
+            {
+                const UPInt obj = Sfr31Rd(pv, 0x10);
+                if ((k >= 0xc && k <= 0xf) && obj == 0)
+                    itr = Sfr31Rd(Sfr31Rd(vm, 0x1f8), 0xc0);
+                else
+                    itr = Sfr31Rd(obj, 0x20);
+                break;
+            }
+            case 0xd:
+            {
+                const UPInt obj = Sfr31Rd(pv, 0x10);
+                if ((k >= 0xc && k <= 0xf) && obj == 0)
+                    itr = Sfr31Rd(Sfr31Rd(vm, 0x1f8), 0xc0);
+                else
+                    itr = Sfr31Rd(Sfr31Rd(obj, 0x20), 0xc0);
+                break;
+            }
+            case 5:
+            case 0x10: itr = Sfr31Rd(Sfr31Rd(vm, 0x208), 0xc8); break;
+            case 7:
+            case 0x11: itr = Sfr31Rd(Sfr31Rd(vm, 0x208), 0xe0); break;
+            case 8: itr = Sfr31Rd(pv, 0x10); break;
+            case 9:
+                itr = Sfr31Rd(Sfr31Rd(pv, 0x10), 0xc0);
+                if (itr == 0)
+                    itr = Sfr31Rd(vm, 0x278);
+                break;
+            default: itr = Sfr31Rd(vm, 0x278); break;
+            }
+            break;
+        }
+        }
+    }
+    return FUN_142514560(itr, Sfr31Rd(traits, 0xc0));
 }
 
 // The class traits of a class description: its package namespace plus its name, resolved through the VM's class traits cache.
