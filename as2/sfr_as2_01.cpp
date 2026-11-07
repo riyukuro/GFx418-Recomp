@@ -4189,12 +4189,32 @@ template void RefCountCollector<StatMV_ActionScript_Mem>::ReleaseChildCall(RefCo
 }}} // namespace Scaleform::GFx::AS3
 
 // ---- AS3 class traits factory ----
+// The exe inlines the three Math-chain ctors (defined out of line in sfr_as3_01c) into MakeClassTraits.
+// These are tagged member-template copies of the SDK bodies (Tag = Instances::fl::InlineCtor), so cl expands
+// them here and never emits a second definition of the owner's ctors.
+namespace Scaleform { namespace GFx { namespace AS3 {
+namespace InstanceTraits { namespace fl {
+template<class Tag> __forceinline Object::Object(VM& vm, const ClassInfo& ci, Tag) : CTraits(vm, ci) { SetMemSize(sizeof(Instances::fl::Object)); }
+}}
+namespace Classes { namespace fl {
+template<class Tag> __forceinline Math::Math(ClassTraits::Traits& t, Tag) : Class(t), LN10(2.302585092994046), E(2.718281828459045), LN2(0.6931471805599453), LOG10E(0.4342944819032518), LOG2E(1.4426950408889634), PI(3.141592653589793), SQRT1_2(0.7071067811865476), SQRT2(1.4142135623730951) {}
+}}
+namespace ClassTraits { namespace fl {
+template<class Tag> __forceinline Math::Math(VM& vm, Tag)
+    : Traits(vm, AS3::fl::MathCI)
+{
+    MemoryHeap* mh = vm.GetMemoryHeap();
+    InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl::MathCI, Tag());
+    SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+    it->SetConstructor(Pickable<Class>(new(mh) Classes::fl::Math(*this, Tag())));
+}
+}}
+}}}
 namespace Scaleform { namespace GFx { namespace AS3 { namespace ClassTraits { namespace fl {
 // @0x1423e0090
-// MS2-FUNCTIONAL the exe inlines the Math constructor (traits, instance traits and the Math class object); cl calls it
 Pickable<Traits> Math::MakeClassTraits(VM& vm)
 {
-    return Pickable<Traits>(new(vm.GetMemoryHeap()) Math(vm));
+    return Pickable<Traits>(new(vm.GetMemoryHeap()) Math(vm, Instances::fl::InlineCtor()));
 }
 }}}}} // namespace Scaleform::GFx::AS3::ClassTraits::fl
 

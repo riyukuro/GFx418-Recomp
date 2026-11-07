@@ -654,6 +654,9 @@ namespace InstanceTraits
         {
         public:
             Object(VM& vm, const ClassInfo& ci);
+            // (appended, fe48) inline copy for factories the exe inlines this ctor into (Tag = Instances::fl::InlineCtor;
+            // a member template, so cl never emits it out of line). Defined in sfr_as2_01.
+            template<class Tag> Object(VM& vm, const ClassInfo& ci, Tag);
             // @0x142414f50
             virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl::Object"; }
             virtual void MakeObject(Value& result, Traits& t);

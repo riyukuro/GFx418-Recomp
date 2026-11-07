@@ -1327,6 +1327,7 @@ namespace Classes { namespace fl
     {
     public:
         Math(ClassTraits::Traits& t);
+        template<class Tag> Math(ClassTraits::Traits& t, Tag);   // (appended, fe48) inline copy, defined in sfr_as2_01
         // @0x142414eb0
         virtual const char* GetAS3ObjectType() const { return "Classes::Math"; }
         // @0x1424059b0
@@ -1650,6 +1651,7 @@ namespace ClassTraits { namespace fl
     {
     public:
         Math(VM& vm);
+        template<class Tag> Math(VM& vm, Tag);   // (appended, fe48) inline copy for MakeClassTraits, defined in sfr_as2_01
         // @0x142414ea0
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::Math"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
