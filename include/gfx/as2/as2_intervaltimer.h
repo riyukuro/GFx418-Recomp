@@ -42,6 +42,10 @@ public:
         : pObject(pobj), MethodName(method), Interval(0), InvokeTime(0), Id(0), Active(true), Unrecovered_79(false)
     {
     }
+    // The two out-of-line constructors as setInterval / setTimeout inline them (bodies TU-local in sfr_as2_07n).
+    struct InlineCtorTag {};
+    IntervalTimer(const FunctionRefBase& fn, ASStringContext* psc, InlineCtorTag);
+    IntervalTimer(InteractiveObject* ptarget, const ASString& method, InlineCtorTag);
 
 private:
     // setInterval / setTimeout: the callback (a function, or an object or character with a method name), the
