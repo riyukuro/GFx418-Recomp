@@ -210,6 +210,21 @@ void* FUN_1424aada0(void* self, unsigned flags)
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// The exe inlines the args dtor of the SPtr<Object>(const ASString&) thunks (getDefinition, getStyle).
+template <>
+struct ThunkArgs1<SPtr<Instances::fl::Object>, const ASString&> : public ThunkArgs0<SPtr<Instances::fl::Object> >
+{
+    SF_INLINE ThunkArgs1(VM& vm, Value& result, unsigned argc, const Value* argv, const ThunkDefs1<const ASString&>& d)
+        : ThunkArgs0<SPtr<Instances::fl::Object> >(vm, result), a0(d._0)
+    {
+        if (argc > 0)
+            ThunkReadArg(a0, argv[0]);
+    }
+    SF_FORCEINLINE ~ThunkArgs1() {}
+
+    ThunkClean<const ASString&>::type a0;
+};
+
 // thunk 0x14249c500: Classes::fl_system::Capabilities::avHardwareDisableGet
 template struct ThunkFunc0<Classes::fl_system::Capabilities, 0, bool>;
 // thunk 0x14249c560: Classes::fl_system::Capabilities::hasAccessibilityGet
@@ -241,8 +256,7 @@ template struct ThunkFunc0<Classes::fl_system::Capabilities, 12, bool>;
 // thunk 0x14249ca90: Classes::fl_system::Capabilities::hasVideoEncoderGet
 template struct ThunkFunc0<Classes::fl_system::Capabilities, 13, bool>;
 // thunk 0x14249caf0: Instances::fl_system::ApplicationDomain::getDefinition
-// MS2-FUNCTIONAL: not matched: the Value result with a string argument (the exe releases the default string at the end)
-template struct ThunkFunc1<Instances::fl_system::ApplicationDomain, 1, Value, const ASString&>;
+template struct ThunkFunc1<Instances::fl_system::ApplicationDomain, 1, SPtr<Instances::fl::Object>, const ASString&>;
 // thunk 0x14249cc70: Classes::fl_system::Capabilities::isDebuggerGet
 template struct ThunkFunc0<Classes::fl_system::Capabilities, 14, bool>;
 // thunk 0x14249ccd0: Instances::fl_system::ApplicationDomain::hasDefinition
@@ -3129,7 +3143,7 @@ namespace Instances { namespace fl_system
 {
     // Not implemented in this build: a warning, nothing else.
     // @0x1424a04a0
-    void ApplicationDomain::getDefinition(Value& result, const ASString& v)
+    void ApplicationDomain::getDefinition(SPtr<Instances::fl::Object>& result, const ASString& v)
     {
         SF_UNUSED2(result, v);
         GetVM().GetUI().Output(FlashUI::Output_Warning, "The method ApplicationDomain::getDefinition() is not implemented\n");
@@ -3186,7 +3200,7 @@ template void Scaleform::HashSetBase<SOSharedObjectNode,
 // MS2-PIN: ?Func@?$ThunkFunc0@VApplicationDomain@fl_system@Instances@AS3@GFx@Scaleform@@$0A@V?$SPtr@VApplicationDomain@fl_system@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249c980
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$0M@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249ca30
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$0N@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249ca90
-// MS2-PIN: ?Func@?$ThunkFunc1@VApplicationDomain@fl_system@Instances@AS3@GFx@Scaleform@@$00VValue@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249caf0
+// MS2-PIN: ?Func@?$ThunkFunc1@VApplicationDomain@fl_system@Instances@AS3@GFx@Scaleform@@$00V?$SPtr@VObject@fl@Instances@AS3@GFx@Scaleform@@@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249caf0
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$0O@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249cc70
 // MS2-PIN: ?Func@?$ThunkFunc1@VApplicationDomain@fl_system@Instances@AS3@GFx@Scaleform@@$01_NAEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249ccd0
 // MS2-PIN: ?Func@?$ThunkFunc0@VCapabilities@fl_system@Classes@AS3@GFx@Scaleform@@$0P@VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x14249ce10

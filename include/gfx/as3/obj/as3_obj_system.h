@@ -18,7 +18,7 @@ namespace Instances { namespace fl_system {
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_system::ApplicationDomain"; }
 
         // @0x1424a04a0
-        void getDefinition(Value& result, const ASString&);
+        void getDefinition(SPtr<Instances::fl::Object>& result, const ASString&);
         // @0x1424a0530
         void hasDefinition(bool& result, const ASString&);
         // @0x1424a07c0

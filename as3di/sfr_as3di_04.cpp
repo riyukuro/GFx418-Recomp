@@ -378,7 +378,7 @@ template <> const TFunc_Classes_fl_system_System_resume::TMethod TFunc_Classes_f
 typedef ThunkFunc0<Classes::fl_system::System, 0, Value> TFunc_Classes_fl_system_System_imeGet;
 // @0x140147830
 template <> const TFunc_Classes_fl_system_System_imeGet::TMethod TFunc_Classes_fl_system_System_imeGet::Method = &Classes::fl_system::System::imeGet;
-typedef ThunkFunc1<Instances::fl_system::ApplicationDomain, 1, Value, const ASString&> TFunc_Instances_fl_system_ApplicationDomain_getDefinition;
+typedef ThunkFunc1<Instances::fl_system::ApplicationDomain, 1, SPtr<Instances::fl::Object>, const ASString&> TFunc_Instances_fl_system_ApplicationDomain_getDefinition;
 // @0x140147860
 template <> const TFunc_Instances_fl_system_ApplicationDomain_getDefinition::TMethod TFunc_Instances_fl_system_ApplicationDomain_getDefinition::Method = &Instances::fl_system::ApplicationDomain::getDefinition;
 typedef ThunkFunc1<Instances::fl_system::ApplicationDomain, 2, bool, const ASString&> TFunc_Instances_fl_system_ApplicationDomain_hasDefinition;
