@@ -3702,7 +3702,7 @@ void VideoProviderNetStream::SendNotification(const char* note, bool error)
 }
 
 // A cue point as a script object: name, time in seconds, type and its parameters.
-// MS2-FUNCTIONAL: exe keeps pobj in its r9 home slot (rsp+0xc8, ours rsp+0x30), stores the default PropFlags temp after the value string is built (ours before), and other scheduling; 1411 vs 1413 bytes
+// MS2-FUNCTIONAL: exe keeps pobj in its r9 home slot (rsp+0xc8, ours rsp+0x30), stores the default PropFlags temp after the value string is built (ours before), keeps the PropFlags ctor result in rbx for r9 (ours lea r9), and swaps the type-ternary temp slot. The "time" and "parameters" values are passed by implicit conversion (Number, Object*): vc9 then builds the Value before the key string, as the exe does. 1412 vs 1413 bytes
 // @0x140008bb0
 static Object* ConvertCuePoint(const VideoPlayer::CuePoint& cp, Environment* penv)
 {
@@ -3710,7 +3710,7 @@ static Object* ConvertCuePoint(const VideoPlayer::CuePoint& cp, Environment* pen
     pobj->SetMemberRaw(penv->GetSC(), penv->GetSC()->pContext->GetStringManager()->CreateConstString("name"),
                        Value(penv->GetSC()->pContext->GetStringManager()->CreateString(cp.Name.ToCStr())));
     pobj->SetMemberRaw(penv->GetSC(), penv->GetSC()->pContext->GetStringManager()->CreateConstString("time"),
-                       Value((Number)(cp.Time / 1000.0f)));
+                       (Number)(cp.Time / 1000.0f));
     pobj->SetMemberRaw(penv->GetSC(), penv->GetSC()->pContext->GetStringManager()->CreateConstString("type"),
                        Value(cp.Type == VideoPlayer::NavigationCuePoint
                                  ? penv->GetSC()->pContext->GetStringManager()->CreateConstString("navigation")
@@ -3725,7 +3725,7 @@ static Object* ConvertCuePoint(const VideoPlayer::CuePoint& cp, Environment* pen
             pparams->SetMemberRaw(penv->GetSC(), penv->GetSC()->pContext->GetStringManager()->CreateString(cp.Params[i].Name.ToCStr()),
                                   Value(penv->GetSC()->pContext->GetStringManager()->CreateString(cp.Params[i].Value.ToCStr())));
         }
-        pobj->SetMemberRaw(penv->GetSC(), penv->GetSC()->pContext->GetStringManager()->CreateConstString("parameters"), Value(pparams));
+        pobj->SetMemberRaw(penv->GetSC(), penv->GetSC()->pContext->GetStringManager()->CreateConstString("parameters"), pparams.GetPtr());
     }
     return pobj;
 }
