@@ -701,36 +701,84 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 void Sfr31VMRaiseError(UPInt vm, const unsigned long* error, UPInt classInfo);      // 0x14252ecb0, raise as an instance of the class
 namespace fl { extern const ClassInfo VerifyErrorCI; }
 
-// A slot namespace sns answers to ns: same kind, protected ones by kind alone, private ones by identity, the rest by
-// uri.
-static bool Sfr21SlotNsMatches(const Instances::Namespace& sns, const Instances::Namespace& ns)
+// Unit-local copies of the Slots inlines the exe expands here (GetSlotInfo 0x142416fb0 / GetSlotNameNode 0x14250dce0
+// one level deep, FindSlotInfoIndex 0x142502b20, the SDK CIterator).
+static __forceinline const SlotInfo& Sfr21GetSlotInfo(const Slots& s, AbsoluteIndex ind)
 {
-    if (sns.GetKind() != ns.GetKind())
-        return false;
-    if (sns.GetKind() == Abc::NS_Protected)
-        return true;
-    return sns.GetKind() == Abc::NS_Private ? &sns == &ns : sns.GetUri().GetNode() == ns.GetUri().GetNode();
+    if (ind < s.FirstOwnSlotNum)
+        return s.Parent->GetSlotInfo(ind);
+    return s.VArray[static_cast<UInt32>(ind.Get()) - s.FirstOwnSlotNum].Value;
 }
-
-// The slot of self named name in namespace ns (own or a parent's), or -1.
-static SPInt Sfr21FindSlotByNs(const Traits& self, const ASString& name, const Instances::Namespace& ns)
+static __forceinline ASStringNode* Sfr21GetSlotNameNode(const Slots& s, AbsoluteIndex ind)
 {
-    const UInt32* first = self.FindSlotValues(name);
-    if (!first)
-        return -1;
-    for (SPInt ind = *first; ind >= 0; ind = self.GetPrevSlotIndex(ind))
+    if (ind < s.FirstOwnSlotNum)
+        return s.Parent->GetSlotNameNode(ind);
+    return s.VArray[static_cast<UInt32>(ind.Get()) - s.FirstOwnSlotNum].Key.GetPtr();
+}
+static __forceinline AbsoluteIndex Sfr21FindSlotInfoIndex(const Slots& s, const ASString& name,
+                                                          const Instances::Namespace& ns)
+{
+    if (const UInt32* values = s.FindSlotValues(name))
     {
-        if (Sfr21SlotNsMatches(*self.GetSlotInfo(AbsoluteIndex(ind)).pNs, ns))
-            return ind;
+        for (SPInt ind = *values; ind >= 0; )
+        {
+            const AbsoluteIndex index(ind);
+            const Instances::Namespace& cur_ns = *Sfr21GetSlotInfo(s, index).pNs;
+            if (cur_ns.GetKind() == ns.GetKind())
+            {
+                switch (ns.GetKind())
+                {
+                case Abc::NS_Protected:
+                    return index;
+                case Abc::NS_Private:
+                    if (&ns == &cur_ns)
+                        return index;
+                    break;
+                default:
+                    if (cur_ns.GetUri().GetNode() == ns.GetUri().GetNode())
+                        return index;
+                    break;
+                }
+            }
+            if (static_cast<UPInt>(ind) < s.FirstOwnSlotNum)
+                ind = s.Parent->GetPrevSlotIndex(ind);
+            else
+                ind = s.VArray[static_cast<UPInt>(ind) - s.FirstOwnSlotNum].Prev;
+        }
     }
-    return -1;
+    return AbsoluteIndex(-1);
 }
+static __forceinline const SlotInfo* Sfr21FindSlotInfo(const Slots& s, const ASString& name,
+                                                       const Instances::Namespace& ns)
+{
+    const AbsoluteIndex ind = Sfr21FindSlotInfoIndex(s, name, ns);
+    return ind.IsValid() ? &Sfr21GetSlotInfo(s, ind) : NULL;
+}
+// Multiname::IsAnyType (0x1424198d0) as the exe inlines it here.
+static __forceinline bool Sfr21IsAnyType(const Multiname& mn)
+{
+    return mn.Name.IsNullOrUndefined() || (mn.Name.IsString() && mn.Name.AsString().IsEmpty());
+}
+struct Sfr21SlotIter
+{
+    explicit Sfr21SlotIter(const Slots& p) : Ind(0), Parent(&p) {}
+    bool IsEnd() const { return static_cast<UInt32>(Ind.Get()) >= Parent->GetSlotInfoNum(); }
+    void Next()
+    {
+        if (Ind < Parent->GetSlotInfoNum())
+            Ind = AbsoluteIndex(Ind.Get() + 1);
+    }
+    AbsoluteIndex Ind;
+    const Slots*  Parent;
+};
 
 // Traits::AddInterfaceSlots: for every interface the ABC class implements (its instance traits, then the parent
 // interfaces), each interface slot not yet present gets an alias of the public slot of that name, or for an
 // interface class a copy bound to the interface's methods. VerifyError 1014 for an unknown interface, 1122 when a
 // class does not implement an interface method.
-// MS2-FUNCTIONAL: free function in place of the Traits member (not declared in as3_obj.h)
+// The interface slot loop is the SDK 4.3 InstanceTraits::Traits::AddInterfaceSlots body.
+// MS2-FUNCTIONAL: free function in place of the Traits member (not declared in as3_obj.h); the outer interface
+// resolution keeps its own register allocation (the exe holds self in r12 and forms &Slots after the lookup)
 // @0x1424e80f0
 void Sfr21AddInterfaceSlots(Traits* self, VMAbcFile& file, const Abc::ClassInfo& info)
 {
@@ -742,7 +790,7 @@ void Sfr21AddInterfaceSlots(Traits* self, VMAbcFile& file, const Abc::ClassInfo&
         Multiname mn(file, file.GetAbcFile().Const_Pool.GetMultiname(ifaces.info[i]));
 
         ClassTraits::Traits* ctr = NULL;
-        if (mn.IsAnyType())
+        if (Sfr21IsAnyType(mn))
             ctr = vm.TraitsClassClass;
         else
         {
@@ -772,59 +820,82 @@ void Sfr21AddInterfaceSlots(Traits* self, VMAbcFile& file, const Abc::ClassInfo&
             return;
         }
 
-        const AS3::Traits& it = *itr;
-        for (UPInt s = 0; s < it.GetSlotInfoNum(); ++s)
+        for (Sfr21SlotIter it(*itr); !it.IsEnd(); it.Next())
         {
-            ASString name(it.GetSlotNameNode(AbsoluteIndex(s)));
-            const SlotInfo& isi = it.GetSlotInfo(AbsoluteIndex(s));
-            const Instances::Namespace& ins = *isi.pNs;
-            if (Sfr21FindSlotByNs(*self, name, ins) >= 0)
-                continue;
+            ASString interfaceSlotName(Sfr21GetSlotNameNode(*it.Parent, it.Ind));
+            const SlotInfo& interfaceSlot = Sfr21GetSlotInfo(*it.Parent, it.Ind);
 
-            const AbsoluteIndex pub = slots.FindSlotInfoIndex(name, vm.GetPublicNamespace());
-            if (pub.Get() >= 0)
+            const SlotInfo* thisSlot = Sfr21FindSlotInfo(slots, interfaceSlotName, *interfaceSlot.pNs);
+            if (!thisSlot)
             {
-                // Alias the public slot under the interface namespace.
-                SlotInfo alias(self->GetSlotInfo(pub));
-                alias.pNs = isi.pNs;
-                slots.Add(name, alias);
-                continue;
-            }
-            if (!info.inst_info.IsInterface())
-            {
-                VM::Error err(static_cast<VM::ErrorID>(1122), vm, name.ToCStr());
-                Sfr31VMRaiseError(reinterpret_cast<UPInt>(&vm), reinterpret_cast<const unsigned long*>(&err),
-                                  reinterpret_cast<UPInt>(&fl::VerifyErrorCI));
-                return;
-            }
+                const AbsoluteIndex pub = slots.FindSlotInfoIndex(interfaceSlotName, vm.GetPublicNamespace());
+                thisSlot = pub.IsValid() ? &Sfr21GetSlotInfo(slots, pub) : NULL;
+                if (thisSlot)
+                {
+                    // Alias the public slot under the interface namespace.
+                    SlotInfo newSlot(*thisSlot);
+                    newSlot.pNs = &*interfaceSlot.pNs;
+                    slots.Add(interfaceSlotName, newSlot);
+                }
+                else
+                {
+                    if (info.inst_info.IsInterface())
+                    {
+                        // An interface method: mark its namespace and copy the slot, bound to the interface's
+                        // methods.
+                        SlotInfo::BindingType binding_type = static_cast<SlotInfo::BindingType>(interfaceSlot.BindType);
+                        AbsoluteIndex ind(-1);
+                        *reinterpret_cast<UPInt*>(reinterpret_cast<char*>(
+                            const_cast<Instances::Namespace*>(interfaceSlot.pNs.GetPtr())) + 0x20) |= 0x10;
 
-            // An interface method: mark its namespace and copy the slot, bound to the interface's methods.
-            const SlotInfo::BindingType bt = static_cast<SlotInfo::BindingType>(isi.BindType);
-            *reinterpret_cast<UPInt*>(reinterpret_cast<char*>(const_cast<Instances::Namespace*>(&ins)) + 0x20) |= 0x10;
-            SPInt ind = Sfr21FindSlotByNs(*self, name, ins);
-            if (ind < 0)
-                ind = slots.Add(name, isi).Get();
-            SlotInfo& si = self->GetOwnSlotInfo(AbsoluteIndex(ind));
-            ASString siName(si.Name.GetPtr());
-            const VTable& ivt = itr->GetVT();
-            switch (bt)
-            {
-            case SlotInfo::BT_Code:
-            case SlotInfo::BT_Get:
-                si.Bind(bt, self->GetVT().AddMethod(ivt.VTMethods[isi.ValueInd], bt, siName));
-                break;
-            case SlotInfo::BT_Set:
-                si.Bind(SlotInfo::BT_Set,
-                        self->GetVT().AddMethod(ivt.VTMethods[isi.ValueInd + 1], SlotInfo::BT_Set, siName));
-                break;
-            case SlotInfo::BT_GetSet:
-                si.Bind(SlotInfo::BT_Get,
-                        self->GetVT().AddMethod(ivt.VTMethods[isi.ValueInd], SlotInfo::BT_Get, siName));
-                si.Bind(SlotInfo::BT_Set,
-                        self->GetVT().AddMethod(ivt.VTMethods[isi.ValueInd + 1], SlotInfo::BT_Set, siName));
-                break;
-            default:
-                break;
+                        ind = Sfr21FindSlotInfoIndex(slots, interfaceSlotName, *interfaceSlot.pNs);
+                        if (!ind.IsValid())
+                            ind = slots.Add(interfaceSlotName, interfaceSlot);
+                        SlotInfo& si = self->GetOwnSlotInfo(ind);
+
+                        switch (binding_type)
+                        {
+                        case SlotInfo::BT_Code:
+                        case SlotInfo::BT_Get:
+                            {
+                                const Value& vt_value = itr->GetVT().VTMethods[interfaceSlot.ValueInd];
+                                si.Bind(binding_type, self->GetVT().AddMethod(vt_value, binding_type,
+                                                                              ASString(si.Name.GetPtr())));
+                            }
+                            break;
+                        case SlotInfo::BT_Set:
+                            {
+                                const Value& vt_value = itr->GetVT().VTMethods[interfaceSlot.ValueInd + 1];
+                                si.Bind(binding_type, self->GetVT().AddMethod(vt_value, binding_type,
+                                                                              ASString(si.Name.GetPtr())));
+                            }
+                            break;
+                        case SlotInfo::BT_GetSet:
+                            {
+                                binding_type = SlotInfo::BT_Get;
+                                const Value& vt_value = itr->GetVT().VTMethods[interfaceSlot.ValueInd];
+                                si.Bind(binding_type, self->GetVT().AddMethod(vt_value, binding_type,
+                                                                              ASString(si.Name.GetPtr())));
+                            }
+                            {
+                                binding_type = SlotInfo::BT_Set;
+                                const Value& vt_value = itr->GetVT().VTMethods[interfaceSlot.ValueInd + 1];
+                                si.Bind(binding_type, self->GetVT().AddMethod(vt_value, binding_type,
+                                                                              ASString(si.Name.GetPtr())));
+                            }
+                            break;
+                        default:
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        VM::Error err(static_cast<VM::ErrorID>(1122), vm, interfaceSlotName.ToCStr());
+                        Sfr31VMRaiseError(reinterpret_cast<UPInt>(&vm), reinterpret_cast<const unsigned long*>(&err),
+                                          reinterpret_cast<UPInt>(&fl::VerifyErrorCI));
+                        return;
+                    }
+                }
             }
         }
 
