@@ -3124,6 +3124,7 @@ void AvmTextField::ReplaceSel(const FnCall& fn)
 }
 
 // replaceText(beginIndex, endIndex, text): text takes the formats of the first replaced character.
+// MS2-FUNCTIONAL 0x142909d80: regalloc floor: the exe keeps the doc in rcx and its StyledText in r10 (ours r8/rcx), one extra mov rcx,r10 before GetTextAndParagraphFormat; same calls and stores
 // @0x142909d80
 void AvmTextField::ReplaceTextA(const FnCall& fn)
 {
@@ -3178,10 +3179,9 @@ void AvmTextField::ReplaceTextA(const FnCall& fn)
     if (pparaFmt)
         ptf->GetDocument()->SetParagraphFormat(*(const Render::Text::ParagraphFormat*)pparaFmt, startPos, newEnd);
     if (ptextFmt)
-    {
         ptf->GetDocument()->SetTextFormat(*(const Render::Text::TextFormat*)ptextFmt, startPos, newEnd);
+    if (ptextFmt)
         ((const Render::Text::TextFormat*)ptextFmt)->Release();
-    }
     if (pparaFmt)
         ((const Render::Text::ParagraphFormat*)pparaFmt)->Release();
     ptf->SetDirtyFlag();
