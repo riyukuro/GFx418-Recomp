@@ -6115,68 +6115,84 @@ typedef HashNode<unsigned long, SPtr<InstanceTraits::Function>, FixedSizeHash<un
 typedef HashSetBase<Sfr31FnNode, Sfr31FnNode::NodeHashF, Sfr31FnNode::NodeAltHashF, AllocatorLH<unsigned long, 340>,
                     HashsetCachedNodeEntry<Sfr31FnNode, Sfr31FnNode::NodeHashF> > Sfr31FnSet;
 
-// MS2-FUNCTIONAL 0x1425303b0: raw-offset model; codegen differs from the exe
+#pragma inline_depth(0)
+// MS2-FUNCTIONAL 0x1425303b0: regalloc and jump threading: the exe keeps zero in r15 (and saves an unused r14) and does not thread the null-table GlobalObjects iterator (rsi=0 then test rsi)
 // @0x1425303b0
 void Sfr31ClassTraitsCleanup(UPInt self)
 {
-    const UPInt owner = Sfr31Rd(self, 0x20);
-    if (FUN_142522a60(owner, self) == 0)
+    // VMAbcFile::UnRegister; the member Clears / Resizes are out of line in the exe (inline_depth 0 here).
+    UPInt* const f = reinterpret_cast<UPInt*>(self);
+    if (!::FUN_142522a60(reinterpret_cast<VM*>(f[0x20 / 8]), f))
         return;
     Sfr31UnregisterClassTraits(self);
-    for (UPInt i = Sfr31Rd(self, 0xc0); i != 0; --i)
-        reinterpret_cast<ArrayData<UInt64, AllocatorLH_POD<UInt64, 338>, ArrayDefaultPolicy>*>(reinterpret_cast<UPInt*>(Sfr31Rd(self, 0xb8)) + (Sfr31Rd(self, 0xc0) - i) * 3)->Resize(0);
-    reinterpret_cast<ArrayData<Abc::MethodBodyInfo::Exception, AllocatorLH<Abc::MethodBodyInfo::Exception, 340>, ArrayDefaultPolicy>*>(self + 0xb8)->Resize(0);
-    reinterpret_cast<Sfr31GcPtrSet*>(self + 0x38)->~Sfr31GcPtrSet();
-    const UPInt table = Sfr31Rd(self, 0x70);
-    if (table != 0)
+    typedef ArrayData<UInt64, AllocatorLH_POD<UInt64, 338>, ArrayDefaultPolicy> OpCodeData;
+    UPInt off = 0;
+    for (UPInt n = f[0xc0 / 8]; n != 0; --n, off += 0x18)
+        reinterpret_cast<OpCodeData*>(f[0xb8 / 8] + off)->Resize(0);
+    reinterpret_cast<ArrayData<ArrayLH_POD<UInt64, 338, ArrayDefaultPolicy>, AllocatorLH<ArrayLH_POD<UInt64, 338, ArrayDefaultPolicy>, 340>, ArrayDefaultPolicy>*>(f + 0xb8 / 8)->Resize(0);
+    reinterpret_cast<Sfr31GcPtrSet*>(f + 0x38 / 8)->Sfr31GcPtrSet::~HashSetBase();
+    // GlobalObjects iteration; VM::UnregisterGlobalObject inlined.
+    SPInt i = 0;
+    UPInt* hs;
+    if (f[0x70 / 8] == 0)
+        hs = NULL;
+    else
     {
-        const SPInt mask = static_cast<SPInt>(Sfr31Rd(table, 8));
-        for (SPInt i = 0; i <= mask; ++i)
+        const UPInt t = f[0x70 / 8];
+        UPInt i0 = 0;
+        while (i0 <= *reinterpret_cast<UPInt*>(t + 8) && *reinterpret_cast<SPInt*>(t + 0x10 + i0 * 0x18) == -2)
+            ++i0;
+        i = static_cast<SPInt>(i0);
+        hs = reinterpret_cast<UPInt*>(self + 0x70);
+    }
+    while (hs != NULL && *hs != 0 && i <= *reinterpret_cast<SPInt*>(*hs + 8))
+    {
+        UPInt* const vm = reinterpret_cast<UPInt*>(f[0x20 / 8]);
+        const UPInt val = *reinterpret_cast<UPInt*>(*hs + 0x20 + i * 0x18);
+        const UPInt n = vm[0x1b0 / 8];
+        for (UPInt j = 0; j < n; ++j)
         {
-            const UPInt t = Sfr31Rd(self, 0x70);
-            if (t == 0 || static_cast<SPInt>(Sfr31Rd(t, 8)) < i)
-                break;
-            const UPInt e = t + 0x10 + static_cast<UPInt>(i) * 0x18;
-            if (static_cast<SPInt>(Sfr31Rd(e, 0)) == -2)
+            UPInt* const data = reinterpret_cast<UPInt*>(vm[0x1a8 / 8]);
+            if (data[j] != val)
                 continue;
-            const UPInt val = Sfr31Rd(e, 0x10);
-            UPInt n = Sfr31Rd(owner, 0x1b0);
-            UPInt* data = reinterpret_cast<UPInt*>(Sfr31Rd(owner, 0x1a8));
-            for (UPInt j = 0; j < n; ++j)
+            if (n == 1)
             {
-                if (data[j] != val)
-                    continue;
-                if (n == 1)
+                if ((vm[0x1b8 / 8] & ~static_cast<UPInt>(1)) > 0)
                 {
-                    if ((Sfr31Rd(owner, 0x1b8) & ~static_cast<UPInt>(1)) != 0)
+                    if (data != NULL)
                     {
-                        if (data != 0)
-                        {
-                            Memory::Free(data);
-                            Sfr31Wr(owner, 0x1a8, 0);
-                        }
-                        Sfr31Wr(owner, 0x1b8, 0);
+                        Memory::pGlobalHeap->Free(data);
+                        vm[0x1a8 / 8] = 0;
                     }
-                    Sfr31Wr(owner, 0x1b0, 0);
+                    vm[0x1b8 / 8] = 0;
                 }
-                else
-                {
-                    memmove(data + j, data + j + 1, (n - j) * 8 - 8);
-                    Sfr31Wr(owner, 0x1b0, n - 1);
-                }
-                break;
+                vm[0x1b0 / 8] = 0;
             }
+            else
+            {
+                memmove(data + j, data + j + 1, (n - j) * 8 - 8);
+                --vm[0x1b0 / 8];
+            }
+            break;
+        }
+        const UPInt mask = *reinterpret_cast<UPInt*>(*hs + 8);
+        if (i <= static_cast<SPInt>(mask))
+        {
+            ++i;
+            while (static_cast<UPInt>(i) <= mask && *reinterpret_cast<SPInt*>(*hs + 0x10 + i * 0x18) == -2)
+                ++i;
         }
     }
-    reinterpret_cast<Sfr31GcPtrSet*>(self + 0x70)->Clear();
-    reinterpret_cast<ArrayDataBase<SPtr<VMAbcFile>, AllocatorLH<SPtr<VMAbcFile>, 340>, ArrayDefaultPolicy>*>(self + 0x78)->ResizeNoConstruct(reinterpret_cast<const void*>(self + 0x78), 0);
-    reinterpret_cast<Sfr31NsSet*>(self + 0x30)->~Sfr31NsSet();
-    reinterpret_cast<ArrayData<SPtr<NamespaceSet>, AllocatorLH<SPtr<NamespaceSet>, 2>, ArrayDefaultPolicy>*>(self + 0x40)->Resize(0);
-    reinterpret_cast<ArrayDataBase<SPtr<ASStringNode>, AllocatorLH<SPtr<ASStringNode>, 2>, ArrayDefaultPolicy>*>(self + 0x58)->ResizeNoConstruct(reinterpret_cast<const void*>(self + 0x58), 0);
-    reinterpret_cast<Sfr31FnSet*>(self + 0x90)->Clear();
-    reinterpret_cast<Sfr31FnSet*>(self + 0x98)->~Sfr31FnSet();
-    reinterpret_cast<ArrayData<ArrayLH_POD<UInt64, 338, ArrayDefaultPolicy>, AllocatorLH<ArrayLH_POD<UInt64, 338, ArrayDefaultPolicy>, 340>, ArrayDefaultPolicy>*>(self + 0xd0)->Resize(0);
+    reinterpret_cast<Sfr31GcPtrSet*>(f + 0x70 / 8)->Clear();
+    reinterpret_cast<ArrayDataBase<SPtr<VMAbcFile>, AllocatorLH<SPtr<VMAbcFile>, 340>, ArrayDefaultPolicy>*>(f + 0x78 / 8)->ResizeNoConstruct(f + 0x78 / 8, 0);
+    reinterpret_cast<Sfr31NsSet*>(f + 0x30 / 8)->Sfr31NsSet::~HashSetBase();
+    reinterpret_cast<ArrayData<SPtr<NamespaceSet>, AllocatorLH<SPtr<NamespaceSet>, 2>, ArrayDefaultPolicy>*>(f + 0x40 / 8)->Resize(0);
+    reinterpret_cast<ArrayDataBase<SPtr<ASStringNode>, AllocatorLH<SPtr<ASStringNode>, 2>, ArrayDefaultPolicy>*>(f + 0x58 / 8)->ResizeNoConstruct(f + 0x58 / 8, 0);
+    reinterpret_cast<Sfr31FnSet*>(f + 0x90 / 8)->Clear();
+    reinterpret_cast<Sfr31FnSet*>(f + 0x98 / 8)->Sfr31FnSet::~HashSetBase();
+    reinterpret_cast<ArrayData<Abc::MethodBodyInfo::Exception, AllocatorLH<Abc::MethodBodyInfo::Exception, 340>, ArrayDefaultPolicy>*>(f + 0xd0 / 8)->Resize(0);
 }
+#pragma inline_depth()
 // ---- batch 54
 static inline UPInt Sfr31SubObj(UPInt o) { return o + *reinterpret_cast<const UInt8*>(o + 0x6d) * 4; }
 static inline UPInt Sfr31VCall0(UPInt self, UPInt off)
