@@ -48,18 +48,37 @@ LocalFrame* Environment::CreateNewLocalFrame()
     return frame;
 }
 
+// DeclareArray's length Value and constructor ref, which share one slot. The exe (LTCG) releases the ref with its
+// flags read once and no field clears, so the code below does it by hand.
+union DeclareArrayHolder
+{
+    Value       z;
+    FunctionRef v;
+    SF_FORCEINLINE DeclareArrayHolder() {}
+    SF_FORCEINLINE ~DeclareArrayHolder() {}
+};
+
 // The Array literal: a new empty array with its length and constructor, filled from the arguments.
-// MS2-FUNCTIONAL: GlobalCtor's twin
+// MS2-FUNCTIONAL: one instruction off: the exe loads the Object vptr (mov r10,[rbx+0x20]) before the length Value's
+// stores, ours after them; the holder/flags forms tried (fe36 a-g) do not move it
 // @0x142938020
 void ArrayCtorFunction::DeclareArray(const FnCall& fn)
 {
     Ptr<ArrayObject> parray = *SF_HEAP_NEW(fn.Env->GetHeap()) ArrayObject(fn.Env);
-    parray->SetMember(fn.Env, fn.Env->GetBuiltin(ASBuiltin_length), Value(0), PropFlags::PropFlag_DontEnum);
-    FunctionRef ctor = fn.Env->GetConstructor(ASBuiltin_Array);
-    parray->Set_constructor(fn.Env->GetSC(), ctor);
+    DeclareArrayHolder ctor;
+    PropFlags flags(PropFlags::PropFlag_DontEnum);
+    parray->SetMember(fn.Env, fn.Env->GetBuiltin(ASBuiltin_length), *::new (&ctor.z) Value(0), flags);
+    ctor.z.~Value();
+    ::new (&ctor.v) FunctionRef(fn.Env->GetConstructor(ASBuiltin_Array));
+    parray->Set_constructor(fn.Env->GetSC(), ctor.v);
     if (fn.NArgs != 0)
         parray->InitArray(fn);
     fn.Result->SetAsObject(parray.GetPtr());
+    UByte rflags = ctor.v.Flags;
+    if (!(rflags & FunctionRefBase::FuncRef_Internal) && ctor.v.Function)
+        ctor.v.Function->Release();
+    if (!(rflags & FunctionRefBase::FuncRef_Weak) && ctor.v.pLocalFrame)
+        ctor.v.pLocalFrame->Release();
 }
 
 }}} // namespace Scaleform::GFx::AS2
