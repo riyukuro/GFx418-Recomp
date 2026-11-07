@@ -1058,7 +1058,9 @@ namespace Instances { namespace fl
     typedef Scaleform::Hash<ConstStringKey, const ClassInfo*, ConstStringHashFn,
                             Scaleform::AllocatorGH<ConstStringKey, 328> > CIRegistrationHashType;
 
-    // MS2-FUNCTIONAL: the scratch ClassInfo is value-initialized (the exe stores its fields one qword at a time)
+    // MS2: flat aggregate twin of ClassInfo; the SDK braces {TInfo, CInfo} so every field is stored one by one
+    struct Sfr01cFlatClassInfo { UPInt Flags; const char* Name; const char* PkgName; const void* Parent; void* Factory;
+                                 UInt64 Nums; const void* M0; const void* M1; const void* M2; const void* M3; };
     // @0x1423ed260
     GlobalObjectCPP::GlobalObjectCPP(VM& vm, InstanceTraits::fl::GlobalObject& t)
         : GlobalObject(t)
@@ -1107,26 +1109,20 @@ namespace Instances { namespace fl
 
         // the global functions, by package
         {
-            ClassInfo ci = ClassInfo();
-            ci.Flags = TypeInfo::CompileTime;
-            ci.Name = "";
-            ci.PkgName = "";
+            const Sfr01cFlatClassInfo cf = {TypeInfo::CompileTime, "", "", NULL, NULL};
+            const ClassInfo& ci = reinterpret_cast<const ClassInfo&>(cf);
             for (unsigned i = 0; i < 13; ++i)
                 GetTraits().Add2VT(ci, GlobalObjectCPP_ti[i]);
         }
         {
-            ClassInfo ci = ClassInfo();
-            ci.Flags = TypeInfo::CompileTime;
-            ci.Name = "";
-            ci.PkgName = "flash.system";
+            const Sfr01cFlatClassInfo cf = {TypeInfo::CompileTime, "", "flash.system", NULL, NULL};
+            const ClassInfo& ci = reinterpret_cast<const ClassInfo&>(cf);
             for (unsigned i = 0; i < 1; ++i)
                 GetTraits().Add2VT(ci, GlobalObjectCPP_ti_system[i]);
         }
         {
-            ClassInfo ci = ClassInfo();
-            ci.Flags = TypeInfo::CompileTime;
-            ci.Name = "";
-            ci.PkgName = "flash.utils";
+            const Sfr01cFlatClassInfo cf = {TypeInfo::CompileTime, "", "flash.utils", NULL, NULL};
+            const ClassInfo& ci = reinterpret_cast<const ClassInfo&>(cf);
             for (unsigned i = 0; i < 11; ++i)
                 GetTraits().Add2VT(ci, GlobalObjectCPP_ti_utils[i]);
         }
@@ -1134,10 +1130,8 @@ namespace Instances { namespace fl
         for (unsigned i = 0; i < 16; ++i)
             t.AddSlot(GlobalObjectCPP_mi[i]);
         {
-            ClassInfo ci = ClassInfo();
-            ci.Flags = TypeInfo::CompileTime;
-            ci.Name = "";
-            ci.PkgName = "avmplus";
+            const Sfr01cFlatClassInfo cf = {TypeInfo::CompileTime, "", "avmplus", NULL, NULL};
+            const ClassInfo& ci = reinterpret_cast<const ClassInfo&>(cf);
             for (unsigned i = 0; i < 3; ++i)
                 GetTraits().Add2VT(ci, GlobalObjectCPP_ti_avmplus[i]);
         }
