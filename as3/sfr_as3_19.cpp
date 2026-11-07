@@ -6194,7 +6194,7 @@ void Sfr31ClassTraitsCleanup(UPInt self)
 }
 #pragma inline_depth()
 // ---- batch 54
-static inline void Sfr31ContAdd(UPInt c, UPInt n) { const UPInt at = FUN_14250dbc0(c); reinterpret_cast<Render::TreeContainer*>(c)->Insert(at, reinterpret_cast<Render::TreeNode*>(n)); }   // TreeContainer::Add
+static inline void Sfr31ContAdd(UPInt c, UPInt n) { reinterpret_cast<Render::TreeContainer*>(c)->Add(reinterpret_cast<Render::TreeNode*>(n)); }   // TreeContainer::Add
 static inline UPInt Sfr31SubObj(UPInt o) { return o + *reinterpret_cast<const UInt8*>(o + 0x6d) * 4; }
 static inline UPInt Sfr31VCall0(UPInt self, UPInt off)
 {
@@ -6204,13 +6204,13 @@ static inline UPInt Sfr31VCall0(UPInt self, UPInt off)
 
 // Moves the button's state objects: every other state's object is detached from the button, then the object of the requested state is
 // attached to its render container (once) and the container is appended to the button's own.
-// MS2-FUNCTIONAL 0x14252e9d0: the exe tests IsUnloaded as movzx/shr al,4/test al,1 (no source form found; ours folds to test al,0x10), which shifts the loop alignment nop; and it sets rdx before r8 for TreeContainer::Insert
+// IsUnloaded/IsUnloading and TreeContainer::Add are the SDK inlines (DisplayObjectBase view; the exe keeps the two Flags tests separate)
 // @0x14252e9d0
 void Sfr31ButtonSwitchStateIntl(UPInt self, int state)
 {
     const UPInt btn = Sfr31Rd(self, 0x18);
-    const UInt16 f = *reinterpret_cast<const UInt16*>(btn + 0x6a);
-    if ((static_cast<UInt8>(static_cast<UInt8>(f) >> 4) & 1) != 0 || (f & 0x1000) != 0 || *reinterpret_cast<const SInt32*>(btn + 0x2c) < -1)
+    //
+    if (reinterpret_cast<const GFx::DisplayObjectBase*>(btn)->IsUnloaded() || reinterpret_cast<const GFx::DisplayObjectBase*>(btn)->IsUnloading())
         return;
     UPInt c = Sfr31VCall0(btn, 0x1f8);
     if (FUN_14250dbc0(c) != 0)
