@@ -2008,8 +2008,9 @@ FunctionRef TextSnapshotCtorFunction::Register(GlobalContext* pgc)
     return RegisterBuiltinClassInline<TextSnapshotCtorFunction, TextSnapshotProto>(pgc, ASBuiltin_TextSnapshot, ASBuiltin_Object, pgc->pGlobal);
 }
 
-// MS2-FUNCTIONAL regalloc floor: ctor inlined down to Object(psc) like the exe (731 vs 730 B); pgc lives in r13
-// where the exe uses r15, and the Object zero stores are immediates where the exe stores dil/di.
+// MS2-FUNCTIONAL regalloc floor: the ctor is inlined down to Object(psc) via the ObjectGcInlineCtorTag chain and
+// the name is read through pgc as in the SDK, so the size (730 B) and the dil/di zero stores match the exe; pgc
+// lives in r14 where the exe uses r15 (and r15/r14 swap their save slots).
 // @0x142976900
 FunctionRef ColorTransformCtorFunction::Register(GlobalContext* pgc)
 {
@@ -2017,11 +2018,11 @@ FunctionRef ColorTransformCtorFunction::Register(GlobalContext* pgc)
     FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) ColorTransformCtorFunction(&sc, ObjectInlineCtorTag()));
     Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) ColorTransformProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor);
     SetBuiltinPrototype(pgc, ASBuiltin_ColorTransform, proto);
-    pgc->FlashGeomPackage->SetMemberRaw(&sc, sc.GetBuiltin(ASBuiltin_ColorTransform), Value(ctor));
+    pgc->FlashGeomPackage->SetMemberRaw(&sc, ((MovieRoot*)pgc->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin_ColorTransform), Value(ctor));
     return ctor;
 }
 
-// MS2-FUNCTIONAL regalloc floor, as ColorTransformCtorFunction::Register above (731 vs 730 B).
+// MS2-FUNCTIONAL regalloc floor, as ColorTransformCtorFunction::Register above (r14/r15 swap only).
 // @0x142979d00
 FunctionRef RectangleCtorFunction::Register(GlobalContext* pgc)
 {
@@ -2029,11 +2030,11 @@ FunctionRef RectangleCtorFunction::Register(GlobalContext* pgc)
     FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) RectangleCtorFunction(&sc, ObjectInlineCtorTag()));
     Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) RectangleProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor);
     SetBuiltinPrototype(pgc, ASBuiltin_Rectangle, proto);
-    pgc->FlashGeomPackage->SetMemberRaw(&sc, sc.GetBuiltin(ASBuiltin_Rectangle), Value(ctor));
+    pgc->FlashGeomPackage->SetMemberRaw(&sc, ((MovieRoot*)pgc->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin_Rectangle), Value(ctor));
     return ctor;
 }
 
-// MS2-FUNCTIONAL regalloc floor, as ColorTransformCtorFunction::Register above (731 vs 730 B).
+// MS2-FUNCTIONAL regalloc floor, as ColorTransformCtorFunction::Register above (r14/r15 swap only).
 // @0x14297c400
 FunctionRef TransformCtorFunction::Register(GlobalContext* pgc)
 {
@@ -2041,7 +2042,7 @@ FunctionRef TransformCtorFunction::Register(GlobalContext* pgc)
     FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) TransformCtorFunction(&sc, ObjectInlineCtorTag()));
     Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) TransformProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor);
     SetBuiltinPrototype(pgc, ASBuiltin_Transform, proto);
-    pgc->FlashGeomPackage->SetMemberRaw(&sc, sc.GetBuiltin(ASBuiltin_Transform), Value(ctor));
+    pgc->FlashGeomPackage->SetMemberRaw(&sc, ((MovieRoot*)pgc->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(ASBuiltin_Transform), Value(ctor));
     return ctor;
 }
 

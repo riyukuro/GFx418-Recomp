@@ -1171,7 +1171,7 @@ class TransformCtorFunction : public CFunctionObject
 public:
     // (appended for sfr_as2_06) Inlined into Register in the exe.
     TransformCtorFunction(ASStringContext* psc) : CFunctionObject(psc, GlobalCtor) {}
-    __forceinline TransformCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t) : CFunctionObject(psc, GlobalCtor, t) {} // sfr_as2_06
+    __forceinline TransformCtorFunction(ASStringContext* psc, ObjectInlineCtorTag t) : CFunctionObject(psc, GlobalCtor, ObjectGcInlineCtorTag()) {} // sfr_as2_06
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429374b0
     // (appended for sfr_as2_06) new Transform(target) / Transform(target) for the movie clip target; undefined
