@@ -119,6 +119,27 @@ const char* const BlendModeNames[] = {"normal",     "normal", "layer",      "mul
                                       "invert",     "alpha",  "erase",      "overlay",  "hardlight"};
 
 // The slash path of pchar: its name and those of its parents up to (not including) ptop, each after a "/".
+// BitmapFilterObject::CreateFromDesc, inlined into GetStandardMember in the exe.
+static SF_FORCEINLINE BitmapFilterObject* Sfr05gbCreateFromDesc(Environment* penv, ASStringContext* psc, const Render::Filter& filter)
+{
+    BitmapFilterObject* pobj;
+    int                 type;
+    switch (filter.GetFilterType())
+    {
+    case Render::Filter_Blur:        type = ASBuiltin_BlurFilter; break;
+    case Render::Filter_Shadow:      type = ASBuiltin_DropShadowFilter; break;
+    case Render::Filter_Glow:        type = ASBuiltin_GlowFilter; break;
+    case Render::Filter_Bevel:       type = ASBuiltin_BevelFilter; break;
+    case Render::Filter_ColorMatrix: type = ASBuiltin_ColorMatrixFilter; break;
+    default:
+        return 0;
+    }
+    pobj = static_cast<BitmapFilterObject*>(penv->OperatorNew(psc->pContext->FlashFiltersPackage, penv->GetBuiltin(type)));
+    if (pobj)
+        *pobj->GetFilter() = filter;
+    return pobj;
+}
+
 SF_FORCEINLINE void PrependNamePath(StringBuffer& path, const DisplayObject* pchar, const DisplayObject* ptop)
 {
     for (; pchar && pchar != ptop; pchar = pchar->GetParent())
@@ -142,117 +163,188 @@ SF_FORCEINLINE void SetBool3W(Value* val, SByte b)
 
 // The built-in properties every character has, by number; false for those this one does not have or that need
 // the subclass (currentframe, totalframes, framesloaded, cacheAsBitmap, lockroot).
-// MS2-FUNCTIONAL the url copy is a plain loop here (vectorised in the exe); local blendMode table
+// MS2-FUNCTIONAL 8 bytes: in the vectorised url copy the exe orders pand/pandn differently in unrolled lanes 3-4 (lanes 1-2 match); no source form found
 // @0x142955080
 bool AvmCharacter::GetStandardMember(StandardMember index, Value* val, bool opcodeFlag) const
 {
     if (opcodeFlag && (unsigned)index > M_BuiltInProperty_End)
     {
         GetASEnvironment()->LogScriptError("Invalid GetProperty query, property number %d", index);
-        return false;
+        return 0;
     }
-    if (index == M_InvalidMember || index > M_LastBitMaskMember)
-        return false;
-    if (!((GetStandardMemberBitMask() >> index) & 1))
-        return false;
+
+    if (index == M_InvalidMember)
+        return 0;
+    if (!((index <= M_LastBitMaskMember) && (GetStandardMemberBitMask() & (1 << index))))
+        return 0;
 
     switch (index)
     {
     case M_x:
+    {
         val->SetNumber(pDispObj->GetX());
-        break;
+        return 1;
+    }
     case M_y:
+    {
         val->SetNumber(pDispObj->GetY());
-        break;
+        return 1;
+    }
     case M_xscale:
+    {
         val->SetNumber(pDispObj->GetXScale());
-        break;
+        return 1;
+    }
     case M_yscale:
+    {
         val->SetNumber(pDispObj->GetYScale());
-        break;
-    case M_alpha:
-        val->SetNumber(pDispObj->GetAlpha());
-        break;
-    case M_visible:
-        val->SetBool(pDispObj->GetVisible());
-        break;
+        return 1;
+    }
     case M_width:
+    {
         val->SetNumber(pDispObj->GetWidth());
-        break;
+        return 1;
+    }
     case M_height:
+    {
         val->SetNumber(pDispObj->GetHeight());
-        break;
+        return 1;
+    }
     case M_rotation:
+    {
         val->SetNumber(pDispObj->GetRotation());
-        break;
+        return 1;
+    }
+    case M_alpha:
+    {
+        val->SetNumber(pDispObj->GetAlpha());
+        return 1;
+    }
+    case M_visible:
+    {
+        val->SetBool(pDispObj->GetVisible());
+        return 1;
+    }
+    case M_blendMode:
+    {
+        val->SetString(GetASEnvironment()->CreateString(BlendModeNames[pDispObj->GetBlendMode()]));
+        return 1;
+    }
+    case M_name:
+    {
+        val->SetString(pDispObj->GetName());
+        return 1;
+    }
+    case M_enabled:
+    {
+        val->SetBool((pDispObj->Flags & InteractiveObject::Mask_Enabled) != 0);
+        return 1;
+    }
+    case M_trackAsMenu:
+    {
+        val->SetBool((pDispObj->Flags & InteractiveObject::Mask_TrackAsMenu) != 0);
+        return 1;
+    }
     case M_target:
     {
         StringBuffer       path;
         Ptr<DisplayObject> ptop = GetTopParent();
         PrependNamePath(path, pDispObj, ptop);
         val->SetString(GetASEnvironment()->CreateString(path.ToCStr(), path.GetSize()));
-        break;
+        return 1;
     }
-    case M_name:
-        val->SetString(pDispObj->GetName());
-        break;
+    case M_parent:
+    {
+        if (pDispObj->GetParent())
+            val->SetAsCharacter(pDispObj->GetParent());
+        else
+            val->SetUndefined();
+        return 1;
+    }
     case M_droptarget:
     {
         val->SetUndefined();
-        MovieImpl*     proot = GetASEnvironment()->GetMovieImpl();
-        Render::PointF mouse = proot->MouseLastPosition;
-        StringBuffer   path;
-        PrependNamePath(path, proot->GetTopMostEntity(mouse, 0, true, pDispObj), NULL);
-        val->SetString(GetASEnvironment()->CreateString(path.ToCStr(), path.GetSize()));
-        break;
+        MovieImpl*         proot    = GetASEnvironment()->GetTarget()->GetMovieImpl();
+        Render::PointF     mousePos = proot->MouseLastPosition;
+        InteractiveObject* ptopCh   = proot->GetTopMostEntity(mousePos, 0, true, pDispObj);
+        StringBuffer       name;
+        for (const DisplayObject* p = ptopCh; p != 0; p = p->GetParent())
+        {
+            ASString cname = p->GetName();
+            name.Insert(cname.ToCStr(), 0);
+            name.Insert("/", 0);
+        }
+        val->SetString(GetASEnvironment()->CreateString(name.ToCStr(), name.GetSize()));
+        return 1;
     }
     case M_url:
     {
         ArrayPOD<char> buf;
         const char*    purl = pDispObj->GetResourceMovieDef()->GetFileURL();
-        const UPInt    len  = purl ? strlen(purl) : 0;
+        UPInt          len  = purl ? strlen(purl) : 0;
         buf.Resize(len + 1);
         for (UPInt i = 0; i < len; ++i)
-            buf[i] = purl[i] == '\\' ? '/' : purl[i];
+            buf[i] = (purl[i] == '\\') ? '/' : purl[i];
         buf[len] = 0;
         String escaped;
-        ASUtils::EscapePath(buf.GetDataPtr(), len, &escaped);
+        ASUtils::EscapePath(&buf[0], len, &escaped);
         val->SetString(GetASEnvironment()->CreateString(escaped));
-        break;
+        return 1;
     }
     case M_highquality:
+    {
         val->SetBool(true);
-        break;
+        return 1;
+    }
+    case M_quality:
+    {
+        val->SetString(GetASEnvironment()->CreateString("HIGH"));
+        return 1;
+    }
     case M_focusrect:
     {
         const unsigned f = pDispObj->Flags & InteractiveObject::Mask_FocusRect;
-        if (!f)
-            val->SetNull();
-        else
+        if (f)
             val->SetBool(f == InteractiveObject::Mask_FocusRect);
-        break;
+        else
+            val->SetNull();
+        return 1;
     }
     case M_soundbuftime:
-        val->SetNumber(0);
-        break;
-    case M_quality:
-        val->SetString(GetASEnvironment()->CreateString("HIGH"));
-        break;
+    {
+        val->SetNumber(0.0);
+        return 1;
+    }
     case M_xmouse:
+    {
         val->SetNumber(pDispObj->GetMouseX());
-        break;
+        return 1;
+    }
     case M_ymouse:
+    {
         val->SetNumber(pDispObj->GetMouseY());
-        break;
-    case M_parent:
-        if (pDispObj->GetParent())
-            val->SetAsCharacter(pDispObj->GetParent());
+        return 1;
+    }
+    case M_tabEnabled:
+    {
+        const unsigned f = pDispObj->Flags & InteractiveObject::Mask_TabEnabled;
+        if (f)
+            val->SetBool(f == InteractiveObject::Mask_TabEnabled);
         else
             val->SetUndefined();
-        break;
-    case M_blendMode:
-        val->SetString(GetASEnvironment()->CreateString(BlendModeNames[pDispObj->GetBlendMode()]));
-        break;
+        return 1;
+    }
+    case M_tabIndex:
+        val->SetNumber((Number)pDispObj->TabIndex);
+        return 1;
+    case M_useHandCursor:
+    {
+        const unsigned f = pDispObj->Flags & InteractiveObject::Mask_UseHandCursor;
+        if (!f)
+            return 0;
+        val->SetBool(f == InteractiveObject::Mask_UseHandCursor);
+        return 1;
+    }
     case M_filters:
     {
         Environment*     penv = const_cast<Environment*>(GetASEnvironment());
@@ -265,55 +357,23 @@ bool AvmCharacter::GetStandardMember(StandardMember index, Value* val, bool opco
                 const Render::Filter* f = filters->GetFilter(i);
                 if (!f)
                     continue;
-                int builtin;
-                switch (f->GetFilterType())
+                BitmapFilterObject* pfilterobj = Sfr05gbCreateFromDesc(penv, psc, *f);
+                if (pfilterobj)
                 {
-                case Render::Filter_Blur:        builtin = ASBuiltin_BlurFilter; break;
-                case Render::Filter_Shadow:      builtin = ASBuiltin_DropShadowFilter; break;
-                case Render::Filter_Glow:        builtin = ASBuiltin_GlowFilter; break;
-                case Render::Filter_Bevel:       builtin = ASBuiltin_BevelFilter; break;
-                case Render::Filter_ColorMatrix: builtin = ASBuiltin_ColorMatrixFilter; break;
-                default:                         builtin = -1; break;
+                    {
+                        Value v(pfilterobj);
+                        parr->PushBack(v);
+                    }
+                    pfilterobj->Release();
                 }
-                if (builtin < 0)
-                    continue;
-                Ptr<Object> pobj = *penv->OperatorNew(psc->pContext->FlashFiltersPackage, penv->GetBuiltin(builtin));
-                if (!pobj)
-                    continue;
-                *static_cast<BitmapFilterObject*>(pobj.GetPtr())->GetFilter() = *f;
-                parr->PushBack(Value(pobj));
             }
         }
         val->SetAsObject(parr);
-        break;
     }
-    case M_enabled:
-        val->SetBool((pDispObj->Flags & InteractiveObject::Mask_Enabled) != 0);
-        break;
-    case M_trackAsMenu:
-        val->SetBool((pDispObj->Flags & InteractiveObject::Mask_TrackAsMenu) != 0);
-        break;
-    case M_tabEnabled:
-    {
-        const unsigned f = pDispObj->Flags & InteractiveObject::Mask_TabEnabled;
-        if (!f)
-            val->SetUndefined();
-        else
-            val->SetBool(f == InteractiveObject::Mask_TabEnabled);
-        break;
-    }
-    case M_tabIndex:
-        val->SetNumber(pDispObj->TabIndex);
-        break;
-    case M_useHandCursor:
-    {
-        const unsigned f = pDispObj->Flags & InteractiveObject::Mask_UseHandCursor;
-        if (!f)
-            return false;
-        val->SetBool(f == InteractiveObject::Mask_UseHandCursor);
-        return true;
-    }
+        return 1;
+
     case M_edgeaaMode:
+    {
         switch (pDispObj->GetRenderNode()->GetEdgeAAMode())
         {
         case Render::EdgeAA_On:      val->SetNumber(1); break;
@@ -321,11 +381,14 @@ bool AvmCharacter::GetStandardMember(StandardMember index, Value* val, bool opco
         case Render::EdgeAA_Disable: val->SetNumber(3); break;
         default:                     val->SetNumber(0); break;
         }
-        break;
-    default:
-        return false;
+        return 1;
     }
-    return true;
+
+    default:
+        break;
+    }
+
+    return 0;
 }
 
 // The common members, then scale9Grid (SWF 8) as a Rectangle in pixels and the hitTestDisable extension.
