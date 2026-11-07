@@ -7,6 +7,18 @@
 // MS2-RANGE: 0x1423e0260-0x1423f06a0 .text$mn
 // MS2-RANGE: 0x1423f06a0-0x1423f3510 .text$mn
 // MS2-RANGE: 0x1423f3570-0x1423f5770 .text$mn
+// MS2-RANGE: 0x142414cc0-0x142414d00 .text$mn
+// MS2-RANGE: 0x142414d10-0x142414d70 .text$mn
+// MS2-RANGE: 0x142414d90-0x142414dd0 .text$mn
+// MS2-RANGE: 0x142414de0-0x142414e20 .text$mn
+// MS2-RANGE: 0x142414e30-0x142414e90 .text$mn
+// MS2-RANGE: 0x142414ea0-0x142414ec0 .text$mn
+// MS2-RANGE: 0x142414ed0-0x142414f60 .text$mn
+// MS2-RANGE: 0x142414f70-0x142414fa0 .text$mn
+// MS2-RANGE: 0x142414fb0-0x142415010 .text$mn
+// MS2-RANGE: 0x142415020-0x142415120 .text$mn
+// MS2-RANGE: 0x142415130-0x142415160 .text$mn
+// MS2-RANGE: 0x142415170-0x1424151d0 .text$mn
 // (0x1423f3510 ??_GInstance belongs with the Instance vftable, emitted by the ~Instance unit sfr_as3_16)
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vm.h"
