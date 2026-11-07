@@ -1593,7 +1593,7 @@ namespace Instances { namespace fl_geom
 
     // The projection as a Matrix3D: focal length f on the x/y diagonal, z copied into w. Without an explicit focal
     // length f comes from the field of view over the stage width (500 pixels when not on a stage).
-    // MS2-FUNCTIONAL: the exe assembles the matrix rows in xmm registers (shufps) and copies them; ours stores directly
+    // The matrix is the SDK's Scaling(f, f, 1) with M[3][2] = 1, M[3][3] = 0 assigned over a default (identity) matrix.
     // @0x14248e490
     __declspec(noinline) void PerspectiveProjection::toMatrix3D(SPtr<Instances::fl_geom::Matrix3D>& result)
     {
@@ -1610,10 +1610,10 @@ namespace Instances { namespace fl_geom
             f = (width * 0.5f) / tanf((float)SF_DEGTORAD(fieldOfView) * 0.5f);
         else
             f = (float)focalLength;
-        Render::Matrix4F m(f, 0, 0, 0,
-                           0, f, 0, 0,
-                           0, 0, 1, 0,
-                           0, 0, 1, 0);
+        Render::Matrix4F m;
+        m = Render::Matrix4F::Scaling(f, f, 1);
+        m.M[3][2] = 1;
+        m.M[3][3] = 0;
         Value argv[16];
         for (int i = 0; i < 16; i++)
             argv[i].SetNumber((Double)m[i]);
