@@ -6579,100 +6579,151 @@ CheckResult XMLSupportImpl::ToXMLString(VM& vm, Value& v) const
 // ---- batch 57
 // Number to decimal string (ECMAScript style): integers print plainly, NaN/Infinity by name, other values with %.16g
 // (integer digit count up to 21 for 1e16..1e21); exponents lose leading zeros and small negative exponents expand to 0.000ddd form. Returns the length.
-// MS2-FUNCTIONAL 0x142525f20: precision selection follows the exe (%.16g, %.17g-%.21g for 1e16..1e21); codegen and the exponent rewrite differ
+// The SDK 4.3 SF_ECMA_dtostr (AS3_Value.cpp), comments dropped.
 // @0x142525f20
-SPInt Sfr31NumberToChars(char* out, int size, double d)
+SPInt Sfr31NumberToChars(char* buffer, int bufflen, double val)
 {
-    if (d == static_cast<double>(static_cast<int>(d)))
+    int intVal = static_cast<int>(val);
+    if (val == intVal)
     {
-        const int n = static_cast<int>(SFsprintf(out, static_cast<UPInt>(size), "%d", static_cast<int>(d)));
-        return n;
+        _itoa_s(intVal, buffer, bufflen, 10);   // SFitoa
+        return SFstrlen(buffer);
     }
-    if (d != d)
+    SF_ASSERT(bufflen >= 40);
+    if (NumberUtil::IsNaN(val))
     {
-        SFsprintf(out, static_cast<UPInt>(size), "NaN");
+        memcpy(buffer, "NaN", 4);
         return 3;
     }
-    if (d == HUGE_VAL)
+    if (NumberUtil::IsPOSITIVE_INFINITY(val))
     {
-        SFsprintf(out, static_cast<UPInt>(size), "Infinity");
-        return 8;
+        memcpy(buffer, "Infinity", sizeof("Infinity"));
+        return sizeof("Infinity")-1;
     }
-    if (d == -HUGE_VAL)
+    if (NumberUtil::IsNEGATIVE_INFINITY(val))
     {
-        SFsprintf(out, static_cast<UPInt>(size), "-Infinity");
-        return 9;
+        memcpy(buffer, "-Infinity", sizeof("-Infinity"));
+        return sizeof("-Infinity")-1;
     }
-    char tmp[40] = {};
-    // The exe prints with %.16g, widened to the integer digit count (17..21) for 1e16 <= |d| < 1e21.
-    char fmt[6] = {'%', '.', '1', '6', 'g', '\0'};
-    const double a = fabs(d);
-    if (a >= 1e16 && a < 1e21)
+    char  temp[40] = { 0 };
+    char  *d, *s;
+    char   format[] = "%.16g";
+    Double absVal = fabs(val);
+    if ((absVal >= 1.0e16) && (absVal < 1.0e21))
     {
-        if (a < 1e17)
-            fmt[3] = '7';
-        else if (a < 1e18)
-            fmt[3] = '8';
-        else if (a < 1e19)
-            fmt[3] = '9';
-        else
+        format[3] = '7';
+        if (absVal >= 1.0e17)
         {
-            fmt[2] = '2';
-            fmt[3] = a >= 1e20 ? '1' : '0';
+            format[3] = '8';
+            if (absVal >= 1.0e18)
+            {
+                format[3] = '9';
+                if (absVal >= 1.0e19)
+                {
+                    format[2] = '2';
+                    format[3] = '0';
+                    if (absVal >= 1.0e20)
+                    {
+                        format[2] = '2';
+                        format[3] = '1';
+                    }
+                }
+            }
         }
     }
-    SFsprintf(tmp, sizeof(tmp), fmt, d);
-    char* e = tmp;
-    while (*e && *e != 'e')
-        ++e;
-    char mant[40];
-    int ml = static_cast<int>(e - tmp);
-    for (int i = 0; i < ml; ++i)
-        mant[i] = tmp[i] == ',' ? '.' : tmp[i];
-    mant[ml] = '\0';
-    char* o = out;
-    if (*e == 'e')
+    const int nc1 = (int)SFsprintf(temp, sizeof(temp), format, static_cast<double>(val));
     {
-        const char* x = e + 1;
-        const bool neg = *x == '-';
-        if (*x == '-' || *x == '+')
-            ++x;
-        while (*x == '0')
-            ++x;
-        int ex = 0;
-        for (const char* y = x; *y >= '0' && *y <= '9'; ++y)
-            ex = ex * 10 + (*y - '0');
-        // The exe expands only a d.ddd mantissa (0x142526250: first digit 1-9, '.' after it); "1e-05" stays "1e-5".
-        const char* lead = mant[0] == '-' ? mant + 1 : mant;
-        if (neg && ex >= 1 && ex <= 6 && *lead >= '1' && *lead <= '9' && lead[1] == '.')
+        bool have_e = false;
+        for (int i = 0; i < nc1; ++i)
         {
-            const char* m = mant;
-            if (*m == '-')
-                *o++ = *m++;
-            *o++ = '0';
-            *o++ = '.';
-            for (int i = 1; i < ex; ++i)
-                *o++ = '0';
-            for (; *m; ++m)
-                if (*m >= '0' && *m <= '9')
-                    *o++ = *m;
-            *o = '\0';
-            return o - out;
+            if (temp[i] == 'e')
+            {
+                have_e = true;
+                break;
+            }
         }
-        for (int i = 0; i < ml; ++i)
-            *o++ = mant[i];
-        *o++ = 'e';
-        if (*e && (e[1] == '-' || e[1] == '+'))
-            *o++ = e[1];
-        for (const char* y = x; *y; ++y)
-            *o++ = *y;
-        *o = '\0';
-        return o - out;
+        if (!have_e)
+        {
+            int dot_pos = 0;
+            bool have_dot = false;
+            for (; temp[dot_pos] != 0; ++dot_pos)
+            {
+                char c = temp[dot_pos];
+                if (c == '.' || c == ',')
+                {
+                    have_dot = true;
+                    break;
+                }
+            }
+            if (have_dot && temp[nc1 - 1] != '0')
+            {
+                int i = nc1 - 2;
+                for (; i > dot_pos; --i)
+                {
+                    if (temp[i] != '0')
+                        break;
+                }
+                if (i < nc1 - 2 && i != dot_pos)
+                    temp[i + 1] = 0;
+            }
+        }
     }
-    for (int i = 0; i < ml; ++i)
-        *o++ = mant[i];
-    *o = '\0';
-    return o - out;
+    bool negativeExponent = false;
+    int  exponentValue = 0;
+    for (d = buffer, s = temp; *s != 0; s++)
+    {
+        if (*s == ',')
+        {
+            *d++ = '.';
+            continue;
+        }
+        if (*s == 'e')
+        {
+            *d++ = *s++;
+            if (*s == '-' || *s == '+')
+            {
+                if (*s == '-')
+                    negativeExponent = true;
+                *d++ = *s++;
+            }
+            while (*s == '0')
+                s++;
+            while((*s >='0') && (*s <= '9'))
+            {
+                exponentValue = exponentValue * 10 + (*s - '0');
+                *d++ = *s++;
+            }
+            break;
+        }
+        *d++ = *s;
+    }
+    if (negativeExponent && (exponentValue > 0) && (exponentValue <= 6))
+    {
+        s = temp; d = buffer;
+        if (*s == '-')
+        {
+            s++;
+            d++;
+        }
+        if ((*s >= '1') && (*s <= '9') && (d[1] == '.'))
+        {
+            *d++ = '0';
+            *d++ = '.';
+            for (int zeroCount = 1; zeroCount < exponentValue; zeroCount++)
+                *d++ = '0';
+            while(*s != 'e')
+            {
+                SF_ASSERT(*s != 0);
+                if ((*s >= '0') && (*s <= '9'))
+                {
+                    *d++ = *s;
+                }
+                s++;
+            }
+        }
+    }
+    *d = 0;
+    return d - buffer;
 }
 
 // The tracer's ReadObject (inlined in the exe): the popped object, released at each return.
@@ -8091,57 +8142,6 @@ void Sfr31ResolveStickyVariables(UPInt root, UPInt dobj)
     else
         sticky.Remove(path);
 }
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
 //
 //
 //
