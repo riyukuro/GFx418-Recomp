@@ -3549,50 +3549,68 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 }}}
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {
 
-    // MS2-FUNCTIONAL: frame differs (the Value temps around AbstractEqual are laid out differently)
+    // XMLAttr::NameMatches, which the exe inlines into EqualsInternal.
+    static SF_FORCEINLINE bool Sfr03AttrNameMatches(const XMLAttr& a, const XMLAttr& b)
+    {
+        if (!(a.Text == b.Text))
+            return false;
+        return (a.Ns.GetPtr() == NULL && b.Ns.GetPtr() == NULL) ||
+            ((a.Ns.GetPtr() != NULL && b.Ns.GetPtr() != NULL) && *a.Ns == *b.Ns);
+    }
+
     // @0x142409b40
     Boolean3 XMLElement::EqualsInternal(const XML& other)
     {
-        Boolean3 r = XML::EqualsInternal(other);
-        if (r != undefined3)
-            return r;
+        Boolean3 result = XML::EqualsInternal(other);
 
-        const XMLElement& o = static_cast<const XMLElement&>(other);
-        if (!(*Ns == *o.Ns))
-            return false3;
-        const UPInt attrNum = Attrs.GetSize();
-        if (attrNum != o.Attrs.GetSize())
-            return false3;
-        const UPInt childNum = Children.GetSize();
-        if (childNum != o.Children.GetSize())
-            return false3;
-
-        for (UPInt i = 0; i < attrNum; ++i)
+        if (result == undefined3)
         {
-            const XMLAttr& a = *Attrs[i];
-            UPInt j = 0;
-            for (; j < attrNum; ++j)
+            const XMLElement& other_el = static_cast<const XMLElement&>(other);
+
+            if (!(*Ns == *other_el.Ns))
+                return false3;
+            if (Attrs.GetSize() != other_el.Attrs.GetSize())
+                return false3;
+            if (Children.GetSize() != other_el.Children.GetSize())
+                return false3;
+
+            // Check attributes.
             {
-                const XMLAttr& b = *o.Attrs[j];
-                if (!(a.Text == b.Text))
-                    continue;
-                if (a.Ns.GetPtr() == NULL ? b.Ns.GetPtr() != NULL : (b.Ns.GetPtr() == NULL || !(*a.Ns == *b.Ns)))
-                    continue;
-                if (a.Data == b.Data)
-                    break;
+                const UPInt size = Attrs.GetSize();
+                for (UPInt i = 0; i < size; ++i)
+                {
+                    const XMLAttr* attr1 = Attrs[i];
+                    bool found = false;
+                    for (UPInt j = 0; j < size; ++j)
+                    {
+                        const XMLAttr* attr2 = other_el.Attrs[j];
+                        if (Sfr03AttrNameMatches(*attr1, *attr2) && attr1->Data == attr2->Data)
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                        return false3;
+                }
             }
-            if (j >= attrNum)
-                return false3;
+
+            // Check children.
+            {
+                const UPInt size = Children.GetSize();
+                for (UPInt i = 0; i < size; ++i)
+                {
+                    bool r;
+                    AbstractEqual(r, Value(Children[i]), Value(other_el.Children[i]));
+                    if (r == false)
+                        return false3;
+                }
+            }
+
+            result = true3;
         }
 
-        for (UPInt i = 0; i < childNum; ++i)
-        {
-            bool result;
-            AbstractEqual(result, Value(Children[i]), Value(o.Children[i]));
-            if (!result)
-                return false3;
-        }
-        return true3;
+        return result;
     }
 
     // @0x14240ae20
