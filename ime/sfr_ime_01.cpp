@@ -4077,7 +4077,7 @@ void* FUN_1423d18b0(void* raw, void* owner, void* userData)
         child = nullptr;
     words[6] = reinterpret_cast<unsigned long long>(child);
     FUN_1423d8e80(words + 7, child);
-    // Left: the exe forms rdi = +0xb0 before the +0x80 store and clears the array's Data first
+    // Left: the exe forms rdi = +0xb0 before the +0x80 store, and sets k = 0 before src in the key loop (scheduling)
     auto* text = reinterpret_cast<Ime01TextArrayLH*>(words + 0x16);
     bytes[0x80] = 1;
 
@@ -4085,7 +4085,7 @@ void* FUN_1423d18b0(void* raw, void* owner, void* userData)
     *reinterpret_cast<unsigned long long*>(bytes + 0x84) = 0x14;
     words[0] = reinterpret_cast<unsigned long long>(DAT_14313a5f8);
     *reinterpret_cast<unsigned*>(bytes + 0x8c) = 0x00ffffff;
-    new (text) Ime01TextArrayLH();
+    ::new (static_cast<void*>(text)) ArrayLH_POD<wchar_t, 2>();
     words[0xb] = 0;
     *reinterpret_cast<unsigned*>(bytes + 0xd4) = 0;
     *reinterpret_cast<unsigned*>(bytes + 0x60) = 0;
