@@ -5637,29 +5637,29 @@ static __forceinline ClassTraits::Traits* Sfr31GetClassTraitsInl(VM* vm, const A
     return ct;
 }
 // The public namespace for a package URI (the VM's public namespace for the empty URI); the URI string dies here.
-static __forceinline SPtr<Instances::Namespace> Sfr31PublicNsOf(VM* vm, const char* pkg)
+static __forceinline Pickable<Instances::Namespace> Sfr31PublicNsOf(VM* vm, const ASString& uri)   // VM::MakeInternedNamespace
 {
-    const ASString uri = vm->GetStringManager().CreateString(pkg ? pkg : "");
     if (uri.IsEmpty())
-        return SPtr<Instances::Namespace>(vm->PublicNamespace.GetPtr());
-    return SPtr<Instances::Namespace>(static_cast<InstanceTraits::fl::Namespace&>(vm->GetClassTraitsNamespace().GetInstanceTraits())
-                                                          .MakeInternedInstance(Abc::NS_Public, uri, Value::GetUndefined()));
+        return Pickable<Instances::Namespace>(vm->PublicNamespace.GetPtr(), PickValue);
+    return static_cast<InstanceTraits::fl::Namespace&>(vm->GetClassTraitsNamespace().GetInstanceTraits())
+                                                          .MakeInternedInstance(Abc::NS_Public, uri, Value::GetUndefined());
 }
+static __forceinline Pickable<Instances::Namespace> Sfr31PublicNsOf(VM* vm, const char* pkg)
+{ if (!pkg) pkg = ""; return Sfr31PublicNsOf(vm, vm->GetStringManager().CreateString(pkg)); }
 // The class traits of a class description: its package namespace plus its name, resolved through the VM's class traits cache.
-// MS2-FUNCTIONAL 0x142525ca0: regalloc/frame: the exe keeps info in rdi on an rbp frame, its strlen counts from -1, ns/found slots swap
+// VM::GetClassTraits(ClassInfo): MakeInternedNamespace (Pickable, uri overload) + single-return if block, info re-read
 // @0x142525ca0
 ClassTraits::Traits* Sfr31GetClassTraitsByInfo(VM* vm, UPInt info)
 {
-    const UPInt ti = Sfr31Rd(info, 0x18);
-    if (ti == 0)
-        return NULL;
-    const SPtr<Instances::Namespace> ns = Sfr31PublicNsOf(vm, reinterpret_cast<const char*>(Sfr31Rd(ti, 0x10)));
-    const char* nm = reinterpret_cast<const char*>(Sfr31Rd(ti, 8));
-    UPInt len = 0;
-    while (nm[len] != '\0')
-        ++len;
-    ASString name(reinterpret_cast<ASStringManager*>(Sfr31Rd(Sfr31Rd(reinterpret_cast<UPInt>(vm), 0x10), 0x1e8))->CreateConstStringNode(nm, len, 0));
-    return Sfr31GetClassTraitsInl(vm, name, *ns.GetPtr());
+    ClassTraits::Traits* r = NULL;
+    if (Sfr31Rd(info, 0x18) != 0)
+    {
+        const SPtr<Instances::Namespace> ns = Sfr31PublicNsOf(vm, reinterpret_cast<const char*>(Sfr31Rd(Sfr31Rd(info, 0x18), 0x10)));
+        r = Sfr31GetClassTraitsInl(vm, vm->GetStringManager().CreateConstString(reinterpret_cast<const char*>(Sfr31Rd(Sfr31Rd(info, 0x18), 8))), *ns.GetPtr());
+    }
+    //
+    //
+    return r;
 }
 
 // VMAbcFile::GetMultiname(ind): index 0 is the file's any-type multiname.
