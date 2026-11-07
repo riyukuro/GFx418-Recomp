@@ -7897,9 +7897,11 @@ namespace AS3 {
 // ObjectInterface::Invoke: the method of that public name of the AS3 object called on it with the host's
 // arguments; the result (when asked for) converted for the host. An exception of the lookup or the call is output;
 // false then, and when there is no such property.
-// PropRef::GetSlotValueUnsafe written out (the exe inlines it); the Multiname ctor and the string Value are the
-// inline copies (InlineCtorTag, Value::InlineStr).
-// MS2-FUNCTIONAL: the name Value's QName-call reload (LTCG), register allocation
+// PropRef::GetSlotValueUnsafe written out (the exe inlines it, with the inline AssignUnsafe copies and the
+// IsFound test as the SDK writes it); the Multiname ctor, the string Value and the this Value are the inline copies
+// (InlineCtorTag, Value::InlineStr, Value::InlineObj); the string manager is read inline (BuiltinsMgr).
+// MS2-FUNCTIONAL: the exe does not reload the name Value after the QName call (LTCG); its frame is 8 bytes
+// larger with rbx saved in the home slot, so registers differ
 // @0x142512870
 bool AS3ValueObjectInterface::Invoke(void* pdata, GFx::Value* presult, const char* name, const GFx::Value* pargs,
                                UPInt nargs, bool isdobj)
@@ -7909,12 +7911,13 @@ bool AS3ValueObjectInterface::Invoke(void* pdata, GFx::Value* presult, const cha
     SF_UNUSED(isdobj);
     MovieRoot* root = Sfr34_RootOf(pMovieRoot);
     VM*        vm   = root->pAVM;
-    const Multiname mn(vm->GetPublicNamespace(), Value(ASString(root->GetStringManager418()->CreateStringNode(name)), Value::InlineStr),
+    const Multiname mn(vm->GetPublicNamespace(), Value(ASString(root->BuiltinsMgr.GetStringManager()->CreateStringNode(name)), Value::InlineStr),
                        Multiname::InlineCtorTag());
     PropRef prop;
     static_cast<Object*>(pdata)->FindProperty(prop, mn, 0);
     const UPInt bits = reinterpret_cast<UPInt>(prop.pValue);
-    if (prop.This.IsUndefined() || bits == 1 || ((bits & 2) != 0 && (bits & ~UPInt(2)) == 0))
+    if (prop.This.IsUndefined() || ((bits & 1) != 0 && (bits & ~UPInt(1)) == 0) ||
+        ((bits & 2) != 0 && (bits & ~UPInt(2)) == 0))
         return false;
     Value asfn;
     Value asresult;
@@ -7928,10 +7931,10 @@ bool AS3ValueObjectInterface::Invoke(void* pdata, GFx::Value* presult, const cha
         break;
     }
     case 1:
-        asfn = *reinterpret_cast<const Value*>(bits & ~UPInt(1));
+        ValueAssignCopies::AssignUnsafeValueInline18(asfn, *reinterpret_cast<const Value*>(bits & ~UPInt(1)));
         break;
     case 2:
-        asfn = Value(reinterpret_cast<Object*>(bits & ~UPInt(2)));
+        ValueAssignCopies::AssignUnsafeInline18(asfn, Value::kObject, reinterpret_cast<Object*>(bits & ~UPInt(2)));
         break;
     }
     if (nargs)
@@ -7939,11 +7942,11 @@ bool AS3ValueObjectInterface::Invoke(void* pdata, GFx::Value* presult, const cha
         Array<Value> args(static_cast<int>(nargs));
         for (UPInt i = 0; i < nargs; i++)
             root->GFxValue2ASValue(pargs[i], &args[i]);
-        vm->ExecuteInternalUnsafe(asfn, Value(static_cast<Object*>(pdata)), asresult, static_cast<unsigned>(nargs),
+        vm->ExecuteInternalUnsafe(asfn, Value(static_cast<Object*>(pdata), Value::InlineObj), asresult, static_cast<unsigned>(nargs),
                                   &args[0], false);
     }
     else
-        vm->ExecuteInternalUnsafe(asfn, Value(static_cast<Object*>(pdata)), asresult, 0, NULL, false);
+        vm->ExecuteInternalUnsafe(asfn, Value(static_cast<Object*>(pdata), Value::InlineObj), asresult, 0, NULL, false);
     if (!vm->IsException())
     {
         if (presult)
