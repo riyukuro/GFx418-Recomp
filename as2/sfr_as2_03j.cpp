@@ -16,174 +16,72 @@
 #include "../include/render/text_fontmanager.h"
 #include "../include/render/render_font.h"
 #include "../include/kernel/sf_std.h"
+#include "../include/gfx/text_editorkit.h"
 
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-// MS2-FUNCTIONAL scheduling of the Value/PropFlags temporaries around the unrolled member sets
-// @0x142921710
-TextFieldProto::TextFieldProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
-    : Prototype<TextFieldObject>(psc, pprototype, constructor)
+// SDK Object::SetConstMemberRaw (inline in the SDK header): the name, value and flags are temporaries.
+static inline bool TfSetConstMemberRaw(Object* pobj, ASStringContext* psc, const char* pname, const Value& val, const PropFlags& flags)
 {
-    ObjectInterface* pobj = this;
+    return pobj->SetMemberRaw(psc, ASString(psc->CreateConstString(pname)), val, flags);
+}
+
+// AsBroadcaster::InitializeProto (out of line at 0x142961fe0), inlined by the exe here.
+static __forceinline bool TfInitializeProto(ASStringContext* psc, ObjectInterface* pobj)
+{
     if (pobj)
         NameFunction::AddConstMembers(pobj, psc, AsBroadcasterProto::FunctionTable, PropFlags::PropFlag_DontEnum);
+    return true;
+}
+
+// The prototype's TextFieldObject base as the exe inlines it (out of line at 0x142921520).
+inline TextFieldObject::TextFieldObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag)
+    : Object(psc), pIMECompositionStringStyles(0)
+{
+    Set__proto__(psc, pprototype);
+}
+
+// @0x142921710
+TextFieldProto::TextFieldProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
+    : Prototype<TextFieldObject>(psc, pprototype, constructor, ObjectInlineCtorTag())
+{
+    TfInitializeProto(psc, this);
     InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("scroll"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("hscroll"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("maxscroll"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("maxhscroll"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("background"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("backgroundColor"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("border"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("borderColor"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("bottomScroll"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("mouseWheelEnabled"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("antiAliasType"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("autoSize"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("condenseWhite"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("embedFonts"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("html"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("htmlText"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("length"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("maxChars"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("multiline"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("password"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("restrict"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("selectable"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("styleSheet"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("tabIndex"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("text"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("textColor"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("textHeight"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("textWidth"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("type"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("variable"), unset, flags);
-    }
-    {
-        PropFlags flags(2);
-        Value unset(Value::UNSET);
-        pobj->SetMemberRaw(psc, psc->CreateConstString("wordWrap"), unset, flags);
-    }
+    TfSetConstMemberRaw(this, psc, "scroll", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "hscroll", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "maxscroll", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "maxhscroll", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "background", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "backgroundColor", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "border", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "borderColor", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "bottomScroll", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "mouseWheelEnabled", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "antiAliasType", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "autoSize", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "condenseWhite", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "embedFonts", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "html", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "htmlText", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "length", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "maxChars", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "multiline", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "password", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "restrict", Value(Value::NULLTYPE), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "selectable", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "styleSheet", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "tabIndex", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "text", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "textColor", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "textHeight", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "textWidth", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "type", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "variable", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    TfSetConstMemberRaw(this, psc, "wordWrap", Value(Value::UNSET), PropFlags(PropFlags::PropFlag_DontDelete));
+    // SDK GAS_TextFieldExtFunctionTable: in the exe it follows FunctionTable's terminator (0x1432144a0).
+    InitFunctionMembers(this, psc, FunctionTable + 9, PropFlags(PropFlags::PropFlag_DontEnum));
+    SetIMECompositionStringStyles(Text::CompositionString::GetDefaultStyles());
 }
 
 }}}
@@ -195,3 +93,5 @@ TextFieldProto::TextFieldProto(ASStringContext* psc, Object* pprototype, const F
 // MS2-PIN: ??_7?$Prototype@VTextFieldObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218580
 // MS2-PIN: ??_7?$Prototype@VTextFieldObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432185c8
 // MS2-PIN: ??_7?$Prototype@VTextFieldObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x143218670
+// MS2-PIN: ??_7TextFieldObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218490
+// MS2-PIN: ??_7TextFieldObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432184d8

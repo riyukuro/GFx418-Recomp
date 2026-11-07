@@ -653,6 +653,7 @@ protected:
     TextFieldObject(Environment* penv, ObjectInlineCtorTag); // inline in sfr_as2_04
     TextFieldObject(GlobalContext* gCtxt, InteractiveObject* ptextField); // exe 0x1429215f0
     TextFieldObject(GlobalContext* gCtxt, InteractiveObject* ptextField, ObjectInlineCtorTag); // inline in sfr_as2_05e
+    TextFieldObject(ASStringContext* psc, Object* pprototype, ObjectInlineCtorTag); // inline in sfr_as2_03j
 
     virtual void Finalize_GC(); // exe 0x1429430b0
 };
