@@ -70,7 +70,7 @@ public:
 class VideoCtorFunction : public CFunctionObject
 {
 public:
-    VideoCtorFunction(ASStringContext* psc) : CFunctionObject(psc, GlobalCtor) {}
+    VideoCtorFunction(ASStringContext* psc);   // exe 0x14000ecc0
     // (implicit destructor: the ??_G 0x14000ed20 calls the out-of-line ~CFunctionObject)
     virtual Object* CreateNewObject(Environment* penv) const;   // exe 0x14000e0c0 (sfr_video_01)
     static void GlobalCtor(const FnCall& fn);   // exe 0x14000e100
@@ -124,8 +124,8 @@ namespace Scaleform { namespace Render { inline ComplexFill::ComplexFill() : Bin
 namespace Scaleform { typedef ArrayPagedBase<const GFx::AS3::RefCountBaseGC<323>*, 10, 5, AllocatorPagedLH_POD<const GFx::AS3::RefCountBaseGC<323>*, 2> > Video02GcRoots; template<> bool Video02GcRoots::allocatePageSafe(UPInt); struct ArrayPagedFriend { static bool AllocatePageSafe(Video02GcRoots* a, UPInt nb) { return a->allocatePageSafe(nb); } }; } // (C3) FUN_1423dfe30
 extern void* PTR_FUN_1431b71b0;
 extern void* PTR_FUN_1431b7260;
-extern void* PTR_LAB_1431b5fb0;
-extern void* PTR_LAB_1431b5f20;
+//
+//
 extern void* PTR_LAB_1431b67d0;
 extern void* PTR_LAB_1431b6740;
 extern void* PTR_LAB_1431b6540;
@@ -2122,13 +2122,13 @@ void* FUN_140012f10(void* object, void* traits)
 
 // constructs the native AS2 function object with the executable's video constructor callback and tables.
 // @0x14000ecc0
-Scaleform::GFx::AS2::CFunctionObject* FUN_14000ecc0(
-    Scaleform::GFx::AS2::CFunctionObject* object, Scaleform::GFx::AS2::ASStringContext* context)
+Scaleform::GFx::AS2::VideoCtorFunction::VideoCtorFunction(
+    Scaleform::GFx::AS2::ASStringContext* context)
+    : CFunctionObject(context, GlobalCtor)
 {
-    object->Scaleform::GFx::AS2::CFunctionObject::CFunctionObject(context, Scaleform::GFx::AS2::VideoCtorFunction::GlobalCtor);
-    *reinterpret_cast<void**>(object) = &PTR_LAB_1431b5f20;
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b5fb0;
-    return object;
+    // (cl stores the vftables 0x1431b5f20 / +0x20 0x1431b5fb0)
+    //
+    //
 }
 
 // constructs the frame-rate native function object and installs its executable tables.
@@ -2387,9 +2387,9 @@ Scaleform::GFx::AS2::FunctionRef* FUN_14000ed60(
     Scaleform::GFx::AS2::CFunctionObject* function = static_cast<Scaleform::GFx::AS2::CFunctionObject*>(context->pHeap->Alloc(0x70));
     if (function)
     {
-        function->Scaleform::GFx::AS2::CFunctionObject::CFunctionObject(&stringContext, Scaleform::GFx::AS2::VideoCtorFunction::GlobalCtor);
-        *reinterpret_cast<void**>(function) = &PTR_LAB_1431b5f20;
-        *reinterpret_cast<void**>(reinterpret_cast<char*>(function) + 0x20) = &PTR_LAB_1431b5fb0;
+        ::new (function) Scaleform::GFx::AS2::VideoCtorFunction(&stringContext);
+        //
+        //
     }
     else
         function = 0;
@@ -3618,7 +3618,7 @@ void Video02EmitVideoProtoVftables(void* p, ASStringContext* psc, Object* pproto
     ::new (p) VideoProto(psc, pprototype, constructor);
 }
 
-// The Video constructor function (vftables 0x1431b5f20 / +0x20 0x1431b5fb0, stored by FUN_14000ecc0). Its ??_G is
+// The Video constructor function (vftables 0x1431b5f20 / +0x20 0x1431b5fb0, stored by its ctor 0x14000ecc0). Its ??_G is
 // 0x14000ed20 and the ObjectInterface slot 0 is cl's adjustor thunk 0x14000ed10.
 void Video02EmitVideoCtorVftables(void* p, ASStringContext* psc)
 {
@@ -3818,9 +3818,9 @@ Ptr<Render::TreeNode> Video02Character::CreateRenderNode(Render::ContextImpl::Co
 #pragma comment(linker, "/alternatename:?PTR_FUN_1431b5e20@@3PEAXEA=??_7VideoProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
 #pragma comment(linker, "/alternatename:?PTR_LAB_1431b5e70@@3PEAXEA=??_7VideoProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
 #pragma comment(linker, "/alternatename:?PTR_LAB_1431b5e18@@3PEAXEA=??_7VideoProto@AS2@GFx@Scaleform@@6B@")
-// FUN_14000ecc0 stores VideoCtorFunction's vftables through these names.
-#pragma comment(linker, "/alternatename:?PTR_LAB_1431b5f20@@3PEAXEA=??_7VideoCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
-#pragma comment(linker, "/alternatename:?PTR_LAB_1431b5fb0@@3PEAXEA=??_7VideoCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
+//
+//
+//
 // FUN_140011ef0 / FUN_1400122e0 / FUN_140012440 store the NetConnection family vftables through these names.
 #pragma comment(linker, "/alternatename:?PTR_LAB_1431b65f0@@3PEAXEA=??_7NetConnection@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
 #pragma comment(linker, "/alternatename:?PTR_LAB_1431b6540@@3PEAXEA=??_7NetConnection@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
