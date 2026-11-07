@@ -104,12 +104,33 @@ SF_FORCEINLINE FunctionRef RegisterBuiltinClass(GlobalContext* pgc, ASBuiltinTyp
     return ctor;
 }
 
+// The builtin name read through the context's movie root, as the exe does (not through the string context).
+SF_FORCEINLINE const ASString& GlobalBuiltin(GlobalContext* pgc, ASBuiltinType type)
+{
+    return ((MovieRoot*)pgc->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(type);
+}
+
+// A function name value on a builtin name.
+struct FunctionNameValue
+{
+    const ASString& Name;
+    SF_FORCEINLINE FunctionNameValue(const ASString& str) : Name(str) {}
+    SF_FORCEINLINE operator Value() const
+    {
+        Value v;
+        v.T.Type        = Value::FUNCTIONNAME;
+        v.V.pStringNode = Name.GetNode();
+        v.V.pStringNode->AddRef();
+        return v;
+    }
+};
+
 // A builtin class created on first use: its registration function under the type's name, and the name published
 // in pdest as a function name value until then.
 SF_FORCEINLINE void AddBuiltinClassRegistry(GlobalContext* pgc, ASStringContext* psc, Object* pdest,
                                             ASBuiltinType type, GlobalContext::ClassRegEntry::RegisterFunc func)
 {
-    const ASString& name = psc->GetBuiltin(type);
+    const ASString& name = GlobalBuiltin(pgc, type);
     if (::FUN_140001bd0(&pgc->BuiltinClassesRegistry, (void*)&name))
         return;
     {
@@ -118,11 +139,7 @@ SF_FORCEINLINE void AddBuiltinClassRegistry(GlobalContext* pgc, ASStringContext*
         pgc->BuiltinClassesRegistry.Add(name, entry);
     }
 
-    Value fname;
-    fname.T.Type        = Value::FUNCTIONNAME;
-    fname.V.pStringNode = psc->GetBuiltin(type).GetNode();
-    fname.V.pStringNode->AddRef();
-    pdest->SetMemberRaw(psc, name, fname);
+    pdest->SetMemberRaw(psc, GlobalBuiltin(pgc, type), FunctionNameValue(GlobalBuiltin(pgc, type)));
 }
 
 } // namespace
@@ -275,15 +292,25 @@ FunctionRef StyleSheetCtorFunction::Register(GlobalContext* pgc)
     return ctor;
 }
 
-// MS2-FUNCTIONAL: the exe inlines the TextFieldCtorFunction ctor
+__forceinline TextFieldCtorFunction::TextFieldCtorFunction(ASStringContext* psc, ObjectInlineCtorTag)
+    : CFunctionObject(psc, GlobalCtor, ObjectInlineCtorTag())
+{
+    NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
+                                  PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
+}
+
+// The exe inlines the TextFieldCtorFunction ctor down to Object(psc); TextFieldProto stays a call.
+// MS2-FUNCTIONAL: register allocation floor (954 vs 950 bytes), the same one as StyleSheet's Register: the exe
+// keeps zero in rbx (the ctor object in rdi, pgc in r15), so its byte/word zero stores use bl/bx; same
+// instructions and order otherwise.
 // @0x14297b6b0
 FunctionRef TextFieldCtorFunction::Register(GlobalContext* pgc)
 {
     ASStringContext sc(pgc, 8);
-    FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) TextFieldCtorFunction(&sc));
-    Ptr<Object>     proto = *SF_HEAP_NEW(pgc->pHeap) TextFieldProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor);
+    FunctionRef     ctor(*SF_HEAP_NEW(pgc->pHeap) TextFieldCtorFunction(&sc, ObjectInlineCtorTag()));
+    Ptr<Object>     proto = SF_HEAP_NEW(pgc->pHeap) TextFieldProto(&sc, pgc->GetPrototype(ASBuiltin_Object), ctor);
     SetBuiltinPrototype(pgc, ASBuiltin_TextField, proto);
-    pgc->pGlobal->SetMemberRaw(&sc, sc.GetBuiltin(ASBuiltin_TextField), Value(ctor));
+    pgc->pGlobal->SetMemberRaw(&sc, GlobalBuiltin(pgc, ASBuiltin_TextField), Value(ctor));
     AddBuiltinClassRegistry(pgc, &sc, ctor.GetObjectPtr(), ASBuiltin_StyleSheet, StyleSheetCtorFunction::Register);
     return ctor;
 }
@@ -376,3 +403,5 @@ FunctionRef TextFormatCtorFunction::Register(GlobalContext* pgc)
 // MS2-PIN: ??_7TextFormatProto@AS2@GFx@Scaleform@@6B@ 0x14321d960
 // MS2-PIN: ??_7TextFormatProto@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321d870
 // MS2-PIN: ??_7TextFormatProto@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321d8b8
+// MS2-PIN: ??_7TextFieldCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218770
+// MS2-PIN: ??_7TextFieldCtorFunction@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432187f8

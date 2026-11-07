@@ -1090,6 +1090,7 @@ class TextFieldCtorFunction : public CFunctionObject
 {
 public:
     TextFieldCtorFunction(ASStringContext* psc); // exe 0x142921480
+    TextFieldCtorFunction(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_06s9
 
     virtual Object* CreateNewObject(Environment* penv) const; // exe 0x1429373c0
 
