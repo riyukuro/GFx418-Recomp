@@ -4445,31 +4445,6 @@ void Sfr31ExecGetSuper(UPInt vmAddr, UPInt file, UInt32 idx)
     }
 }
 // ---- batch 29
-// getlex-style resolve: pushes the value the multiname resolves to, or raises a ReferenceError.
-// MS2-FUNCTIONAL 0x142538d30: raw-offset model; codegen differs from the exe
-// @0x142538d30
-void Sfr31ExecGetLex(UPInt vmAddr, UPInt file, UInt32 idx)
-{
-    const UPInt cvm = Sfr31Rd(file, 0x20);
-    Sfr31ExecMnCtx ctx = {cvm, cvm + 0x48, file};
-    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
-    FUN_1425201f0(&ctx, &mn);
-    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) != 0)
-        return;
-    UPInt pr[6] = {0, 0, 0, 0, 0, 0};
-    FUN_142502570(vmAddr, pr, &mn);
-    Value& res = *reinterpret_cast<Value*>(&pr[2]);
-    const UPInt f = pr[0];
-    if ((*reinterpret_cast<const UInt32*>(&res) & 0x1f) == 0 || f == 1 || ((f & 2) != 0 && (f & ~static_cast<UPInt>(2)) == 0))
-    {
-        VM::Error e(static_cast<VM::ErrorID>(0x429), *reinterpret_cast<VM*>(vmAddr));
-        reinterpret_cast<VM*>(vmAddr)->ThrowReferenceError(e);
-    }
-    else
-        ExecPushCopy(reinterpret_cast<VM*>(vmAddr), res);
-    res.~Value();
-}
-
 typedef UPInt* (*Sfr31VFnName)(UPInt self, UPInt* out);
 
 // VM::CheckObject: a TypeError when the value is undefined or a null object.
@@ -4505,6 +4480,52 @@ struct Sfr31ExecReadMnObject : Sfr31ExecStackReader
     Sfr31MnRaw mn;          // +0x18
     const Value* obj;       // +0x48
 };
+
+// The exe calls Multiname's implicit destructor out of line here.
+extern "C" void FUN_1423f1060(void* multiname);    // Multiname::~Multiname
+struct Sfr31MnBox
+{
+    Sfr31MnBox(VMAbcFile& file, const Abc::Multiname& e) { ::new (&w0) Multiname(file, e); }
+    ~Sfr31MnBox() { FUN_1423f1060(&w0); }
+    Multiname& Get() { return *reinterpret_cast<Multiname*>(&w0); }
+    void* w0; void* w1; UPInt w2, w3, w4, w5;
+};
+// SDK ReadMn: the exec reader fields, then the multiname read off the stack.
+struct Sfr31ExecReadMn : Sfr31ExecStackReader
+{
+    __forceinline Sfr31ExecReadMn(UPInt link, UPInt idx)
+        : Sfr31ExecStackReader(link), mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntryW(file, idx))
+    {
+        FUN_1425201f0(this, &mn.Get());
+    }
+    Sfr31MnBox mn;          // +0x18
+    void* pad;              // +0x48
+};
+
+// ReferenceError 0x429 (eUndefinedVarError) naming the multiname.
+static __forceinline void Sfr31ThrowUndefinedVar(VM& vm, Sfr31MnBox& mn)
+{
+    vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x429), vm, *reinterpret_cast<const Value*>(&mn.w2)));
+}
+
+// getlex-style resolve: pushes the value the multiname resolves to, or raises a ReferenceError naming it.
+// MS2-FUNCTIONAL 0x142538d30: 465 B vs the exe 487; the exe lays the early return out inside its prolog, puts the Error temp above rd and clears the weak ref with one movdqu
+// @0x142538d30
+void Sfr31ExecGetLex(UPInt vmAddr, UPInt file, UInt32 idx)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    Sfr31ExecReadMn rd(file, idx);
+    Sfr31MnBox& mn = rd.mn;
+    if (vm.IsException())
+        return;
+    Sfr31TracePropRef pr;
+    FUN_142502570(vmAddr, &pr, &mn.Get());
+    const UPInt f = pr.f;
+    if ((*reinterpret_cast<const UInt32*>(&pr.v) & 0x1f) == 0 || f == 1 || ((static_cast<UInt8>(f >> 1) & 1) != 0 && (f & ~static_cast<UPInt>(2)) == 0))
+        Sfr31ThrowUndefinedVar(vm, mn);
+    else
+        ExecPushCopy(&vm, pr.v);
+}
 
 // getdescendants: the XML support reads the descendants of the object; when it declines, pops the operand and raises a TypeError naming the traits.
 // @0x142539230
