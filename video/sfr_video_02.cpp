@@ -2444,16 +2444,19 @@ Scaleform::GFx::AS2::FunctionRef* FUN_14000ed60(
         FUN_14000c280(context, 0x24, &prototypeSlot);
     }
 
-    Scaleform::GFx::AS2::Object* global = context->pGlobal;
-    Scaleform::GFx::AS2::StringManager* manager = context->GetStringManager();
-    const Scaleform::GFx::ASString& name = *reinterpret_cast<const Scaleform::GFx::ASString*>(
-        reinterpret_cast<char*>(manager) + 0x120);
-    // The exe builds and destroys the member value out of line (0x142923b90 / 0x1429260b0).
-    Video02ValueStorage valueStorage;
-    global->SetMemberRaw(&stringContext, name,
-        *Scaleform::GFx::AS2::FUN_142923b90(reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage), *result),
-        Scaleform::GFx::AS2::PropFlags());
-    reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage)->Scaleform::GFx::AS2::Value::~Value();
+    {
+        Scaleform::GFx::AS2::Object* global = context->pGlobal;
+        Scaleform::GFx::AS2::PropFlags flags;
+        Scaleform::GFx::AS2::StringManager* manager = context->GetStringManager();
+        const Scaleform::GFx::ASString& name = *reinterpret_cast<const Scaleform::GFx::ASString*>(
+            reinterpret_cast<char*>(manager) + 0x120);
+        // The exe builds and destroys the member value out of line (0x142923b90 / 0x1429260b0).
+        Video02ValueStorage valueStorage;
+        global->SetMemberRaw(&stringContext, name,
+            *Scaleform::GFx::AS2::FUN_142923b90(reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage), *result),
+            flags);
+        reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage)->Scaleform::GFx::AS2::Value::~Value();
+    }
     if (prototype)
     {
         unsigned* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
@@ -2467,8 +2470,8 @@ Scaleform::GFx::AS2::FunctionRef* FUN_14000ed60(
 }
 
 // MS2-FUNCTIONAL: creates and registers the Connect native function and prototype, written out in full with the
-// exe's in-place Init of the result. Left: global/manager sit in rbx/rsi (exe rsi/rbx) and the default PropFlags
-// byte is stored after the GetStringManager call (exe before it; a named local fixes the order but takes a new slot).
+// exe's in-place Init of the result. The PropFlags is a named local in a block, so it shares the prototypeSlot slot
+// and is stored before the GetStringManager call, as in the exe. Left: global/manager sit in rbx/rsi (exe rsi/rbx).
 // @0x1400126f0
 Scaleform::GFx::AS2::FunctionRef* FUN_1400126f0(
     Scaleform::GFx::AS2::FunctionRef* result, Scaleform::GFx::AS2::GlobalContext* context)
@@ -2501,16 +2504,19 @@ Scaleform::GFx::AS2::FunctionRef* FUN_1400126f0(
         FUN_14000c280(context, 0x22, &prototypeSlot);
     }
 
-    Scaleform::GFx::AS2::Object* global = context->pGlobal;
-    Scaleform::GFx::AS2::StringManager* manager = context->GetStringManager();
-    const Scaleform::GFx::ASString& name = *reinterpret_cast<const Scaleform::GFx::ASString*>(
-        reinterpret_cast<char*>(manager) + 0x110);
-    // The exe builds and destroys the member value out of line (0x142923b90 / 0x1429260b0).
-    Video02ValueStorage valueStorage;
-    global->SetMemberRaw(&stringContext, name,
-        *Scaleform::GFx::AS2::FUN_142923b90(reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage), *result),
-        Scaleform::GFx::AS2::PropFlags());
-    reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage)->Scaleform::GFx::AS2::Value::~Value();
+    {
+        Scaleform::GFx::AS2::Object* global = context->pGlobal;
+        Scaleform::GFx::AS2::PropFlags flags;
+        Scaleform::GFx::AS2::StringManager* manager = context->GetStringManager();
+        const Scaleform::GFx::ASString& name = *reinterpret_cast<const Scaleform::GFx::ASString*>(
+            reinterpret_cast<char*>(manager) + 0x110);
+        // The exe builds and destroys the member value out of line (0x142923b90 / 0x1429260b0).
+        Video02ValueStorage valueStorage;
+        global->SetMemberRaw(&stringContext, name,
+            *Scaleform::GFx::AS2::FUN_142923b90(reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage), *result),
+            flags);
+        reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage)->Scaleform::GFx::AS2::Value::~Value();
+    }
     if (prototype)
     {
         unsigned* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
