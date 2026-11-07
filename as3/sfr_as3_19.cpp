@@ -5801,99 +5801,108 @@ ASString FUN_14250bc60(const Traits& tr);
 const char* AsString(Abc::NamespaceKind kind);   // 0x1424ed700
 inline const char* FUN_1424ed700(Abc::NamespaceKind kind) { return AsString(kind); }
 
-// The name a value's type shows under in messages: the builtin names, qualified class names or the kind-specific forms.
-// MS2-FUNCTIONAL 0x1425322c0: raw-offset model; codegen differs from the exe
+// The name a value's type shows under in messages (VM::describeTypeEx): the builtin names, qualified class names or the
+// kind-specific forms.
+// MS2-FUNCTIONAL 0x1425322c0: SDK describeTypeEx switch; Function/ThunkFunction fields read raw, codegen differs
 // @0x1425322c0
 ASString* Sfr31ValueTypeName(UPInt vmAddr, ASString* out, const UInt32* v)
 {
-    const UPInt helper = Sfr31Rd(vmAddr, 0x10);
-    ASStringManager* mgr = reinterpret_cast<ASStringManager*>(Sfr31Rd(helper, 0x1e8));
-    const UPInt obj = Sfr31Rd(reinterpret_cast<UPInt>(v), 0x10);
-    const UPInt aux = Sfr31Rd(reinterpret_cast<UPInt>(v), 0x18);
-    UPInt node;
-    switch (v[0] & 0x1f)
+    const Value& value = *reinterpret_cast<const Value*>(v);
+    const StringManager& sm = *reinterpret_cast<const StringManager*>(Sfr31Rd(vmAddr, 0x10));
+    ASStringNode* node;
+    switch (value.GetKind())
     {
-    case 0: node = Sfr31Rd(helper, 8); break;
-    case 1: node = Sfr31Rd(helper, 0x30); break;
-    case 2: node = reinterpret_cast<UPInt>(mgr->CreateConstStringNode("int", 3, 0)); break;
-    case 3: node = reinterpret_cast<UPInt>(mgr->CreateConstStringNode("uint", 4, 0)); break;
-    case 4: node = Sfr31Rd(helper, 0x38); break;
-    case 5:
-    {
-        new (out) ASString(FUN_14250f330(ASString(reinterpret_cast<ASStringNode*>(Sfr31Rd(helper, 0))), *reinterpret_cast<const ThunkInfo*>(obj), false));
-        return out;
-    }
-    case 7:
-    {
-        new (out) ASString(FUN_14250fc60(ASString(reinterpret_cast<ASStringNode*>(Sfr31Rd(helper, 0))), *reinterpret_cast<const VTable*>(FUN_14250fa80(aux)), v[4], false));
-        return out;
-    }
-    case 10: node = Sfr31Rd(helper, obj != 0 ? 0x40 : 0x10); break;
-    case 0xb:
-    {
-        const char* c = FUN_1424ed700(static_cast<Abc::NamespaceKind>(Sfr31Rd(obj, 0x20) & 0xf));
-        UPInt len = 0;
-        while (c[len] != '\0')
-            ++len;
-        ASString s(mgr->CreateConstStringNode(c, len, 0));
-        if (*reinterpret_cast<const SInt32*>(Sfr31Rd(obj, 0x30) + 0x20) != 0)
-        {
-            s.Append(" ", 1);
-            s.Append(*reinterpret_cast<const ASString*>(obj + 0x30));
-        }
-        new (out) ASString(s);
-        return out;
-    }
-    case 0xc:
-        if (obj != 0)
-            new (out) ASString(FUN_14250bc60(*reinterpret_cast<const Traits*>(Sfr31Rd(obj, 0x20))));
+    case Value::kUndefined:
+        node = sm.GetBuiltin(AS3Builtin_undefined).GetNode();
+        break;
+    case Value::kBoolean:
+        node = sm.GetBuiltin(AS3Builtin_boolean).GetNode();
+        break;
+    case Value::kInt:
+        node = sm.GetStringManager()->CreateConstStringNode("int", 3, 0);
+        break;
+    case Value::kUInt:
+        node = sm.GetStringManager()->CreateConstStringNode("uint", 4, 0);
+        break;
+    case Value::kNumber:
+        node = sm.GetBuiltin(AS3Builtin_number).GetNode();
+        break;
+    case Value::kString:
+        if (value.GetStringNode())
+            node = sm.GetBuiltin(AS3Builtin_string).GetNode();
         else
-            new (out) ASString(reinterpret_cast<ASStringNode*>(Sfr31Rd(helper, 0x10)));
+            node = sm.GetBuiltin(AS3Builtin_null).GetNode();
+        break;
+    case Value::kThunk:
+        new (out) ASString(FUN_14250f330(sm.GetBuiltin(AS3Builtin_empty_), value.AsThunk(), false));
         return out;
-    case 0xd:
-        if (obj != 0)
-        {
-            ASString s = FUN_14250bc60(*reinterpret_cast<const Traits*>(Sfr31Rd(obj, 0x20)));
-            s.Append("$", 1);
-            new (out) ASString(s);
-        }
+    case Value::kThunkFunction:
+    {
+        const UPInt tf = reinterpret_cast<UPInt>(&value.AsThunkFunction());
+        const Traits& otr = *reinterpret_cast<const Traits*>(Sfr31Rd(tf, 0x48));
+        new (out) ASString(FUN_14250f330(FUN_14250bc60(otr), *reinterpret_cast<const ThunkInfo*>(Sfr31Rd(tf, 0x40)), false));
+        return out;
+    }
+    case Value::kVTableInd:
+        new (out) ASString(FUN_14250fc60(sm.GetBuiltin(AS3Builtin_empty_), value.GetTraits().GetVT(), value.GetVTableInd(), false));
+        return out;
+    case Value::kVTableIndClosure:
+    {
+        const SInt32 ind = value.GetVTableInd();
+        const VTable& vt = value.GetClosure()->GetTraits().GetVT();
+        new (out) ASString(FUN_14250fc60(FUN_14250bc60(value.GetClosure()->GetTraits()), vt, ind, true));
+        return out;
+    }
+    case Value::kFunction:
+    {
+        const UPInt f = reinterpret_cast<UPInt>(&value.AsFunction());
+        const UPInt ftr = Sfr31Rd(f, 0x20);
+        const Traits& otr = *reinterpret_cast<const Traits*>(FUN_142416720(reinterpret_cast<const void*>(ftr)));
+        const ASString name = reinterpret_cast<const Traits*>(Sfr31Rd(f, 0x20))->GetName();
+        new (out) ASString(FUN_14250bc60(otr) + "::" + name);
+        return out;
+    }
+    case Value::kObject:
+        if (value.GetObject())
+            new (out) ASString(FUN_14250bc60(value.GetObject()->GetTraits()));
         else
-            new (out) ASString(reinterpret_cast<ASStringNode*>(Sfr31Rd(helper, 0x10)));
+        {
+            node = sm.GetBuiltin(AS3Builtin_null).GetNode();
+            break;
+        }
         return out;
-    case 0xe:
+    case Value::kClass:
+        if (value.GetObject())
+            new (out) ASString(FUN_14250bc60(value.GetObject()->GetTraits()).AppendCharNode('$'));
+        else
+        {
+            node = sm.GetBuiltin(AS3Builtin_null).GetNode();
+            break;
+        }
+        return out;
+    case Value::kNamespace:
     {
-        const UPInt inner = Sfr31Rd(obj, 0x20);
-        const UPInt cls = reinterpret_cast<UPInt>(FUN_142416720(reinterpret_cast<const void*>(inner)));
-        ASString nm(reinterpret_cast<ASStringNode*>(Sfr31Rd(helper, 0)));
-        typedef void (*GetName)(UPInt, ASString*);
-        (*reinterpret_cast<GetName*>(Sfr31Rd(inner, 0) + 0x38))(inner, &nm);
-        ASString head = FUN_14250bc60(*reinterpret_cast<const Traits*>(cls));
-        new (out) ASString(head + "::" + nm);
+        const Instances::Namespace& ns = value.AsNamespace();
+        ASString result = sm.CreateConstString(AsString(ns.GetKind()));
+        if (!ns.GetUri().IsEmpty())
+        {
+            result += " ";
+            result += ns.GetUri();
+        }
+        new (out) ASString(result);
         return out;
     }
-    case 0xf:
-    {
-        ASString n = FUN_14250bc60(*reinterpret_cast<const Traits*>(Sfr31Rd(obj, 0x48)));
-        new (out) ASString(FUN_14250f330(n, *reinterpret_cast<const ThunkInfo*>(Sfr31Rd(obj, 0x40)), false));
+    case Value::kThunkClosure:
+        new (out) ASString(FUN_14250f330(FUN_14250bc60(value.GetClosure()->GetTraits()), value.AsThunk(), true));
         return out;
+    default:
+        node = sm.GetBuiltin(AS3Builtin_empty_).GetNode();
+        break;
     }
-    case 0x10:
-    {
-        ASString n = FUN_14250bc60(*reinterpret_cast<const Traits*>(Sfr31Rd(aux, 0x20)));
-        new (out) ASString(FUN_14250f330(n, *reinterpret_cast<const ThunkInfo*>(obj), true));
-        return out;
-    }
-    case 0x11:
-    {
-        ASString n = FUN_14250bc60(*reinterpret_cast<const Traits*>(Sfr31Rd(aux, 0x20)));
-        new (out) ASString(FUN_14250fc60(n, *reinterpret_cast<const VTable*>(FUN_14250fa80(Sfr31Rd(aux, 0x20))), v[4], true));
-        return out;
-    }
-    default: node = Sfr31Rd(helper, 0); break;
-    }
-    new (out) ASString(reinterpret_cast<ASStringNode*>(node));
+    new (out) ASString(node);
     return out;
 }
+
 // ---- batch 47
 // Storage for a Value whose dtor expands Value::ReleaseInternal in place (as sfr_as3_17's Sfr33InlineReleaseValue).
 struct Sfr19InlineReleaseValue
