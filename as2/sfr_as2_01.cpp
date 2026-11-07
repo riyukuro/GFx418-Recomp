@@ -1526,9 +1526,19 @@ static SF_INLINE Ptr<TextFieldObject> GetThisTextFieldObject(const FnCall& fn)
     return 0;
 }
 
+// IMEStyle::SetElement with the mask the caller holds and the element it already addressed.
+static SF_FORCEINLINE void Sfr01SetIMEElement(Text::IMEStyle& st, UInt8 mask, UPInt n,
+                                              Render::Text::HighlightInfo& elem, const Render::Text::HighlightInfo& info)
+{
+    st.PresenceMask = mask | UInt8(1 << n);
+    elem            = info;
+}
+
 // TextField.setIMECompositionStringStyle(category, style)
 // @0x1428eb900
-// MS2-FUNCTIONAL SDK body; the exe keeps PresenceMask in r15b across ParseStyle (LTCG mod-ref knows it does not write &imeStyles), ours reloads it; noalias on ParseStyle does not help
+// MS2-FUNCTIONAL SDK body with SetElement inlined by hand: the exe (LTCG) keeps PresenceMask in r15b across ParseStyle, so the
+// mask is a local here. What remains is two loads the exe schedules earlier: the mask byte at the start of the style copy,
+// and the Flags byte of the element copy before its third dword store.
 void TextFieldProto::SetIMECompositionStringStyle(const FnCall& fn)
 {
     if (fn.ThisPtr)
@@ -1554,9 +1564,14 @@ void TextFieldProto::SetIMECompositionStringStyle(const FnCall& fn)
 
                 Text::IMEStyle* pimeStyles = pasTextObj->GetIMECompositionStringStyles();
                 Text::IMEStyle  imeStyles;
+                UInt8           mask = 0;
                 if (pimeStyles)
+                {
                     imeStyles = *pimeStyles;
-                imeStyles.SetElement(cat, ParseStyle(fn, 1, imeStyles.GetElement(cat)));
+                    mask      = imeStyles.PresenceMask;
+                }
+                Render::Text::HighlightInfo& elem = imeStyles.HighlightStyles[cat];
+                Sfr01SetIMEElement(imeStyles, mask, cat, elem, ParseStyle(fn, 1, elem));
                 pasTextObj->SetIMECompositionStringStyles(imeStyles);
             }
         }
