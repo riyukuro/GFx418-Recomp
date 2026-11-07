@@ -25,15 +25,40 @@ CharacterDef* GenericDisplayObj::GetCharacterDef() const
     return pDef;
 }
 
+namespace {
+// The SDK's Render::ContextImpl::EntryRef (Render_Context.h): the page and index of an entry, kept in a struct.
+struct RatioEntryRef
+{
+    Render::ContextImpl::EntryPage* pPage;
+    unsigned                        Index;
+
+    SF_FORCEINLINE RatioEntryRef(const Render::ContextImpl::Entry* pentry)
+    {
+        pPage = (Render::ContextImpl::EntryPage*)(((UPInt)pentry) & ~(UPInt)0xFFF);
+        Index = unsigned(pentry - &pPage->Entries[0]);
+    }
+    SF_FORCEINLINE Render::ContextImpl::EntryData* GetData() const { return pPage->pSnapshotPage->pData[Index]; }
+};
+
+SF_FORCEINLINE const Render::ContextImpl::EntryData* RatioReadOnlyData(const Render::ContextImpl::Entry* pentry)
+{
+    return RatioEntryRef(pentry).GetData();
+}
+} // namespace
+
 // The morph ratio of a shape node, 0 for any other node.
-// MS2-FUNCTIONAL: the exe indexes the snapshot page by the in-page offset and does not reuse the first lookup's
-// division; the shared Entry::GetReadOnlyDataBase inline subtracts the page base and is CSE'd
 // @0x142954c30
 float GenericDisplayObj::GetRatio() const
 {
-    if (pRenNode && pRenNode->GetReadOnlyDataBase()->Type == Render::ContextImpl::EntryData::ET_Shape)
-        return static_cast<Render::TreeShape*>(pRenNode.GetPtr())->GetReadOnlyData()->MorphRatio;
-    return 0;
+    if (pRenNode)
+    {
+        if (RatioReadOnlyData(pRenNode.GetPtr())->Type == Render::ContextImpl::EntryData::ET_Shape)
+        {
+            return ((const Render::TreeShape::NodeData*)RatioReadOnlyData(
+                static_cast<Render::TreeShape*>(pRenNode.GetPtr())))->MorphRatio;
+        }
+    }
+    return 0.f;
 }
 
 // @0x14296efb0
