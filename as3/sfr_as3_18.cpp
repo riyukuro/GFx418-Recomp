@@ -8933,8 +8933,10 @@ void FUN_14251acc0(UPInt) {}
 void FUN_14251d060(UPInt) {}
 // @0x1425210c0
 void FUN_1425210c0(UPInt) {}
+// Empty in the exe too. noinline plus the barrier keep cl from dropping the call, so its adjustor thunks
+// (0x1425190d4/0x1425190e0) stay a jmp instead of folding to ret.
 // @0x1425190d0
-void FUN_1425190d0(UPInt) {}
+__declspec(noinline) void FUN_1425190d0(UPInt) { _ReadWriteBarrier(); }
 // @0x142514d10
 bool FUN_142514d10(UPInt) { return true; }
 
@@ -9072,10 +9074,10 @@ void FUN_14251bda0(UPInt self, FlashUI::OutputMessageType type, const char* msg)
 #define SFR21_THUNK(name, off, target) \
     void name(UPInt self) { target(self - off); }
 
-// MS2-FUNCTIONAL: adjustor thunk
+// MS2-FUNCTIONAL: adjustor thunk; the exe has the compiler-generated sub rcx,N, a hand-written one gives add rcx,-N
 // @0x1425190d4
 SFR21_THUNK(FUN_1425190d4, 0x30, FUN_1425190d0)
-// MS2-FUNCTIONAL: adjustor thunk
+// MS2-FUNCTIONAL: adjustor thunk; the exe has the compiler-generated sub rcx,N, a hand-written one gives add rcx,-N
 // @0x1425190e0
 SFR21_THUNK(FUN_1425190e0, 0x40, FUN_1425190d0)
 // MS2-FUNCTIONAL: adjustor thunk
