@@ -6680,69 +6680,97 @@ static SF_INLINE ASStringManager* sm(const MovieRoot* root)
 {
     return *reinterpret_cast<ASStringManager* const*>(reinterpret_cast<const UByte*>(root) + 0x348);
 }
-// v = ASString(node), node already AddRef'd here. The exe keeps the node in a register across the
-// out-of-line operator=, so the reference it is passed is a separate copy of the node pointer.
-static SF_INLINE void Sfr17AssignNode(Value& v, ASStringNode* node)
+// ASStringNode::AddRef / Release and the Object / Traits accessors, inline in the exe (forceinline copies so that
+// inline_depth(0) below keeps only the Value setters out of line).
+static __forceinline void Sfr17NodeAddRef(ASStringNode* node) { node->RefCount++; }
+static __forceinline void Sfr17NodeRelease(ASStringNode* node)
 {
-    {
-        ASStringNode* str = node;
-        v = reinterpret_cast<const ASString&>(str);
-    }
-    node->Release();
+    if (--node->RefCount == 0)
+        node->ReleaseNode();
 }
+static __forceinline const Traits& Sfr17ObjTraits(const Object* obj)
+{
+    return **reinterpret_cast<const Traits* const*>(reinterpret_cast<const UByte*>(obj) + 0x20);
+}
+// An ASString temporary with the AddRef/Release bodies forced inline under inline_depth(0).
+struct Sfr17TempStr
+{
+    ASStringNode* pNode;
+    __forceinline explicit Sfr17TempStr(ASStringNode* node) : pNode(node) { Sfr17NodeAddRef(node); }
+    __forceinline ~Sfr17TempStr() { Sfr17NodeRelease(pNode); }
+    __forceinline operator const ASString&() const { return reinterpret_cast<const ASString&>(*this); }
+};
+// The closure temporary of GFxValue2ASValue: the exe inlines its ~Value (the SCU weak release, the
+// strong one out of line) under the out-of-line setters, so it is a dtor-less slot released by hand.
+struct Sfr17ClosureTemp
+{
+    union { Value v; };
+    __forceinline Sfr17ClosureTemp(Object* p, SInt32 ind) : v(p, ind) {}
+    __forceinline Sfr17ClosureTemp(Object* p, const ThunkInfo& f) : v(p, f) {}
+    __forceinline ~Sfr17ClosureTemp()
+    {
+        const UInt32 flags = *reinterpret_cast<const UInt32*>(&v);
+        if ((flags & 0x1f) > Value::kClassTraits)
+        {
+            if ((UByte)(flags >> 9) & 1)
+            {
+                WeakProxy* wp = *reinterpret_cast<WeakProxy* const*>(reinterpret_cast<const UByte*>(&v) + 8);
+                if (--wp->RefCount == 0)
+                    Memory::pGlobalHeap->Free(wp);
+            }
+            else
+                Sfr33ValueReleaseInternal(v);
+        }
+    }
+};
 // The exe calls the Value setters out of line here.
 #pragma inline_depth(0)
-// MS2-FUNCTIONAL 0x1425048d0: rbx and rdi swapped (the destination and the string node); same code otherwise
+// MS2-FUNCTIONAL 0x1425048d0: rbx and rdi swapped (the destination and the string node); same length, jump
+// table and code otherwise (ASString temps, closure ~Value and traits test forced inline under inline_depth(0))
 // @0x1425048d0
 void MovieRoot::GFxValue2ASValue(const GFx::Value& gfxVal, Value* pdestVal)
 {
+    Value& dst = *pdestVal;
     const Sfr33GFxValueRaw& gv = reinterpret_cast<const Sfr33GFxValueRaw&>(gfxVal);
     switch (int(gv.Type & 0x8f))
     {
     case 0:     // VT_Undefined
-        pdestVal->SetUndefined();
+        dst.SetUndefined();
         break;
     case 2:     // VT_Boolean
-        pdestVal->SetBool(*reinterpret_cast<const bool*>(&gv.pData));
+        dst.SetBool(*reinterpret_cast<const bool*>(&gv.pData));
         break;
     case 1:     // VT_Null
-        pdestVal->SetNull();
+        dst.SetNull();
         break;
     case 3:     // VT_Int
-        pdestVal->SetSInt32(*reinterpret_cast<const SInt32*>(&gv.pData));
+        dst.SetSInt32(*reinterpret_cast<const SInt32*>(&gv.pData));
         break;
     case 4:     // VT_UInt
-        pdestVal->SetUInt32(*reinterpret_cast<const UInt32*>(&gv.pData));
+        dst.SetUInt32(*reinterpret_cast<const UInt32*>(&gv.pData));
         break;
     case 5:     // VT_Number
-        pdestVal->SetNumber(*reinterpret_cast<const Double*>(&gv.pData));
+        dst.SetNumber(*reinterpret_cast<const Double*>(&gv.pData));
         break;
     case 6:     // VT_String
         if ((UByte)(gv.Type >> 6) & 1)
-            pdestVal->Assign(static_cast<ASStringNode*>(gv.pData));   // pData is the node's first field
+            dst.Assign(static_cast<ASStringNode*>(gv.pData));   // pData is the node's first field
         else
         {
-            ASStringNode* node = sm(this)->CreateStringNode(static_cast<const char*>(gv.pData));
-            node->AddRef();
-            Sfr17AssignNode(*pdestVal, node);
+            dst = Sfr17TempStr(sm(this)->CreateStringNode(static_cast<const char*>(gv.pData)));
         }
         break;
     case 7:     // VT_StringW
         {
             const wchar_t* pwstr = static_cast<const wchar_t*>(gv.pData);
-            ASStringNode* node;
             if ((UByte)(gv.Type >> 6) & 1)
             {
                 // The wide text sits after the node pointer of its storage.
-                node = *reinterpret_cast<ASStringNode* const*>(reinterpret_cast<const UByte*>(pwstr) - 8);
-                node->AddRef();
+                Sfr17TempStr str(*reinterpret_cast<ASStringNode* const*>(reinterpret_cast<const UByte*>(pwstr) - 8));
+                dst = str;
             }
             else
-            {
-                node = sm(this)->CreateStringNode(pwstr);
-                node->AddRef();
-            }
-            Sfr17AssignNode(*pdestVal, node);
+                dst = Sfr17TempStr(sm(this)->CreateStringNode(pwstr));
         }
         break;
     case 8:     // VT_Object
@@ -6752,23 +6780,29 @@ void MovieRoot::GFxValue2ASValue(const GFx::Value& gfxVal, Value* pdestVal)
             Object* obj = static_cast<Object*>(gv.pData);
             if (obj)
             {
-                const Traits& tr = obj->GetTraits();
-                if (tr.GetTraitsType() == Traits_Function && tr.IsInstanceTraits())
+                const Traits& tr = Sfr17ObjTraits(obj);
+                if (tr.TraitsType == Traits_Function && ((UByte)~(UByte)((UByte)tr.Flags >> 5) & 1))
                 {
-                    ValueAssignCopies::AssignFunction(*pdestVal, reinterpret_cast<Instances::Function*>(obj));
+                    ValueAssignCopies::AssignFunction(dst, reinterpret_cast<Instances::Function*>(obj));
                     break;
                 }
             }
-            pdestVal->Assign(obj);
+            dst.Assign(obj);
         }
         break;
     case 11:    // VT_Closure
         {
             Object* pobj = reinterpret_cast<Object*>(reinterpret_cast<UPInt>(gv.pData) & ~UPInt(2));
             if ((UByte)(reinterpret_cast<UPInt>(gv.pData) >> 1) & 1)
-                *pdestVal = Value(pobj, SInt32(gv.DataAux));
+            {
+                Sfr17ClosureTemp t(pobj, SInt32(gv.DataAux));
+                dst = t.v;
+            }
             else
-                *pdestVal = Value(pobj, *reinterpret_cast<const ThunkInfo*>(gv.DataAux));
+            {
+                Sfr17ClosureTemp t(pobj, *reinterpret_cast<const ThunkInfo*>(gv.DataAux));
+                dst = t.v;
+            }
         }
         break;
     default:
