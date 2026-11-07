@@ -839,14 +839,15 @@ static __forceinline void Sfr17dCheckAvm(MovieRoot* self)
 }
 
 // VM::FindVMAbcFileWeak, inlined: the loaded file whose source is name.
-static __forceinline SPtr<VMAbcFile> Sfr17dFindVMAbcFileWeak(const VM& vm, const String& name)
+static __forceinline SPtr<VMAbcFile> Sfr17dFindVMAbcFileWeak(const VM& vm, const char* name)
 {
-    for (UPInt i = 0; i < vm.VMAbcFilesWeak.GetSize(); ++i)
+    for (UPInt i = 0, n = vm.VMAbcFilesWeak.GetSize(); i < n; ++i)
     {
-        if (strcmp(vm.VMAbcFilesWeak[i]->GetAbcFile().Source.ToCStr(), name.ToCStr()) == 0)
-            return vm.VMAbcFilesWeak[i];
+        VMAbcFile* abcFile = vm.VMAbcFilesWeak[i];
+        if (strcmp(abcFile->GetAbcFile().Source.ToCStr(), name) == 0)
+            return SPtr<VMAbcFile>(vm.VMAbcFilesWeak[i]);
     }
-    return NULL;
+    return SPtr<VMAbcFile>(NULL);
 }
 
 // VM::LoadFile, inlined: the file's classes and scripts are registered, or no file.
@@ -861,7 +862,8 @@ struct Sfr17dAbcLoad
     }
 };
 
-// MS2-FUNCTIONAL 0x1424f9d60: SDK form with CheckAvm, FindVMAbcFileWeak and LoadFile inlined as the exe does
+// MS2-FUNCTIONAL 0x1424f9d60: SDK form with CheckAvm, FindVMAbcFileWeak and LoadFile inlined as the exe does; the
+// this/pabc/pspr register permutation (exe r14/rbp/r15) is left
 // @0x1424f9d60
 // A file already loaded under the same name ("file[name]") is reused; otherwise the block is parsed and its classes
 // and scripts registered. Either way the movie's root node keeps the file alive.
@@ -877,7 +879,7 @@ bool MovieRoot::ExecuteAbc(const AbcDataBuffer* pabc, DisplayObjContainer* pspr)
         fileName.AppendString("]");
     }
 
-    SPtr<VMAbcFile> vmabc = Sfr17dFindVMAbcFileWeak(*pAVM, fileName);
+    SPtr<VMAbcFile> vmabc = Sfr17dFindVMAbcFileWeak(*pAVM, fileName.ToCStr());
     if (!vmabc)
     {
         Scaleform::AutoPtr<Abc::Reader> preader = SF_HEAP_NEW(GetMovieImpl()->GetMovieHeap()) Abc::Reader(pabc->Data, pabc->DataSize);
