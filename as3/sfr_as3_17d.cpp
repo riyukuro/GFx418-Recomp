@@ -1176,7 +1176,9 @@ void FUN_14252ecb0(void* vm, const void* error, const void* classInfo);   // VM:
 namespace Scaleform { namespace GFx { namespace AS3 {
 namespace Instances { namespace fl_display { bool BindLibraryBitmap(BitmapData* pthis, Resource* pres, MovieDefImpl* pdefImpl); } }   // 0x142441730
 
-// MS2-FUNCTIONAL 0x1424f2450: written from the exe's control flow (the exe inlines the Value and StringDataPtr temporaries)
+// MS2-FUNCTIONAL 0x1424f2450: SDK locals (_this, value, a named StringDataPtr); the exe inlines Value(Class*) on the known non-null class,
+// written here on the raw payload because Value's Flags are private. Left: frame 0x90 vs 0xb0, and the exe keeps value's Flags in esi
+// where ours re-reads them, which also colours the rest of the function differently
 // @0x1424f2450
 bool AvmDisplayObj::CreateASInstanceNoCtor(bool)
 {
@@ -1185,22 +1187,19 @@ bool AvmDisplayObj::CreateASInstanceNoCtor(bool)
     VM* pvm = static_cast<MovieRoot*>(pDispObj->pASRoot)->pAVM;
     if (!pvm)
         return false;
-    bool result = false;
     String className;
     GetASClassName(&className);
     Value _this;
-    Class* cls = pvm->GetClass(StringDataPtr(className.ToCStr(), className.GetSize()));
-    if (!cls)
+    Value value;
+    const StringDataPtr name(className.ToCStr(), className.GetSize());
+    struct Payload { Class* p; void* q; } payload;
+    Class* cls = pvm->GetClass(name);
+    if (cls)
     {
-        if (!pvm->HandleException)
-        {
-            const VM::Error e(VM::ErrorID(1065) /* eUndefinedVarError */, *pvm, className.ToCStr());
-            FUN_14252ecb0(pvm, &e, &fl::ReferenceErrorCI);
-        }
-    }
-    else
-    {
-        Value _class(cls);
+        payload.p = cls;
+        cls->AddRef();
+        *reinterpret_cast<UInt32*>(&value) = Value::kClass;
+        *reinterpret_cast<Payload*>(reinterpret_cast<UByte*>(&value) + 0x10) = payload;
         InstanceTraits::Traits& itr = cls->GetInstanceTraits();
         itr.MakeObject(_this, itr);
         Instances::fl_display::DisplayObject* pobj = static_cast<Instances::fl_display::DisplayObject*>(_this.GetObject());
@@ -1212,12 +1211,17 @@ bool AvmDisplayObj::CreateASInstanceNoCtor(bool)
             return true;
         }
     }
+    else if (!pvm->HandleException)
+    {
+        const VM::Error e(VM::ErrorID(1065) /* eUndefinedVarError */, *pvm, name.ToCStr());
+        FUN_14252ecb0(pvm, &e, &fl::ReferenceErrorCI);
+    }
     if (pvm->HandleException)
     {
         pvm->OutputAndIgnoreException();
         pDispObj->Flags |= DisplayObject::Mask_ExecutionAborted;
     }
-    return result;
+    return false;
 }
 
 // CreateASInstanceNoCtor ignores its bool, and the exe's LTCG calls it without one: called through the shorter
