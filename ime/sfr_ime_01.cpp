@@ -165,23 +165,21 @@ extern void FUN_14257dcb0(void*);
 extern "C" unsigned long long* FUN_1423cabb0(unsigned long long*, unsigned long long);
 extern "C" const unsigned long long DAT_14313b410;
 // (DAT_14313b418 is the second half of the DAT_14313b410 GUID: one 16-byte object in data_rdata_sf_a)
+// (the same for DAT_1431c4828, DAT_1431c4d58, DAT_1431c4e08, DAT_1431c4ee8 (data_rdata_sf_b) and DAT_14313b8b8: each is
+// one 16-byte GUID, and the IID compares read its second qword as DAT_x+8)
 extern "C" const void* DAT_14313ba60[];
 extern "C" const unsigned char DAT_1431c51e8[];
 extern "C" const unsigned char DAT_1431c5018[];
 extern "C" const unsigned long long DAT_1431c4d58;
 extern "C" const unsigned long long DAT_14313b8b8;
 extern "C" const unsigned long long DAT_1431c4828;
-extern "C" const unsigned long long DAT_1431c4830;
 extern "C" const unsigned long long DAT_14313b8a8;
 extern "C" const unsigned long long DAT_14313b8c8;
 extern "C" const unsigned char DAT_14313b400[];
 extern "C" const unsigned char DAT_1431c4878[];
 extern "C" const unsigned char DAT_1431c51b8[];
 extern "C" void* DAT_14313b520[];
-extern "C" const unsigned long long DAT_1431c4d60;
-extern "C" const unsigned long long DAT_14313b8c0;
 extern "C" const unsigned long long DAT_1431c4e08;
-extern "C" const unsigned long long DAT_1431c4e10;
 extern "C" const unsigned long long DAT_1431c4ee8;
 extern "C" const unsigned long long DAT_1431c4898;
 extern "C" const unsigned long long DAT_1431c5068;
@@ -197,7 +195,6 @@ extern "C" const unsigned char DAT_143a2a3e0[];
 extern "C" const unsigned char DAT_143a293e0[];
 extern "C" const int DAT_143a2a6b4;
 extern "C" const char DAT_14305cd3c[];
-extern "C" const unsigned long long DAT_1431c4ef0;
 #define DAT_143b15f60 (static_cast<void*>(Scaleform::Memory::pGlobalHeap))
 extern "C" void FUN_1423ca030(void*, const char*, const char*, ...);
 void FUN_14257dc30(void*);
