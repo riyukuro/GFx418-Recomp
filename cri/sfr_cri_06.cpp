@@ -9103,23 +9103,21 @@ void FUN_14005a070(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
   }
 }
 
-// MS2-FUNCTIONAL: the for-index form gives the exe's 64-bit trip count, but VC9 folds (src + 1) - dst into a +1
-// displacement, where the exe keeps a second register (lea rax,[rcx+1]; sub rax,rdx), as in FUN_1400597b0.
+// MS2-FUNCTIONAL: load scheduling only. With src read by row and src + 1 kept at its distance from dst
+// (d + (r - dst)), the prologue and length match the exe (lea rax,[rcx+1]; sub rax,rdx; sub rcx,rdx), but the
+// exe loads both rows and dst + 8 before the first pavgb and stores lo and hi last. Statement order and avg
+// operand order do not move VC9's schedule.
 // SSE2 16-wide horizontal half-pel average, then averaged into dst. The exe walks dst only.
 // @0x14005a140
 void FUN_14005a140(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
 {
   (void)off;
-  const cri_u1* s1 = src + 1;
-  __int64 d1 = s1 - dst;
-  __int64 d0 = src - dst;
+  const cri_u1* r = src + 1;
   for (int i = 0; i < h; ++i) {
-    __m128i lo = _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(dst + d0)), _mm_loadl_epi64((const __m128i*)(dst + d1)));
-    __m128i hi = _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(dst + d0 + 8)), _mm_loadl_epi64((const __m128i*)(dst + d1 + 8)));
-    lo = _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)(dst)));
-    hi = _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(dst + 8)));
-    _mm_storel_epi64((__m128i*)(dst), lo);
-    _mm_storel_epi64((__m128i*)(dst + 8), hi);
-    dst += stride;
+    cri_u1* d = dst + i * stride;
+    __m128i lo = _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(src + i * stride)), _mm_loadl_epi64((const __m128i*)(d + (r - dst))));
+    __m128i hi = _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(src + i * stride + 8)), _mm_loadl_epi64((const __m128i*)(d + (r - dst) + 8)));
+    _mm_storel_epi64((__m128i*)d, _mm_avg_epu8(lo, _mm_loadl_epi64((const __m128i*)d)));
+    _mm_storel_epi64((__m128i*)(d + 8), _mm_avg_epu8(hi, _mm_loadl_epi64((const __m128i*)(d + 8))));
   }
 }
