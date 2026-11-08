@@ -6792,10 +6792,11 @@ void FUN_1425201f0(void* ctx, void* multiname)
     }
 }
 
-namespace Scaleform { namespace GFx { namespace AS3 {
+// The vftable of NamespaceSet (the class has no out-of-line constructor; its virtuals are not modeled here):
+// the global vtable image of data_rdata_sf_b.
+struct Sd_14317b058; extern Sd_14317b058 DAT_14317b058;
 
-// The vftable of NamespaceSet (the class has no out-of-line constructor; its virtuals are not modeled here).
-extern const void* const DAT_14317b058;
+namespace Scaleform { namespace GFx { namespace AS3 {
 
 // VMAbcFile::GetInternedNamespaceSet: the namespace set at constant pool index ind, made on first use from the
 // interned namespaces its entry lists.
@@ -6820,7 +6821,7 @@ NamespaceSet& VMAbcFile::GetInternedNamespaceSet(UPInt ind)
         if (v)
         {
             ASRefCountCollector* gc = &GetVM().GetGC();
-            v->vptr     = &DAT_14317b058;
+            v->vptr     = &::DAT_14317b058;
             v->gc       = gc;
             v->RefCount = 1;
             ::new (&v->Namespaces) ArrayLH<SPtr<Instances::Namespace> >();
