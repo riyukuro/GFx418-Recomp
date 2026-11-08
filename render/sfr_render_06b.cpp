@@ -520,25 +520,20 @@ bool MatrixPool::squeezeMemoryRange(DataPage* from, DataPage* to, SqueezeType ty
 // The null handle's block (HMatrix_DefaultMatrixData, the 2D-matrix-only block NullHandle points at) holds the
 // identity, so a handle-less HMatrix reads as an identity transform. The exe's dynamic initializer copies
 // Matrix2F::Identity into the block's matrix; the block header itself is constant-initialized.
-// The data unit holds NullHandle and the block as one image (0x143a2fcb0): the handle, then the 48-byte block.
-// NullHandleImage is a view of that image for this unit only. The SDK's block ctor sets Format = 0 right before the
+// The block is the data unit's DAT_143a2fcb8 (0x143a2fcb8), the 48 bytes right after NullHandle in the exe. In the
+// fullexe the two are separate objects, so the block is named by its own symbol, not reached as NullHandle + 8
+// (that wrote the identity past NullHandle into its neighbour). The SDK's block ctor sets Format = 0 right before the
 // copy, so the exe reads the matrix offset for format 0 instead of the block's Format byte, and widens it to 64 bits
 // before scaling (shl rax,4). Matrix2F::Identity's initializer runs first: its .CRT$XCU entry is earlier in the exe
 // and in the fullexe.
+}}} // namespace Scaleform::Render::MatrixPoolImpl
+struct Sd_143a2fcb8;
+extern Sd_143a2fcb8 DAT_143a2fcb8;
+namespace Scaleform { namespace Render { namespace MatrixPoolImpl {
 namespace {
-struct NullHandleImage
-{
-    EntryHandle Handle;
-    union
-    {
-        DataHeader Data;
-        UByte      DataBytes[48];
-    } DefaultMatrixData;
-};
-
 inline Matrix2F* DefaultMatrixPtr()
 {
-    DataHeader& block = reinterpret_cast<NullHandleImage&>(HMatrix::NullHandle).DefaultMatrixData.Data;
+    DataHeader& block = reinterpret_cast<DataHeader&>(DAT_143a2fcb8);
     return (Matrix2F*)(block.GetDataStart()
                        + (UPInt)HMatrixConstants::MatrixElementSizeTable[HMatrixConstants::Has_2D]
                              .Offsets[HMatrixConstants::Element_Matrix] * Pool_DataUnitSize);
