@@ -39,6 +39,8 @@
 
 // Text::StyleManager bodies (text_stylesheet.h does not mix with the AS2 headers).
 
+namespace Scaleform { namespace Render { namespace Text { void TextFormat_SetFontSize(TextFormat* pfmt, float pixels); }}} // exe 0x142981610 (sfr_as2_07p)
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 using Render::Text::StyleManagerBase;
@@ -90,101 +92,93 @@ public:
 
     CSSTextFormatLoader(Environment* penv, TextFormatObject* pformat) : pEnv(penv), pFormat(pformat) {}
 
-    // The paragraph format fields this writes (ParagraphFormat has no setters for them).
-    struct ParaView
-    {
-        UByte  Unrecovered[0x12];
-        SInt16 Indent;       // +0x12
-        UInt16 Unused14;
-        UInt16 LeftMargin;   // +0x16
-        UInt16 RightMargin;  // +0x18
-        UInt16 PresentMask;  // +0x1a
-    };
-
-    static bool Is(const char* pconst, const char* pval, unsigned len, unsigned maxLen)
-    {
-        return strncmp(pconst, pval, (len < maxLen) ? len : maxLen) == 0;
-    }
-
     virtual void Visit(const ASString& name, const Value& val, UByte flags);
 };
 
 // @0x142993270
 void CSSTextFormatLoader::Visit(const ASString& name, const Value& val, UByte flags)
 {
+    // The SDK body (AS2_StyleSheet.cpp); fontSize goes through the out-of-line SetFontSize copy, as in the exe.
     SF_UNUSED(flags);
-    ASString      str   = val.ToString(pEnv);
-    const char*   pval  = str.ToCStr();
-    unsigned      len   = str.GetSize();
-    const char*   pname = name.ToCStr();
-    char*         pend  = 0;
-    Render::Text::TextFormat& fmt  = pFormat->GetTextFormat();
-    ParaView&                 para = *(ParaView*)&pFormat->GetParagraphFormat();
-
-    if (!strcmp(pname, "color"))
-        fmt.SetColor32((UInt32)strtol(pval + 1, &pend, 16));
-    else if (!strcmp(pname, "display"))
-        ;
-    else if (!strcmp(pname, "fontFamily"))
-        fmt.SetFontList(pval, len);
-    else if (!strcmp(pname, "fontSize"))
-        fmt.SetFontSize((float)SFstrtod(pval, &pend));
-    else if (!strcmp(pname, "fontStyle"))
+    ASString valstr = val.ToString(pEnv);
+    const char* pstr = valstr.ToCStr();
+    char* temp = NULL;
+    unsigned sz = valstr.GetSize();
+    if (name == "color")
     {
-        if (Is("normal", pval, len, 4))
-            fmt.SetItalic(false);
-        else if (Is("italic", pval, len, 9))
-            fmt.SetItalic(true);
+        UInt32 colval = strtol(pstr+1, &temp, 16);
+        pFormat->GetTextFormat().SetColor32(colval);
     }
-    else if (!strcmp(pname, "fontWeight"))
+    else if (name == "display")
     {
-        if (Is("normal", pval, len, 6))
-            fmt.SetBold(false);
-        else if (Is("bold", pval, len, 4))
-            fmt.SetBold(true);
     }
-    else if (!strcmp(pname, "kerning"))
+    else if (name == "fontFamily")
     {
-        if (Is("false", pval, len, 5))
-            fmt.SetKerning(false);
-        else if (Is("true", pval, len, 4))
-            fmt.SetKerning(true);
+        pFormat->GetTextFormat().SetFontList(pstr, sz);
     }
-    else if (!strcmp(pname, "letterSpacing"))
-        fmt.SetLetterSpacing((float)SFstrtod(pval, &pend));
-    else if (!strcmp(pname, "marginLeft"))
+    else if (name == "fontSize")
     {
-        para.PresentMask |= 0x10;
-        para.LeftMargin = (UInt16)(SInt64)SFstrtod(pval, &pend);
+        float num = (float)SFstrtod(pstr, &temp);
+        Render::Text::TextFormat_SetFontSize(&pFormat->GetTextFormat(), num);
     }
-    else if (!strcmp(pname, "marginRight"))
+    else if (name == "fontStyle")
     {
-        para.PresentMask |= 0x20;
-        para.RightMargin = (UInt16)(SInt64)SFstrtod(pval, &pend);
+        if ( !strncmp("normal", pstr, (sz < 4) ? sz : 4) )
+            pFormat->GetTextFormat().SetItalic(false);
+        else if ( !strncmp("italic", pstr, (sz < 9) ? sz : 9) )
+            pFormat->GetTextFormat().SetItalic(true);
     }
-    else if (!strcmp(pname, "textAlign"))
+    else if (name == "fontWeight")
     {
-        // alignment bits 0x600 (left 0, right 1, justify 2, center 3), present bit 1
-        if (Is("left", pval, len, 4))
-            para.PresentMask = (UInt16)((para.PresentMask & 0xf9ff) | 1);
-        else if (Is("center", pval, len, 6))
-            para.PresentMask |= 0x601;
-        else if (Is("right", pval, len, 5))
-            para.PresentMask = (UInt16)((para.PresentMask & 0xfbff) | 0x201);
-        else if (Is("justify", pval, len, 7))
-            para.PresentMask = (UInt16)((para.PresentMask & 0xfdff) | 0x401);
+        if ( !strncmp("normal", pstr, (sz < 6) ? sz : 6) )
+            pFormat->GetTextFormat().SetBold(false);
+        else if ( !strncmp("bold", pstr, (sz < 4) ? sz : 4) )
+            pFormat->GetTextFormat().SetBold(true);
     }
-    else if (!strcmp(pname, "textDecoration"))
+    else if (name == "kerning")
     {
-        if (Is("none", pval, len, 4))
-            fmt.SetUnderline(false);
-        else if (Is("underline", pval, len, 9))
-            fmt.SetUnderline(true);
+        if ( !strncmp("false", pstr, (sz < 5) ? sz : 5) )
+            pFormat->GetTextFormat().SetKerning(false);
+        else if ( !strncmp("true", pstr, (sz < 4) ? sz : 4) )
+            pFormat->GetTextFormat().SetKerning(true);
     }
-    else if (!strcmp(pname, "textIndent"))
+    else if (name == "letterSpacing")
     {
-        para.PresentMask |= 4;
-        para.Indent = (SInt16)(int)SFstrtod(pval, &pend);
+        float num = (float)SFstrtod(pstr, &temp);
+        pFormat->GetTextFormat().SetLetterSpacing(num);
+    }
+    else if (name == "marginLeft")
+    {
+        float num = (float)SFstrtod(pstr, &temp);
+        pFormat->GetParagraphFormat().SetLeftMargin((unsigned)num);
+    }
+    else if (name == "marginRight")
+    {
+        float num = (float)SFstrtod(pstr, &temp);
+        pFormat->GetParagraphFormat().SetRightMargin((unsigned)num);
+    }
+    else if (name == "textAlign")
+    {
+        if ( !strncmp("left", pstr, (sz < 4) ? sz : 4) )
+            pFormat->GetParagraphFormat().SetAlignment( Render::Text::ParagraphFormat::Align_Left );
+        else if ( !strncmp("center", pstr, (sz < 6) ? sz : 6) )
+            pFormat->GetParagraphFormat().SetAlignment( Render::Text::ParagraphFormat::Align_Center );
+        else if ( !strncmp("right", pstr, (sz < 5) ? sz : 5) )
+            pFormat->GetParagraphFormat().SetAlignment( Render::Text::ParagraphFormat::Align_Right );
+        else if ( !strncmp("justify", pstr, (sz < 7) ? sz : 7) )
+            pFormat->GetParagraphFormat().SetAlignment( Render::Text::ParagraphFormat::Align_Justify );
+    }
+    else if (name == "textDecoration")
+    {
+        if ( !strncmp("none", pstr, (sz < 4) ? sz : 4) )
+            pFormat->GetTextFormat().SetUnderline(false);
+        else if ( !strncmp("underline", pstr, (sz < 9) ? sz : 9) )
+            pFormat->GetTextFormat().SetUnderline(true);
+    }
+    else if (name == "textIndent")
+    {
+        float num = (float)SFstrtod(pstr, &temp);
+        pFormat->GetParagraphFormat().SetIndent((int)num);
     }
 }
 
