@@ -6300,7 +6300,7 @@ typedef HashSetBase<Sfr31FnNode, Sfr31FnNode::NodeHashF, Sfr31FnNode::NodeAltHas
                     HashsetCachedNodeEntry<Sfr31FnNode, Sfr31FnNode::NodeHashF> > Sfr31FnSet;
 
 #pragma inline_depth(0)
-// MS2-FUNCTIONAL 0x1425303b0: regalloc and jump threading: the exe keeps zero in r15 (and saves an unused r14) and does not thread the null-table GlobalObjects iterator (rsi=0 then test rsi)
+// MS2-FUNCTIONAL 0x1425303b0: regalloc and jump threading: the exe keeps zero in r15 (and saves an unused r14, so a 0x30 frame) and does not thread the null-table GlobalObjects iterator (rsi=0 then test rsi); the indexed opcode loop gives the exe's rdi count / rbx offset (71 -> 67)
 // @0x1425303b0
 void Sfr31ClassTraitsCleanup(UPInt self)
 {
@@ -6310,9 +6310,9 @@ void Sfr31ClassTraitsCleanup(UPInt self)
         return;
     Sfr31UnregisterClassTraits(self);
     typedef ArrayData<UInt64, AllocatorLH_POD<UInt64, 338>, ArrayDefaultPolicy> OpCodeData;
-    UPInt off = 0;
-    for (UPInt n = f[0xc0 / 8]; n != 0; --n, off += 0x18)
-        reinterpret_cast<OpCodeData*>(f[0xb8 / 8] + off)->Resize(0);
+    const UPInt nOps = f[0xc0 / 8];
+    for (UPInt k = 0; k < nOps; ++k)
+        reinterpret_cast<OpCodeData*>(f[0xb8 / 8] + k * 0x18)->Resize(0);
     reinterpret_cast<ArrayData<ArrayLH_POD<UInt64, 338, ArrayDefaultPolicy>, AllocatorLH<ArrayLH_POD<UInt64, 338, ArrayDefaultPolicy>, 340>, ArrayDefaultPolicy>*>(f + 0xb8 / 8)->Resize(0);
     reinterpret_cast<Sfr31GcPtrSet*>(f + 0x38 / 8)->Sfr31GcPtrSet::~HashSetBase();
     // GlobalObjects iteration; VM::UnregisterGlobalObject inlined.
