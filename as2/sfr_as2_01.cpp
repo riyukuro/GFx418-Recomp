@@ -1773,105 +1773,148 @@ void ArrayObject::ArraySort(const FnCall& fn)
     }
 }
 
+// SF_AutoPtr.h's ScopePtr (deletes the held object at scope exit).
+template<class T> class Sfr01ScopePtr
+{
+public:
+    Sfr01ScopePtr(T* p = 0) : pObject(p) {}
+    ~Sfr01ScopePtr(void) { delete pObject; }
+    T& operator* () const { return *pObject; }
+    T* operator->() const { return  pObject; }
+private:
+    Sfr01ScopePtr(const Sfr01ScopePtr<T>&);
+    const Sfr01ScopePtr<T>& operator=(const Sfr01ScopePtr<T>&);
+    T* pObject;
+};
+
 // Array.sortOn(fieldNames, [options]): sorts by the named members of the elements, one option word per field.
 // @0x1428f5d60
-// MS2-FUNCTIONAL same sequence; the exe's functor array construction and temporaries are scheduled differently
+// MS2-FUNCTIONAL SDK body (AS2_ArrayObject.cpp); rest = the exe inlines ArrayCC::PushBack and its frame slots sit 8 bytes higher (regalloc/frame layout)
 void ArrayObject::ArraySortOn(const FnCall& fn)
 {
     MS2_AS2_CHECK_THIS(fn, Array);
-    ArrayObject* pthis = (ArrayObject*)fn.ThisPtr;
-    // The exe holds the field names in an ArrayCC on the movie heap and the option words in a global-heap
-    // Array; a stack ArrayLH would look its heap up from the stack address.
-    ArrayCC<ASString>* pfields = SF_HEAP_NEW(fn.Env->GetHeap()) ArrayCC<ASString>(fn.Env->GetBuiltin(ASBuiltin_empty_));
-    ArrayCC<ASString>& fields  = *pfields;
-    Array<UInt32>      options;
+    ArrayObject* pThis = (ArrayObject*)fn.ThisPtr;
+
+    Sfr01ScopePtr<ArrayCC<ASString> > pfieldNames(SF_HEAP_NEW(fn.Env->GetHeap()) ArrayCC<ASString>(fn.Env->GetBuiltin(ASBuiltin_empty_)));
+    ArrayCC<ASString>& fieldNames(*pfieldNames);
+    Array<int>         fieldFlags;
+    int                commonFlags = 0;
+
     if (fn.NArgs == 0)
     {
         fn.Result->SetUndefined();
-        delete pfields;
         return;
     }
-    pthis->LengthValueOverriden = false;
 
-    // A hole in the field array sorts on "<undefined>" (builtin 48, after <unknown> and <bad type>).
-    ASString dummy = fn.Env->GetBuiltin(static_cast<ASBuiltinType>(48));
-    Object* parr = fn.Arg(0).ToObject(fn.Env);
-    if (parr && parr->GetObjectType() == Object_Array)
-    {
-        ArrayObject* pa = static_cast<ArrayObject*>(parr);
-        for (int i = 0; i < pa->GetSize(); i++)
-        {
-            if (Value* pv = pa->GetElementPtr(i))
-                fields.PushBack(pv->ToString(fn.Env));
-            else
-                fields.PushBack(dummy);
-        }
-    }
-    else
-        fields.PushBack(fn.Arg(0).ToString(fn.Env));
+    pThis->LengthValueOverriden = false;
+    int i;
+    ASString dummyName(fn.Env->GetBuiltin(static_cast<ASBuiltinType>(48)));
 
-    options.Resize(fields.GetSize());
-    for (UPInt i = 0; i < options.GetSize(); i++)
-        options[i] = 0;
-    int flags = 0;
-    if (fn.NArgs >= 2)
+    if (fn.NArgs >= 1)
     {
-        Object* po = fn.Arg(1).ToObject(fn.Env);
-        if (po && po->GetObjectType() == Object_Array)
+        Object* fields = fn.Arg(0).ToObject(fn.Env);
+        if (fields && fields->GetObjectType() == Object_Array)
         {
-            ArrayObject* pa = static_cast<ArrayObject*>(po);
-            for (int i = 0; i < pa->GetSize() && (UPInt)i < fields.GetSize(); i++)
-                if (Value* pv = pa->GetElementPtr(i))
-                    options[i] = pv->ToInt32(fn.Env);
+            ArrayObject* pFieldArray = (ArrayObject*)fields;
+            for (i = 0; i < pFieldArray->GetSize(); i++)
+            {
+                const Value* pName = pFieldArray->GetElementPtr(i);
+                if (pName)
+                    fieldNames.PushBack(pName->ToString(fn.Env));
+                else
+                    fieldNames.PushBack(dummyName);
+            }
         }
         else
         {
-            flags = fn.Arg(1).ToInt32(fn.Env);
-            for (UPInt i = 0; i < fields.GetSize(); i++)
-                options[i] = flags;
+            fieldNames.PushBack(fn.Arg(0).ToString(fn.Env));
         }
     }
 
-    Ptr<ArrayObject> pnew = *static_cast<ArrayObject*>(fn.Env->OperatorNew(fn.Env->GetBuiltin(ASBuiltin_Array)));
-    (reinterpret_cast<ArrayObjectElementsData*>(&pnew->Elements)->*&ArrayObjectElementsData::Resize)(pthis->Elements.GetSize());
-    for (UPInt i = 0; i < pnew->Elements.GetSize(); i++)
-        pnew->Elements[i] = pthis->Elements[i];
-
-    ArraySortOnFunctor sf(fn.ThisPtr, &fields, fn.Env, pthis->LogPtr);
-    sf.GetFunctorArray().Resize(fields.GetSize());
-    for (UPInt i = 0; i < fields.GetSize(); i++)
-        sf.GetFunctorArray()[i] = ArraySortFunctor(fn.ThisPtr, options[i], FunctionRef(), fn.Env, pthis->LogPtr);
-    Alg::ArrayAdaptor<Value*> adaptor(pnew->Elements.GetDataPtr(), pnew->Elements.GetSize());
-    Alg::QuickSortSlicedSafe(adaptor, 0, pnew->Elements.GetSize(), sf);
-
-    bool duplicate = false;
-    if (flags & SortFlags_UniqueSort)
+    for (i = 0; i < (int)fieldNames.GetSize(); i++)
     {
-        for (int i = 1; i < pnew->GetSize(); i++)
-            if (sf.Compare(pnew->Elements[i - 1], pnew->Elements[i]) == 0)
+        fieldFlags.PushBack(0);
+    }
+
+    if (fn.NArgs >= 2)
+    {
+        Object* flags = fn.Arg(1).ToObject(fn.Env);
+        if (flags && flags->GetObjectType() == Object_Array)
+        {
+            ArrayObject* pFlagsArray = (ArrayObject*)flags;
+            for (i = 0; i < pFlagsArray->GetSize() && i < (int)fieldNames.GetSize(); i++)
             {
-                duplicate = true;
-                break;
+                const Value* pFlags = pFlagsArray->GetElementPtr(i);
+                if (pFlags)
+                {
+                    fieldFlags[i] = pFlags->ToInt32(fn.Env);
+                }
             }
+        }
+        else
+        {
+            commonFlags = fn.Arg(1).ToInt32(fn.Env);
+            for (i = 0; i < (int)fieldNames.GetSize(); i++)
+            {
+                fieldFlags[i] = commonFlags;
+            }
+        }
     }
-    if (duplicate)
+
+    Ptr<ArrayObject> retArray = *static_cast<ArrayObject*>(fn.Env->OperatorNew(fn.Env->GetBuiltin(ASBuiltin_Array)));
+    if (retArray)
     {
-        fn.Result->SetInt(0);
+        // ShallowCopyFrom, inline.
+        (reinterpret_cast<ArrayObjectElementsData*>(&retArray->Elements)->*&ArrayObjectElementsData::Resize)(pThis->Elements.GetSize());
+        for (UPInt k = 0, n = retArray->Elements.GetSize(); k < n; k++)
+            retArray->Elements[k] = pThis->Elements[k];
+
+        // The ArraySortOnFunctor(fields, flags) ctor, inline.
+        ArraySortOnFunctor sortFunctor(retArray, &fieldNames, fn.Env, pThis->LogPtr);
+        sortFunctor.GetFunctorArray().Resize(fieldFlags.GetSize());
+        for (unsigned k = 0; k < sortFunctor.GetFunctorArray().GetSize(); k++)
+            sortFunctor.GetFunctorArray()[k] = ArraySortFunctor(retArray, fieldFlags[k], FunctionRef(), fn.Env, pThis->LogPtr);
+        // Sort, inline.
+        if (retArray->Elements.GetSize() > 0)
+        {
+            Alg::ArrayAdaptor<Value*> a(&retArray->Elements[0], (unsigned)retArray->Elements.GetSize());
+            Alg::QuickSortSafe(a, sortFunctor);
+        }
+
+        bool uniqueSortFailed = false;
+        if (commonFlags & ArrayObject::SortFlags_UniqueSort)
+        {
+            int i;
+            for (i = 1; i < retArray->GetSize(); i++)
+            {
+                if (sortFunctor.Compare(retArray->GetElementPtr(i - 1), retArray->GetElementPtr(i)) == 0)
+                {
+                    uniqueSortFailed = true;
+                    break;
+                }
+            }
+        }
+
+        if (uniqueSortFailed)
+        {
+            fn.Result->SetInt(0);
+            return;
+        }
+
+        if (commonFlags & ArrayObject::SortFlags_ReturnIndexedArray)
+        {
+            retArray->MakeDeepCopy(fn.Env->GetHeap());
+            fn.Result->SetAsObject(retArray);
+        }
+        else
+        {
+            (reinterpret_cast<ArrayObjectElementsData*>(&pThis->Elements)->*&ArrayObjectElementsData::Resize)(retArray->Elements.GetSize());
+            for (UPInt k = 0, n = pThis->Elements.GetSize(); k < n; k++)
+                pThis->Elements[k] = retArray->Elements[k];
+            (reinterpret_cast<ArrayObjectElementsData*>(&retArray->Elements)->*&ArrayObjectElementsData::Resize)(0);
+            fn.Result->SetAsObject(pThis);
+        }
     }
-    else if (flags & SortFlags_ReturnIndexedArray)
-    {
-        pnew->MakeDeepCopy(fn.Env->GetHeap());
-        fn.Result->SetAsObject(pnew);
-    }
-    else
-    {
-        (reinterpret_cast<ArrayObjectElementsData*>(&pthis->Elements)->*&ArrayObjectElementsData::Resize)(pnew->Elements.GetSize());
-        for (UPInt i = 0; i < pnew->Elements.GetSize(); i++)
-            pthis->Elements[i] = pnew->Elements[i];
-        (reinterpret_cast<ArrayObjectElementsData*>(&pnew->Elements)->*&ArrayObjectElementsData::Resize)(0);
-        fn.Result->SetAsObject(pthis);
-    }
-    delete pfields;
 }
 
 // ---- Matrix ----
