@@ -2527,3 +2527,9 @@ bool MatchFileNames(const String& path1, const String& path2)
 // MS2-RANGE: 0x142cc9490-0x142cc94af .text$yd
 // MS2-PIN: ??__FGFxMovieDataDefFileKeyInterface_Instance@GFx@Scaleform@@YAXXZ 0x142cc9490
 // MS2-PIN: ??__FGFxMovieDefImplKeyInterface_Instance@GFx@Scaleform@@YAXXZ 0x142cc94a0
+
+// The statics' own atexit registrations in .text$di (lea rcx,??__F; jmp atexit)
+// MS2-RANGE: 0x14014cc00-0x14014cc0c .text$di
+// MS2-PIN: ??__EGFxMovieDataDefFileKeyInterface_Instance@GFx@Scaleform@@YAXXZ 0x14014cc00
+// MS2-RANGE: 0x14014cc10-0x14014cc1c .text$di
+// MS2-PIN: ??__EGFxMovieDefImplKeyInterface_Instance@GFx@Scaleform@@YAXXZ 0x14014cc10

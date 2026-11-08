@@ -696,3 +696,9 @@ void HAL::endMaskDisplay()
 // MS2-PIN: ??_7RenderEvent@Render@Scaleform@@6B@ 0x143192a98
 // MS2-PIN: ??_GHALBeginDisplayItem@Render@Scaleform@@UEAAPEAXI@Z 0x1426beaf0
 // MS2-PIN: ??_GHALEndDisplayItem@Render@Scaleform@@UEAAPEAXI@Z 0x1426beb30
+
+// The statics' own atexit registrations in .text$di (lea rcx,??__F; jmp atexit)
+// MS2-RANGE: 0x14014d0a0-0x14014d0ac .text$di
+// MS2-PIN: ??__E?Instance@HALBeginDisplayItem@Render@Scaleform@@2V123@A@@YAXXZ 0x14014d0a0
+// MS2-RANGE: 0x14014d0b0-0x14014d0bc .text$di
+// MS2-PIN: ??__E?Instance@HALEndDisplayItem@Render@Scaleform@@2V123@A@@YAXXZ 0x14014d0b0

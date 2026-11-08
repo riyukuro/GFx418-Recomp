@@ -532,3 +532,7 @@ void TextPrimitiveBundle::startPrimitive(RenderQueueItem& item, TextPrepareBuffe
 // MS2-PIN: ??_7MaskPrimitive@Render@Scaleform@@6BInterface@RenderQueueItem@12@@ 0x143192890
 // (the deleting dtor at 0x1426f2830, slot 0 of the Bundle vftable)
 // MS2-PIN: ??_GTextPrimitiveBundle@Render@Scaleform@@UEAAPEAXI@Z 0x1426f2830
+
+// The statics' own atexit registrations in .text$di (lea rcx,??__F; jmp atexit)
+// MS2-RANGE: 0x14014d100-0x14014d10c .text$di
+// MS2-PIN: ??__E?Instance3D@SKI_TextPrimitive@Render@Scaleform@@2V123@A@@YAXXZ 0x14014d100

@@ -2028,3 +2028,7 @@ void GlyphCache::LogWarning(const char* fmt, ...)
 // MS2-PIN: ??_7MeshProvider_KeySupport@Render@Scaleform@@6BMeshProvider@12@@ 0x14318f1b8
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0EO@@Scaleform@@6B@ 0x143184c98
 // MS2-PIN: ??_7ImageFileHandler@Render@Scaleform@@6B@ 0x143184f20
+
+// The statics' own atexit registrations in .text$di (lea rcx,??__F; jmp atexit)
+// MS2-RANGE: 0x14014d0d0-0x14014d0dc .text$di
+// MS2-PIN: ??__E?Instance@AmpGlyphImageWriter@Render@Scaleform@@2V123@A@@YAXXZ 0x14014d0d0

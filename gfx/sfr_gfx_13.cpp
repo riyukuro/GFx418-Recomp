@@ -80,7 +80,7 @@ static AtexitRegistration s_atexit_143a2fbc8(&Scaleform::GFx::FUN_142cc9690);   
 static AtexitRegistration s_atexit_143a2fbf8(&Scaleform::GFx::FUN_142cc96b0);   // VertexXY16iCF32::Format.pSysFormat
 static AtexitRegistration s_atexit_143a2fc10(&Scaleform::GFx::FUN_142cc96d0);   // VertexXY16iInstance::Format.pSysFormat
 static AtexitRegistration s_atexit_143a2fc28(&Scaleform::GFx::FUN_142cc96f0);   // VertexXY16iUV::Format.pSysFormat
-static AtexitRegistration s_atexit_143a30338(&Scaleform::GFx::FUN_142cc98d0);   // the Ptr<> static
+static AtexitRegistration s_atexit_143a30338(&Scaleform::GFx::FUN_142cc98d0);   // ImageGlyphVertex::Format.pSysFormat
 #endif
 
 namespace Scaleform { namespace Render {
@@ -145,3 +145,12 @@ static char s_crtStartup = (char)AfxInitialize(0, 0xe00);
 // MS2-PIN: ??__Es_atexit_143a51b70@@YAXXZ 0x140157e70
 // MS2-PIN: ??__F_AtlComModule@ATL@@YAXXZ 0x142cca4e8
 // MS2-PIN: ??__F_AtlWinModule@ATL@@YAXXZ 0x142cca508
+
+// RasterGlyphVertex::Format.pSysFormat (0x143a2fe50+0x10). The Format itself is a data blob in data_data_game, so its
+// own ??__E has nothing to hang on; registered here like the other vertex formats (dtor in sfr_atexit_01).
+#ifndef MS2_HOOK_DLL
+namespace Scaleform { namespace GFx { void FUN_142cc9870(); }}
+static AtexitRegistration s_atexit_143a2fe60(&Scaleform::GFx::FUN_142cc9870);
+#endif
+// MS2-RANGE: 0x14014d0c0-0x14014d0cc .text$di
+// MS2-PIN: ??__Es_atexit_143a2fe60@@YAXXZ 0x14014d0c0

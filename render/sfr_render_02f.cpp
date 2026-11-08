@@ -563,3 +563,9 @@ FileWriter FileWriter::Instance;
 // MS2-PIN: ??_7LibPNGInput@PNG@Render@Scaleform@@6B@ 0x143185670
 // MS2-PIN: ??_7MemoryBufferImage@PNG@Render@Scaleform@@6B@ 0x1431856a0
 // MS2-PIN: ??_7PNGFileImageSource@PNG@Render@Scaleform@@6B@ 0x143185788
+
+// The statics' own atexit registrations in .text$di (lea rcx,??__F; jmp atexit)
+// MS2-RANGE: 0x14014cbd0-0x14014cbdc .text$di
+// MS2-PIN: ??__E?Instance@FileReader@PNG@Render@Scaleform@@2V1234@A@@YAXXZ 0x14014cbd0
+// MS2-RANGE: 0x14014cbe0-0x14014cbec .text$di
+// MS2-PIN: ??__E?Instance@FileWriter@PNG@Render@Scaleform@@2V1234@A@@YAXXZ 0x14014cbe0

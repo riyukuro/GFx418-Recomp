@@ -112,3 +112,7 @@ ResourceKey ImageResource::CreateImageFileKey(ImageFileInfo* pfileInfo, FileOpen
 // MS2-PIN: ??_7ImageFileInfoKeyData@GFx@Scaleform@@6B@ 0x143192a60
 // MS2-PIN: ??_GImageFileKeyInterface@GFx@Scaleform@@UEAAPEAXI@Z 0x1426be8a0
 // MS2-PIN: ??_G?$RefCountBase@VImageFileInfoKeyData@GFx@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x1426be8d0
+
+// The statics' own atexit registrations in .text$di (lea rcx,??__F; jmp atexit)
+// MS2-RANGE: 0x14014d090-0x14014d09c .text$di
+// MS2-PIN: ??__EImageFileKeyInterface_Instance@GFx@Scaleform@@YAXXZ 0x14014d090

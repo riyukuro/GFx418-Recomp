@@ -191,3 +191,7 @@ ResourceData SoundResourceCreator::CreateSoundResourceData(Sound::SoundData* pso
 // MS2-PIN: ??_7?$RefCountBaseNTS@VSoundInfoBase@Sound@Scaleform@@$03@Scaleform@@6B@ 0x14318ff60
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$03@Scaleform@@6B@ 0x14318ff68
 // MS2-PIN: ??_7SoundInfoBase@Sound@Scaleform@@6B@ 0x14318ff70
+
+// The statics' own atexit registrations in .text$di (lea rcx,??__F; jmp atexit)
+// MS2-RANGE: 0x14014d0e0-0x14014d0ec .text$di
+// MS2-PIN: ??__ESoundFileKeyInterface_Instance@GFx@Scaleform@@YAXXZ 0x14014d0e0

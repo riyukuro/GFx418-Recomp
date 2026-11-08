@@ -703,3 +703,7 @@ FileReader FileReader::Instance;
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountVImpl@Scaleform@@$02@Scaleform@@6B@ 0x1431498a0
 // MS2-PIN: ??_7?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@6B@ 0x1431498b8
 // MS2-PIN: ??_7ImageBase@Render@Scaleform@@6B@ 0x1431498d0
+
+// The statics' own atexit registrations in .text$di (lea rcx,??__F; jmp atexit)
+// MS2-RANGE: 0x14014cbc0-0x14014cbcc .text$di
+// MS2-PIN: ??__E?Instance@FileReader@JPEG@Render@Scaleform@@2V1234@A@@YAXXZ 0x14014cbc0
