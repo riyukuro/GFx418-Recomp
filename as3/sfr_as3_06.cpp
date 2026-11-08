@@ -2460,8 +2460,10 @@ namespace Instances { namespace fl_display
                         ++cnt;
                     }
                 }
-                if (k != DescrCnt)
-                    memmove(pdst + DescrCnt, pdst + k, (cnt - DescrCnt) * sizeof(Descr));
+                // Exe bug, kept: it fills the holes from slot cnt, not from k. That only moves the right entries while
+                // total <= 2 * added-in-fact; a frame named three or more times in one call copies uninitialized slots.
+                if (total != cnt)
+                    memmove(pdst + DescrCnt, pdst + cnt, (total - cnt) * sizeof(Descr));
                 DescrCnt = (UInt16)total;
             }
         }
