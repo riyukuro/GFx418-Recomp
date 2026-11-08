@@ -474,8 +474,9 @@ LRESULT FUN_1423d02d0(unsigned long long* self, UINT message, unsigned long long
 }
 
 // MS2-FUNCTIONAL: handles the executable's focus, candidate-list, and IME notification messages. Reviewed case by case
-// against the exe, same behaviour. The rest is register allocation: the exe keeps self in rsi, the result in rdi and
-// the case 5 temporary in rbx.
+// against the exe, same behaviour. The case 5 temporary is a scoped holder whose destructor releases it, which gives
+// the exe's registers (self in rsi, result in rdi, temporary in rbx). Left: the exe saves rbx inside case 5 and
+// restores it there; cl saves it in the prologue and restores it at the shared exit.
 // @0x1423d41f0
 LRESULT FUN_1423d41f0(unsigned long long* self, unsigned reason, unsigned long long message, unsigned long long value)
 {
@@ -503,11 +504,10 @@ LRESULT FUN_1423d41f0(unsigned long long* self, unsigned reason, unsigned long l
     }
     case 5: {
         void* factory = static_cast<unsigned char*>(child) + 0x10;
-        void* temporary = reinterpret_cast<void*(*)(void*, int)>(
-            (*reinterpret_cast<void***>(factory))[3])(factory, 0x18);
+        struct Held { void* p; ~Held() { if (p) FUN_14257dcb0(p); } } temporary = {
+            reinterpret_cast<void*(*)(void*, int)>((*reinterpret_cast<void***>(factory))[3])(factory, 0x18) };
         reinterpret_cast<void(*)(void*, int)>(reinterpret_cast<void**>(self[0])[0x118 / sizeof(void*)])(self, 0);
         handled = static_cast<unsigned>(*reinterpret_cast<int*>(self + 0x13) - 5) > 1;
-        if (temporary) FUN_14257dcb0(temporary);
         break;
     }
     case 0xe: {
