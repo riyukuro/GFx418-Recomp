@@ -455,7 +455,7 @@ char* Sfr27SetPropertyOfValue(char* ret, VM* vm, const Value* obj, const Multina
 void  Sfr31TraceNoteJump(UPInt tr, SPInt base, UPInt blk, SInt32 off, SInt32 arg);
 __declspec(noinline) void Sfr31ValueToBool(Value* v);   // the exe calls it out of line
 void  Sfr31ButtonSwitchStateIntl(UPInt self, int state);
-char  Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state);
+char  Sfr31TracerCommonOp(UPInt tracer, int op, UPInt* pos, UPInt state);
 void  Sfr31StateTraceOp(UPInt state, unsigned char op, UPInt* pos);
 UPInt Sfr31ResolveClassTraits(UPInt vmAddr, UPInt link, UPInt entry);
 //void  FUN_142524af0(UPInt* a, const void* addr, UPInt n);   // = Sfr19TraitsArr::ResizeNoConstruct
@@ -8817,451 +8817,474 @@ static void Sfr31TrPushTraits(UPInt state, UInt32 flags, UPInt traits)
 // Tracer::TraceCommonOp: per-opcode specialization of the ops that need no block structure: property get/set/call ops on
 // names with a known fixed slot become slot or vtable accesses, the convert ops vanish for operands of the target type,
 // getlocal/kill update the register model. Returns whether the original opcode was consumed.
-// MS2-FUNCTIONAL 0x14252d100: raw-offset model; codegen differs from the exe
-// @0x14252d100
-char Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state)
+// MS2-FUNCTIONAL 0x14252d100: Tracer::SubstituteOpCode written from the SDK; frame matches, 8 bytes short. Remaining: value/nk registers in coerce_s, the add case temp slots, flags caching across the _1 dtor
+struct Sfr31ValStore { Value* AsValue() { return reinterpret_cast<Value*>(w); } UPInt w[4]; };
+struct Sfr31RdMnObj { VM* vm; State* st; int num; UPInt file; UPInt mn[6]; Sfr31ValStore obj; };
+struct Sfr31RdValueMnObj { VM* vm; State* st; int num; Sfr31ValStore value; UPInt file; UPInt mn[6]; Sfr31ValStore obj; };
+struct Sfr31RdArgsMnObj { UPInt ra[0x28]; UPInt file; UPInt mn[6]; Sfr31ValStore obj; UInt32& ReadNum() { return *reinterpret_cast<UInt32*>(ra + 2); } };
+static __forceinline UPInt Sfr31MnEntryX(UPInt abcLink, UInt32 idx)
 {
-    const UInt8* code = reinterpret_cast<const UInt8*>(Sfr31Rd(tracer, 0x50));
-    const UPInt link = TrAbcLink(tracer);
-    const UPInt vmA = TrRd(link, 0x20);
-    UInt8* const stk = reinterpret_cast<UInt8*>(Sfr31Rd(state, 0x38));
-    UInt32* const top = reinterpret_cast<UInt32*>(stk + Sfr31Rd(state, 0x40) * 0x20 - 0x20);
-    UPInt p;
+    UPInt r = idx;
+    const UPInt file = TrRd(abcLink, 0x28);
+    if (idx == 0)
+        r = file + 0xe8;
+    else
+        r = (r << 4) + TrRd(file, 0xb8);
+    return r;
+}
+// @0x14252d100
+char Sfr31TracerCommonOp(UPInt tracer, int op, UPInt* pos, UPInt state)
+{
+    Tracer* const self = reinterpret_cast<Tracer*>(tracer);
+    State& st = *reinterpret_cast<State*>(state);
+    Sfr31TrSubstView& tv = *reinterpret_cast<Sfr31TrSubstView*>(tracer);
+    UPInt ccp;
     switch (op)
     {
-    case 4:
-    case 0x66:
+    case 8:     // kill
     {
-        p = *pos;
-        const UInt32 idx = Abc::ReadU30<UInt8>(code, p);
-        alignas(8) UInt8 R[0x70];
-        Sfr31Wr(reinterpret_cast<UPInt>(R), 0, vmA);
-        Sfr31Wr(reinterpret_cast<UPInt>(R), 8, state);
-        *reinterpret_cast<int*>(R + 0x10) = 0;
-        Sfr31Wr(reinterpret_cast<UPInt>(R), 0x18, link);
-        FUN_1424d8ec0(R + 0x20, link, reinterpret_cast<UPInt>(&Sfr31MnEntry(link, idx)));
-        *reinterpret_cast<int*>(R + 0x10) += FUN_142520380(R, R + 0x20);
-        FUN_14251cd30(reinterpret_cast<State*>(state), reinterpret_cast<Value*>(R + 0x50));
-        ++*reinterpret_cast<int*>(R + 0x10);
-        const UPInt tr = FUN_14250ff00(tracer, *reinterpret_cast<const Value*>(R + 0x50), op == 4);
-        const bool ok = FUN_1424f8b00(reinterpret_cast<void*>(tracer), op, reinterpret_cast<void*>(state),
-                                      reinterpret_cast<const Traits*>(tr), reinterpret_cast<const Multiname*>(R + 0x20),
-                                      static_cast<int>(idx));
-        if (ok)
-            Sfr31TracerSkipOrigOpCode(tracer, pos, p);
-        FUN_1424ded40(R);
-        return ok;
-    }
-    case 5:
-    case 0x61:
-    case 0x68:
-    {
-        p = *pos;
-        const UInt32 idx = Abc::ReadU30<UInt8>(code, p);
-        alignas(8) UInt8 R[0x90];
-        Sfr31Wr(reinterpret_cast<UPInt>(R), 0, vmA);
-        Sfr31Wr(reinterpret_cast<UPInt>(R), 8, state);
-        *reinterpret_cast<int*>(R + 0x10) = 0;
-        FUN_14251cd30(reinterpret_cast<State*>(state), reinterpret_cast<Value*>(R + 0x18));
-        ++*reinterpret_cast<int*>(R + 0x10);
-        Sfr31Wr(reinterpret_cast<UPInt>(R), 0x38, link);
-        FUN_1424d8ec0(R + 0x40, link, reinterpret_cast<UPInt>(&Sfr31MnEntry(link, idx)));
-        *reinterpret_cast<int*>(R + 0x10) += FUN_142520380(R, R + 0x40);
-        FUN_14251cd30(reinterpret_cast<State*>(state), reinterpret_cast<Value*>(R + 0x70));
-        ++*reinterpret_cast<int*>(R + 0x10);
-        const UPInt tr = FUN_14250ff00(tracer, *reinterpret_cast<const Value*>(R + 0x70), op == 5);
-        UInt32* val = reinterpret_cast<UInt32*>(R + 0x18);
-        const UPInt vt = Sfr31TrTraitsOfVal(vmA, val);
-        const bool ok = FUN_1424f92f0(reinterpret_cast<void*>(tracer), op, reinterpret_cast<const Traits*>(tr),
-                                      reinterpret_cast<void*>(vt), reinterpret_cast<const Multiname*>(R + 0x40),
-                                      static_cast<int>(idx));
-        if (ok)
-            Sfr31TracerSkipOrigOpCode(tracer, pos, p);
-        FUN_1424dee30(R);
-        return ok;
-    }
-    case 8:
-    {
-        const UInt32 reg = Abc::ReadU30<UInt8>(code, *pos);
-        reinterpret_cast<State*>(state)->SetRegister(AbsoluteIndex(reg), Value::GetUndefined());
-        *reinterpret_cast<UInt8*>(Sfr31Rd(state, 0x78) + (reg >> 3)) &= static_cast<UInt8>(~(1 << (reg & 7)));
+        const int index = Abc::ReadU30<UInt8>(tv.pCode, *pos);
+        st.SetRegister(AbsoluteIndex(index), Value::GetUndefined());
+        UInt8* bits = reinterpret_cast<UInt8*>(Sfr31Rd(state, 0x78) + (static_cast<UPInt>(static_cast<UInt32>(index)) >> 3));
+        *bits &= static_cast<UInt8>(~(1 << (index & 7)));
         Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
         return 1;
+    }
+    case 0x82:  // coerce_a
+    {
+        Value& v = st.GetOpStack().Back();
+        if (self->IsSIntType(v) || self->IsUIntType(v))
+        {
+            self->PushNewOpCode(static_cast<Abc::Code::OpCode>(0x75));
+            if (static_cast<UInt32>(v.GetKind()) - 2 <= 1)
+                v.ToNumberValueInline();
+            else
+                st.ConvertOpTo(self->GetNumberType(), Value::NotNull);
+            return 1;
+        }
+        Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
+        return 1;
+    }
+    case 0x85:  // coerce_s
+    {
+        const Value& v = st.GetOpStack().Back();
+        if (v.GetKind() == Value::kString)
+            return 1;
+        const UInt32 nk = static_cast<UInt32>(v.GetKind()) - 0xc;
+        if ((nk <= 3 && v.GetObject() == NULL) || self->IsStringType(v))
+        {
+            const int nf = nk <= 3 ? (v.GetObject() != NULL) : 1;
+            const Value::TraceNullType null = static_cast<Value::TraceNullType>(nf + 1);
+            st.ConvertOpTo(self->GetStringType(), null);
+            Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
+            return 1;
+        }
+        return 0;
+    }
+    case 0x80:  // coerce
+    {
+        ccp = *pos;
+        const SPInt mn_index = Abc::ReadU30<UInt8>(tv.pCode, ccp);
+        const UPInt link = TrAbcLink(tracer);
+        const UPInt lfile = TrRd(link, 0x28);
+        const UPInt entry = mn_index == 0 ? lfile + 0xe8 : static_cast<UPInt>(mn_index) * 0x10 + TrRd(lfile, 0xb8);
+        const Value& value = st.GetOpStack().Back();
+        const UPInt ctr = Sfr31ResolveClassTraits(reinterpret_cast<UPInt>(&self->GetVM()), TrAbcLink(tracer), entry);
+        if (ctr == 0)
+        {
+            UPInt sv[2];
+            FUN_142545310(Sfr31Rd(TrFile(tracer), 0x70) + static_cast<UPInt>(*reinterpret_cast<const UInt32*>(entry + 8)) * 8, sv);
+            self->GetVM().ThrowVerifyError(VM::Error(static_cast<VM::ErrorID>(0x3f6), self->GetVM(), reinterpret_cast<const char*>(sv[0])));
+            return 1;
+        }
+        InstanceTraits::Traits& itr = reinterpret_cast<const ClassTraits::Traits*>(ctr)->GetInstanceTraits();
+        const UPInt vmA = reinterpret_cast<UPInt>(&self->GetVM());
+        if (value.GetKind() == Value::kUndefined && reinterpret_cast<UPInt>(&itr) != Sfr31Rd(Sfr31Rd(vmA, 0x1f0), 0xc0) &&
+            reinterpret_cast<UPInt>(&itr) != Sfr31Rd(Sfr31Rd(vmA, 0x220), 0xc0) &&
+            reinterpret_cast<UPInt>(&itr) != Sfr31Rd(Sfr31Rd(vmA, 0x228), 0xc0) &&
+            reinterpret_cast<UPInt>(&itr) != Sfr31Rd(Sfr31Rd(vmA, 0x218), 0xc0) &&
+            reinterpret_cast<UPInt>(&itr) != Sfr31Rd(Sfr31Rd(vmA, 0x210), 0xc0) &&
+            reinterpret_cast<UPInt>(&itr) != Sfr31Rd(vmA, 0x278) &&
+            reinterpret_cast<UPInt>(&itr) != Sfr31Rd(Sfr31Rd(vmA, 0x230), 0xc0))
+        {
+            UPInt* posArr = reinterpret_cast<UPInt*>(tracer + 0x90);
+            if (posArr[1] != 0)
+            {
+                UPInt* ops = reinterpret_cast<UPInt*>(Sfr31Rd(tracer, 0x28));
+                UInt64* arr = reinterpret_cast<UInt64*>(ops[0]);
+                if (*reinterpret_cast<int*>(&arr[reinterpret_cast<UPInt*>(posArr[0])[posArr[1] - 1]]) == 0x21)
+                {
+                    arr[ops[1] - 1] = 0x20;
+                    st.ConvertOpTo(itr, Value::Null);
+                    Sfr31TracerSkipOrigOpCode(tracer, pos, ccp);
+                    return 1;
+                }
+            }
+        }
+        if (value.IsNull() || Sfr31SetTraitsForValue(tracer, reinterpret_cast<const UInt32*>(&value), ctr))
+        {
+            Value::TraceNullType null = self->CanBeNull(itr);
+            if (value.IsNull())
+                null = Value::Null;
+            st.ConvertOpTo(itr, null);
+            Sfr31TracerSkipOrigOpCode(tracer, pos, ccp);
+            return 1;
+        }
+        Sfr31TracerSkipOrigOpCode(tracer, pos, ccp);
+        self->PushNewOpCode(static_cast<Abc::Code::OpCode>(0x80), static_cast<UPInt>(mn_index));
+        st.ConvertOpTo(itr, Value::NullOrNot);
+        return 1;
+    }
+    case 100:   // getglobalscope
+    {
+        ccp = *pos;
+        const int next_opcode = tv.pCode[ccp++];
+        if (next_opcode == 'l')
+        {
+            Sfr31StatePushTyped(state);
+            self->PushNewOpCode(static_cast<Abc::Code::OpCode>(0x6e));
+            const UInt32 slot = Abc::ReadU30<UInt8>(tv.pCode, ccp);
+            Sfr31TraceGetSlot(&st, slot);
+            Sfr31TracerSkipOrigOpCode(tracer, pos, ccp);
+            return 1;
+        }
+        if (next_opcode == '+')
+        {
+            {
+                Scaleform::Sfr19PosData& o = tv.OrigOpcodePos;
+                const UPInt n = o.Size + 1;
+                if (n < o.Size)
+                {
+                    if (n < (o.Policy.GetCapacity() >> 1))
+                        o.Reserve(n);
+                }
+                else if (n >= o.Policy.GetCapacity())
+                    o.Reserve(n + (n >> 2));
+                o.Size = n;
+                o.Data[n - 1] = ccp;
+            }
+            const int next2 = tv.pCode[ccp++];
+            if (next2 == 'm')
+            {
+                self->PushNewOpCode(static_cast<Abc::Code::OpCode>(0x6f));
+                Sfr31StatePushTyped(state);
+                Sfr31StateSwapOp(state);
+                const UInt32 slot = Abc::ReadU30<UInt8>(tv.pCode, ccp);
+                Sfr31TracePop2Note(&st, slot);
+                Sfr31TracerSkipOrigOpCode(tracer, pos, ccp);
+                return 1;
+            }
+            tv.OrigOpcodePos.Resize(tv.OrigOpcodePos.Size - 1);
+        }
+        return 0;
+    }
+    case 0x62:  // getlocal
+    {
+        ccp = *pos;
+        const int reg_num = static_cast<int>(Abc::ReadU30<UInt8>(tv.pCode, ccp));
+        return Sfr31TracerOptRegIncDec(tracer, pos, ccp, state, reg_num);
+    }
+    case 0xd0:
+        return Sfr31TracerOptRegIncDec(tracer, pos, *pos, state, 0);
+    case 0xd1:
+        return Sfr31TracerOptRegIncDec(tracer, pos, *pos, state, 1);
+    case 0xd2:
+        return Sfr31TracerOptRegIncDec(tracer, pos, *pos, state, 2);
+    case 0xd3:
+        return Sfr31TracerOptRegIncDec(tracer, pos, *pos, state, 3);
+    case 0x68:  // initproperty
+    case 0x61:  // setproperty
+    case 5:     // setsuper
+    {
+        ccp = *pos;
+        const int mn_index = static_cast<int>(Abc::ReadU30<UInt8>(tv.pCode, ccp));
+        Sfr31RdValueMnObj args;
+        const UPInt file0 = TrAbcLink(tracer);
+        args.vm = reinterpret_cast<VM*>(TrRd(file0, 0x20));
+        args.st = &st;
+        args.num = 0;
+        FUN_14251cd30(&st, args.value.AsValue());
+        ++args.num;
+        args.file = file0;
+        FUN_1424d8ec0(args.mn, args.file, Sfr31MnEntryX(args.file, mn_index));
+        args.num += FUN_142520380(&args, args.mn);
+        FUN_14251cd30(&st, args.obj.AsValue());
+        ++args.num;
+        const Traits* const tr = reinterpret_cast<const Traits*>(FUN_14250ff00(tracer, *args.obj.AsValue(), op == 5));
+        const Traits* const vt = Sfr31TrValueTraitsOf(tracer, *args.value.AsValue());
+        if (FUN_1424f92f0(self, op, tr, const_cast<Traits*>(vt), reinterpret_cast<const Multiname*>(args.mn), mn_index))
+        {
+            Sfr31TracerSkipOrigOpCode(tracer, pos, ccp);
+            FUN_1424dee30(&args);
+            return 1;
+        }
+        FUN_1424dee30(&args);
+        return 0;
+    }
+    case 0x66:  // getproperty
+    case 4:     // getsuper
+    {
+        ccp = *pos;
+        const int mn_index = static_cast<int>(Abc::ReadU30<UInt8>(tv.pCode, ccp));
+        Sfr31RdMnObj args;
+        const UPInt file0 = TrAbcLink(tracer);
+        args.vm = reinterpret_cast<VM*>(TrRd(file0, 0x20));
+        args.st = &st;
+        args.num = 0;
+        args.file = file0;
+        FUN_1424d8ec0(args.mn, args.file, Sfr31MnEntryX(args.file, mn_index));
+        args.num += FUN_142520380(&args, args.mn);
+        FUN_14251cd30(&st, args.obj.AsValue());
+        ++args.num;
+        const Traits* const tr = reinterpret_cast<const Traits*>(FUN_14250ff00(tracer, *args.obj.AsValue(), op == 4));
+        if (FUN_1424f8b00(self, op, &st, tr, reinterpret_cast<const Multiname*>(args.mn), mn_index))
+        {
+            Sfr31TracerSkipOrigOpCode(tracer, pos, ccp);
+            FUN_1424ded40(&args);
+            return 1;
+        }
+        FUN_1424ded40(&args);
+        return 0;
+    }
+    case 0x5d:  // findpropstrict
+    {
+        ccp = *pos;
+        const int mn_index = static_cast<int>(Abc::ReadU30<UInt8>(tv.pCode, ccp));
+        UPInt ccp2 = ccp;
+        const int next_opcode = tv.pCode[ccp2++];
+        const int consumer = FUN_14250c990(tracer, ccp);
+        if (next_opcode == 0x66)
+        {
+            Abc::ReadU30<UInt8>(tv.pCode, ccp2);
+            if (FUN_1424f7cc0(tracer, &st, mn_index, true, consumer, true))
+            {
+                Sfr31TracerSkipOrigOpCode(tracer, pos, ccp2);
+                return 1;
+            }
+        }
+        else if (FUN_1424f7cc0(tracer, &st, mn_index, false, consumer, true))
+        {
+            Sfr31TracerSkipOrigOpCode(tracer, pos, ccp);
+            return 1;
+        }
+    }
+    // fall through
+    case 0x5e:  // findproperty
+    {
+        ccp = *pos;
+        const int mn_index = static_cast<int>(Abc::ReadU30<UInt8>(tv.pCode, ccp));
+        if (FUN_1424f7cc0(tracer, &st, mn_index, false, 2, false))
+        {
+            Sfr31TracerSkipOrigOpCode(tracer, pos, ccp);
+            return 1;
+        }
+        return 0;
+    }
+    case 0x60:  // getlex
+    {
+        ccp = *pos;
+        const int mn_index = static_cast<int>(Abc::ReadU30<UInt8>(tv.pCode, ccp));
+        if (FUN_1424f7cc0(tracer, &st, mn_index, true, 2, false))
+        {
+            Sfr31TracerSkipOrigOpCode(tracer, pos, ccp);
+            return 1;
+        }
+        return 0;
     }
     case 0x45:
     case 0x46:
     case 0x4c:
     case 0x4e:
-    case 0x4f:
+    case 0x4f:  // call*
     {
-        p = *pos;
-        const UInt32 idx = Abc::ReadU30<UInt8>(code, p);
-        const UInt32 argc = Abc::ReadU30<UInt8>(code, p);
-        alignas(8) UInt8 R[0x198];
-        FUN_1424d9640(R, reinterpret_cast<VM*>(vmA), reinterpret_cast<void*>(state), argc);
-        Sfr31Wr(reinterpret_cast<UPInt>(R), 0x140, link);
-        FUN_1424d8ec0(R + 0x148, link, reinterpret_cast<UPInt>(&Sfr31MnEntry(link, idx)));
-        *reinterpret_cast<int*>(R + 0x10) += FUN_142520380(R, R + 0x148);
-        FUN_14251cd30(reinterpret_cast<State*>(state), reinterpret_cast<Value*>(R + 0x178));
-        ++*reinterpret_cast<int*>(R + 0x10);
-        const bool ok = FUN_1424f7540(reinterpret_cast<void*>(tracer), op, reinterpret_cast<void*>(state), R,
-                                      static_cast<int>(idx));
-        if (ok)
-            Sfr31TracerSkipOrigOpCode(tracer, pos, p);
-        FUN_1424debc0(R);
-        return ok;
-    }
-    case 0x4a:
-    {
-        p = *pos;
-        const UInt32 idx = Abc::ReadU30<UInt8>(code, p);
-        const UInt32 argc = Abc::ReadU30<UInt8>(code, p);
-        alignas(8) UInt8 R[0x198];
-        FUN_1424d9640(R, reinterpret_cast<VM*>(vmA), reinterpret_cast<void*>(state), argc);
-        Sfr31Wr(reinterpret_cast<UPInt>(R), 0x140, link);
-        FUN_1424d8ec0(R + 0x148, link, reinterpret_cast<UPInt>(&Sfr31MnEntry(link, idx)));
-        *reinterpret_cast<int*>(R + 0x10) += FUN_142520380(R, R + 0x148);
-        FUN_14251cd30(reinterpret_cast<State*>(state), reinterpret_cast<Value*>(R + 0x178));
-        ++*reinterpret_cast<int*>(R + 0x10);
-        const UInt32 mnw = *reinterpret_cast<UInt32*>(R + 0x148);
-        UInt32* obj = reinterpret_cast<UInt32*>(R + 0x178);
-        const UPInt objPtr = Sfr31Rd(reinterpret_cast<UPInt>(obj), 0x10);
-        bool generic = (mnw & 3) == 1 || ((mnw >> 2) & 1) != 0;
-        bool done = false;
-        if (!generic)
+        ccp = *pos;
+        const UInt32 mn_index = Abc::ReadU30<UInt8>(tv.pCode, ccp);
+        const UInt32 arg_count = Abc::ReadU30<UInt8>(tv.pCode, ccp);
+        Sfr31RdArgsMnObj args;
+        FUN_1424d9640(args.ra, &self->GetVM(), &st, arg_count);
+        args.file = TrAbcLink(tracer);
+        FUN_1424d8ec0(args.mn, args.file, Sfr31MnEntryX(args.file, mn_index));
+        args.ReadNum() += FUN_142520380(&args, args.mn);
+        FUN_14251cd30(&st, args.obj.AsValue());
+        ++args.ReadNum();
+        if (FUN_1424f7540(self, op, &st, &args, static_cast<int>(mn_index)))
         {
-            if (((obj[0] >> 10) & 1) == 0)
+            Sfr31TracerSkipOrigOpCode(tracer, pos, ccp);
+            FUN_1424debc0(&args);
+            return 1;
+        }
+        FUN_1424debc0(&args);
+        return 0;
+    }
+    case 0x4a:  // constructprop
+    {
+        ccp = *pos;
+        const UInt32 mn_index = Abc::ReadU30<UInt8>(tv.pCode, ccp);
+        const UInt32 arg_count = Abc::ReadU30<UInt8>(tv.pCode, ccp);
+        Sfr31RdArgsMnObj args;
+        FUN_1424d9640(args.ra, &self->GetVM(), &st, arg_count);
+        args.file = TrAbcLink(tracer);
+        FUN_1424d8ec0(args.mn, args.file, Sfr31MnEntryX(args.file, mn_index));
+        args.ReadNum() += FUN_142520380(&args, args.mn);
+        FUN_14251cd30(&st, args.obj.AsValue());
+        ++args.ReadNum();
+        const Multiname& mn = *reinterpret_cast<const Multiname*>(args.mn);
+        const Value& obj = *args.obj.AsValue();
+        const UInt32 mnw = static_cast<UInt32>(args.mn[0]);
+        bool result = false;
+        if ((mnw & 3) != 1 && ((mnw >> 2) & 1) == 0)
+        {
+            if (obj.IsArtificialClass())
             {
-                if (argc != 0)
-                    generic = true;
-                else
+                switch (obj.GetKind())
                 {
-                    const UPInt tr = Sfr31TrTraitsOfVal(vmA, obj);
-                    UPInt slotInd = 0;
-                    const SlotInfo* si = FindFixedSlot(*reinterpret_cast<VM*>(vmA), *reinterpret_cast<const Traits*>(tr),
-                                                       *reinterpret_cast<const Multiname*>(R + 0x148), slotInd, 0);
-                    if (!si)
-                        generic = true;
-                    else
+                case Value::kClassTraits:
+                    self->PushNewOpCode(static_cast<Abc::Code::OpCode>(0x42), static_cast<UPInt>(arg_count));
+                    st.GetOpStack().PushBack(Value(obj.GetClassTraits().GetInstanceTraits(), Value::NotNull));
+                    goto cp_done;
+                case Value::kClass:
+                    self->PushNewOpCode(static_cast<Abc::Code::OpCode>(0x42), static_cast<UPInt>(arg_count));
+                    st.GetOpStack().PushBack(Value(obj.AsClass().GetClassTraits().GetInstanceTraits(), Value::NotNull));
+                    goto cp_done;
+                default:
+                    break;
+                }
+            }
+            else if (arg_count == 0)
+            {
+                const Traits* const tr = Sfr31TrValueTraitsOf(tracer, obj);
+                UPInt slot_ind;
+                const SlotInfo* si = FindFixedSlot(self->GetVM(), *tr, mn, slot_ind, 0);
+                if (si)
+                {
+                    self->PushNewOpCode(static_cast<Abc::Code::OpCode>(0xb6), static_cast<UPInt>(static_cast<UInt32>(slot_ind) + 1));
+                    self->PushNewOpCode(static_cast<Abc::Code::OpCode>(0x42), static_cast<UPInt>(arg_count));
                     {
-                        FUN_14251fb90(reinterpret_cast<void*>(tracer), 0xb6, static_cast<SPInt>(static_cast<UInt32>(slotInd) + 1));
-                        FUN_14251fb90(reinterpret_cast<void*>(tracer), 0x42, 0);
-                        TrPopped res;
-                        res.w0 = 0;
-                        res.w1 = 0;
-                        res.w2 = 0;
-                        res.w3 = 0;
-                        char okb[8];
-                        const char* r = Scaleform::GFx::AS3::TR::Sfr33TRStateAccess19::PropType(reinterpret_cast<void*>(state), okb, reinterpret_cast<const void*>(tr),
-                                                      si, res.Get());
+                        Value type;
+                        char okb;
+                        const char* r = Scaleform::GFx::AS3::TR::Sfr33TRStateAccess19::PropType(&st, &okb, tr, si, type);
                         if (*r == 0)
                         {
-                            res.Get().~Value();
-                            FUN_1424debc0(R);
-                            return 0;
+                            FUN_1424debc0(&args);
+                            return result;
                         }
-                        reinterpret_cast<ArrayDH<Value>*>(state + 0x38)->PushBack(res.Get());
-                        res.Get().~Value();
-                        done = true;
+                        st.GetOpStack().PushBack(type);
                     }
+                    goto cp_done;
                 }
             }
-            else
-            {
-                const UInt32 k = obj[0] & 0x1f;
-                UPInt it;
-                if (k == 9)
-                {
-                    FUN_14251fb90(reinterpret_cast<void*>(tracer), 0x42, static_cast<SPInt>(argc));
-                    it = Sfr31Rd(objPtr, 0xc0);
-                    Sfr31TrPushTraits(state, 8, it);
-                    done = true;
-                }
-                else if (k == 0xd)
-                {
-                    FUN_14251fb90(reinterpret_cast<void*>(tracer), 0x42, static_cast<SPInt>(argc));
-                    it = Sfr31Rd(Sfr31Rd(objPtr, 0x20), 0xc0);
-                    Sfr31TrPushTraits(state, 8, it);
-                    done = true;
-                }
-                else
-                    generic = true;
-            }
         }
-        if (generic)
-        {
-            FUN_14251fa10(reinterpret_cast<void*>(tracer), 0x4a, idx, argc);
-            Sfr31TrPushTraits(state, 8, Sfr31Rd(Sfr31Rd(vmA, 0x1f8), 0xc0));
-            done = true;
-        }
-        if (done)
-            Sfr31TracerSkipOrigOpCode(tracer, pos, p);
-        FUN_1424debc0(R);
-        return done;
+        self->PushNewOpCode(static_cast<Abc::Code::OpCode>(0x4a), mn_index, arg_count);
+        st.GetOpStack().PushBack(Value(*reinterpret_cast<InstanceTraits::Traits*>(Sfr31Rd(Sfr31Rd(reinterpret_cast<UPInt>(&self->GetVM()), 0x1f8), 0xc0)), Value::NotNull));
+    cp_done:
+        Sfr31TracerSkipOrigOpCode(tracer, pos, ccp);
+        result = true;
+        FUN_1424debc0(&args);
+        return result;
     }
-    case 0x5d:
+    case 0x87:  // astypelate
     {
-        p = *pos;
-        const int idx = static_cast<int>(Abc::ReadU30<UInt8>(code, p));
-        const UInt8 c = code[p];
-        UPInt q = p + 1;
-        const int r = FUN_14250c990(tracer, p);
-        if (c == 'f')
+        const Value class_ = st.PopOpValue();
+        const ClassTraits::Traits* ctr = NULL;
+        switch (class_.GetKind())
         {
-            Abc::ReadU30<UInt8>(code, q);
-            if (FUN_1424f7cc0(tracer, reinterpret_cast<void*>(state), idx, true, r, true))
+        case Value::kClassTraits:
+            ctr = &class_.GetClassTraits();
+            break;
+        case Value::kClass:
+            ctr = &class_.AsClass().GetClassTraits();
+            break;
+        default:
+            break;
+        }
+        if (ctr)
+        {
+            const Value& value = st.GetOpStack().Back();
+            if (value.IsNull() || Sfr31SetTraitsForValue(tracer, reinterpret_cast<const UInt32*>(&value), reinterpret_cast<UPInt>(ctr)))
             {
-                Sfr31TracerSkipOrigOpCode(tracer, pos, q);
+                FUN_1424f9180(self);
+                Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
+                st.ConvertOpTo(ctr->GetInstanceTraits(), Value::NullOrNot);
                 return 1;
             }
         }
-        else if (FUN_1424f7cc0(tracer, reinterpret_cast<void*>(state), idx, false, r, true))
-        {
-            Sfr31TracerSkipOrigOpCode(tracer, pos, p);
-            return 1;
-        }
-    }
-    // fall through: the plain find-property trace
-    case 0x5e:
-    case 0x60:
-    {
-        p = *pos;
-        const int idx = static_cast<int>(Abc::ReadU30<UInt8>(code, p));
-        if (FUN_1424f7cc0(tracer, reinterpret_cast<void*>(state), idx, op == 0x60, 2, false))
-        {
-            Sfr31TracerSkipOrigOpCode(tracer, pos, p);
-            return 1;
-        }
+        st.GetOpStack().PushBack(class_);
         return 0;
-    }
-    case 0x62:
-    {
-        p = *pos;
-        const UInt32 reg = Abc::ReadU30<UInt8>(code, p);
-        return Sfr31TracerOptRegIncDec(tracer, pos, p, state, reg);
-    }
-    case 0xd0:
-    case 0xd1:
-    case 0xd2:
-    case 0xd3:
-        return Sfr31TracerOptRegIncDec(tracer, pos, *pos, state, op - 0xd0u);
-    case 100:
-    {
-        const UInt8 c = code[*pos];
-        p = *pos + 1;
-        if (c == 'l')
-        {
-            Sfr31StatePushTyped(state);
-            FUN_14251f930(reinterpret_cast<void*>(tracer), 0x6e);
-            const UInt32 slot = Abc::ReadU30<UInt8>(code, p);
-            Sfr31TraceGetSlot(reinterpret_cast<State*>(state), slot);
-            Sfr31TracerSkipOrigOpCode(tracer, pos, p);
-            return 1;
-        }
-        if (c != '+')
-            return 0;
-        UPInt* posArr = reinterpret_cast<UPInt*>(tracer + 0x70);
-        reinterpret_cast<Scaleform::Sfr19PosData*>(posArr)->Resize(posArr[1] + 1);
-        reinterpret_cast<UPInt*>(posArr[0])[posArr[1] - 1] = p;
-        const UInt8 d = code[p++];
-        if (d == 'm')
-        {
-            FUN_14251f930(reinterpret_cast<void*>(tracer), 0x6f);
-            Sfr31StatePushTyped(state);
-            Sfr31StateSwapOp(state);
-            const UInt32 slot = Abc::ReadU30<UInt8>(code, p);
-            Sfr31TracePop2Note(reinterpret_cast<State*>(state), slot);
-            Sfr31TracerSkipOrigOpCode(tracer, pos, p);
-            return 1;
-        }
-        reinterpret_cast<Scaleform::Sfr19PosData*>(posArr)->Resize(posArr[1] - 1);
-        return 0;
-    }
-    case 0x70:
-    case 0x85:
-    {
-        const UInt32 k = top[0] & 0x1f;
-        if (op == 0x85 && k == 10)
-            return 1;
-        const UInt32 kk = k - 0xc;
-        if ((kk > 3 || Sfr31Rd(reinterpret_cast<UPInt>(top), 0x10) != 0) && !FUN_142514e10(tracer, top))
-            return 0;
-        int nn = 2;
-        if (op == 0x85)
-            nn = (kk < 4 ? (Sfr31Rd(reinterpret_cast<UPInt>(top), 0x10) != 0 ? 1 : 0) : 1) + 1;
-        FUN_1424f1e50(state, Sfr31Rd(Sfr31Rd(vmA, 0x230), 0xc0), nn);
-        Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
-        return 1;
     }
     case 0x73:
-        if (!FUN_142514c30(tracer, top))
-            return 0;
-        Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
-        return 1;
+        if (self->IsSIntType(st.GetOpStack().Back()))
+        {
+            Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
+            return 1;
+        }
+        return 0;
     case 0x74:
-        if (!FUN_1425150c0(tracer, top))
-            return 0;
-        Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
-        return 1;
+        if (self->IsUIntType(st.GetOpStack().Back()))
+        {
+            Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
+            return 1;
+        }
+        return 0;
     case 0x75:
-        if (!FUN_142514470(tracer, top))
-            return 0;
-        Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
-        return 1;
+        if (self->IsNumberType(st.GetOpStack().Back()))
+        {
+            Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
+            return 1;
+        }
+        return 0;
     case 0x76:
-        if (!FUN_142514000(tracer, top))
-            return 0;
-        Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
-        return 1;
-    case 0x80:
+        if (self->IsBooleanType(st.GetOpStack().Back()))
+        {
+            Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
+            return 1;
+        }
+        return 0;
+    case 0x70:
     {
-        p = *pos;
-        const UInt32 idx = Abc::ReadU30<UInt8>(code, p);
-        const UPInt entry = reinterpret_cast<UPInt>(&Sfr31MnEntry(link, idx));
-        UInt8* const endp = stk + Sfr31Rd(state, 0x40) * 0x20;
-        UInt32* const tv = reinterpret_cast<UInt32*>(endp - 0x20);
-        const UPInt tr = Sfr31ResolveClassTraits(vmA, link, entry);
-        if (tr == 0)
+        const Value& value = st.GetOpStack().Back();
+        if (value.IsNull() || self->IsStringType(value))
         {
-            UPInt sv[2];
-            FUN_142545310(Sfr31Rd(TrFile(tracer), 0x70) + static_cast<UPInt>(*reinterpret_cast<const UInt32*>(entry + 8)) * 8, sv);
-            alignas(8) char eb[sizeof(VM::Error)];
-            FUN_1424d7850(eb, 0x3f6, reinterpret_cast<void*>(vmA), reinterpret_cast<const char*>(sv[0]));
-            reinterpret_cast<VM*>(vmA)->ThrowVerifyError(*reinterpret_cast<VM::Error*>(eb));
-            reinterpret_cast<VM::Error*>(eb)->~Error();
+            st.ConvertOpTo(self->GetStringType(), Value::NullOrNot);
+            Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
             return 1;
         }
-        const UPInt it = Sfr31Rd(tr, 0xc0);
-        const UInt32 k = tv[0] & 0x1f;
-        bool nullable = false;
-        if (k == 0)
-        {
-            if (it != Sfr31Rd(Sfr31Rd(vmA, 0x1f0), 0xc0) && it != Sfr31Rd(Sfr31Rd(vmA, 0x220), 0xc0) &&
-                it != Sfr31Rd(Sfr31Rd(vmA, 0x228), 0xc0) && it != Sfr31Rd(Sfr31Rd(vmA, 0x218), 0xc0) &&
-                it != Sfr31Rd(Sfr31Rd(vmA, 0x210), 0xc0) && it != Sfr31Rd(vmA, 0x278) &&
-                it != Sfr31Rd(Sfr31Rd(vmA, 0x230), 0xc0))
-            {
-                UPInt* posArr = reinterpret_cast<UPInt*>(tracer + 0x90);
-                if (posArr[1] != 0)
-                {
-                    UPInt* ops = reinterpret_cast<UPInt*>(Sfr31Rd(tracer, 0x28));
-                    UInt64* arr = reinterpret_cast<UInt64*>(ops[0]);
-                    if (*reinterpret_cast<int*>(&arr[reinterpret_cast<UPInt*>(posArr[0])[posArr[1] - 1]]) == 0x21)
-                    {
-                        arr[ops[1] - 1] = 0x20;
-                        FUN_1424f1e50(state, it, 1);
-                        Sfr31TracerSkipOrigOpCode(tracer, pos, p);
-                        return 1;
-                    }
-                }
-            }
-        }
-        else if (k - 0xc < 4 && Sfr31Rd(reinterpret_cast<UPInt>(tv), 0x10) == 0)
-            nullable = true;
-        if (!nullable && !Sfr31SetTraitsForValue(tracer, tv, tr))
-        {
-            Sfr31TracerSkipOrigOpCode(tracer, pos, p);
-            FUN_14251fb90(reinterpret_cast<void*>(tracer), 0x80, static_cast<SPInt>(idx));
-            FUN_1424f1e50(state, it, 2);
-            return 1;
-        }
-        int nt = FUN_1424eea80(tracer, it);
-        if ((tv[0] & 0x1f) - 0xc < 4 && Sfr31Rd(reinterpret_cast<UPInt>(tv), 0x10) == 0)
-            nt = 1;
-        FUN_1424f1e50(state, it, nt);
-        Sfr31TracerSkipOrigOpCode(tracer, pos, p);
-        return 1;
-    }
-    case 0x82:
-        if (FUN_142514c30(tracer, top) || FUN_1425150c0(tracer, top))
-        {
-            FUN_14251f930(reinterpret_cast<void*>(tracer), 0x75);
-            if ((top[0] & 0x1f) - 2 > 1)
-                FUN_1424f1e50(state, Sfr31Rd(Sfr31Rd(vmA, 0x218), 0xc0), 0);
-            else
-                reinterpret_cast<Value*>(top)->ToNumberValueInline();
-            return 1;
-        }
-        Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
-        return 1;
-    case 0x87:
-    {
-        TrPopped pv;
-        FUN_14251cd30(reinterpret_cast<State*>(state), &pv.Get());
-        const UInt32 k = pv.w0 & 0x1f;
-        UPInt ct = pv.w2;
-        if (k == 0xd)
-            ct = Sfr31Rd(ct, 0x20);
-        if ((k == 9 || k == 0xd) && ct != 0)
-        {
-            UInt32* t2 = reinterpret_cast<UInt32*>(stk + Sfr31Rd(state, 0x40) * 0x20 - 0x20);
-            if (((t2[0] & 0x1f) - 0xc < 4 && Sfr31Rd(reinterpret_cast<UPInt>(t2), 0x10) == 0) ||
-                Sfr31SetTraitsForValue(tracer, t2, ct))
-            {
-                FUN_1424f9180(reinterpret_cast<void*>(tracer));
-                Sfr31TracerSkipOrigOpCode(tracer, pos, *pos);
-                FUN_1424f1e50(state, Sfr31Rd(ct, 0xc0), 2);
-                pv.Get().~Value();
-                return 1;
-            }
-        }
-        reinterpret_cast<ArrayDH<Value>*>(state + 0x38)->PushBack(pv.Get());
-        pv.Get().~Value();
         return 0;
     }
-    case 0xa0:
+    case 0xa0:  // add
     {
-        TrPopped b;
-        TrPopped a;
-        FUN_14251cd30(reinterpret_cast<State*>(state), &b.Get());
-        FUN_14251cd30(reinterpret_cast<State*>(state), &a.Get());
-        const UPInt ta = Sfr31TrTraitsOfVal(vmA, reinterpret_cast<UInt32*>(&a));
-        const UPInt tb = Sfr31TrTraitsOfVal(vmA, reinterpret_cast<UInt32*>(&b));
-        const UPInt strT = Sfr31Rd(Sfr31Rd(vmA, 0x230), 0xc0);
-        UInt32 flags = 8;
-        UPInt owner;
-        if (ta == strT || tb == strT)
+        const Value _2 = st.PopOpValue();
+        const Value _1 = st.PopOpValue();
+        const Traits* const _1tr = Sfr31TrValueTraitsOf(tracer, _1);
+        const Traits* const _2tr = Sfr31TrValueTraitsOf(tracer, _2);
+        if (_1tr == &self->GetStringType() || _2tr == &self->GetStringType())
         {
-            FUN_14251f930(reinterpret_cast<void*>(tracer), 0xa0);
-            owner = Sfr31Rd(vmA, 0x230);
-            flags = 0x48;
+            self->PushNewOpCode(static_cast<Abc::Code::OpCode>(0xa0));
+            st.GetOpStack().PushBack(Value(self->GetStringType(), Value::NullOrNot));
+        }
+        else if (self->IsNumberType(_1) && self->IsNumberType(_2))
+        {
+            self->PushNewOpCode(static_cast<Abc::Code::OpCode>(0x7c));
+            st.GetOpStack().PushBack(Value(self->GetNumberType(), Value::NotNull));
+        }
+        else if (tv.pCode[*pos] == 0x75)
+        {
+            self->PushNewOpCode(static_cast<Abc::Code::OpCode>(0x9b));
+            Sfr31TracerSkipOrigOpCode(tracer, pos, *pos + 1);
+            st.GetOpStack().PushBack(Value(self->GetNumberType(), Value::NotNull));
+        }
+        else if (self->IsSIntType(_1) && self->IsSIntType(_2))
+        {
+            self->PushNewOpCode(static_cast<Abc::Code::OpCode>(0x79));
+            st.GetOpStack().PushBack(Value(self->GetSIntType(), Value::NotNull));
         }
         else
         {
-            bool number = false;
-            if (FUN_142514470(tracer, &a) && FUN_142514470(tracer, &b))
-            {
-                FUN_14251f930(reinterpret_cast<void*>(tracer), 0x7c);
-                number = true;
-            }
-            else if (code[*pos] == 0x75)
-            {
-                FUN_14251f930(reinterpret_cast<void*>(tracer), 0x9b);
-                Sfr31TracerSkipOrigOpCode(tracer, pos, *pos + 1);
-                number = true;
-            }
-            else if (FUN_142514c30(tracer, &a) && FUN_142514c30(tracer, &b))
-            {
-                FUN_14251f930(reinterpret_cast<void*>(tracer), 0x79);
-                owner = Sfr31Rd(vmA, 0x220);
-            }
+            self->PushNewOpCode(static_cast<Abc::Code::OpCode>(0xa0));
+            if (self->IsPrimitiveType(_1tr) && self->IsPrimitiveType(_2tr))
+                st.GetOpStack().PushBack(Value(self->GetNumberType(), Value::NotNull));
             else
-            {
-                FUN_14251f930(reinterpret_cast<void*>(tracer), 0xa0);
-                if (FUN_142514a80(tracer, reinterpret_cast<void*>(ta)) && FUN_142514a80(tracer, reinterpret_cast<void*>(tb)))
-                    number = true;
-                else
-                {
-                    owner = Sfr31Rd(vmA, 0x1f8);
-                    flags = 0x48;
-                }
-            }
-            if (number)
-                owner = Sfr31Rd(vmA, 0x218);
+                st.GetOpStack().PushBack(Value(*reinterpret_cast<InstanceTraits::Traits*>(Sfr31Rd(Sfr31Rd(reinterpret_cast<UPInt>(&self->GetVM()), 0x1f8), 0xc0)), Value::NullOrNot));
         }
-        Sfr31TrPushTraits(state, flags, Sfr31Rd(owner, 0xc0));
-        a.Get().~Value();
-        b.Get().~Value();
         return 1;
     }
     }
