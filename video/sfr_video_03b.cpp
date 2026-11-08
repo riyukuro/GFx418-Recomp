@@ -23,8 +23,8 @@ namespace Scaleform { namespace GFx { int FUN_1427443c0(void* channel, int type,
 ExeDecl<uint64_t()>::type FUN_1425e3480;
 namespace Scaleform { unsigned FUN_142745f50(void*); }
 namespace Scaleform { void ReserveVideoPlayerArray(void** array, void* heap, UPInt requested); }   // ArrayData<VideoPlayerImpl*>::Reserve (sfr_as3_22)
-extern ExeDecl<void*>::type DAT_1431b4c60; struct Sd_1431bec40; extern "C" Sd_1431bec40 DAT_1431bec40;
-#define VideoAudioVtableA DAT_1431b4c60
+extern ExeDecl<void*>::type DAT_1431b4c60[]; struct Sd_1431bec40; extern "C" Sd_1431bec40 DAT_1431bec40;
+#define VideoAudioVtableA (*DAT_1431b4c60)
 #define VideoAudioVtableB (*reinterpret_cast<void**>(&DAT_1431bec40))
 struct Sd_1431bed60; extern "C" Sd_1431bed60 DAT_1431bed60; struct Sd_1431bedd8; extern "C" Sd_1431bedd8 DAT_1431bedd8;
 #define VideoAudioDeleteVtable (*reinterpret_cast<void**>(&DAT_1431bed60))

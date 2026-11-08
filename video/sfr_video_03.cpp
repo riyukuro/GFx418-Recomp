@@ -51,8 +51,8 @@ extern ExeDecl<void*>::type DAT_143b27600;
 #define VideoThunkBaseD DAT_143b27600
 extern ExeDecl<void*>::type DAT_143b27638;
 #define VideoThunkE DAT_143b27638
-extern ExeDecl<void*>::type DAT_1431b7ba0;
-#define VideoDisplayVtable DAT_1431b7ba0
+extern ExeDecl<void*>::type DAT_1431b7ba0[];
+#define VideoDisplayVtable (*DAT_1431b7ba0)
 static const float VideoDurationScale = 1000.0f;    // exe 0x142d15c1c
 extern ExeDecl<void*>::type DAT_143b27640;
 #define VideoThunkBaseE DAT_143b27640
@@ -155,8 +155,8 @@ ExeDecl<void(void*, void*, const void*, void*, unsigned, void*, unsigned)>::type
 ExeDecl<void(void*, void*, double)>::type FUN_1424d2150;   // SoundTransform setter (Value const&, double): the value travels in xmm2
 ExeDecl<void(void*)>::type FUN_140026ed0;
 ExeDecl<void()>::type FUN_140026db0;
-extern ExeDecl<void*>::type DAT_1431b7c70;
-#define VideoTraitsVtable DAT_1431b7c70
+extern ExeDecl<void*>::type DAT_1431b7c70[];
+#define VideoTraitsVtable (*DAT_1431b7c70)
 // (AvmVideoCharacter's ctor 0x14001af70, at the end of the file, stores its three vftables by name)
 //
 //
@@ -170,17 +170,17 @@ extern ExeDecl<void*>::type DAT_1431b7c70;
 //
 //
 //
-extern ExeDecl<void*>::type DAT_1431b7160; extern ExeDecl<void*>::type DAT_1431b7900;
+extern ExeDecl<void*>::type DAT_1431b7160; extern ExeDecl<void*>::type DAT_1431b7900[];
 #define VideoClassInfoA DAT_1431b7160
-#define VideoClassVtableA DAT_1431b7900
-struct Sd_1431b71b0; extern Sd_1431b71b0 DAT_1431b71b0; struct Sd_1431b7260; extern Sd_1431b7260 DAT_1431b7260;
-#define VideoInstanceVtableA (*reinterpret_cast<void**>(&DAT_1431b71b0))
-#define VideoCTraitsVtable (*reinterpret_cast<void**>(&DAT_1431b7260))
-extern ExeDecl<void*>::type DAT_1431b7b50; extern ExeDecl<void*>::type DAT_1431b7d50;
+#define VideoClassVtableA (*DAT_1431b7900)
+extern void* DAT_1431b71b0[]; extern void* DAT_1431b7260[];
+#define VideoInstanceVtableA (*DAT_1431b71b0)
+#define VideoCTraitsVtable (*DAT_1431b7260)
+extern ExeDecl<void*>::type DAT_1431b7b50; extern ExeDecl<void*>::type DAT_1431b7d50[];
 #define VideoClassInfoB DAT_1431b7b50
-#define VideoClassVtableB DAT_1431b7d50
-extern ExeDecl<void*>::type DAT_1431b7c70;
-#define VideoInstanceVtableB DAT_1431b7c70
+#define VideoClassVtableB (*DAT_1431b7d50)
+extern ExeDecl<void*>::type DAT_1431b7c70[];
+#define VideoInstanceVtableB (*DAT_1431b7c70)
 ExeDecl<void(void*)>::type FUN_1424df220;
 ExeDecl<void*(void*)>::type FUN_1424eb610;
 namespace Scaleform { namespace GFx { namespace Video { class VideoCharacter; class VideoProvider; }}}

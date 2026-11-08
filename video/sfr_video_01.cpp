@@ -30,10 +30,10 @@ template <class T> struct ExeDecl { typedef T type; };
 // (C3: real Prototype<VideoObject> ctor/dtor) #define VideoProtoInterfaceVtable DAT_1431b5940
 // (C3: real Prototype<VideoObject> ctor/dtor) extern ExeDecl<void*>::type DAT_1431b5938;
 // (C3: real Prototype<VideoObject> ctor/dtor) #define VideoProtoBaseVtable DAT_1431b5938
-extern ExeDecl<void*>::type DAT_1431b4be0;
-#define VideoSoundStreamVtable DAT_1431b4be0
-extern ExeDecl<void*>::type DAT_1431b4ce0;
-#define VideoSoundChannelSystemVtable DAT_1431b4ce0
+extern ExeDecl<void*>::type DAT_1431b4be0[];
+#define VideoSoundStreamVtable (*DAT_1431b4be0)
+extern ExeDecl<void*>::type DAT_1431b4ce0[];
+#define VideoSoundChannelSystemVtable (*DAT_1431b4ce0)
 // The AS2 AvmVideoCharacter vftables (0x1431b5cb0 / 0x1431b5c00 / 0x1431b5b40) come from its ctor (0x14000e2b0).
 //
 //

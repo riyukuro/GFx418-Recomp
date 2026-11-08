@@ -122,8 +122,8 @@ extern void FUN_14257eb30(void*);
 #include "../include/render/render_gradients.h"   // GradientData, for ComplexFill's Ptr<GradientData>
 namespace Scaleform { namespace Render { inline ComplexFill::ComplexFill() : BindIndex(~0u) {} }}   // the SDK ctor (as in sfr_gfx_06e): the fill below stores ??_7ComplexFill by name
 namespace Scaleform { typedef ArrayPagedBase<const GFx::AS3::RefCountBaseGC<323>*, 10, 5, AllocatorPagedLH_POD<const GFx::AS3::RefCountBaseGC<323>*, 2> > Video02GcRoots; template<> bool Video02GcRoots::allocatePageSafe(UPInt); struct ArrayPagedFriend { static bool AllocatePageSafe(Video02GcRoots* a, UPInt nb) { return a->allocatePageSafe(nb); } }; } // (C3) FUN_1423dfe30
-extern void* PTR_FUN_1431b71b0;
-extern void* PTR_FUN_1431b7260;
+extern void* DAT_1431b71b0[];
+extern void* DAT_1431b7260[];
 void FUN_140012340(const Scaleform::GFx::AS2::FnCall& call);   // NetConnection's script constructor (below)
 namespace Scaleform { namespace GFx { namespace AS2 { class NetConnectionCtorFunction : public CFunctionObject { public:
     NetConnectionCtorFunction(ASStringContext* psc);   // exe 0x140012650
@@ -138,13 +138,13 @@ namespace Scaleform { namespace GFx { namespace AS2 { class NetConnectionCtorFun
 //
 //
 //
-extern void* PTR_FUN_1431b7360;
+extern void* DAT_1431b7360[];
 //
 //
 //
 //
 //
-extern void* PTR_FUN_1431b7858;
+extern void* DAT_1431b7858[];
 extern void* DAT_143b274d8;
 extern void* DAT_143b274e0;
 extern void* DAT_143b27518;
@@ -924,7 +924,7 @@ void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher* d
     // the exe's dtor: vftable store, the player detached with no null check, the AS3 Value members destroyed in
     // place in reverse order (0xd8, 0xb8, 0x98), then the two weak references (+0x58, +0x50)
     char* fields = reinterpret_cast<char*>(dispatcher);
-    *reinterpret_cast<void**>(fields) = &PTR_FUN_1431b7360;
+    *reinterpret_cast<void**>(fields) = DAT_1431b7360;
     *reinterpret_cast<void**>(*reinterpret_cast<char**>(fields + 0x50) + 0x18) = 0;
     ((::Scaleform::GFx::AS3::VideoProviderNetStream*)(*reinterpret_cast<void**>(fields + 0x50)))->Stop();
     reinterpret_cast<Scaleform::GFx::AS3::Value*>(fields + 0xd8)->~Value();
@@ -2106,7 +2106,7 @@ void* FUN_140012ec0(void* object, void* vm, void* classInfo)
 {
     static_cast<Scaleform::GFx::AS3::InstanceTraits::CTraits*>(object)->Scaleform::GFx::AS3::InstanceTraits::CTraits::CTraits(
         *static_cast<Scaleform::GFx::AS3::VM*>(vm), *static_cast<const Scaleform::GFx::AS3::ClassInfo*>(classInfo));
-    *reinterpret_cast<void**>(object) = &PTR_FUN_1431b71b0;
+    *reinterpret_cast<void**>(object) = DAT_1431b71b0;
     *reinterpret_cast<unsigned*>(static_cast<char*>(object) + 0x60) = 0xf8;
     return object;
 }
@@ -2116,7 +2116,7 @@ void* FUN_140012f10(void* object, void* traits)
 {
     static_cast<Scaleform::GFx::AS3::Class*>(object)->Scaleform::GFx::AS3::Class::Class(
         *static_cast<Scaleform::GFx::AS3::ClassTraits::Traits*>(traits));
-    *reinterpret_cast<void**>(object) = &PTR_FUN_1431b7260;
+    *reinterpret_cast<void**>(object) = DAT_1431b7260;
     return object;
 }
 
@@ -2289,7 +2289,7 @@ void* FUN_1400140e0(void* object, void* traits)
         Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher::EventDispatcher(
             *static_cast<Scaleform::GFx::AS3::InstanceTraits::Traits*>(traits));
     unsigned char* bytes = static_cast<unsigned char*>(object);
-    *reinterpret_cast<void**>(bytes) = &PTR_FUN_1431b7360;
+    *reinterpret_cast<void**>(bytes) = DAT_1431b7360;
     *reinterpret_cast<void**>(bytes + 0x50) = 0;
     *reinterpret_cast<void**>(bytes + 0x58) = 0;
     *reinterpret_cast<unsigned*>(bytes + 0x98) = 0;
@@ -2519,7 +2519,7 @@ void FUN_140015c40(void* object)
     if (relay)
     {
         *reinterpret_cast<unsigned*>(static_cast<char*>(relay) + 8) = 1;
-        *reinterpret_cast<void**>(relay) = &PTR_FUN_1431b7858;
+        *reinterpret_cast<void**>(relay) = DAT_1431b7858;
         *reinterpret_cast<void**>(static_cast<char*>(relay) + 0x10) = object;
     }
     else
