@@ -8219,35 +8219,52 @@ struct Sfr31StickyNodeView
     Value    Val;                   // +0x20
 };
 
+// The display object's interface part (at +[0x6d]*4); slot 1 is GetAvmObjImpl (a virtual call, as DisplayObject::GetAvmObjImpl).
+struct Sfr31AvmObjHolder
+{
+    virtual void  Slot0() = 0;
+    virtual UPInt GetAvmObjImpl() = 0;
+};
+
+// Value(ASString, InlineStr) whose dtor expands Value::ReleaseInternal in place (the exe's LTCG inlines the kind switch here).
+struct Sfr31InlineStrValue : Sfr19InlineReleaseValue
+{
+    __forceinline explicit Sfr31InlineStrValue(const ASString& s) { ::new (Buf) Value(s, Value::InlineStr); }
+};
+
 // MovieRoot: applies the sticky variables kept for a display object (SetVariable calls made before the object existed) to its AS3 object.
 // The ones not marked permanent are dropped from the object's chain (and the chain from the table when none is left).
-// MS2-FUNCTIONAL 0x142525500: SDK body (AS3_MovieRoot.cpp) with the QName Multiname ctor inlined; what remains is the frame
-// (slots 8 bytes apart), the register choice (exe r13 zero / r12 node) and the exe keeping the QName name copy in a slot.
+// MS2-FUNCTIONAL 0x142525500: SDK body (AS3_MovieRoot.cpp) with the QName Multiname ctor and the name temp's ReleaseInternal
+// inlined; what remains is the register choice (exe r14 root / r15 path / r13 zero / r12 node) and the exe keeping the
+// QName name copy in a slot.
 // @0x142525500
 void Sfr31ResolveStickyVariables(UPInt root, UPInt dobj)
 {
     UPInt handle = Sfr31Rd(dobj, 0x70);
     if (handle == 0)
         handle = reinterpret_cast<UPInt>(reinterpret_cast<DisplayObject*>(dobj)->GetCharacterHandle());
-//
-    const UPInt sub = dobj + *reinterpret_cast<const UByte*>(dobj + 0x6d) * 4;
-    typedef UPInt (*GetAvmFn)(UPInt);
-    const UPInt avm = reinterpret_cast<GetAvmFn>(Sfr31Rd(Sfr31Rd(sub, 0), 8))(sub);
-    if (avm == 0)
-        return;
-    UPInt avmObj = Sfr31Rd(avm - 0x20, 0);
-    if (avmObj == 0)
-        avmObj = Sfr31Rd(avm - 0x28, 0);
-    if (avmObj & 1)
-        avmObj -= 1;
-    typedef ASStringHash<MovieImpl::StickyVarNode*> StickyHash;
-    StickyHash& sticky = *reinterpret_cast<StickyHash*>(Sfr31Rd(root, 0x10) + 0x2e08);   // MovieImpl::StickyVariables
     const ASString& path = *reinterpret_cast<const ASString*>(handle + 0x18);              // CharacterHandle::NamePath
+    // ToAvmInteractiveObj(pch)->GetAS3Obj(): the AvmDisplayObj sits 0x30 below the interface GetAvmObjImpl returns.
+    const UPInt sub = dobj + *reinterpret_cast<const UByte*>(dobj + 0x6d) * 4;
+    const UPInt avm = reinterpret_cast<Sfr31AvmObjHolder*>(sub)->GetAvmObjImpl();
+    const UPInt avmDisp = avm ? avm - 0x30 : 0;
+    union
+    {
+        UPInt   v;
+        Object* p;
+    } u;
+    Object* const raw = *reinterpret_cast<Object* const*>(avmDisp + 0x10);        // pAS3RawPtr
+    u.p = raw ? raw : *reinterpret_cast<Object* const*>(avmDisp + 0x08);         // pAS3CollectiblePtr
+    if (u.v & 1)
+        u.v -= 1;
+    typedef ASStringHash<MovieImpl::StickyVarNode*> StickyHash;
+    // pMovieImpl->StickyVariables, re-read at each use as in the SDK
+#define MS2_STICKY (*reinterpret_cast<StickyHash*>(Sfr31Rd(root, 0x10) + 0x2e08))
     MovieImpl::StickyVarNode* _pnode = 0;
     Sfr31StickyNodeView *p, *pnext, *pnode;
-    Object* const pobj = reinterpret_cast<Object*>(avmObj);
+    Object* const pobj = u.p;
 
-    if (sticky.Get(path, &_pnode))
+    if (MS2_STICKY.Get(path, &_pnode))
     {
         pnode = reinterpret_cast<Sfr31StickyNodeView*>(_pnode);
         Sfr31StickyNodeView* ppermanent = 0;
@@ -8258,7 +8275,7 @@ void Sfr31ResolveStickyVariables(UPInt root, UPInt dobj)
         while (p)
         {
             Multiname propname(reinterpret_cast<VM*>(Sfr31Rd(root, 0x48))->GetPublicNamespace(),
-                               Value(p->Name, Value::InlineStr), Multiname::InlineQNameTag());
+                               Sfr31InlineStrValue(p->Name).Get(), Multiname::InlineQNameTag());
             pobj->SetProperty(propname, p->Val);
             pnext = p->pNext;
 
@@ -8284,13 +8301,13 @@ void Sfr31ResolveStickyVariables(UPInt root, UPInt dobj)
         if (ppermanent)
         {
             if (ppermanent != pnode)
-                sticky.Set(path, reinterpret_cast<MovieImpl::StickyVarNode*>(ppermanent));
+                MS2_STICKY.Set(path, reinterpret_cast<MovieImpl::StickyVarNode*>(ppermanent));
         }
         else
-            sticky.Remove(path);
+            MS2_STICKY.Remove(path);
     }
 }
-//
+#undef MS2_STICKY
 //
 //
 //
