@@ -3894,12 +3894,6 @@ UPInt* FUN_1424d9ca0(UPInt* self, UPInt arg)
     return self;
 }
 
-// CallFrame::GetMethodBodyInfo: GetFile().GetMethodBody().Get(GetMethodBodyInd()), as raw words.
-static inline UPInt Sfr15MethodBodyGet(int ind, UPInt table)
-{
-    return (*reinterpret_cast<UPInt**>(table + 0x170))[ind];
-}
-
 // FixedBitSetBase(pheapAddr, bitsCount) over {pData, BitsCount}.
 static inline void Sfr15BitSetInit(UPInt* bs, UPInt heap, unsigned bitsCount)
 {
@@ -3912,8 +3906,9 @@ static inline void Sfr15BitSetInit(UPInt* bs, UPInt heap, unsigned bitsCount)
 }
 
 // Three heap-owned arrays and a bit set sized from the abc file's table (Tracer state, SDK TR::State::State).
-// MS2-FUNCTIONAL: raw words; the layout of the three arrays is {Data, Size, Policy, Heap}. The exe reads the call
-// frame before the heap and keeps the method-body index in r8 (ours rdx), so its lea of the AllocInfo stays late.
+// Raw words; the layout of the three arrays is {Data, Size, Policy, Heap}. The call frame, heap and method-body
+// index are named locals in that order (CallFrame::GetMethodBodyInfo: GetFile().GetMethodBody().Get(ind)), which
+// keeps the index in r8 and the AllocInfo lea late, as in the exe.
 // @0x1424d9be0
 UPInt* FUN_1424d9be0(UPInt* self, UPInt owner, UPInt arg)
 {
@@ -3931,11 +3926,12 @@ UPInt* FUN_1424d9be0(UPInt* self, UPInt owner, UPInt arg)
         a[3] = heapOwner;
     }
     // RegistersAlive(tr.GetHeap(), tr.GetMethodBodyInfo().GetMaxLocalRegisterIndex()).
-    UPInt heap = *reinterpret_cast<UPInt*>(owner + 0x18);
     UPInt frame = *reinterpret_cast<UPInt*>(owner + 0x20);
-    Sfr15BitSetInit(self + 15, heap,
-                    *reinterpret_cast<unsigned*>(Sfr15MethodBodyGet(*reinterpret_cast<int*>(frame + 0x30),
-                        *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(frame + 0x28) + 0x28)) + 0x20));
+    UPInt heap = *reinterpret_cast<UPInt*>(owner + 0x18);
+    UPInt ind = *reinterpret_cast<int*>(frame + 0x30);
+    UPInt* tbl = *reinterpret_cast<UPInt**>(
+        *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(frame + 0x28) + 0x28) + 0x170);
+    Sfr15BitSetInit(self + 15, heap, *reinterpret_cast<unsigned*>(tbl[ind] + 0x20));
     return self;
 }
 
