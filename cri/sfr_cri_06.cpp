@@ -8764,40 +8764,38 @@ void FUN_140059570(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
   _mm_storel_epi64((__m128i*)dst, x0); _mm_storel_epi64((__m128i*)(dst + 8), x1);
 }
 
-// MS2-FUNCTIONAL: the exe keeps a 64-bit trip count (mov rcx,rax) and indexes [d2 + dst]; ours counts h down in 32 bits.
+// MS2-FUNCTIONAL: the for-index loops give the exe's 64-bit trip count (mov rcx,rax). The exe reads h once at entry
+// and folds the source pointers into a distance from dst ([r10 + rdx]); VC9 keeps our walked source pointers apart.
+// The dst-relative do/while form folded the distance but counted h in 32 bits (47 diff lines vs 30 here).
 // SSE2 16-wide vertical half-pel average of src and src + off (two pavgb per row). When off == stride the exe
-// carries the previous row in registers, so each row loads only src + off. The exe walks dst only and reads the
-// sources at a fixed distance from it.
+// carries the previous row in registers, so each row loads only src + off.
 // @0x140059700
 void FUN_140059700(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
 {
-  int n = h;
   const cri_u1* s2 = src + off;
   if (off == stride) {
     __m128i a = _mm_loadl_epi64((const __m128i*)(src));
     __m128i b = _mm_loadl_epi64((const __m128i*)(src + 8));
-    if (n > 0) {
-      __int64 d2 = s2 - dst;
-      do {
-        __m128i c = _mm_loadl_epi64((const __m128i*)(dst + d2));
-        __m128i d = _mm_loadl_epi64((const __m128i*)(dst + d2 + 8));
-        _mm_storel_epi64((__m128i*)(dst), _mm_avg_epu8(a, c));
-        _mm_storel_epi64((__m128i*)(dst + 8), _mm_avg_epu8(b, d));
-        dst += stride;
-        a = c;
-        b = d;
-      } while (--n);
+    for (int i = 0; i < h; ++i) {
+      __m128i c = _mm_loadl_epi64((const __m128i*)(s2));
+      __m128i d = _mm_loadl_epi64((const __m128i*)(s2 + 8));
+      _mm_storel_epi64((__m128i*)(dst), _mm_avg_epu8(a, c));
+      _mm_storel_epi64((__m128i*)(dst + 8), _mm_avg_epu8(b, d));
+      s2 += stride;
+      dst += stride;
+      a = c;
+      b = d;
     }
-  } else if (n > 0) {
-    __int64 d2 = s2 - dst;
-    __int64 d1 = src - dst;
-    do {
-      __m128i hi = _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(dst + d1 + 8)), _mm_loadl_epi64((const __m128i*)(dst + d2 + 8)));
-      __m128i lo = _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(dst + d1)), _mm_loadl_epi64((const __m128i*)(dst + d2)));
+  } else {
+    for (int i = 0; i < h; ++i) {
+      __m128i hi = _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(src + 8)), _mm_loadl_epi64((const __m128i*)(s2 + 8)));
+      __m128i lo = _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(src)), _mm_loadl_epi64((const __m128i*)(s2)));
       _mm_storel_epi64((__m128i*)(dst), lo);
       _mm_storel_epi64((__m128i*)(dst + 8), hi);
+      src += stride;
+      s2 += stride;
       dst += stride;
-    } while (--n);
+    }
   }
 }
 
