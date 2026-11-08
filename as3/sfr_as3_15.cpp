@@ -3424,10 +3424,13 @@ struct MS2_VMDefCallFrame
     UInt64 InvokerValue0, InvokerValue1;
     SF_FORCEINLINE MS2_VMDefCallFrame(MemoryHeap* heap)
         : DiscardResult(false), ACopy(false), RegisteredFunction(false), ScopeStackBaseInd(0), CP(0), pRegisterFile(NULL),
-          pHeap(heap), pFile(NULL), MBIIndex(0), pSavedScope(NULL), OriginationTraits(NULL), pScopeStack(NULL),
-          PrevInitialStackPos(NULL), DefXMLNamespace(NULL), PrevFirstStackPos(NULL), PrevReservedNum(0), Name(NULL),
+          pHeap(heap), pFile(NULL), MBIIndex(0), pSavedScope(NULL), OriginationTraits(NULL), DefXMLNamespace(NULL),
+          PrevFirstStackPos(NULL), PrevReservedNum(0), Name(NULL),
           CurrFileInd(0), CurrLineNumber(0), StartTicks(0), InvokerFlags(0), InvokerBonus(NULL)
     {
+        // set in the body: the exe stores these two after the rest of the frame
+        pScopeStack = NULL;
+        PrevInitialStackPos = NULL;
     }
     SF_FORCEINLINE ~MS2_VMDefCallFrame() { reinterpret_cast<CallFrame*>(this)->~CallFrame(); }
 };
@@ -3436,8 +3439,11 @@ static_assert(sizeof(MS2_VMDefCallFrame) == 0xa8, "CallFrame layout");
 template <class U, class C>
 static SF_FORCEINLINE void MS2_VMCallStackDefault(U& Unk070, C& CallStack, const MS2_VMDefCallFrame& defval)
 {
-    for (unsigned i = 1; i < 5; ++i)
-        Unk070[i] = 0;
+    volatile UPInt* const z = reinterpret_cast<volatile UPInt*>(&Unk070[0]);
+    z[1] = 0;
+    z[2] = 0;
+    z[3] = 0;
+    z[4] = 0;
     new (CallStack) CallFrame(reinterpret_cast<const CallFrame&>(defval));
 }
 
@@ -3455,9 +3461,10 @@ static SF_FORCEINLINE void MS2_VMCallStack(U& Unk070, C& CallStack, MemoryHeap* 
 // The default CallFrame is a CallFrame(MemoryHeap*) temporary passed by const& to the copy constructor (the exe's
 // unaligned movdqu fills), and GlobalObjectValue takes the SPtr through an inlined Value(SPtr) (AssignUnsafe).
 // NoFunctionTraits->pConstructor is assigned AddRef-first, as the exe does.
-// MS2-FUNCTIONAL: scheduling only: cl stores the four Unk070 zeroes before the default frame is built (the exe
-// after, just before the copy-constructor call), and the loader loop keeps the file count in rbp, not r14 (the
-// exe also copies the file pointer to rbp for the inner SPtr's release test).
+// The four Unk070 zeroes are volatile stores so they stay after the default frame is built, as in the exe.
+// MS2-FUNCTIONAL: scheduling only: the default frame's xmm0/xmm1 zero fills come in a different order, and the
+// loader loop keeps the file count in r14, not rbp (our build also copies the file pointer to rbp for the inner
+// SPtr's release test).
 // Each allocation through MS2_VMNEW runs its constructor only on a non-null block, as a new-expression does.
 #define MS2_VMNEW(T, size, init) [this] { void* pmem = MS2_VMAlloc(MHeap, size); return static_cast<T*>(init); }()
 #define MS2_VMCT(C) MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) C(*this))
