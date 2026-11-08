@@ -3984,8 +3984,10 @@ static __forceinline FMOD_RESULT Sfr22SampleCreateDataSound(unsigned char* sampl
 // MS2-FUNCTIONAL: SoundRendererFMODImpl::CreateSampleFromData (SDK 4.2): a callback-fed stream sample becomes a
 // SwfSoundStreamer handed to CreateSampleFromAuxStreamer (vtable[4]); any other sample is a SoundSampleFMODImpl
 // whose FMOD sound is created from the file name or from the in-memory data.
-// Left vs the exe (1199 bytes, ours 1194): cl drops the null test before the final Release (the exe keeps test rsi/je),
-// and the streamer's pSoundData store sits one instruction later. A Ptr-like holder keeps the test but moves every register.
+// psample->pSoundData = psd is Ptr<SoundDataBase>::operator= run on this = sample + 0x38. Written as a direct store
+// through sample, it let cl prove sample non-null and drop the test before the final Release, which the exe keeps.
+// Left vs the exe: the streamer's +0x28 store sits one instruction later than in the exe (the zero register for +0x30
+// is set first).
 // The whole body runs under the manager lock (+0xc8), as in the exe: the request is linked into the list before its FMOD
 // sound exists, so leaving the lock early let the update thread see a half-built request.
 // @0x1427449f0
@@ -4058,11 +4060,18 @@ void* FUN_1427449f0(void* manager, void* requestData)
     } else {
         sample = nullptr;
     }
-    // psample->pSoundData = psd (Ptr<SoundDataBase>, NTS refcount)
-    *reinterpret_cast<int*>(request + 8) += 1;
-    if (*reinterpret_cast<void**>(sample + 0x38))
-        static_cast<Scaleform::RefCountNTSImpl*>(*reinterpret_cast<void**>(sample + 0x38))->Release();
-    *reinterpret_cast<void**>(sample + 0x38) = requestData;
+    // psample->pSoundData = psd: Ptr<SoundDataBase>::operator= (NTS refcount) AddRefs the new data, Releases the old, stores.
+    struct DataPtr {
+        unsigned char* pObject;
+        void Assign(unsigned char* ptr)
+        {
+            *reinterpret_cast<int*>(ptr + 8) += 1;
+            if (pObject)
+                reinterpret_cast<Scaleform::RefCountNTSImpl*>(pObject)->Release();
+            pObject = ptr;
+        }
+    };
+    reinterpret_cast<DataPtr*>(sample + 0x38)->Assign(request);
 
     bool created = false;
     if (static_cast<UByte>(*reinterpret_cast<unsigned*>(request + 0x10) >> 13) & 1)
@@ -4130,76 +4139,81 @@ void* CreateAudioRequest(void* manager, const char* path, bool stream)
 }
 
 // Builds a linked buffered request, retains its backing data, and creates its callback-fed FMOD sound.
-// MS2-FUNCTIONAL: register allocation of the exit: the exe returns through r15 (the null-allocation path sets it from
-// the zero register) and restores r13 in each createSound arm; ours returns through r12
+// The whole body sits in the allocation's if, with the result set in both arms (the SF_NEW placement-new shape), so the
+// exe's exit is kept: it returns through r15, and the null path sets that from the zero register.
+// MS2-FUNCTIONAL: scheduling only: the exe puts the wide-samples test before the +0x40 backing store and the +0x4c
+// load; cl puts it after.
 // @0x1427447f0
 void* CreateBufferedAudioRequest(void* manager, void* backing, unsigned channels, unsigned rate, bool wideSamples)
 {
     auto* managerBytes = static_cast<unsigned char*>(manager);
     Lock::Locker locker(reinterpret_cast<Lock*>(managerBytes + 0xc8));
     // SF_NEW BufferedSoundRequest(manager): same ctor chain as CreateAudioRequest, 0x78 bytes.
+    unsigned char* result;
     auto* object = static_cast<unsigned char*>(Memory::Alloc(0x78));
-    if (!object)
-        return nullptr;
-
-    *reinterpret_cast<void**>(object) = AS3SoundObjectBaseVtable;
-    auto* node = object + 0x10;
-    auto* sentinel = managerBytes + 0xb0;
-    *reinterpret_cast<volatile int*>(object + 8) = 1;   // AtomicInt RefCount
-    *reinterpret_cast<void***>(node) = &AS3AudioListNodeVtable;
-    *reinterpret_cast<void**>(node + 0x10) = *reinterpret_cast<void**>(sentinel + 0x10);
-    *reinterpret_cast<void**>(node + 8) = sentinel;
-    *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(sentinel + 0x10) + 8) = node;
-    *reinterpret_cast<void**>(sentinel + 0x10) = node;
-    *reinterpret_cast<void**>(object + 0x38) = nullptr;
-    // volatile: the exe keeps the +0x38 store above the derived vptr store (the ctor-chain order)
-    *reinterpret_cast<void** volatile*>(object) = &AS3BufferedRequestVtable;
-    *reinterpret_cast<void***>(node) = &AS3BufferedRequestNodeVtable;
-    *reinterpret_cast<void**>(object + 0x28) = manager;
-    auto* sound = reinterpret_cast<FMOD::Sound**>(object + 0x30);
-    *sound = nullptr;
-    *reinterpret_cast<void**>(object + 0x40) = nullptr;
-    *reinterpret_cast<unsigned*>(object + 0x48) = channels;
-    *reinterpret_cast<unsigned*>(object + 0x4c) = rate;
-    *reinterpret_cast<void**>(object + 0x58) = nullptr;
-    *reinterpret_cast<unsigned*>(object + 0x60) = 0;
-    *reinterpret_cast<unsigned long long*>(object + 0x6c) = 0;
-
-    // Ptr<> assignment of the backing data: AddRef the new one, Release the old one.
-    if (backing)
-        FUN_14257dc30(backing);
-    // volatile: the exe re-tests the old data even when backing is null (no threading past the just-stored 0)
-    if (void* old = *reinterpret_cast<void* volatile*>(object + 0x40))
-        FUN_14257dcb0(old);
-    *reinterpret_cast<void**>(object + 0x40) = backing;
-
-    // The exe tests the whole dword of the fifth argument's stack slot, so the parameter is an int there.
-    const unsigned wide = *reinterpret_cast<const unsigned*>(&wideSamples);
-    const unsigned format = wide == 0 ? 2u : 5u;
-    *reinterpret_cast<unsigned*>(object + 0x68) = format;
-    const unsigned bits = wide == 0 ? 16u : 32u;
-    *reinterpret_cast<unsigned*>(object + 0x50) = bits;
-    const unsigned sampleRate = *reinterpret_cast<unsigned*>(object + 0x4c);
-    const unsigned channelCount = *reinterpret_cast<unsigned*>(object + 0x48);
-    const unsigned length = (sampleRate / 1000u) * (bits >> 3) * channelCount * 0x5dcu;
-    *reinterpret_cast<unsigned*>(object + 0x64) = length;
-
-    FMOD_CREATESOUNDEXINFO info;
-    std::memset(&info, 0, sizeof(info));
-    auto* owner = *reinterpret_cast<unsigned char**>(object + 0x28);
-    info.cbsize = sizeof(info);
-    info.length = length;
-    info.numchannels = channelCount;
-    info.defaultfrequency = sampleRate;
-    info.format = format;
-    auto* system = *reinterpret_cast<FMOD::System**>(owner + 0x10);
-    if (system->createSound(nullptr, 0x442, &info, sound) != 0) {
+    if (object) {
+        *reinterpret_cast<void**>(object) = AS3SoundObjectBaseVtable;
+        auto* node = object + 0x10;
+        auto* sentinel = managerBytes + 0xb0;
+        *reinterpret_cast<volatile int*>(object + 8) = 1;   // AtomicInt RefCount
+        *reinterpret_cast<void***>(node) = &AS3AudioListNodeVtable;
+        *reinterpret_cast<void**>(node + 0x10) = *reinterpret_cast<void**>(sentinel + 0x10);
+        *reinterpret_cast<void**>(node + 8) = sentinel;
+        *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(sentinel + 0x10) + 8) = node;
+        *reinterpret_cast<void**>(sentinel + 0x10) = node;
+        *reinterpret_cast<void**>(object + 0x38) = nullptr;
+        // volatile: the exe keeps the +0x38 store above the derived vptr store (the ctor-chain order)
+        *reinterpret_cast<void** volatile*>(object) = &AS3BufferedRequestVtable;
+        *reinterpret_cast<void***>(node) = &AS3BufferedRequestNodeVtable;
+        *reinterpret_cast<void**>(object + 0x28) = manager;
+        auto* sound = reinterpret_cast<FMOD::Sound**>(object + 0x30);
         *sound = nullptr;
+        *reinterpret_cast<void**>(object + 0x40) = nullptr;
+        *reinterpret_cast<unsigned*>(object + 0x48) = channels;
+        *reinterpret_cast<unsigned*>(object + 0x4c) = rate;
+        *reinterpret_cast<void**>(object + 0x58) = nullptr;
+        *reinterpret_cast<unsigned*>(object + 0x60) = 0;
+        *reinterpret_cast<unsigned long long*>(object + 0x6c) = 0;
+
+        // Ptr<> assignment of the backing data: AddRef the new one, Release the old one.
+        if (backing)
+            FUN_14257dc30(backing);
+        // volatile: the exe re-tests the old data even when backing is null (no threading past the just-stored 0)
+        if (void* old = *reinterpret_cast<void* volatile*>(object + 0x40))
+            FUN_14257dcb0(old);
+        *reinterpret_cast<void**>(object + 0x40) = backing;
+
+        // The exe tests the whole dword of the fifth argument's stack slot, so the parameter is an int there.
+        const unsigned wide = *reinterpret_cast<const unsigned*>(&wideSamples);
+        const unsigned format = wide == 0 ? 2u : 5u;
+        *reinterpret_cast<unsigned*>(object + 0x68) = format;
+        const unsigned bits = wide == 0 ? 16u : 32u;
+        *reinterpret_cast<unsigned*>(object + 0x50) = bits;
+        const unsigned sampleRate = *reinterpret_cast<unsigned*>(object + 0x4c);
+        const unsigned channelCount = *reinterpret_cast<unsigned*>(object + 0x48);
+        const unsigned length = (sampleRate / 1000u) * (bits >> 3) * channelCount * 0x5dcu;
+        *reinterpret_cast<unsigned*>(object + 0x64) = length;
+
+        FMOD_CREATESOUNDEXINFO info;
+        std::memset(&info, 0, sizeof(info));
+        info.cbsize = sizeof(info);
+        info.length = length;
+        info.numchannels = channelCount;
+        info.defaultfrequency = sampleRate;
+        info.format = format;
+        auto* owner = *reinterpret_cast<unsigned char**>(object + 0x28);
+        // read at the call, not before the memset: the exe loads owner and system through rcx
+        if ((*reinterpret_cast<FMOD::System**>(owner + 0x10))->createSound(nullptr, 0x442, &info, sound) != 0) {
+            *sound = nullptr;
+        } else {
+            unsigned soundLength = 0;
+            (*sound)->getLength(&soundLength, 4);
+        }
+        result = object;
     } else {
-        unsigned soundLength = 0;
-        (*sound)->getLength(&soundLength, 4);
+        result = nullptr;
     }
-    return object;
+    return result;
 }
 
 // Color::SetRGBAFloat (SDK Render_Color.h): SetRGBFloat, then SetAlphaFloat.
