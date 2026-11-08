@@ -2420,42 +2420,16 @@ namespace Instances { namespace fl_display
     }
 
     // @0x1424466b0
-    // MS2-FUNCTIONAL: written from the exe's control flow
+    // MS2-FUNCTIONAL: exe block order now matched (existing-data branch first, SPInt index); rest = regalloc + the exe keeps cnt in a param home slot
     void MovieClip::FrameScript::Set(MemoryHeap* pheap, unsigned frameCnt, unsigned descrCnt, const Descr* pdescrs)
     {
         unsigned cnt = 0;
-        if (!pData)
-        {
-            if (descrCnt == 0)
-                return;
-            FrameCnt = (UInt16)frameCnt;
-            DescrCnt = (UInt16)(descrCnt < frameCnt ? descrCnt : frameCnt);
-            pData = SF_HEAP_ALLOC(pheap, ((FrameCnt + 31) >> 5) * 4 + DescrCnt * sizeof(Descr), StatMV_ActionScript_Mem);
-            if (!pData)
-                return;
-            memset(pData, 0, (FrameCnt + 7) >> 3);
-            Descr* pdst = GetDescrs();
-            // From the back: the last descriptor of a frame wins; they land at the top of the array.
-            int k = DescrCnt;
-            for (int i = DescrCnt - 1; i >= 0; --i)
-            {
-                unsigned frame = pdescrs[i].Frame;
-                if (frame < FrameCnt && !IsSet(frame))
-                {
-                    new (&pdst[--k]) Descr(pdescrs[i]);
-                    reinterpret_cast<UByte*>(pData)[frame >> 3] |= (UByte)(1 << (frame & 7));
-                    ++cnt;
-                }
-            }
-            if (k != 0)
-                memmove(pdst, pdst + k, cnt * sizeof(Descr));
-        }
-        else
+        if (pData)
         {
             // Frames already set get their method replaced; count the new ones.
             unsigned added = 0;
             Descr* pdst = GetDescrs();
-            for (int i = (int)descrCnt - 1; i >= 0; --i)
+            for (SPInt i = (SPInt)descrCnt - 1; i >= 0; --i)
             {
                 unsigned frame = pdescrs[i].Frame;
                 if (frame >= FrameCnt)
@@ -2490,6 +2464,32 @@ namespace Instances { namespace fl_display
                     memmove(pdst + DescrCnt, pdst + k, (cnt - DescrCnt) * sizeof(Descr));
                 DescrCnt = (UInt16)total;
             }
+        }
+        else
+        {
+            if (descrCnt == 0)
+                return;
+            FrameCnt = (UInt16)frameCnt;
+            DescrCnt = (UInt16)(descrCnt < frameCnt ? descrCnt : frameCnt);
+            pData = SF_HEAP_ALLOC(pheap, ((FrameCnt + 31) >> 5) * 4 + DescrCnt * sizeof(Descr), StatMV_ActionScript_Mem);
+            if (!pData)
+                return;
+            memset(pData, 0, (FrameCnt + 7) >> 3);
+            Descr* pdst = GetDescrs();
+            // From the back: the last descriptor of a frame wins; they land at the top of the array.
+            int k = DescrCnt;
+            for (int i = DescrCnt - 1; i >= 0; --i)
+            {
+                unsigned frame = pdescrs[i].Frame;
+                if (frame < FrameCnt && !IsSet(frame))
+                {
+                    new (&pdst[--k]) Descr(pdescrs[i]);
+                    reinterpret_cast<UByte*>(pData)[frame >> 3] |= (UByte)(1 << (frame & 7));
+                    ++cnt;
+                }
+            }
+            if (k != 0)
+                memmove(pdst, pdst + k, cnt * sizeof(Descr));
         }
         if (DescrCnt != cnt)
         {
