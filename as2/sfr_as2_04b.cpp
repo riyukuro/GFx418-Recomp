@@ -94,6 +94,7 @@ namespace Scaleform { class Range; } // gfx_textfield.h (WIP header) names Range
 void FUN_14257dcb0(void* p);  // global in the exe
 void FUN_14257dcd0(void* p);  // global in the exe
 
+namespace Scaleform { namespace GFx { namespace AS3 { extern const void* DAT_14317afe8[]; } } } // the AS3 base vftable, shared with AS2
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The prototype destructors stay out of line.
@@ -147,7 +148,7 @@ public:
 
 // The base vftables the inlined destructors store.
 extern const void* DAT_143215f60[];
-extern const void* DAT_14317afe8[];
+using Scaleform::GFx::AS3::DAT_14317afe8;
 extern const void* DAT_143215fa8[];
 extern const void* DAT_143216050[];
 extern const void* DAT_143217750[];
