@@ -696,16 +696,16 @@ static __forceinline void sfr03fSetRectToParl(Matrix2F* m, float x1, float y1, f
 {
     float src[6] = { x1, y1, x2, y1, x2, y2 };
     m->SetMatrix(src[2] - src[0], src[4] - src[0], src[0], src[3] - src[1], src[5] - src[1], src[1]);
+    // the copy for the inverse is named before d: keeps d contiguous below Matrix4F m and xmm9 live, as in the exe
+    Matrix2F c(*m);
     Matrix2F d(parl[2] - parl[0], parl[4] - parl[0], parl[0], parl[3] - parl[1], parl[5] - parl[1], parl[1]);
-    sfr03fSetInverse(m, Matrix2F(*m));
+    sfr03fSetInverse(m, c);
     m->Append(d);
 }
 
 // The 2D matrix to tessellate a 3D layer with: the one mapping the shape bounds onto their projected corners,
 // degenerating to a uniform scale.
 // @0x142635200
-// MS2-FUNCTIONAL: the exe keeps one more xmm register (xmm9) live through the inverse, so its frame is 0x10 larger
-// and the parallelogram matrix sits contiguous below Matrix4F m
 void TreeCacheShapeLayer::getShapeMatrixFrom3D(const TreeShape::NodeData* nd, Matrix2F* mat,
                                                const Matrix4F& viewProj) const
 {
