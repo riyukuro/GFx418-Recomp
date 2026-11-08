@@ -6392,30 +6392,26 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 // GetPropertyUnsafe: the property prop_name of _this into value: by the object itself when it is array-like or an
 // XML (list) instance, else by the found slot or dynamic value. False when there is none or it could not be read.
-// MS2-FUNCTIONAL the exe loads prop.This's flags into a register once after the lookup and keeps them for the
-// undefined test and the inlined ~PropRef; its false path stores the result at its own site
 // @0x14250d2f0
-char* FUN_14250d2f0(char* ret, VM& vm, const Value& _this, const Multiname& prop_name, Value& value)
+CheckResult FUN_14250d2f0(VM& vm, const Value& _this, const Multiname& prop_name, Value& value)
 {
     if (_this.IsObject())
     {
         Object*       obj = _this.GetObject();
         const Traits& tr  = obj->GetTraits();
+        const BuiltinTraitsType tt = tr.GetTraitsType();
         if (tr.IsArrayLike() ||
-            ((tr.GetTraitsType() == Traits_XML || tr.GetTraitsType() == Traits_XMLList) && tr.IsInstanceTraits()))
+            ((tt == Traits_XML || tt == Traits_XMLList) && tr.IsInstanceTraits()))
         {
-            ::new (ret) CheckResult(obj->GetProperty(prop_name, value));
-            return ret;
+            return obj->GetProperty(prop_name, value);
         }
     }
     PropRef prop;
     FUN_142501b00(prop, vm, _this, prop_name, 0);
     const UPInt bits = reinterpret_cast<UPInt>(prop.pValue);
-    bool r = false;
-    if (!(prop.This.IsUndefined() || bits == 1 || (((UByte)(bits >> 1) & 1) && (bits & ~UPInt(2)) == 0)))
-        r = prop.GetSlotValueUnsafe(vm, value);
-    *ret = r;
-    return ret;
+    if (prop.This.IsUndefined() || bits == 1 || (((UByte)(bits >> 1) & 1) && (bits & ~UPInt(2)) == 0))
+        return false;
+    return prop.GetSlotValueUnsafe(vm, value);
 }
 
 class Tracer;

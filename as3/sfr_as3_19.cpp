@@ -338,9 +338,7 @@ Scaleform::GFx::AS3::Object* FUN_14250a550(Scaleform::GFx::AS3::VM&);
 inline Scaleform::UPInt FUN_14250a550(Scaleform::UPInt vm) { return reinterpret_cast<Scaleform::UPInt>(::FUN_14250a550(*reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm))); }
 inline void FUN_1424d7130(void* err, int id, void* vm, const void* value, const char* s) { ::new (err) Scaleform::GFx::AS3::VM::Error(static_cast<Scaleform::GFx::AS3::VM::ErrorID>(id), *static_cast<Scaleform::GFx::AS3::VM*>(vm), *static_cast<const Scaleform::GFx::AS3::Value*>(value), s); }   // VM::Error::Error(id, vm, Value, char*)
 void FUN_142508bd0(Scaleform::UPInt obj, void* out, int hint);   // Object::GetDefaultValue-style conversion to a primitive
-namespace Scaleform { namespace GFx { namespace AS3 { char* FUN_14250d2f0(char*, VM&, const Value&, const Multiname&, Value&); } } }
-inline Scaleform::UInt8* FUN_14250d2f0(void* ret, Scaleform::UPInt vm, void* obj, void* mn, void* result) { return reinterpret_cast<Scaleform::UInt8*>(Scaleform::GFx::AS3::FUN_14250d2f0(static_cast<char*>(ret), *reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm), *static_cast<const Scaleform::GFx::AS3::Value*>(obj), *static_cast<const Scaleform::GFx::AS3::Multiname*>(mn), *static_cast<Scaleform::GFx::AS3::Value*>(result))); }
-namespace Scaleform { namespace GFx { namespace AS3 { using ::FUN_14250d2f0; } } }
+namespace Scaleform { namespace GFx { namespace AS3 { CheckResult FUN_14250d2f0(VM&, const Value&, const Multiname&, Value&); } } }
 void FUN_1424d2890(void* tbl, Scaleform::UPInt heap, void* key, Scaleform::UInt64 hash);   // HashSet add (8-byte key)
 void FUN_1424d2be0(void* tbl, Scaleform::UPInt heap, void* key, Scaleform::UInt64 hash);   // HashSet add (int to AutoPtr map)
 void FUN_1424d2d50(void* tbl, Scaleform::UPInt heap, void* key, Scaleform::UInt64 hash);   // HashSet add (4-byte key)
@@ -5470,8 +5468,7 @@ void Sfr31ExecGetProp(UPInt vmAddr, UPInt file, UInt32 idx)
     if (vm.IsException())
         return;
     Value _this(args.ArgObject, PickValue);
-    char r;
-    if (!*FUN_14250d2f0(&r, vm, _this, args.ArgMN.Get(), args.ArgObject))
+    if (!FUN_14250d2f0(vm, _this, args.ArgMN.Get(), args.ArgObject))
     {
         if (vm.IsException())
             return;
