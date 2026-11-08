@@ -26,6 +26,7 @@
 // MS2-RANGE: 0x142507a40-0x1425080b0 .text$mn
 // MS2-RANGE: 0x1425080c0-0x1425094e0 .text$mn
 // MS2-RANGE: 0x142509850-0x142509d40 .text$mn
+// MS2-RANGE: 0x142cc92b0-0x142cc92c1 .text$yd
 #define SF_AS3_AVMBUTTON_MODEL
 #define SF_AS3_SHAPEOBJECT_MODEL   // ShapeObject / AvmBitmap from the SDK MI layout (as3_avm.h)
 #define MS2_AS3_ASSIGN_NOALIAS
@@ -8116,3 +8117,4 @@ const char* FUN_142508980(Scaleform::UPInt) { return "flash.text.TextField"; }
 // MS2-FUNCTIONAL: the exe returns its .rdata copy
 // @0x142508990
 const char* FUN_142508990(Scaleform::UPInt) { return "flash.display.Shape"; }
+// MS2-PIN: ??__Ff@?1??GetFile@Sfr33NullFileLoader@AS3@GFx@Scaleform@@UEAAAEBV?$Ptr@VFile@Abc@AS3@GFx@Scaleform@@@4@_K@Z@YAXXZ 0x142cc92b0

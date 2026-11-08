@@ -7,6 +7,7 @@
 // MS2-RANGE: 0x14261e1c0-0x14261fc40 .text$mn
 // MS2-RANGE: 0x14261fd80-0x14261ff80 .text$mn
 // MS2-RANGE: 0x14261ffe0-0x142620040 .text$mn
+// MS2-RANGE: 0x142cc94e0-0x142cc94ef .text$yd
 // MS2-PIN: ?FUN_14261f940@GFx@Scaleform@@YAXPEA_K@Z 0x14261f940
 // MS2-PIN: ?FUN_14261f9e0@GFx@Scaleform@@YAXPEA_K@Z 0x14261f9e0
 // MS2-PIN: ?FUN_14261fd80@GFx@Scaleform@@YA_KPEAXPEBE@Z 0x14261fd80
@@ -717,3 +718,4 @@ void FUN_14261fa90(char* self)
 }
 
 }} // namespace Scaleform::GFx
+// MS2-PIN: ??__Fstate@?4??FUN_14261e310@GFx@Scaleform@@YAPEAXXZ@YAXXZ 0x142cc94e0

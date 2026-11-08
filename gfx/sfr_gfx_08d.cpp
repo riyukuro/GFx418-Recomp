@@ -194,4 +194,8 @@ ResourceData SoundResourceCreator::CreateSoundResourceData(Sound::SoundData* pso
 
 // The statics' own atexit registrations in .text$di (lea rcx,??__F; jmp atexit)
 // MS2-RANGE: 0x14014d0e0-0x14014d0ec .text$di
+// MS2-RANGE: 0x142cc98b0-0x142cc98bf .text$yd
+// MS2-RANGE: 0x142cc98c0-0x142cc98cf .text$yd
 // MS2-PIN: ??__ESoundFileKeyInterface_Instance@GFx@Scaleform@@YAXXZ 0x14014d0e0
+// MS2-PIN: ??__Fstatic_inst@?1??CreateSoundFileResourceData@SoundFileResourceCreator@GFx@Scaleform@@SA?AVResourceData@23@PEAUSoundFileInfo@23@@Z@YAXXZ 0x142cc98b0
+// MS2-PIN: ??__Fstatic_inst@?1??CreateSoundResourceData@SoundResourceCreator@GFx@Scaleform@@SA?AVResourceData@23@PEAVSoundData@Sound@3@@Z@YAXXZ 0x142cc98c0

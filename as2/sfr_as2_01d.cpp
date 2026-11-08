@@ -5,6 +5,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1424eb7b0-0x1424ed770 .text$mn
 // MS2-RANGE: 0x1424ed7b0-0x1424ed840 .text$mn
+// MS2-RANGE: 0x142cc92d0-0x142cc92f9 .text$yd
 
 #define MS2_SF_STRING_FROM_BUFFER
 #include "ms2/scaleform/include/kernel/sf_std.h"
@@ -530,3 +531,4 @@ String AsStringFlag(const Abc::Instance& inst)
 }
 
 }}} // namespace Scaleform::GFx::AS3
+// MS2-PIN: ??__Fempty@?1??AsString@AS3@GFx@Scaleform@@YA?AVString@3@AEBVNamespaceInfo@Abc@123@W4NamespaceText@123@@Z@YAXXZ 0x142cc92d0

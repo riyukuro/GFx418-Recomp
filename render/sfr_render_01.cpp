@@ -13,6 +13,7 @@
 // MS2-RANGE: 0x1425792d0-0x14257db40 .text$mn
 // MS2-RANGE: 0x14257db40-0x14257dc30 .text$mn
 // MS2-RANGE: 0x142579270-0x1425792cd .text$mn
+// MS2-RANGE: 0x142cc93e0-0x142cc93ec .text$yd
 #define MS2_SF_SUBIMAGE_DTOR_FORCEINLINE
 
 #include "ms2/scaleform/include/render/render_image.h"
@@ -1389,3 +1390,4 @@ void* FUN_142579e30(TextureManager* object, unsigned flags)
 // MS2-PIN: ??_7RawImage@Render@Scaleform@@6B@ 0x143183a40
 // MS2-PIN: ?BeginScene@TextureManager@Render@Scaleform@@UEAAXXZ 0x14257a0c0
 // MS2-PIN: ?Invert@?$Matrix2x4@M@Render@Scaleform@@QEAAAEAV123@XZ 0x14257c730
+// MS2-PIN: ??__FidLock@?1??GetNextImageId@ImageBase@Render@Scaleform@@SAKXZ@YAXXZ 0x142cc93e0

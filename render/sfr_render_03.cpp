@@ -4,6 +4,7 @@
 // MS2-UNIT: sfr_render_03
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142604370-0x142608a30 .text$mn
+// MS2-RANGE: 0x142cc94b0-0x142cc94d9 .text$yd
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -777,3 +778,4 @@ bool Allocator::FlushTextFormatCache(bool noAllocationsAllowed)
 // MS2-PIN: ?GetFontHandle@TextFormat@Text@Render@Scaleform@@QEBAPEAVFontHandle@234@XZ 0x1426066c0
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@V?$TextFormatPtrWrapper@VParagraphFormat@Text@Render@Scaleform@@@Text@Render@Scaleform@@UHashFunctor@1234@U51234@U?$AllocatorLH@V?$TextFormatPtrWrapper@VParagraphFormat@Text@Render@Scaleform@@@Text@Render@Scaleform@@$0EO@@4@V?$HashsetCachedEntry@V?$TextFormatPtrWrapper@VParagraphFormat@Text@Render@Scaleform@@@Text@Render@Scaleform@@UHashFunctor@1234@@4@@Scaleform@@AEAAXPEAX_K@Z 0x142608660
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@V?$TextFormatPtrWrapper@VTextFormat@Text@Render@Scaleform@@@Text@Render@Scaleform@@UHashFunctor@1234@U51234@U?$AllocatorLH@V?$TextFormatPtrWrapper@VTextFormat@Text@Render@Scaleform@@@Text@Render@Scaleform@@$0EO@@4@V?$HashsetCachedEntry@V?$TextFormatPtrWrapper@VTextFormat@Text@Render@Scaleform@@@Text@Render@Scaleform@@UHashFunctor@1234@@4@@Scaleform@@AEAAXPEAX_K@Z 0x142608850
+// MS2-PIN: ??__FemptyStr@?1??GetFontList@TextFormat@Text@Render@Scaleform@@QEBAAEBVString@4@XZ@YAXXZ 0x142cc94b0

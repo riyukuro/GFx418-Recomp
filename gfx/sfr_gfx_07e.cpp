@@ -4,6 +4,9 @@
 // MS2-UNIT: sfr_gfx_07e
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142636190-0x1426395f0 .text$mn
+// MS2-RANGE: 0x142cc94f0-0x142cc94ff .text$yd
+// MS2-RANGE: 0x142cc9500-0x142cc950f .text$yd
+// MS2-RANGE: 0x142cc9510-0x142cc951f .text$yd
 // MS2-PINS-BEGIN tplpin
 // MS2-PIN: ?AddRef@DataInterface@ResourceData@GFx@Scaleform@@UEAAXPEAX@Z 0x1426369e0 ; unique
 // MS2-PIN: ?Release@DataInterface@ResourceData@GFx@Scaleform@@UEAAXPEAX@Z 0x1426369f0 ; unique
@@ -1029,3 +1032,6 @@ SF_NOINLINE TimelineDef::Frame LoadProcess::TagArrayToFrame(
 }
 
 }} // namespace Scaleform::GFx
+// MS2-PIN: ??__Fstatic_inst@?1??CreateImageFileResourceData@ImageFileResourceCreator@GFx@Scaleform@@SA?AVResourceData@23@PEAUImageFileInfo@23@@Z@YAXXZ 0x142cc94f0
+// MS2-PIN: ??__Fstatic_inst@?1??CreateImageResourceData@ImageResourceCreator@GFx@Scaleform@@SA?AVResourceData@23@PEAVImageSource@Render@3@@Z@YAXXZ 0x142cc9500
+// MS2-PIN: ??__Fstatic_inst@?1??CreateSubImageResourceData@SubImageResourceCreator@GFx@Scaleform@@SA?AVResourceData@23@PEAUSubImageResourceInfo@23@@Z@YAXXZ 0x142cc9510

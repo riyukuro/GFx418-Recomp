@@ -61,6 +61,7 @@
 // MS2-RANGE: 0x142991170-0x142991190 .text$mn   (sfr24: full-exe outside-unit row)
 // MS2-RANGE: 0x142994e00-0x142994e10 .text$mn   (sfr24: full-exe outside-unit row)
 // MS2-RANGE: 0x142992830-0x142992880 .text$mn   (sfr24: full-exe outside-unit row)
+// MS2-RANGE: 0x142cca4b0-0x142cca4c6 .text$yd
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
@@ -1794,3 +1795,4 @@ template void decltype(StringHashLH<GFx::AS2::MovieClipLoader::ProgressDesc>::mH
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@VValue@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry_GC@U?$HashNode@VASString@GFx@Scaleform@@VValue@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@GFx@2@@Scaleform@@AEAAXPEAX_K@Z 0x142995ff0
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@VEventId@GFx@Scaleform@@V?$ArrayLH@VValue@AS2@GFx@Scaleform@@$0BED@UArrayDefaultPolicy@4@@3@UEventIdHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VEventId@GFx@Scaleform@@$0BED@@2@V?$HashsetCachedNodeEntry@U?$HashNode@VEventId@GFx@Scaleform@@V?$ArrayLH@VValue@AS2@GFx@Scaleform@@$0BED@UArrayDefaultPolicy@4@@3@UEventIdHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x1429961b0
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$StringLH_HashNode@UProgressDesc@MovieClipLoader@AS2@GFx@Scaleform@@UNoCaseHashFunctor@String@5@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@UProgressDesc@MovieClipLoader@AS2@GFx@Scaleform@@$01@2@V?$HashsetCachedNodeEntry@U?$StringLH_HashNode@UProgressDesc@MovieClipLoader@AS2@GFx@Scaleform@@UNoCaseHashFunctor@String@5@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x1429962f0
+// MS2-PIN: ??__FnotsetVal@?1??SetMember@Object@AS2@GFx@Scaleform@@UEAA_NPEAVEnvironment@234@AEBVASString@34@AEBVValue@234@AEBVPropFlags@234@@Z@YAXXZ 0x142cca4b0

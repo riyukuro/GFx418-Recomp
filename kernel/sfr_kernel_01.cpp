@@ -11,6 +11,8 @@
 // MS2-RANGE: 0x14258c0a0-0x14258c130 .text$mn   (0x14258a0c0-0x14258c0a0: SF_ThreadsWinAPI, sfr_kernel_01b.cpp)
 // MS2-RANGE: 0x14258c270-0x14258c2f0 .text$mn   (0x14258c130-0x14258c270: GFx::Loader ctors, sfr_gfx_01)
 // MS2-RANGE: 0x14258cb30-0x14258d0c0 .text$mn
+// MS2-RANGE: 0x142cc93f0-0x142cc9421 .text$yd
+// MS2-RANGE: 0x142cc9430-0x142cc943f .text$yd
 #include "ms2/scaleform/kernel/sf_types.h"
 #include "ms2/scaleform/kernel/sf_atomic.h"
 #include "ms2/scaleform/kernel/sf_memory.h"
@@ -2873,3 +2875,5 @@ UPInt SysAllocStatic::GetUsedSpace() const { return TotalSpace - pAllocator->Get
 // MS2-PIN: ??_7SysMemMapperWinAPI@Scaleform@@6B@ 0x143184560
 // MS2-PIN: ??_7?$SysAllocBase_SingletonSupport@VSysAllocWinAPI@Scaleform@@VSysAllocPaged@2@@Scaleform@@6B@ 0x143184590
 // MS2-PIN: ??_7SysAllocWinAPI@Scaleform@@6B@ 0x143184608
+// MS2-PIN: ??__FdefaultLog@?1??GetDefaultLog@Log@Scaleform@@SAPEAV12@XZ@YAXXZ 0x142cc93f0
+// MS2-PIN: ??__FdefaultInterface@?1??GetDefaultAcquireInterface@DefaultAcquireInterface@Scaleform@@SAPEAV12@XZ@YAXXZ 0x142cc9430

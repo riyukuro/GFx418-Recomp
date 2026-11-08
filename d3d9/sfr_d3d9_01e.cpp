@@ -5,6 +5,7 @@
 // MS2-UNIT: sfr_d3d9_01e
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14272d9c0-0x142738e60 .text$mn
+// MS2-RANGE: 0x142cc9910-0x142cc99b2 .text$yd
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -2387,3 +2388,4 @@ bool FUN_142734e10(D3D9::ShaderManager* sm, const Matrix2F& mvp, const Cxform& c
 // MS2-PIN: ??_7?$RefCountBaseNTS@VPrimitiveFill@Render@Scaleform@@$0EF@@Scaleform@@6B@ 0x143191988
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0EF@@Scaleform@@6B@ 0x143191988
 // MS2-PIN: ??_7DepthStencilBuffer@Render@Scaleform@@6B@ 0x14319d730
+// MS2-PIN: ??__Fevents@?1??GetEvent@HAL@D3D9@Render@Scaleform@@UEAAAEAVRenderEvent@34@W4EventType@34@@Z@YAXXZ 0x142cc9910

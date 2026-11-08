@@ -153,4 +153,20 @@ namespace Scaleform { namespace GFx { void FUN_142cc9870(); }}
 static AtexitRegistration s_atexit_143a2fe60(&Scaleform::GFx::FUN_142cc9870);
 #endif
 // MS2-RANGE: 0x14014d0c0-0x14014d0cc .text$di
+// MS2-RANGE: 0x142cc9570-0x142cc957f .text$yd
+// MS2-RANGE: 0x142cc9580-0x142cc958f .text$yd
+// MS2-RANGE: 0x142cc9590-0x142cc959f .text$yd
+// MS2-RANGE: 0x142cc95a0-0x142cc95af .text$yd
+// MS2-RANGE: 0x142cc95b0-0x142cc95bf .text$yd
+// MS2-RANGE: 0x142cc95c0-0x142cc95cf .text$yd
+// MS2-RANGE: 0x142cc95d0-0x142cc95df .text$yd
+// MS2-RANGE: 0x142cc95e0-0x142cc95ef .text$yd
 // MS2-PIN: ??__Es_atexit_143a2fe60@@YAXXZ 0x14014d0c0
+// MS2-PIN: ??__F?InterfaceImpl@BlendState@Render@Scaleform@@2VInterface_Value@StateData@23@A@@YAXXZ 0x142cc9570
+// MS2-PIN: ??__F?InterfaceImpl@FilterState@Render@Scaleform@@2VInterface_RefCountImpl@StateData@23@A@@YAXXZ 0x142cc9580
+// MS2-PIN: ??__F?InterfaceImpl@Internal_MaskOwnerState@Render@Scaleform@@2VInterface_Value@StateData@23@A@@YAXXZ 0x142cc9590
+// MS2-PIN: ??__F?InterfaceImpl@MaskNodeState@Render@Scaleform@@2VInterface@123@A@@YAXXZ 0x142cc95a0
+// MS2-PIN: ??__F?InterfaceImpl@ProjectionMatrix3DState@Render@Scaleform@@2VInterface_RefCountImpl@StateData@23@A@@YAXXZ 0x142cc95b0
+// MS2-PIN: ??__F?InterfaceImpl@Scale9State@Render@Scaleform@@2VInterface_RefCountImpl@StateData@23@A@@YAXXZ 0x142cc95c0
+// MS2-PIN: ??__F?InterfaceImpl@ViewMatrix3DState@Render@Scaleform@@2VInterface_RefCountImpl@StateData@23@A@@YAXXZ 0x142cc95d0
+// MS2-PIN: ??__Fs_noneInterface@Render@Scaleform@@YAXXZ 0x142cc95e0
