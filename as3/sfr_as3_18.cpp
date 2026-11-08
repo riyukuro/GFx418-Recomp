@@ -7444,19 +7444,25 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // obj), or the result of the getter. False (with a TypeError or ReferenceError raised for a non-callable getter or a
 // write-only property) when the slot has no value.
 // The constant C string case reads ValueInd itself, as the SDK's GetSlotConstChar(obj, ValueInd) does.
-// MS2-FUNCTIONAL free function (not declared in the shared SlotInfo class); the slot is read over its address.
-// The exe's result is a CheckResult sret, so it stores *r = true ahead of the value stores (our char* r may alias
-// value, so ours stores it last); the other differences are register numbering (value/obj/vind)
-// @0x14250e770
-char* FUN_14250e770(const Scaleform::GFx::AS3::SlotInfo* psi, char* r, Scaleform::GFx::AS3::Value* pvalue,
-                    Scaleform::GFx::AS3::Object* obj)
+namespace Scaleform { namespace GFx { namespace AS3 {
+// Value(obj) in the getter call: the object store and AddRef inline, without Value(Object*)'s null test.
+struct Sfr18ObjArgValue
 {
-    using namespace Scaleform;
-    using namespace Scaleform::GFx::AS3;
-    const SlotInfo& si    = *psi;
-    Value&          value = *pvalue;
-    const AbsoluteIndex vind(si.ValueInd);
-    const SlotInfo::BindingType bt = static_cast<SlotInfo::BindingType>(si.BindType);
+    union { Value V; };
+    explicit Sfr18ObjArgValue(Object* p) { ValueAssignCopies::InitObjectInline18(V, p); }
+    ~Sfr18ObjArgValue() { V.~Value(); }
+};
+struct Sfr18SlotGetView : SlotInfo
+{
+    CheckResult FUN_14250e770(Value& value, Object* obj) const;
+};
+// MS2-FUNCTIONAL register numbering only: the exe keeps value/obj/vind in rbx/rdi/rsi, ours in rdi/rsi/rbx.
+// Member of a local view, since the shared SlotInfo class doesn't declare this overload.
+// @0x14250e770
+CheckResult Sfr18SlotGetView::FUN_14250e770(Value& value, Object* obj) const
+{
+    AbsoluteIndex vind(ValueInd);
+    const SlotInfo::BindingType bt = static_cast<SlotInfo::BindingType>(BindType);
     switch (bt)
     {
     case SlotInfo::BT_ValueArray:
@@ -7491,7 +7497,7 @@ char* FUN_14250e770(const Scaleform::GFx::AS3::SlotInfo* psi, char* r, Scaleform
         break;
     case 10:   // a constant C string (4.1.18 numbers this binding before BT_Code)
         ValueAssignCopies::AssignUnsafeStrInline18(value, obj->GetVM().GetStringManager().CreateConstString(
-            *reinterpret_cast<const char* const*>(reinterpret_cast<UPInt>(obj) + UInt32(si.ValueInd))));
+            *reinterpret_cast<const char* const*>(reinterpret_cast<UPInt>(obj) + UInt32(ValueInd))));
         break;
     case SlotInfo::BT_Code:
         FUN_14250ba10(&obj->GetTraits().GetVT(), value, vind, obj);
@@ -7502,31 +7508,29 @@ char* FUN_14250e770(const Scaleform::GFx::AS3::SlotInfo* psi, char* r, Scaleform
         const Value getter = obj->GetTraits().GetVT().GetValue(vind);
         VM&         vm     = obj->GetVM();
         if (getter.IsCallable())
-            vm.ExecuteInternalUnsafe(getter, Value(obj), value, 0, NULL, false);
+            vm.ExecuteInternalUnsafe(getter, Sfr18ObjArgValue(obj).V, value, 0, NULL, false);
         else
         {
             TrThrowError(vm, VM::Error(VM::eCallOfNonFunctionError, vm, obj->GetTraits().GetName().ToCStr()),
                          fl::TypeErrorCI);
-            *r = false;
-            return r;
+            return false;
         }
         break;
     }
     case SlotInfo::BT_Set:
     {
         VM& vm = obj->GetVM();
-        TrThrowError(vm, VM::Error(static_cast<VM::ErrorID>(1077) /* eWriteOnlyError */, vm, si.Name->pData,
+        TrThrowError(vm, VM::Error(static_cast<VM::ErrorID>(1077) /* eWriteOnlyError */, vm, Name->pData,
                                    obj->GetTraits().GetName().ToCStr()),
                      fl::ReferenceErrorCI);
     }
         // fall through
     default:
-        *r = false;
-        return r;
+        return false;
     }
-    *r = true;
-    return r;
+    return true;
 }
+}}}  // Scaleform::GFx::AS3
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 

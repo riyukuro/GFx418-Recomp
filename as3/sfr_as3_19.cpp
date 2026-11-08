@@ -257,8 +257,8 @@ int FUN_142519a00(Scaleform::GFx::AS3::VM* vm, Scaleform::UPInt index, void* fra
 namespace Scaleform { namespace GFx { namespace AS3 { ClassTraits::Traits* Sfr33SlotDataType(const SlotInfo*, VM*); } } }
 inline Scaleform::GFx::AS3::ClassTraits::Traits* FUN_1425085b0(const Scaleform::GFx::AS3::SlotInfo* si, Scaleform::GFx::AS3::VM* vm) { return Scaleform::GFx::AS3::Sfr33SlotDataType(si, vm); }
 inline void FUN_142508720(const Scaleform::GFx::AS3::SlotInfo* si, Scaleform::GFx::ASString* name, Scaleform::GFx::AS3::VM* vm) { ::new (static_cast<void*>(name)) Scaleform::GFx::ASString(si->GetDataTypeName(*vm)); }   // its name
-char* FUN_14250e770(const Scaleform::GFx::AS3::SlotInfo*, char*, Scaleform::GFx::AS3::Value*, Scaleform::GFx::AS3::Object*);
-inline void FUN_14250e770(const void* si, void* ok, Scaleform::GFx::AS3::Value* result, Scaleform::GFx::AS3::Object* obj) { ::FUN_14250e770(static_cast<const Scaleform::GFx::AS3::SlotInfo*>(si), static_cast<char*>(ok), result, obj); }
+namespace Scaleform { namespace GFx { namespace AS3 { struct Sfr18SlotGetView : SlotInfo { CheckResult FUN_14250e770(Value& value, Object* obj) const; }; } } }
+inline void FUN_14250e770(const void* si, void* ok, Scaleform::GFx::AS3::Value* result, Scaleform::GFx::AS3::Object* obj) { ::new (ok) Scaleform::GFx::AS3::CheckResult(static_cast<const Scaleform::GFx::AS3::Sfr18SlotGetView*>(si)->FUN_14250e770(*result, obj)); }
 // Tracer: OrigOpcodePos.PushBack(*pos), through the real ArrayDataDH<UPInt>::PushBack (0x14251f710, called out of line)
 typedef Scaleform::ArrayDataDH<Scaleform::UPInt, Scaleform::AllocatorDH_POD<Scaleform::UPInt, 328>, Scaleform::ArrayDefaultPolicy> Sfr19OpcodePosData;
 #define FUN_14251f710(arr, pos) ((reinterpret_cast<Sfr19OpcodePosData*>(arr)->*static_cast<void (Sfr19OpcodePosData::*)(const Scaleform::UPInt&)>(&Sfr19OpcodePosData::PushBack))(*(pos)))
@@ -6494,43 +6494,29 @@ void Sfr31VMRaiseError(UPInt vmAddr, const UInt32* err, UPInt classInfo)
 }
 // ---- batch 56
 // Checks that a value converts to a string: null-ish operands convert directly; otherwise the object's public toString is invoked
-// and its result converted. Writes the success flag through ret.
-// MS2-FUNCTIONAL 0x14252f9b0: SDK AS3::ToString body with the inlined Multiname(ns, Value) ctor; the r / name-temp /
-// Multiname stack slots are rotated vs the exe
+// and its result converted.
 // @0x14252f9b0
-char* Sfr31ValueToStringCheck(char* ret, VM* vm, Value* v, void* strOut)
+CheckResult Sfr31ValueToStringCheck(VM& vm, const Value& _this, ASString& result)
 {
     // SDK AS3::ToString(VM&, const Value&, ASString&) (AS3_Object.cpp).
-    const Value& _this = *v;
-    ASString& result = *static_cast<ASString*>(strOut);
     if (_this.IsNullOrUndefined())
     {
         if (!_this.Convert2String(result))
-        {
-            *ret = 0;
-            return ret;
-        }
+            return false;
     }
     else
     {
         Value r;
-        Multiname name(vm->GetPublicNamespace(), Value(vm->GetStringManager().CreateConstString("toString"), Value::InlineStr), Multiname::InlineAssignTag());
+        Multiname name(vm.GetPublicNamespace(), Value(vm.GetStringManager().CreateConstString("toString"), Value::InlineStr), Multiname::InlineAssignTag());
 
-        if (!ExecutePropertyUnsafe(*vm, name, _this, r, 0, NULL))
-        {
-            *ret = 0;
-            return ret;
-        }
+        if (!ExecutePropertyUnsafe(vm, name, _this, r, 0, NULL))
+            return false;
 
         if (!r.IsString() && !r.Convert2String(result))
-        {
-            *ret = 0;
-            return ret;
-        }
+            return false;
     }
 
-    *ret = 1;
-    return ret;
+    return true;
 }
 
 // v = sm.CreateString(buf): the exe's LTCG knows Value::Assign does not write the ASString temp, so the temp's
