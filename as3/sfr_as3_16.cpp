@@ -1242,6 +1242,15 @@ static SF_INLINE bool Sfr16IsTraitsObject(const Value& v, BuiltinTraitsType tt)
 
 // The method and closure kinds, as a switch: the exe tests each side with cl's case-range tree (< kThunk, <= kMethodInd,
 // kThunkClosure..kVTableIndClosure).
+// The exe calls Convert2NumberInternal straight from the String == Number arm (the inline kind switch folded away).
+struct Sfr16ValueConvert
+{
+    static SF_INLINE CheckResult ToNumber(const Value& v, Value::Number& n, Value::KindType k)
+    {
+        return v.Convert2NumberInternal(n, k);
+    }
+};
+
 static SF_INLINE bool Sfr16IsMethodKind(Value::KindType k)
 {
     switch (k)
@@ -1256,9 +1265,10 @@ static SF_INLINE bool Sfr16IsMethodKind(Value::KindType k)
     }
 }
 
-// MS2-FUNCTIONAL: closer (2076 bytes, exe 2120). The exe keeps l in rsi and r in rdi (ours swaps them), writes the
-// CheckResult byte at each return where ours shares one tail, and lays out the Boolean case and the Number/String
-// conversion arms in another order.
+// MS2-FUNCTIONAL: closer (1928 bytes, exe 2120). The String == Number arm calls Convert2NumberInternal directly and the
+// Number case stores constant true/false. The exe keeps l in rsi and r in rdi in the first half (ours swaps them),
+// writes result and the CheckResult byte at each return where ours shares one tail, and places the
+// Number/String == Object arm after the Boolean/int fallback.
 // @0x1424e46f0
 CheckResult AbstractEqual(bool& result, const Value& l, const Value& r)
 {
@@ -1282,8 +1292,10 @@ CheckResult AbstractEqual(bool& result, const Value& l, const Value& r)
         case Value::kNumber:
             if (l.IsNaN() || r.IsNaN())
                 result = false;
+            else if (l.AsNumber() == r.AsNumber())
+                result = true;
             else
-                result = l.AsNumber() == r.AsNumber();
+                result = false;
             return true;
         case Value::kThunk:
         case Value::kString:
@@ -1346,7 +1358,7 @@ CheckResult AbstractEqual(bool& result, const Value& l, const Value& r)
     if (lk == Value::kString && rk == Value::kNumber)
     {
         Value::Number n;
-        if (!l.Convert2NumberInline(n))
+        if (!Sfr16ValueConvert::ToNumber(l, n, lk))
             return false;
         result = n == r.AsNumber();
         return true;

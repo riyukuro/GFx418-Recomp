@@ -810,6 +810,7 @@ private:
     friend struct Sfr18ValueSwap;       // (appended, sfb) GetSuperProperty (sfr_as3_18) has Swap inline
     friend struct Sfr17ValueInline;     // (appended, fe11) GetASVariableAtPath (sfr_as3_17) has Assign inline
     friend struct Sfr17dValueInline;    // (appended, fe11) CreateEmptyMovieClip (sfr_as3_17d) builds Value(Class*) inline
+    friend struct Sfr16ValueConvert;    // (appended, perm71) AbstractEqual's String == Number arm calls Convert2NumberInternal
     friend struct Video02ValueRefs;     // (appended, sfn) sfr_video_02's out-of-line AddRef/Release copies
 
     SF_INLINE void AddRefString() const         { value.VS._1.VStr->AddRef(); }
