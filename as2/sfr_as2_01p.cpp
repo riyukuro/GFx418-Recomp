@@ -77,8 +77,7 @@ __forceinline Value* TypeDefaultValue(Value* result, VM& vm, VMAbcFile& file, co
         Abc::SInd              NameIndex;
         Abc::SInd              NextIndex;
     public:
-        explicit TypeName(const Abc::Multiname& x)
-            : Kind(x.Kind), Ind(x.Ind), NameIndex(x.NameIndex), NextIndex(x.NextIndex) {}
+        explicit TypeName(const Abc::Multiname& x) { *reinterpret_cast<Abc::Multiname*>(this) = x; }
         const Abc::Multiname* operator&() const { return reinterpret_cast<const Abc::Multiname*>(this); }
     };
     const TypeName mn(ti.GetType() == Abc::TraitInfo::tSlot || ti.GetType() == Abc::TraitInfo::tConst
@@ -193,10 +192,30 @@ void CallFrame::SetupRegisters(const Abc::MethodInfo& mi, const Value& _this, un
     }
 }
 
-// MS2-FUNCTIONAL: the exe's AS3_All.cpp SCU also inlines Value::GetUndefined (its guarded local static, 0x80 bytes)
-// as the namespace lookup's prefix argument. Ours calls it, because sfr_as3_18 defines it out of line and the static
-// is internal there. The rest (inline Slots::GetSlotInfo, VM::GetDefaultValue with its any-type test, one shared
-// value temporary, SCU AddRef bodies) follows the SDK.
+// Slots::FindSlotInfo as the SCU inlines it; FindSlotInfoIndex is protected in Slots.
+struct Sfr01pSlots : Slots
+{
+    __forceinline const SlotInfo* Find(const ASString& name, const Instances::Namespace& ns) const
+    {
+        const AbsoluteIndex ind = FindSlotInfoIndex(name, ns);
+        return ind.IsValid() ? (ind.Get() < FirstOwnSlotNum ? &Parent->GetSlotInfo(ind)
+                                                            : &VArray[static_cast<UInt32>(ind.Get()) - FirstOwnSlotNum].Value)
+                             : NULL;
+    }
+};
+
+// Value::GetUndefined as the exe's SCU inlines it into SetupSlotValues. The static is a second undefined Value here,
+// because sfr_as3_18 defines the real one out of line and its static is internal there.
+static __forceinline const Value& Sfr01pUndefined()
+{
+    static const Value undefinedValue;
+    return undefinedValue;
+}
+
+// MS2-FUNCTIONAL: follows the SDK (the switch on the trait type, one SetSlotValue per branch that cross-jump into one tail)
+// with the exe's inlined namespace and slot lookups. What remains is register colouring: the exe has vm in rbx and the
+// index in rdi, keeps the Slots base in a register where ours rematerialises it, and keeps the Ind half of the first
+// multiname from xmm0. 986 of 1011 bytes.
 // @0x14252c0e0
 CheckResult Traits::SetupSlotValues(VMAbcFile& file, const Abc::HasTraits& t, Object& for_obj) const
 {
@@ -207,35 +226,36 @@ CheckResult Traits::SetupSlotValues(VMAbcFile& file, const Abc::HasTraits& t, Ob
         const Abc::File&      abc = file.GetAbcFile();
         const Abc::ConstPool& cp  = abc.Const_Pool;
         const Abc::TraitInfo& ti  = *abc.Traits.TraitInfos[t.obj_traits[i]];
-        if (ti.GetType() != Abc::TraitInfo::tSlot && ti.GetType() != Abc::TraitInfo::tConst)
-            continue;
-
+        switch (ti.GetType())
+        {
+        case Abc::TraitInfo::tSlot:
+        case Abc::TraitInfo::tConst:
+        {
         const Abc::Multiname      mn  = cp.GetMultiname(ti.name_ind);
         const Abc::NamespaceInfo& nsi = mn.Ind == 0 ? cp.any_namespace : cp.ConstNamespace[mn.Ind];
         const Instances::Namespace* ns;
         {
+            VM& nsvm = GetVM();
+            const Abc::NamespaceKind kind = nsi.Kind;
             const ASString uri =
-                GetVM().GetStringManager().GetStringManager()->CreateString(nsi.NameURI.ToCStr(),
-                                                                             nsi.NameURI.GetSize());
-            if (uri.IsEmpty() && nsi.Kind == Abc::NS_Public)
-                ns = &GetVM().GetPublicNamespace();
+                nsvm.GetStringManager().GetStringManager()->CreateString(nsi.NameURI.ToCStr(), nsi.NameURI.GetSize());
+            if (uri.IsEmpty() && kind == Abc::NS_Public)
+                ns = &nsvm.GetPublicNamespace();
             else
-                ns = FUN_142415c20(&static_cast<InstanceTraits::fl::Namespace&>(
-                                       GetVM().GetClassTraitsNamespace().GetInstanceTraits()),
-                                   nsi.Kind, uri, Value::GetUndefined());
+            {
+                InstanceTraits::fl::Namespace& itr =
+                    static_cast<InstanceTraits::fl::Namespace&>(nsvm.GetClassTraitsNamespace().GetInstanceTraits());
+                ns = FUN_142415c20(&itr, kind, uri, Sfr01pUndefined());
+            }
         }
 
         const SlotInfo* si;
         {
-            const AbsoluteIndex ind = FindSlotInfoIndex(file.GetInternedString(mn.NameIndex), *ns);
-            si = ind.IsValid() ? (ind.Get() < FirstOwnSlotNum ? &Parent->GetSlotInfo(ind)
-                                                              : &VArray[static_cast<UInt32>(ind.Get()) -
-                                                                        FirstOwnSlotNum].Value)
-                               : NULL;
+            const Slots& slots = *this;
+            si = static_cast<const Sfr01pSlots&>(slots).Find(file.GetInternedString(mn.NameIndex), *ns);
         }
-        if (!si)
-            continue;
-
+        if (si)
+        {
         // The slot's start value, built in place (the exe constructs both kinds into one temporary).
         union ValueSlot
         {
@@ -243,15 +263,28 @@ CheckResult Traits::SetupSlotValues(VMAbcFile& file, const Abc::HasTraits& t, Ob
             ~ValueSlot() {}
             Value v;
         } slot;
-        const Value* v = ti.default_value.ValueIndex > 0 ? ::new (&slot.v) Value(file.GetDetailValue(ti.default_value))
-                                                         : TypeDefaultValue(&slot.v, GetVM(), file, ti);
-        bool ok;
-        const char r = *Sfr27SlotSetValueObj(si, reinterpret_cast<char*>(&ok), &GetVM(), v, &for_obj);
+        bool r;
+        if (ti.default_value.ValueIndex > 0)
+        {
+            VM& dvm = GetVM();
+            r = si->SetSlotValue(dvm, *::new (&slot.v) Value(file.GetDetailValue(ti.default_value)), &for_obj);
+        }
+        else
+        {
+            TypeDefaultValue(&slot.v, GetVM(), file, ti);
+            r = si->SetSlotValue(GetVM(), slot.v, &for_obj);
+        }
         slot.v.~Value();
         if (!r)
         {
             --vm.InInitializer;
             return false;
+        }
+        }
+        break;
+        }
+        default:
+            break;
         }
     }
     --vm.InInitializer;
