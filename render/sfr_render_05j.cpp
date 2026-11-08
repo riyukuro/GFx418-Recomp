@@ -298,8 +298,10 @@ void TreeCacheNode::UpdateBundlePattern()
 {
 }
 
-bool TreeCacheNode::GetPatternChain(BundleEntryRange*, unsigned)
+// @0x1426817f0
+bool TreeCacheNode::GetPatternChain(BundleEntryRange* range, unsigned)
 {
+    range->Clear(Range_Empty);
     return false;
 }
 
