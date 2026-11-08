@@ -39,8 +39,10 @@ static __forceinline InteractiveObject* FfToCharacter(const Value& v, const Envi
 // the character the key would focus from startFrom (or the controller's focused character), kept within
 // parentMovie (null: the modal clip). With loop, when the key leads nowhere the first / last tabable character
 // (Tab) or the one at the far edge (arrows) is returned instead; otherwise null.
-// MS2-FUNCTIONAL: register allocation differs (the exe keeps keycode in r13d through the direction compares, where
-// ours stores it to a frame slot, and the strcmp loops are laid out in another order).
+// keycode is a UPInt here: with the SDK's short, cl keeps it in a frame slot and the fn spill moves; the exe keeps
+// it in r13d. Like the exe, an unset parentMovie (UNSET as well as null/undefined) picks the modal clip.
+// MS2-FUNCTIONAL: register allocation differs (the exe keeps keycode in r13d through the direction compares and
+// stores it to a 16-bit slot once, and the hand-run context Value is addressed via the ctor's result in ours).
 // @0x142943ce0
 void SelectionCtorFunction::FindFocus(const FnCall& fn)
 {
@@ -62,7 +64,7 @@ void SelectionCtorFunction::FindFocus(const FnCall& fn)
     bool includeFocusEnabled = (fn.NArgs >= 5) ? fn.Arg(4).ToBool(fn.Env) : false;
 
     ASString     directionStr = fn.Arg(0).ToString(fn.Env);
-    short        keycode;
+    UPInt        keycode;
     KeyModifiers specKeysState;
     if (directionStr == "up")
         keycode = Key::Up;
@@ -90,8 +92,8 @@ void SelectionCtorFunction::FindFocus(const FnCall& fn)
         union { UInt64 Align; char Buf[sizeof(Value)]; } contextBuf;
         Value& context = *::new (static_cast<void*>(contextBuf.Buf)) Value(fn.Arg(1));
         const UByte contextType = context.T.Type;
-        if (contextType != Value::NULLTYPE && contextType != Value::UNDEFINED)
-            panelChar = (contextType == Value::CHARACTER && fn.Env) ? FfToCharacter(context, fn.Env) : NULL;
+        if (contextType != Value::NULLTYPE && contextType != Value::UNDEFINED && contextType != Value::UNSET)
+            panelChar = FfToCharacter(context, fn.Env);
         else
             panelChar = proot->GetModalClip(controllerIdx);
         if (contextType >= Value::STRING)
