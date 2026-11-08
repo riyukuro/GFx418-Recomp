@@ -299,13 +299,13 @@ namespace Instances { namespace fl {
     // (appended, sfr19) the XMLElement::CallBack visitors (vftables 0x1431439b8-0x1431439f8; the ??_G bodies
     // sit with the ctors in sfr_as3_01c, the Call bodies in sfr_as3_03).
 
-    // Counts only. vftable 0x1431439b8, ??_G 0x1423f2c50
+    // Stops the walk at the first match. vftable 0x1431439b8, ??_G 0x1423f2c50
     class EmptyCallBack : public XMLElement::CallBack
     {
     public:
         EmptyCallBack(XMLElement& el) : XMLElement::CallBack(el) {}
         // 0x142405770 (one body with ThunkDefault<bool>::Get)
-        virtual bool Call(UPInt ind) { SF_UNUSED(ind); return true; }
+        virtual bool Call(UPInt ind) { SF_UNUSED(ind); return false; }
     };
 
     // The first matching attribute. vftable 0x1431439c8, ??_G 0x1423f2380
