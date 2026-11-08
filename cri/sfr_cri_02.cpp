@@ -739,7 +739,7 @@ static __forceinline void* CriMvSoundCtor02(void* mem, void* pheap, void* psound
     return mem;
 }
 
-// MS2-FUNCTIONAL: the first CriMvSound's null test and vtable loads are scheduled differently, and the exe tests the
+// MS2-FUNCTIONAL: the first CriMvSound (written mem ? ctor : NULL) has its vtable lea and null test scheduled differently, and the exe tests the
 // new decoder with cmp against its zero register; logic identical
 // @0x14002b530
 bool VideoPlayerImpl::Init(Video* pvideo, TaskManager*, FileOpenerBase* pfileOpener, Log* plog)
@@ -759,9 +759,9 @@ bool VideoPlayerImpl::Init(Video* pvideo, TaskManager*, FileOpenerBase* pfileOpe
             Ptr<VideoSound> psubinterface = *psoundSystem->Create();
 
             void* mem;
-            VideoPlayerSound* psound = (VideoPlayerSound*)pHeap->Alloc(0x50);
-            if (psound)
-                CriMvSoundCtor02(psound, pHeap, pinterface);
+            mem = pHeap->Alloc(0x50);
+            VideoPlayerSound* psound;
+            if (mem) { CriMvSoundCtor02(mem, pHeap, pinterface); psound = (VideoPlayerSound*)mem; } else psound = NULL;
             pSound = *psound;
 
             mem = pHeap->Alloc(0x50);
