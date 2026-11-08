@@ -21,7 +21,7 @@
 #include "../include/gfx/gfx_resource.h"
 #include <cstdint>
 #include <new>
-
+#include "../include/gfx/as2/as2_action.h"   // GlobalContext, ClassRegEntry, Value (real views)
 // The exe functions and globals this unit uses but does not define, declared by their FUN_<va> / DAT_<va> names: the
 // hook DLL binds them to the exe, the full exe to the recovered definition at that VA (tools/fullexe/alias.py).
 template <class T> struct ExeDecl { typedef T type; };
@@ -33,7 +33,7 @@ using namespace Scaleform::GFx::Video;
 // ---- exe callees outside this unit ----
 namespace Scaleform { namespace GFx { namespace AS2 {
 class AvmCharacter; class FunctionRef; class StringManager;
-class GlobalContext { public: StringManager* GetStringManager() const; };
+// (GlobalContext: the real class from as2_action.h)
 class AvmVideoCharacter { public: AvmVideoCharacter(InteractiveObject* pdispObj); };   // ctor-only view (sfr_video_01, 0x14000e2b0)
 FunctionRef FUN_14000cf20(GlobalContext* global);
 } } }
@@ -42,12 +42,12 @@ namespace Scaleform { namespace GFx { class Video02Character { public: Video02Ch
 AS2::FunctionRef* FUN_1400126f0(AS2::FunctionRef* result, AS2::GlobalContext* context);
 AS2::FunctionRef* FUN_14000ed60(AS2::FunctionRef* result, AS2::GlobalContext* context);
 namespace Scaleform { namespace GFx {
-void FUN_142591a00(UPInt** table, void* heapOwner, const void* keyValue, UPInt hashCode);   // hash: add {key, value} at a hash code
+// (0x142591a00 = HashSetBase<..ClassRegEntry..>::add, reached through ASStringHash<ClassRegEntry>::Add)
 void FUN_1425916c0(void* context, void* sc, void* global);       // registers the first builtin
 namespace AS3 { class VM; struct ClassInfo; void FUN_1425210d0(VM& vm, const ClassInfo* table[]); }   // AS3 class registration
 } }
 namespace Scaleform { namespace GFx { namespace AS2 {
-class Value { public: ~Value(); };
+// (Value: the real class from as2_action.h)
 template <int Stat> class RefCountCollector
 {
 public:
@@ -425,10 +425,10 @@ void FUN_140001ff0(Video04Hash* hash)
 // @0x1400020d0
 void FUN_1400020d0(void* hash, ASStringNode** key, void* value)
 {
-    struct { ASStringNode** Key; void* Value; } pair;
-    pair.Value = value;
-    pair.Key = key;
-    FUN_142591a00((UPInt**)hash, hash, &pair, (*key)->HashFlags);
+    // ASStringHash<ClassRegEntry>::Add inlined:
+    // the private HashSetBase::add at 0x142591a00 with the key's hash flags.
+    static_cast<ASStringHash<AS2::GlobalContext::ClassRegEntry>*>(hash)->Add(*reinterpret_cast<const ASString*>(key),
+        *static_cast<const AS2::GlobalContext::ClassRegEntry*>(value));
 }
 
 // registers one builtin: looks the builtin's name up in the context's class hash and, when it is not
@@ -466,8 +466,8 @@ __forceinline void Video04RegisterBuiltin(Video04Context* context, void* sc, Vid
         return;
     {
         struct { void* Builder; Video04GcObject* Value; } proto = {(void*)builder, 0};
-        struct { ASStringNode** Key; void* Value; } keyValue = {VIDEO04_NAME(context, nameOffset), &proto};
-        FUN_142591a00((UPInt**)&context->Classes, &context->Classes, &keyValue, (*keyValue.Key)->HashFlags);
+        reinterpret_cast<ASStringHash<AS2::GlobalContext::ClassRegEntry>*>(&context->Classes)->Add(
+            *reinterpret_cast<const ASString*>(VIDEO04_NAME(context, nameOffset)), reinterpret_cast<const AS2::GlobalContext::ClassRegEntry&>(proto));
         Video04GcRelease(proto.Value);
     }
     unsigned char flags = 0;

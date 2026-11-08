@@ -102,12 +102,12 @@ extern ExeDecl<void*>::type DAT_143b276d8; extern ExeDecl<void*>::type DAT_143b2
 extern ExeDecl<void*>::type DAT_143b27598; extern ExeDecl<void*>::type DAT_143b275a0;
 #define VideoStringCallbackB DAT_143b27598
 #define VideoStringCallbackBaseB DAT_143b275a0
-extern ExeDecl<void*>::type DAT_143b277a8;
-#define VideoCriWork DAT_143b277a8
-extern ExeDecl<unsigned long>::type DAT_143b277b0;
-#define VideoCriWorkSize DAT_143b277b0
-extern ExeDecl<unsigned int>::type DAT_143b277b4;
-#define VideoCriUsers DAT_143b277b4
+// Video's static CRI work-area members (video_video.h):
+// pHandleWorkBuf 0x143b277a8, HandleWorkSize 0x143b277b0,
+// Initialized 0x143b277b4 (the user count).
+#define VideoCriWork Scaleform::GFx::Video::Video::pHandleWorkBuf
+#define VideoCriWorkSize Scaleform::GFx::Video::Video::HandleWorkSize
+#define VideoCriUsers Scaleform::GFx::Video::Video::Initialized
 extern ExeDecl<void*>::type DAT_143b275f0;
 #define VideoCallbackBaseC DAT_143b275f0
 
