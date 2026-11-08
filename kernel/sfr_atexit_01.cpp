@@ -79,8 +79,8 @@ extern ImageFileKeyInterface ImageFileKeyInterface_Instance;
 extern SoundFileKeyInterface SoundFileKeyInterface_Instance;
 }}
 
-// static AS2::Value array at 0x143a51b50.
-extern unsigned char DAT_143a51b50[];
+// AS2 Object_NotsetVal (0x143a51b50; Value(NOTSET), defined in data_data_game).
+namespace Scaleform { namespace GFx { namespace AS2 { extern const Value Object_NotsetVal; } } }
 namespace Scaleform { namespace Render { class RenderQueueProcessor; class RenderQueueItem { public: enum QIPrepareResult { QIP_Done, QIP_NeedCache }; class Interface { public: virtual ~Interface() {} virtual QIPrepareResult Prepare(RenderQueueItem&, RenderQueueProcessor&, bool waitForCache) { (void)waitForCache; return QIP_Done; } virtual void EmitToHAL(RenderQueueItem&, RenderQueueProcessor&) {} }; }; }}   // RenderQueueItem::Interface as render_primitivequeue.h has it (that header clashes with this TU kernel headers)
 namespace Scaleform { namespace GFx {
 
@@ -548,7 +548,7 @@ void FUN_142cca460()
 // @0x142cca4d0
 void FUN_142cca4d0()
 {
-    RawAs2ValueDtor(reinterpret_cast<char*>(::DAT_143a51b50));
+    RawAs2ValueDtor(reinterpret_cast<char*>(const_cast<AS2::Value*>(&AS2::Object_NotsetVal)));
 }
 
 }} // namespace Scaleform::GFx
