@@ -1655,32 +1655,6 @@ void ObjectProto::ToString(const FnCall& fn)
         fn.Result->SetString(fn.Env->GetBuiltin(ASBuiltin_objectObject_));
 }
 
-// addProperty(name, getter[, setter]): a member read and written through the functions.
-// MS2-FUNCTIONAL the exe calls FnCall::Arg, Value::ToFunction and the ValueProperty constructor out of line for the
-// setter and the property, ours inlines the first two and calls the constructor
-// @0x142901d20
-void ObjectProto::AddProperty(const FnCall& fn)
-{
-    if (fn.NArgs >= 2)
-    {
-        ASString    propName(fn.Arg(0).ToString(fn.Env));
-        FunctionRef getter = fn.Arg(1).ToFunction(fn.Env);
-        if (!getter.IsNull())
-        {
-            FunctionRef setter;
-            if (fn.NArgs >= 3 && (fn.Arg(2).IsFunctionObject() || fn.Arg(2).IsFunctionName()))
-                setter = fn.Arg(2).ToFunction(fn.Env);
-            Value val(getter, setter, fn.Env->GetHeap(), fn.Env->GetCollector());
-            fn.ThisPtr->SetMemberRaw(fn.Env->GetSC(), propName, val);
-            fn.Result->SetBool(true);
-        }
-        else
-            fn.Result->SetBool(false);
-    }
-    else
-        fn.Result->SetBool(false);
-}
-
 // FunctionRefBase::SetLocalFrame (0x142981e70, sfr_as2_07) and the FunctionRef copy around it, which the exe inlines
 // into the ToFunction copy in Watch_. Local copies: an inline redefinition of the member would emit a second COMDAT.
 static SF_FORCEINLINE void MS2_SetLocalFrame(FunctionRefBase& r, LocalFrame* localFrame, bool weakRef)
@@ -1726,6 +1700,55 @@ struct MS2_FuncValue : Value
         return FunctionRef();
     }
 };
+
+// ValueProperty ctor (0x142923e70, sfr_as2_03), which the exe (LTCG) inlines into AddProperty. A tagged copy: an
+// inline redefinition of the ctor would be a second COMDAT next to sfr_as2_03's.
+struct Sfr02PropertyTag {};
+template<>
+SF_FORCEINLINE ValueProperty::ValueProperty(ASRefCountCollector* pcc, const FunctionRef& getterMethod,
+                                            const FunctionRef& setterMethod, Sfr02PropertyTag)
+    : ASRefCountBase<ValueProperty>(pcc), GetterMethod(getterMethod), SetterMethod(setterMethod)
+{
+}
+
+// Value(getter, setter, heap, collector) (as2_value.h) over the tagged ValueProperty copy.
+struct Sfr02PropertyValue : Value
+{
+    SF_FORCEINLINE Sfr02PropertyValue(const FunctionRef& getter, const FunctionRef& setter, MemoryHeap* pheap,
+                                      ASRefCountCollector* pcc)
+    {
+        T.Type      = PROPERTY;
+        V.pProperty = new (pheap) ValueProperty(pcc, getter, setter, Sfr02PropertyTag());
+    }
+};
+
+// addProperty(name, getter[, setter]): a member read and written through the functions.
+// The exe (LTCG) inlines the getter's ToFunction (the SDK switch) and the ValueProperty ctor; the setter goes through
+// FnCall::Arg and Value::ToFunction out of line.
+// MS2-FUNCTIONAL register allocation: the exe keeps the getter's Flags byte in a frame slot ([rbp+0x67]) and the
+// heap/collector in memory, ours keeps them in r15b/r12 (1190 vs 1235 bytes).
+// @0x142901d20
+void ObjectProto::AddProperty(const FnCall& fn)
+{
+    if (fn.NArgs >= 2)
+    {
+        ASString    propName(fn.Arg(0).ToString(fn.Env));
+        FunctionRef getter = static_cast<const MS2_FuncValue&>(fn.Arg(1)).ToFunctionSw(fn.Env);
+        if (!getter.IsNull())
+        {
+            FunctionRef setter;
+            if (fn.NArgs >= 3 && fn.Arg(2).IsFunction())
+                setter = ArgCopy(&fn, 2)->ToFunction_Call(fn.Env);
+            Sfr02PropertyValue val(getter, setter, fn.Env->GetHeap(), fn.Env->GetCollector());
+            fn.ThisPtr->SetMemberRaw(fn.Env->GetSC(), propName, val);
+            fn.Result->SetBool(true);
+        }
+        else
+            fn.Result->SetBool(false);
+    }
+    else
+        fn.Result->SetBool(false);
+}
 
 // watch(name, callback[, userData]): the callback sees every assignment of the member.
 // @0x1429024e0
@@ -3569,3 +3592,6 @@ template UPInt Format<StringDataPtr, const char*>(const MsgFormat::Sink&, const 
 // MS2-PIN: ??_7SharedObjectVisitor@GFx@Scaleform@@6B@ 0x143162f18
 // MS2-PIN: ??_7GASSharedObjectLoader@AS2@GFx@Scaleform@@6B@ 0x1432227a8
 // MS2-PIN: ??$add@UNodeRef@?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@Scaleform@@@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAXAEBUNodeRef@?$HashNode@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@@1@_K@Z 0x1429162d0
+// MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS2@GFx@Scaleform@@6B@ 0x143215370
+// MS2-PIN: ??_7?$ASRefCountBase@UValueProperty@AS2@GFx@Scaleform@@@AS2@GFx@Scaleform@@6B@ 0x1432153d0
+// MS2-PIN: ??_7ValueProperty@AS2@GFx@Scaleform@@6B@ 0x1432153e8

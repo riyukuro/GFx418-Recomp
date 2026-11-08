@@ -362,6 +362,10 @@ struct ValueProperty : public ASRefCountBase<ValueProperty>
     FunctionRef SetterMethod; // +0x38
 
     ValueProperty(ASRefCountCollector* pcc, const FunctionRef& getterMethod, const FunctionRef& setterMethod);
+    // An inline copy for units where the exe inlines the ctor (sfr_as2_02 AddProperty). A template over a unit-local
+    // tag, so it is never a second definition of the out-of-line ctor.
+    template<class Tag> ValueProperty(ASRefCountCollector* pcc, const FunctionRef& getterMethod,
+                                      const FunctionRef& setterMethod, Tag);
 
 protected:
     virtual void ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) const;
