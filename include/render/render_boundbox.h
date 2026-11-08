@@ -159,6 +159,49 @@ RectF ComputeBoundsRoundStroke(const ShapeDataInterface& shape, const Transforme
     return bounds;
 }
 
+// ComputeBoundsRoundStroke as inlined into ExpandBoundsToStrokesSimplified: there the exe squares M[1][1] first
+// (GetYScale with the first square named), while the out-of-line copy (0x142626830) keeps the plain expression.
+inline float RoundStrokeYScale(const Matrix2F& m)
+{
+    float sy = m.M[1][1];
+    float shx = m.M[0][1];
+    float sy2 = sy * sy;
+    return sqrtf(sy2 + shx * shx);
+}
+template<class Transformer>
+inline float RoundStrokeYScale(const Transformer& trans) { return trans.GetYScale(); }
+
+template<class Transformer>
+inline RectF ComputeBoundsRoundStrokeInlined(const ShapeDataInterface& shape, const Transformer& trans,
+                                             ShapePosInfo* pos, float* coord, unsigned* styles)
+{
+    RectF bounds(1e30f, 1e30f, -1e30f, -1e30f);
+
+    StrokeStyleType stroke;
+    shape.GetStrokeStyle(styles[2], &stroke);
+
+    float scale = 1.0f;
+    switch (stroke.Flags & StrokeScaling_Mask)
+    {
+    case StrokeScaling_Normal:     scale = trans.GetScale(); break;
+    case StrokeScaling_Horizontal: scale = trans.GetXScale(); break;
+    case StrokeScaling_Vertical:   scale = RoundStrokeYScale(trans); break;
+    case StrokeScaling_None:       break;
+    }
+    float width = stroke.Width * scale;
+
+    ExpandBoundsToPath(shape, trans, pos, coord, &bounds);
+    if (bounds.IsNormal())
+    {
+        width /= 2;
+        bounds.x1 -= width;
+        bounds.y1 -= width;
+        bounds.x2 += width;
+        bounds.y2 += width;
+    }
+    return bounds;
+}
+
 // Grows bounds by every stroked path, each taken as round joined and capped.
 template<class Transformer>
 void ExpandBoundsToStrokesSimplified(const ShapeDataInterface& shape, const Transformer& trans, RectF* bounds)
@@ -171,7 +214,7 @@ void ExpandBoundsToStrokesSimplified(const ShapeDataInterface& shape, const Tran
     {
         if (styles[2])
         {
-            RectF stroke = ComputeBoundsRoundStroke(shape, trans, &pos, coord, styles);
+            RectF stroke = ComputeBoundsRoundStrokeInlined(shape, trans, &pos, coord, styles);
             if (stroke.IsNormal())
             {
                 bounds->ExpandToPoint(stroke.x1, stroke.y1);

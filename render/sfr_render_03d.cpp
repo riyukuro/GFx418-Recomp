@@ -2137,6 +2137,11 @@ void ShapeMeshProvider::computeImgAdjustMatrix(const Scale9GridData* s9g, unsign
     }
 }
 
+// the exe keeps an out-of-line ComputeBoundsRoundStroke (0x142626830) beside the copy inlined into
+// ExpandBoundsToStrokesSimplified (render_boundbox.h ComputeBoundsRoundStrokeInlined)
+template RectF ComputeBoundsRoundStroke<Matrix2F>(const ShapeDataInterface&, const Matrix2F&, ShapePosInfo*, float*,
+                                                  unsigned*);
+
 }} // namespace Scaleform::Render
 
 // MS2-PIN: ??_7?$TransformerWrapper@V?$Matrix2x4@M@Render@Scaleform@@@Render@Scaleform@@6B@ 0x14318f3d8
