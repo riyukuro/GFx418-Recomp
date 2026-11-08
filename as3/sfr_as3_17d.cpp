@@ -961,20 +961,29 @@ Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const S
 namespace Scaleform { namespace GFx { namespace AS3 {
 static __forceinline void Sfr17dPostProcessName(Multiname& mn)
 {
-    if (!mn.Name.IsString())
-        return;
-    ASString n = mn.Name.AsString();
-    if (n.GetSize() == 0)
-        return;
-    if (n[0] == '*')
-        FUN_1424e0d40(mn.Name, ASString(n.GetManager()->GetEmptyStringNode()));
-    else if (n[0] == '@')
+    // SDK Multiname::PostProcessName(false) (AS3_Object.cpp): the manager is read before the switch on name[0]
+    if (mn.Name.IsString())
     {
-        mn.Kind = static_cast<Abc::MultinameKind>(mn.Kind | 8);
-        if (n.GetSize() == 2 && n[1] == '*')
-            FUN_1424e0d40(mn.Name, ASString(n.GetManager()->GetEmptyStringNode()));
-        else
-            FUN_1424e0d40(mn.Name, ASString(n.SubstringNode(1, n.GetSize())));
+        const ASString n = mn.Name.AsString();
+        if (!n.IsEmpty())
+        {
+            ASStringManager* sm = n.GetManager();
+            switch (n[0])
+            {
+            case '@':
+                mn.Kind = static_cast<Abc::MultinameKind>(mn.Kind | 8);
+                if (n.GetSize() == 2 && n[1] == '*')
+                    FUN_1424e0d40(mn.Name, ASString(sm->GetEmptyStringNode()));
+                else
+                    FUN_1424e0d40(mn.Name, ASString(n.SubstringNode(1, n.GetSize())));
+                break;
+            case '*':
+                FUN_1424e0d40(mn.Name, ASString(sm->GetEmptyStringNode()));
+                break;
+            default:
+                break;
+            }
+        }
     }
 }
 
