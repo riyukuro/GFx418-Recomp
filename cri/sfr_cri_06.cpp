@@ -8670,9 +8670,9 @@ void FUN_1400592c0(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
     for (int j = 0; j < 8; ++j) dst[i * stride + j] = src[i * stride + j];
 }
 
-// MS2-FUNCTIONAL: SSE2 8-wide vertical half-pel average of src and src + off; same length as the exe. When off == stride
-// the previous row stays in a register and that branch matches. In the else branch only the order of the two sub r,dst
-// setups and the index operand order ([rdx+rcx] vs exe [rcx+rdx]) differ, as in FUN_1400593b0.
+// SSE2 8-wide vertical half-pel average of src and src + off. When off == stride the previous row stays in a register.
+// In the else branch src is indexed by row (src + i * stride) and src + off at its distance from dst; that gives the
+// exe's sub r,dst order and [rcx+rdx] (d + (src - dst) puts the src - dst setup first and indexes [rdx+rcx]).
 // @0x140059340
 void FUN_140059340(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
 {
@@ -8688,14 +8688,13 @@ void FUN_140059340(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
     const cri_u1* r = src + off;
     for (int i = 0; i < h; ++i) {
       cri_u1* d = dst + i * stride;
-      _mm_storel_epi64((__m128i*)d, _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(d + (src - dst))), _mm_loadl_epi64((const __m128i*)(d + (r - dst)))));
+      _mm_storel_epi64((__m128i*)d, _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(src + i * stride)), _mm_loadl_epi64((const __m128i*)(d + (r - dst)))));
     }
   }
 }
 
-// MS2-FUNCTIONAL: SSE2 8-wide horizontal half-pel average of src and src + 1, with dst as the only induction variable as
-// in the exe. What is left is the order of the two sub r,dst setups and the index operand order ([rdx+rcx] vs exe [rcx+rdx]).
-// Operand, temp and declaration order did not move it.
+// SSE2 8-wide horizontal half-pel average of src and src + 1, with dst as the only induction variable as in the exe:
+// src indexed by row, src + 1 at its distance from dst (as in FUN_140059340).
 // @0x1400593b0
 void FUN_1400593b0(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
 {
@@ -8703,7 +8702,7 @@ void FUN_1400593b0(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
   const cri_u1* r = src + 1;
   for (int i = 0; i < h; ++i) {
     cri_u1* d = dst + i * stride;
-    _mm_storel_epi64((__m128i*)d, _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(d + (src - dst))), _mm_loadl_epi64((const __m128i*)(d + (r - dst)))));
+    _mm_storel_epi64((__m128i*)d, _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(src + i * stride)), _mm_loadl_epi64((const __m128i*)(d + (r - dst)))));
   }
 }
 
@@ -8857,10 +8856,8 @@ const cri_u1* FUN_140059ac0(const cri_u1* src, cri_u1* dst, int off, int stride,
   return src;
 }
 
-// MS2-FUNCTIONAL: same length as the exe and the off == stride branch matches. In the else branch only the order of
-// the two sub r,dst setups and the index operand order ([rdx+rcx] vs exe [rcx+rdx]) differ.
 // SSE2 8-wide vertical half-pel average of src and src + off, then averaged into dst. When off == stride the exe
-// carries the previous row in a register. The exe walks dst only and reads the sources at a fixed distance from it.
+// carries the previous row in a register. The exe walks dst only; src is indexed by row (as in FUN_140059340).
 // @0x140059b80
 void FUN_140059b80(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
 {
@@ -8876,7 +8873,7 @@ void FUN_140059b80(const cri_u1* src, cri_u1* dst, int off, int stride, int h)
     const cri_u1* r = src + off;
     for (int i = 0; i < h; ++i) {
       cri_u1* d = dst + i * stride;
-      __m128i v = _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(d + (src - dst))), _mm_loadl_epi64((const __m128i*)(d + (r - dst))));
+      __m128i v = _mm_avg_epu8(_mm_loadl_epi64((const __m128i*)(src + i * stride)), _mm_loadl_epi64((const __m128i*)(d + (r - dst))));
       _mm_storel_epi64((__m128i*)d, _mm_avg_epu8(v, _mm_loadl_epi64((const __m128i*)d)));
     }
   }
