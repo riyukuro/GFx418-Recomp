@@ -475,8 +475,6 @@ static TextUnderlineStyle ConvertUnderlineStyle(HighlightInfo::UnderlineStyle st
 // Emits the records of every visible line: a new-line record at the first glyph drawn, colour / font switches,
 // images, and the underline and selection runs merged across glyphs of the same colour and style. Glyphs left
 // of the view are skipped and the line ends at the right edge; a clip box is set once something is cut.
-// MS2-FUNCTIONAL: the inlined image GetYScale loads M[1][1] into xmm0 and M[0][1] into xmm1, ours the other way
-// round (cl orders the commutative sum the same whatever the source order; tried 6 forms)
 // @0x1426680e0
 void LineBuffer::CreateVisibleTextLayout(TextLayout::Builder& bld, const Highlighter* phighlighter,
                                          const TextFieldParam& textFieldParam)
@@ -587,7 +585,11 @@ void LineBuffer::CreateVisibleTextLayout(TextLayout::Builder& bld, const Highlig
             {
                 if (pimage->pImage)
                 {
-                    float yscale = pimage->GetYScale();
+                    // pimage->GetYScale() with the first square named: keeps M[1][1]^2 in xmm0 on the add's left
+                    float sy = pimage->Matrix.M[1][1];
+                    float shx = pimage->Matrix.M[0][1];
+                    float sy2 = sy * sy;
+                    float yscale = sqrtf(sy2 + shx * shx);
                     bld.AddImage(pimage->pImage, pimage->GetXScale(), yscale, pimage->BaseLineY, float(advance));
                 }
                 else
