@@ -15,10 +15,6 @@ extern const char* NS_AS3;                 // "http://adobe.com/AS3/2006/builtin
 extern const char* NS_flash_proxy;         // "http://www.adobe.com/flash/proxy"
 }
 
-namespace Instances { namespace fl {
-extern const char* DateMonthNames[];       // the image runs on into Object's method table (+0x60)
-}}
-
 // Sets the NamespaceName of `count` consecutive entries, the first `offset` bytes into `table`. Out of line: the
 // tables are declared const, and an inlined copy lets the compiler fold the initializer to `true` without the stores.
 static __declspec(noinline) bool SetThunkNamespaces(const void* table, UPInt offset, unsigned count, const char* ns)
@@ -31,6 +27,7 @@ static __declspec(noinline) bool SetThunkNamespaces(const void* table, UPInt off
 
 }}} // namespace Scaleform::GFx::AS3
 
+struct Sd_143a2a8b0; extern Sd_143a2a8b0 DAT_143a2a8b0;        // Object's AS3 methods. The exe reaches it as DateMonthNames+0x60; fullexe does not keep them adjacent
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_143a2aab0[];   // Function prototype, then the fl class tables
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_143a2d220[];   // Proxy (callProperty ..)
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_143a2d5c0[];   // the Object methods of a class object

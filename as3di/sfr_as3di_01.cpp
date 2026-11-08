@@ -837,7 +837,7 @@ static const ThunkNamespaces2 NamespacesOf_Namespace(DAT_143a2aab0, 0xd0, fl::NS
 static const ThunkNamespacesN<6> NamespacesOf_Number(DAT_143a2aab0, 0x1c0, fl::NS_AS3);
 // Object (3 entries: isPrototypeOf, hasOwnProperty, propertyIsEnumerable)
 // @0x14013e380
-static const ThunkNamespacesN<3> NamespacesOf_Object(Instances::fl::DateMonthNames, 0x60, fl::NS_AS3);
+static const ThunkNamespacesN<3> NamespacesOf_Object(&DAT_143a2a8b0, 0x0, fl::NS_AS3);
 // QName (2 entries: valueOf, toString)
 // @0x14013e3a0
 static const ThunkNamespaces2 NamespacesOf_QName(DAT_143a2aab0, 0x170, fl::NS_AS3);
