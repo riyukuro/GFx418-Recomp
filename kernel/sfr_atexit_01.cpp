@@ -31,6 +31,9 @@ struct VertexXY16fAlpha { static VertexFormat Format; };
 struct VertexXY16iC32 { static VertexFormat Format; };
 struct VertexXY16iInstance { static VertexFormat Format; };
 struct VertexXY16iUV { static VertexFormat Format; };
+// The glyph vertex formats (Render_GlyphCache statics 0x143a2fe50 / 0x143a30328); only their Format is used here.
+struct RasterGlyphVertex { static VertexFormat Format; };
+struct ImageGlyphVertex { static VertexFormat Format; };
 }}
 
 // The exit-time statics, as far as these destructors name them (defined in sfr_render_06e/06g/06d/07q and
@@ -85,8 +88,6 @@ namespace Scaleform { namespace Render { class RenderQueueProcessor; class Rende
 namespace Scaleform { namespace GFx {
 
 // 0x143191990 = RenderQueueItem::Interface vftable (stored by its real inline dtor)
-extern "C" char DAT_143a2fe60[];
-extern "C" char DAT_143a30338[];
 extern "C" char DAT_143a2dd20[];
 extern "C" char DAT_143b15780[];
 extern "C" char DAT_143a2f650[];
@@ -471,11 +472,11 @@ void FUN_142cc9850()
     reinterpret_cast<Render::RenderQueueItem::Interface*>(RawObj(Render::HALEndDisplayItem::Instance))->Render::RenderQueueItem::Interface::~Interface();
 }
 
-// static Ptr<> at 0x143a2fe60.
+// RasterGlyphVertex::Format.pSysFormat (Ptr<SystemVertexFormat>, 0x143a2fe60).
 // @0x142cc9870
 void FUN_142cc9870()
 {
-    RawReleasePtr(DAT_143a2fe60);
+    RawReleasePtr(FormatSysSlot(Render::RasterGlyphVertex::Format));
 }
 
 // MS2-PIN: ??_7ImageFileHandler@Render@Scaleform@@6B@ 0x143184f20
@@ -495,11 +496,11 @@ void FUN_142cc98a0()
     reinterpret_cast<ResourceKey::KeyInterface*>(RawObj(GFx::SoundFileKeyInterface_Instance))->ResourceKey::KeyInterface::~KeyInterface();
 }
 
-// static Ptr<> at 0x143a30338.
+// ImageGlyphVertex::Format.pSysFormat (Ptr<SystemVertexFormat>, 0x143a30338).
 // @0x142cc98d0
 void FUN_142cc98d0()
 {
-    RawReleasePtr(DAT_143a30338);
+    RawReleasePtr(FormatSysSlot(Render::ImageGlyphVertex::Format));
 }
 
 // SKI_TextPrimitive::Instance3D (Render::SortKeyInterface): back to its interface base vftable.
