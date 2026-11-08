@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x14252b5a0-0x14252c09c .text$mn
 // MS2-RANGE: 0x14252c0e0-0x14252c4d3 .text$mn
 
+#define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp weak-ref bodies inline (as3_value.h)
 #include "ms2/scaleform/include/gfx/as3/as3_callframe.h"
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vm.h"
@@ -60,16 +61,32 @@ inline Value DetailValue(VMAbcFile& file, const Abc::ValueDetail& d)
 }
 
 // The value a slot without a default starts with: the default of its declared type, undefined for an unknown one.
-inline Value TypeDefaultValue(VM& vm, VMAbcFile& file, const Abc::TraitInfo& ti)
+__forceinline Value* TypeDefaultValue(Value* result, VM& vm, VMAbcFile& file, const Abc::TraitInfo& ti)
 {
-    const Abc::Multiname mn = file.GetAbcFile().Const_Pool.GetMultiname(ti.Ind);
-    const ClassTraits::Traits* ctr = reinterpret_cast<const ClassTraits::Traits*>(Sfr31ResolveClassTraits(
-        reinterpret_cast<UPInt>(&vm), reinterpret_cast<UPInt>(&file), reinterpret_cast<UPInt>(&mn)));
-    if (!ctr)
-        return Value::GetUndefined();
-    Value v;
-    Sfr33GetDefaultValue(&vm, &v, *ctr);
-    return v;
+    const Abc::File& f = file.GetAbcFile();
+    // A non-POD copy of the type name: the SDK's Multiname has a ctor, so its address-taken copy is no /GS buffer.
+    class TypeName
+    {
+        Abc::MultinameFlagKind Kind;
+        Abc::SInd              Ind;
+        Abc::SInd              NameIndex;
+        Abc::SInd              NextIndex;
+    public:
+        explicit TypeName(const Abc::Multiname& x)
+            : Kind(x.Kind), Ind(x.Ind), NameIndex(x.NameIndex), NextIndex(x.NextIndex) {}
+        const Abc::Multiname* operator&() const { return reinterpret_cast<const Abc::Multiname*>(this); }
+    };
+    const TypeName mn(ti.GetType() == Abc::TraitInfo::tSlot || ti.GetType() == Abc::TraitInfo::tConst
+                          ? f.Const_Pool.GetMultiname(ti.Ind)
+                          : f.Const_Pool.GetMultiname(f.AS3_Classes.Info[ti.Ind]->inst_info.name_ind));
+    if (&mn != &f.Const_Pool.AnyType)
+    {
+        const ClassTraits::Traits* ctr = reinterpret_cast<const ClassTraits::Traits*>(Sfr31ResolveClassTraits(
+            reinterpret_cast<UPInt>(&vm), reinterpret_cast<UPInt>(&file), reinterpret_cast<UPInt>(&mn)));
+        if (ctr)
+            return Sfr33GetDefaultValue(&vm, result, *ctr);
+    }
+    return ::new (result) Value(Value::GetUndefined());
 }
 
 } // namespace
@@ -171,8 +188,10 @@ void CallFrame::SetupRegisters(const Abc::MethodInfo& mi, const Value& _this, un
     }
 }
 
-// MS2-FUNCTIONAL: the exe inlines Slots::GetSlotInfo and keeps a never-taken any-type test before it resolves the
-// slot type
+// MS2-FUNCTIONAL: the exe's AS3_All.cpp SCU also inlines Value::GetUndefined (its guarded local static, 0x80 bytes)
+// as the namespace lookup's prefix argument. Ours calls it, because sfr_as3_18 defines it out of line and the static
+// is internal there. The rest (inline Slots::GetSlotInfo, VM::GetDefaultValue with its any-type test, one shared
+// value temporary, SCU AddRef bodies) follows the SDK.
 // @0x14252c0e0
 CheckResult Traits::SetupSlotValues(VMAbcFile& file, const Abc::HasTraits& t, Object& for_obj) const
 {
@@ -204,16 +223,27 @@ CheckResult Traits::SetupSlotValues(VMAbcFile& file, const Abc::HasTraits& t, Ob
         const SlotInfo* si;
         {
             const AbsoluteIndex ind = FindSlotInfoIndex(file.GetInternedString(mn.NameIndex), *ns);
-            si = ind.IsValid() ? &GetSlotInfo(ind) : NULL;
+            si = ind.IsValid() ? (ind.Get() < FirstOwnSlotNum ? &Parent->GetSlotInfo(ind)
+                                                              : &VArray[static_cast<UInt32>(ind.Get()) -
+                                                                        FirstOwnSlotNum].Value)
+                               : NULL;
         }
         if (!si)
             continue;
 
-        const Value v = ti.default_value.ValueIndex >= 1 ? DetailValue(file, ti.default_value)
-                                                         : TypeDefaultValue(GetVM(), file, ti);
-        char ok;
-        Sfr27SlotSetValueObj(si, &ok, &GetVM(), &v, &for_obj);
-        if (!ok)
+        // The slot's start value, built in place (the exe constructs both kinds into one temporary).
+        union ValueSlot
+        {
+            ValueSlot() {}
+            ~ValueSlot() {}
+            Value v;
+        } slot;
+        const Value* v = ti.default_value.ValueIndex > 0 ? ::new (&slot.v) Value(file.GetDetailValue(ti.default_value))
+                                                         : TypeDefaultValue(&slot.v, GetVM(), file, ti);
+        bool ok;
+        const char r = *Sfr27SlotSetValueObj(si, reinterpret_cast<char*>(&ok), &GetVM(), v, &for_obj);
+        slot.v.~Value();
+        if (!r)
         {
             --vm.InInitializer;
             return false;
