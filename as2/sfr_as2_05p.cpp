@@ -24,7 +24,7 @@
 #include "../include/gfx/gfx_movieimpl.h"
 #include "../include/gfx/gfx_value.h"
 
-template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Value>::SetType::~HashSetBase();    // exe 0x142924960
+template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Value>::GCSetType::~HashSetBase();    // exe 0x142924960
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -95,7 +95,7 @@ void FUN_142941190(const LocalFrame* pframe, ASRefCountBaseType::Collector* prcc
 // @0x142942db0
 void FUN_142942db0(LocalFrame* pframe)
 {
-    reinterpret_cast<ASStringHash_GC<Value>::SetType*>(&pframe->Variables)->~HashSetBase();
+    reinterpret_cast<ASStringHash_GC<Value>::GCSetType*>(&pframe->Variables)->~HashSetBase();
 }
 
 // The base character finds no member; the sprite, button and text field characters override it.

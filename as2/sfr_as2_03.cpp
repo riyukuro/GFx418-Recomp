@@ -210,8 +210,24 @@
 #include "../include/gfx/as2/as2_value.h"
 
 // The out-of-line destructors of the hash tables (exe COMDATs that the exe calls where cl inlines them).
-template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Member>::SetType::~HashSetBase();                // exe 0x142924800
-template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Object::Watchpoint>::SetType::~HashSetBase();    // exe 0x1429246b0
+// ~Object calls these two, and cl inlines the template body when it can see it, so they are specialized noinline.
+#define MS2_AS2_GC_HASH_DTOR_NOINLINE(U)                                                                         \
+    template<> inline __declspec(noinline) Scaleform::GFx::ASStringHash_GC<U>::GCSetType::~HashSetBase()          \
+    {                                                                                                             \
+        if (pTable)                                                                                               \
+        {                                                                                                         \
+            for (Scaleform::UPInt i = 0, last = pTable->SizeMask; i <= last; i++)                                 \
+            {                                                                                                     \
+                auto* e = &E(i);                                                                                  \
+                if (!e->IsEmpty())                                                                                \
+                    e->Free();                                                                                    \
+            }                                                                                                     \
+            Scaleform::AllocatorLH<Scaleform::GFx::ASString, Scaleform::GFx::StatMV_ASString_Mem>::Free(pTable);  \
+            pTable = 0;                                                                                           \
+        }                                                                                                         \
+    }
+MS2_AS2_GC_HASH_DTOR_NOINLINE(Scaleform::GFx::AS2::Member)                // exe 0x142924800
+MS2_AS2_GC_HASH_DTOR_NOINLINE(Scaleform::GFx::AS2::Object::Watchpoint)    // exe 0x1429246b0
 // The constant pool's string array dtor (exe 0x14256a8e0): ~ActionBuffer calls it out of line.
 template<> Scaleform::ArrayDataBase<Scaleform::GFx::ASString, Scaleform::AllocatorLH<Scaleform::GFx::ASString, 323>,
     Scaleform::ArrayDefaultPolicy>::~ArrayDataBase();
@@ -1582,8 +1598,6 @@ template decltype(HashLH<GFx::ASString, GFx::AS2::FunctionRef, GFx::ASStringHash
                              GFx::HashsetNodeEntry_GC<HashNode<GFx::ASString, U, GFx::ASStringHashFunctor>,        \
                                                       HashNode<GFx::ASString, U, GFx::ASStringHashFunctor>::NodeHashF> >::mHash)::BaseType::~HashSetBase();
 
-MS2_AS2_STRING_HASH_GC_DTOR(GFx::AS2::Object::Watchpoint)
-MS2_AS2_STRING_HASH_GC_DTOR(GFx::AS2::Member)
 MS2_AS2_STRING_HASH_GC_DTOR(GFx::AS2::SharedObjectPtr)
 MS2_AS2_STRING_HASH_GC_DTOR(GFx::AS2::Value)
 // @0x142924a20

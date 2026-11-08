@@ -90,7 +90,7 @@ template<> AS2::FunctionRef*
 ASStringHashBase<AS2::FunctionRef, HashUncachedLH<ASString, AS2::FunctionRef, ASStringHashFunctor, StatMV_ASString_Mem> >::GetCaseCheck(
     const ASString& key, bool caseSensitive);    // sfr_as2_05 @0x142949f60
 }}
-template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Object::Watchpoint>::SetType::~HashSetBase();    // exe 0x1429246b0
+template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Object::Watchpoint>::GCSetType::~HashSetBase();    // exe 0x1429246b0
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -1233,7 +1233,7 @@ SInt32 Value::ToInt32(Environment* penv) const
 // The watchpoint hash as the SDK's Hash deletes it: its set destructor, then the global heap free.
 struct WatchpointHashDel : ASStringHash_GC<Object::Watchpoint>
 {
-    ~WatchpointHashDel() { reinterpret_cast<SetType*>(this)->~HashSetBase(); }
+    ~WatchpointHashDel() { reinterpret_cast<GCSetType*>(this)->~HashSetBase(); }
     void operator delete(void* p) { SF_FREE(p); }
 };
 

@@ -6,6 +6,7 @@
 #define MS2_SF_GFX_AS2_OBJECT_H
 
 #include "as2_value.h"
+#include "../gfx_asstringhash.h"
 
 namespace Scaleform { namespace GFx {
 
@@ -24,12 +25,18 @@ public:
                         AllocatorLH<NodeType, StatMV_ASString_Mem>, EntryType> SetType;
     typedef typename SetType::ConstIterator                                  ConstIterator;
 
+    // The same table as the exe destroys it: Free drops the key and finalizes the value, because the collector
+    // has already released (or owns) what the value points to. SetType::~HashSetBase would release it again.
+    typedef HashSetBase<NodeType, typename NodeType::NodeHashF, typename NodeType::NodeAltHashF,
+                        AllocatorLH<ASString, StatMV_ASString_Mem>,
+                        HashsetNodeEntry_GC<NodeType, typename NodeType::NodeHashF> >      GCSetType;
+
     void* pTable;
 
     ASStringHash_GC() : pTable(0) {}
 #ifdef MS2_AS2_STRINGHASH_GC_DTOR
     // Declared in a unit whose exe destroys an object's member hash as a member (after the later members).
-    ~ASStringHash_GC() { reinterpret_cast<SetType*>(this)->~HashSetBase(); }
+    ~ASStringHash_GC() { reinterpret_cast<GCSetType*>(this)->~HashSetBase(); }
 #endif
 
     void* operator new(UPInt sz, MemoryHeap* heap) { return Memory::AllocInHeap(heap, sz); }

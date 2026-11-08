@@ -241,9 +241,9 @@
 template<> void Scaleform::MsgFormat::FormatD1<int>(const int& v);
 
 // The out-of-line destructors of the hash tables (exe COMDATs that the exe calls where cl inlines them).
-template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Member>::SetType::~HashSetBase();                // exe 0x142924800
-template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Object::Watchpoint>::SetType::~HashSetBase();    // exe 0x1429246b0
-template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::SharedObjectPtr>::SetType::~HashSetBase();       // exe 0x1429248c0
+template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Member>::GCSetType::~HashSetBase();                // exe 0x142924800
+template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Object::Watchpoint>::GCSetType::~HashSetBase();    // exe 0x1429246b0
+template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::SharedObjectPtr>::GCSetType::~HashSetBase();       // exe 0x1429248c0
 
 // The progress table's lookup (exe 0x142917500, folded with another table's): the exe calls it out of line from
 // the inlined GetAlt.
@@ -285,9 +285,9 @@ void FUN_1424aa0f0(void* pformat);                                              
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The hash table of a table object, for its out-of-line destructor.
-typedef ASStringHash_GC<Member>::SetType                 MemberHashSet;
-typedef ASStringHash_GC<Object::Watchpoint>::SetType     WatchpointHashSet;
-typedef ASStringHash_GC<SharedObjectPtr>::SetType        SharedObjectHashSet;
+typedef ASStringHash_GC<Member>::GCSetType               MemberHashSet;
+typedef ASStringHash_GC<Object::Watchpoint>::GCSetType   WatchpointHashSet;
+typedef ASStringHash_GC<SharedObjectPtr>::GCSetType      SharedObjectHashSet;
 
 // @0x142942e70
 void Object::Finalize_GC()
