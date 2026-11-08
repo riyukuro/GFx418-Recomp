@@ -7224,6 +7224,75 @@ __forceinline Multiname::Multiname(Instances::Namespace& ns, const Value& name, 
     }
 }
 
+// The same with the QName branch (Sfr27MultinameFromQName) inlined too, as ResolveStickyVariables has it.
+__forceinline Multiname::Multiname(Instances::Namespace& ns, const Value& name, InlineQNameTag)
+    : Kind(static_cast<Abc::MultinameKind>(0))
+    , Obj(&ns)
+{
+    const UInt32 k = static_cast<UInt32>(name.GetKind());
+    if (k - 0xc <= 3 && name.GetGASRefCountBase() != NULL)
+    {
+        const Traits& tr = reinterpret_cast<Object*>(name.GetGASRefCountBase())->GetTraits();
+        if (static_cast<int>(tr.TraitsType) == 0xc && (static_cast<UInt8>(~static_cast<UInt8>(static_cast<UInt8>(tr.Flags) >> 5)) & 1) != 0)
+        {
+            // SetFromQName: the QName's local name and namespace (QName::LocalName +0x38, Ns +0x40).
+            const UPInt q = reinterpret_cast<UPInt>(name.GetGASRefCountBase());
+            FUN_1424e0d40(Name, *reinterpret_cast<const ASString*>(q + 0x38));
+            // PostProcessName(true): '@' is a plain character in a QName name.
+            if (Name.IsString())
+            {
+                const ASString qn = Name.AsString();
+                if (!qn.IsEmpty())
+                {
+                    ASStringManager* sm = qn.GetManager();
+                    if (qn[0] == '*')
+                        FUN_1424e0d40(Name, sm->CreateEmptyString());
+                }
+            }
+            // SPtr::SetPtr, inline
+            GASRefCountBase* const ns = *reinterpret_cast<GASRefCountBase* const*>(q + 0x40);
+            GASRefCountBase*& o = Obj.GetRawRef();
+            if (ns != o)
+            {
+                if (o)
+                {
+                    if (reinterpret_cast<UPInt>(o) & 1)
+                        o = reinterpret_cast<GASRefCountBase*>(reinterpret_cast<UPInt>(o) - 1);
+                    else
+                        o->Release();
+                }
+                if (ns)
+                    ns->AddRef();
+                o = ns;
+            }
+            Kind = static_cast<Abc::MultinameKind>(Kind & ~6);
+            return;
+        }
+    }
+    Sfr17ValueInline::Assign(Name, name);
+    // PostProcessName(false) (0x14251cef0, sfr_as3_18) inlined: the three renames share one assignment
+    if (Name.IsString())
+    {
+        ASString n = Name.AsString();
+        if (n.GetSize() != 0)
+        {
+            if (n[0] == '*')
+                goto empty_name;
+            if (n[0] == '@')
+            {
+                Kind = static_cast<Abc::MultinameKind>(Kind | 8);
+                if (n.GetSize() == 2 && n[1] == '*')
+                {
+                empty_name:
+                    FUN_1424e0d40(Name, ASString(n.GetManager()->GetEmptyStringNode()));
+                }
+                else
+                    FUN_1424e0d40(Name, ASString(n.SubstringNode(1, n.GetSize())));
+            }
+        }
+    }
+}
+
 // MS2-FUNCTIONAL 0x14253c470: SDK exec_newclass form; the remaining diff is register allocation (the
 // interned namespace / global object held in other callee-saved regs) and the placement of the inlined
 // PostProcessName blocks (the exe hoists the string manager load and moves SubstringNode to the end).
@@ -8152,7 +8221,8 @@ struct Sfr31StickyNodeView
 
 // MovieRoot: applies the sticky variables kept for a display object (SetVariable calls made before the object existed) to its AS3 object.
 // The ones not marked permanent are dropped from the object's chain (and the chain from the table when none is left).
-// MS2-FUNCTIONAL 0x142525500: the exe inlines the StickyVariables Get/Set/Remove lookups (1936 bytes, ours 1239)
+// MS2-FUNCTIONAL 0x142525500: SDK body (AS3_MovieRoot.cpp) with the QName Multiname ctor inlined; what remains is the frame
+// (slots 8 bytes apart), the register choice (exe r13 zero / r12 node) and the exe keeping the QName name copy in a slot.
 // @0x142525500
 void Sfr31ResolveStickyVariables(UPInt root, UPInt dobj)
 {
@@ -8173,51 +8243,52 @@ void Sfr31ResolveStickyVariables(UPInt root, UPInt dobj)
     typedef ASStringHash<MovieImpl::StickyVarNode*> StickyHash;
     StickyHash& sticky = *reinterpret_cast<StickyHash*>(Sfr31Rd(root, 0x10) + 0x2e08);   // MovieImpl::StickyVariables
     const ASString& path = *reinterpret_cast<const ASString*>(handle + 0x18);              // CharacterHandle::NamePath
-    MovieImpl::StickyVarNode* pnode = 0;
-    if (!sticky.Get(path, &pnode))
-        return;
-    Sfr31StickyNodeView* const head = reinterpret_cast<Sfr31StickyNodeView*>(pnode);
-    Sfr31StickyNodeView* keptHead = 0;
-    Sfr31StickyNodeView* keptTail = 0;
-    VM& vm = *reinterpret_cast<VM*>(Sfr31Rd(root, 0x48));
-    Sfr31StickyNodeView* node = head;
-    while (node != 0)
+    MovieImpl::StickyVarNode* _pnode = 0;
+    Sfr31StickyNodeView *p, *pnext, *pnode;
+    Object* const pobj = reinterpret_cast<Object*>(avmObj);
+
+    if (sticky.Get(path, &_pnode))
     {
-        const UPInt nameNode = reinterpret_cast<UPInt>(node->Name.GetNode());
-        ASString nameStr(node->Name);
-        Value nm;
-        if (nameNode == Sfr31Rd(nameNode, 8) + 0x68)
-            nm.SetNull();
+        pnode = reinterpret_cast<Sfr31StickyNodeView*>(_pnode);
+        Sfr31StickyNodeView* ppermanent = 0;
+        Sfr31StickyNodeView* ppermanentTail = 0;
+
+        p = pnode;
+
+        while (p)
+        {
+            Multiname propname(reinterpret_cast<VM*>(Sfr31Rd(root, 0x48))->GetPublicNamespace(),
+                               Value(p->Name, Value::InlineStr), Multiname::InlineQNameTag());
+            pobj->SetProperty(propname, p->Val);
+            pnext = p->pNext;
+
+            if (p->Permanent)
+            {
+                if (!ppermanent)
+                    ppermanent = p;
+                else
+                    ppermanentTail->pNext = p;
+
+                ppermanentTail = p;
+                p->pNext = 0;
+            }
+            else
+            {
+                typedef void (*DelFn)(Sfr31StickyNodeView*, int);
+                reinterpret_cast<DelFn>(p->VTbl[0])(p, 1);
+            }
+
+            p = pnext;
+        }
+
+        if (ppermanent)
+        {
+            if (ppermanent != pnode)
+                sticky.Set(path, reinterpret_cast<MovieImpl::StickyVarNode*>(ppermanent));
+        }
         else
-            nm.Assign(nameStr);
-        Multiname mn(*reinterpret_cast<Instances::Namespace*>(Sfr31Rd(reinterpret_cast<UPInt>(&vm), 0x1d0)), nm);
-        reinterpret_cast<Object*>(avmObj)->SetProperty(mn, node->Val);
-        Sfr31StickyNodeView* const next = node->pNext;
-        if (!node->Permanent)
-        {
-            typedef void (*DelFn)(Sfr31StickyNodeView*, int);
-            reinterpret_cast<DelFn>(node->VTbl[0])(node, 1);
-        }
-        else if (keptHead == 0)
-        {
-            keptHead = keptTail = node;
-            node->pNext = 0;
-        }
-        else
-        {
-            keptTail->pNext = node;
-            keptTail = node;
-            node->pNext = 0;
-        }
-        node = next;
+            sticky.Remove(path);
     }
-    if (keptHead != 0)
-    {
-        if (keptHead != head)
-            sticky.Set(path, reinterpret_cast<MovieImpl::StickyVarNode*>(keptHead));
-    }
-    else
-        sticky.Remove(path);
 }
 //
 //
