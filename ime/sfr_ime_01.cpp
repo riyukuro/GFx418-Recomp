@@ -6665,7 +6665,9 @@ __declspec(noinline) void Ime01KeepValueArrayDtor()
 // current page's range (GetPageIndex / GetCurrentPage / GetSelection), selects the item, and refills the manager's
 // candidate list at +0x30 with the page's strings as UTF-8. The COM calls go through the same pointers the exe uses:
 // the GetUIElement result for GetPageIndex(NULL, 0, &n), GetUpdatedFlags and GetString, and the QI'd candidate
-// pointer for the rest.
+// pointer for the rest. As in the exe, the page index array is read unguarded and the row item ctor (FUN_1423cdb60)
+// is inlined. What remains is register colouring (the exe keeps self in rdi and the page array in rsi) and the +0x54
+// flag test, where the exe shifts flags right by 3 and ours tests bit 8.
 // @0x1423db0c0
 unsigned long long Ime01TsfUiSink::UpdateUIElement(unsigned message)
 {
@@ -6739,8 +6741,8 @@ unsigned long long Ime01TsfUiSink::UpdateUIElement(unsigned message)
             unsigned char* owner = *reinterpret_cast<unsigned char**>(self + 8);
             const unsigned state = *reinterpret_cast<unsigned*>(owner + 0x98);
             const int vertical = (state == 0xd00001 || state == 5) ? 0 : 1;
-            Ime01ValueArgs args;
             Scaleform::GFx::Value result;
+            Ime01ValueArgs args;
             Ime01PushArgCall(args, Scaleform::GFx::Value(10.0));
             Ime01PushArgCall(args, Scaleform::GFx::Value(static_cast<double>(vertical)));
             if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(
@@ -6756,34 +6758,34 @@ unsigned long long Ime01TsfUiSink::UpdateUIElement(unsigned message)
         }
         reinterpret_cast<HRESULT(*)(IUnknown*, UINT*)>((*reinterpret_cast<void***>(candidates))[9])(candidates, &count);
         if (count) {
-            UINT pageCount = 0, currentPage = 0, selection = 0;
-            DWORD flags = 0;
+            UINT currentPage = 0, selection = 0;
             UINT* pages = nullptr;
+            UINT pageCount = 0;
+            DWORD flags;
             BSTR text = nullptr;
             *reinterpret_cast<unsigned*>(self + 0x48) = id;
             reinterpret_cast<HRESULT(*)(IUnknown*, UINT*, UINT, UINT*)>((*reinterpret_cast<void***>(element))[0xc])(
                 element, nullptr, 0, &pageCount);
             reinterpret_cast<HRESULT(*)(IUnknown*, DWORD*)>((*reinterpret_cast<void***>(element))[7])(element, &flags);
-            self[0x54] = ((flags & 0x24) == 0 || (flags & 8)) ? 1 : 0;
-            UINT pageSize = count;
+            self[0x54] = ((flags & 0x24) == 0 || ((flags >> 3) & 1)) ? 1 : 0;
             if (pageCount) {
                 pages = static_cast<UINT*>(Scaleform::Memory::Alloc((pageCount + 1) * sizeof(UINT)));
                 reinterpret_cast<HRESULT(*)(IUnknown*, UINT*, UINT, UINT*)>((*reinterpret_cast<void***>(candidates))[0xc])(
                     candidates, pages, pageCount, &pageCount);
-                if (pageCount > 1) pageSize = pages[1] - pages[0];
             }
+            const UINT pageSize = pageCount > 1 ? pages[1] - pages[0] : count;
             reinterpret_cast<HRESULT(*)(IUnknown*, UINT*)>((*reinterpret_cast<void***>(candidates))[0xe])(
                 candidates, &currentPage);
             reinterpret_cast<HRESULT(*)(IUnknown*, UINT*)>((*reinterpret_cast<void***>(candidates))[0xa])(
                 candidates, &selection);
-            // The exe reads pages[currentPage] unguarded; pages is null when GetPageIndex reported no pages.
-            const UINT start = pages ? pages[currentPage] : 0;
+            // The exe reads pages[currentPage] unguarded, as here; pages is null when GetPageIndex reported no pages.
+            const UINT start = pages[currentPage];
             *reinterpret_cast<UINT*>(self + 0x58) = start;
             UINT shown;
             unsigned char* owner = *reinterpret_cast<unsigned char**>(self + 8);
             if ((*reinterpret_cast<unsigned*>(owner + 0x98) & 0xf0f) == 0) {
                 if (currentPage == pageCount - 1) shown = count - start;
-                else shown = pages ? pages[currentPage + 1] - pages[currentPage] : count;
+                else shown = pages[currentPage + 1] - pages[currentPage];
             } else {
                 shown = count;
                 if (shown >= pageSize) shown = (currentPage + 1) * pageSize > shown ? shown % pageSize : pageSize;
@@ -6798,22 +6800,26 @@ unsigned long long Ime01TsfUiSink::UpdateUIElement(unsigned message)
             for (UINT i = 0; i < shown; ++i) {
                 reinterpret_cast<HRESULT(*)(IUnknown*, UINT, BSTR*)>((*reinterpret_cast<void***>(element))[0xb])(
                     element, start + i, &text);
-                if (!text) {
+                if (text) {
+                    const int size = static_cast<int>(Scaleform::UTF8Util::GetEncodeStringSize(text, -1)) + 1;
+                    char* utf8 = static_cast<char*>(Scaleform::Memory::Alloc(size));
+                    Scaleform::UTF8Util::EncodeStringSafe(utf8, size, text, -1);
+                    auto* item = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x20));
+                    if (item) {
+                        *reinterpret_cast<unsigned*>(item + 1) = 1;
+                        String* value = reinterpret_cast<String*>(item + 3);
+                        item[0] = reinterpret_cast<unsigned long long>(DAT_14313a228);
+                        new (value) String();
+                        *value = utf8;
+                        ++*reinterpret_cast<int*>(item + 1);
+                    } else
+                        item = nullptr;
+                    unsigned long long retained = reinterpret_cast<unsigned long long>(item);
+                    FUN_1423d9490(*reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 8) + 0x30), &retained, 0);
+                    Scaleform::Memory::Free(utf8);
+                    if (item) FUN_14257dcd0(item);
+                } else
                     ++missing;
-                    continue;
-                }
-                const SPInt size = Scaleform::UTF8Util::GetEncodeStringSize(text, -1) + 1;
-                char* utf8 = static_cast<char*>(Scaleform::Memory::Alloc(size));
-                Scaleform::UTF8Util::EncodeStringSafe(utf8, size, text, -1);
-                auto* item = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x20));
-                if (item) {
-                    FUN_1423cdb60(item, utf8);
-                    ++*reinterpret_cast<int*>(item + 1);
-                }
-                unsigned long long retained = reinterpret_cast<unsigned long long>(item);
-                FUN_1423d9490(*reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 8) + 0x30), &retained, 0);
-                Scaleform::Memory::Free(utf8);
-                if (item) FUN_14257dcd0(item);
             }
             *reinterpret_cast<UINT*>(self + 0x50) = shown - missing;
             FUN_1423d9b40(*reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 8) + 0x30));
