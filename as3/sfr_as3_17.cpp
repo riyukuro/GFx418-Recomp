@@ -2987,6 +2987,59 @@ static SF_FORCEINLINE void Sfr17PushOp(Scaleform::ArrayDH<Scaleform::GFx::AS3::V
     s.PushBack(v);
 }
 
+// PropRef::IsAsValue / IsAsObject and PropRef::operator bool (0x1424e0e20), which the exe inlines.
+static SF_FORCEINLINE bool Sfr33TrPropTag(Scaleform::UPInt p, unsigned bit)
+{
+    return (static_cast<Scaleform::UByte>(static_cast<Scaleform::UByte>(p) >> (bit - 1)) & 1) != 0;
+}
+static SF_FORCEINLINE bool Sfr33TrPropFound(const Scaleform::GFx::AS3::PropRef& prop)
+{
+    const Scaleform::UPInt p = reinterpret_cast<Scaleform::UPInt>(prop.pValue);
+    return !(prop.This.IsUndefined() || p == 1 || (Sfr33TrPropTag(p, 2) && (p & ~Scaleform::UPInt(2)) == 0));
+}
+
+// Tracer::GetValueTraits as the exe inlines it: re-reads the VM through the tracer at each use.
+static SF_FORCEINLINE const Scaleform::GFx::AS3::Traits* Sfr33TracerTraitsOf(const Scaleform::GFx::AS3::Tracer* self, const Scaleform::GFx::AS3::Value& v, const void* tv)
+{
+    using namespace Scaleform::GFx::AS3;
+    const Traits* result = NULL;
+    switch (v.GetKind())
+    {
+    case Value::kUndefined:
+        result = reinterpret_cast<const Traits*>(&self->GetVM().GetClassTraitsVoid());
+        break;
+    case 8:
+        result = static_cast<const Traits*>(tv);
+        break;
+    case 9:
+        result = static_cast<const Traits*>(tv);
+        break;
+    default:
+        result = &self->GetVM().GetValueTraits(v);
+    }
+    if (result && result == reinterpret_cast<const Traits*>(&self->GetVM().GetClassTraitsClassClass()))
+        result = reinterpret_cast<const Traits*>(&self->GetVM().GetClassTraitsObject());
+    return result;
+}
+
+// Multiname::IsRunTime: a run-time namespace or a late name, from the kind word.
+static SF_FORCEINLINE bool Sfr33TrMnRunTime(Scaleform::UInt32 kw)
+{
+    const Scaleform::UByte ns = static_cast<Scaleform::UByte>(kw & 3);
+    const Scaleform::UByte late = static_cast<Scaleform::UByte>(kw >> 2);
+    return ns == 1 || (late & 1) != 0;
+}
+
+struct Sfr33TrSlotEntry { Scaleform::GFx::ASStringNode* Name; Scaleform::UByte Rest[0x38]; };
+
+// The slot's name lives in a parent's table.
+static SF_FORCEINLINE bool Sfr33TrSlotInherited(const Scaleform::GFx::AS3::Slots& slots, Scaleform::UPInt ind)
+{
+    if (static_cast<Scaleform::SPInt>(ind) < 0)
+        return true;
+    return ind < slots.FirstOwnSlotNum;
+}
+
 // Tracer::EmitFindProperty: the find (getlex when get_prop) of the constant-pool name mn_index, resolved statically
 // through the traced scopes (State::FindProp). A class name pushes its class; a slot of an outer scope (stype 0/1)
 // pushes that scope object (getscopeobject 0x65 / getouterscope 0x67 unless it is a constant) and, for get_prop
@@ -2994,153 +3047,181 @@ static SF_FORCEINLINE void Sfr17PushOp(Scaleform::ArrayDH<Scaleform::GFx::AS3::V
 // global object (stype 2) pushes the object or its slot, the globals undefined and NaN as constants. The op stack
 // (+0x38) gets the resulting type, flagged not null for a const slot or a namespace kind 4 unless consumer is
 // 0x61/0x68. False when the name is run-time or nothing was found.
-// MS2-FUNCTIONAL 0x1424f7cc0: written on raw offsets (tracer +0x20 state, SlotInfo bitfields); the trailing bool is
-// the exe's stype home slot, unused. Left: frame 0x128 vs the exe's 0xf8 (the exe shares one temp slot for the
-// Multiname copies and Values), the exe destroys Value f inline in each getter branch (cl merges them), and the
-// exe moves the !get_prop push and the early FUN_1424f8910 path to cold code
+// MS2-FUNCTIONAL 0x1424f7cc0: real Tracer, PropRef, Multiname and Value types with the SDK's inlined GetValueTraits;
+// the trailing bool is the exe's stype home slot, unused. The frame (0xf8) and block order match. Left: register
+// colouring (exe si r13, This object rdi, slot index and get_prop in their homes; ours si rdi, slot index r13), the
+// exe tests the Multiname and PropRef flags from a register where cl re-reads the byte from memory, and 51 bytes
+// of length from the name refcount and slot-name blocks
 // @0x1424f7cc0
 bool FUN_1424f7cc0(Scaleform::UPInt tracer, void* state, int idx, bool get_prop, int consumer, bool)
 {
     using namespace Scaleform;
     using namespace Scaleform::GFx::AS3;
-    UByte* const self = reinterpret_cast<UByte*>(tracer);
-    UByte* const file = *reinterpret_cast<UByte**>(*reinterpret_cast<UByte**>(self + 0x20) + 0x28);
+    Tracer* const self = reinterpret_cast<Tracer*>(tracer);
+    UByte* const file = *reinterpret_cast<UByte**>(*reinterpret_cast<UByte**>(tracer + 0x20) + 0x28);
     UByte* const abc = *reinterpret_cast<UByte**>(file + 0x28);
-    const UByte* amn = idx == 0 ? abc + 0xe8 : *reinterpret_cast<UByte**>(abc + 0xb8) + static_cast<SPInt>(idx) * 0x10;
-    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), *reinterpret_cast<const Abc::Multiname*>(amn));
-    const unsigned mnw = *reinterpret_cast<const unsigned*>(&mn);
-    if ((mnw & 3) == 1 || (mnw & 4))
+    const SPInt ind = idx;
+    const Abc::Multiname& amn = ind == 0 ? *reinterpret_cast<const Abc::Multiname*>(abc + 0xe8)
+                                         : (*reinterpret_cast<const Abc::Multiname* const*>(abc + 0xb8))[ind];
+    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), amn);
+    UPInt scope_ind = 0;
+    int stype;
+    if (Sfr33TrMnRunTime(*reinterpret_cast<const UInt32*>(&mn)))
         return false;
-    UByte* const vm = *reinterpret_cast<UByte**>(file + 0x20);
-    UPInt scope_index = 0;
-    UInt32 stype = 0;
     PropRef prop;
-    FUN_142501e80(state, &prop, &mn, &stype, &scope_index);
-    const UPInt pbits = reinterpret_cast<UPInt>(prop.pValue);
-    if (prop.This.GetKind() == Value::kUndefined || pbits == 1 || ((pbits & 2) != 0 && (pbits & ~UPInt(2)) == 0))
-        return get_prop && FUN_1424f8910(self, state, mn, false, false);
-    if (pbits & 1)
-        return false;
-    const UByte* const si = reinterpret_cast<const UByte*>(prop.pSI);
-    const unsigned siw = *reinterpret_cast<const unsigned*>(si);
-    const UByte* const sins = *reinterpret_cast<UByte* const*>(si + 0x20);
-    bool not_null = consumer != 0x61 && consumer != 0x68 && ((siw & 0x3e0) == 0x20 || (sins && (*sins & 0xf) == 4));
-    const UByte* const t = Sfr33TracerThisTraits(vm, prop.This);
-    const int bt = (static_cast<int>(siw) << 0x16) >> 0x1b;
-    if (static_cast<int>(stype) < 0 || static_cast<int>(stype) > 2)
-        return false;
-    if (stype == 2)
+    FUN_142501e80(state, &prop, &mn, &stype, &scope_ind);
+    if (Sfr33TrPropFound(prop))
     {
-        if (not_null && FUN_1424f8910(self, state, mn, false, true))
-            return true;
-        if (get_prop)
+        if (Sfr33TrPropTag(reinterpret_cast<UPInt>(prop.pValue), 1))
+            return false;
+        const SlotInfo* const si = prop.pSI;
+        const SPInt slot_ind = prop.SlotIndex;
+        const UInt32* const siw = reinterpret_cast<const UInt32*>(si);
+        const UByte* const sins = reinterpret_cast<const UByte* const*>(si)[4];
+        bool altered = consumer != 0x61 && consumer != 0x68 && ((*siw & 0x3e0) == 0x20 || (sins && (*sins & 0xf) == 4));
+        const Traits* const tr = Sfr33TracerTraitsOf(self, prop.This, prop.This.GetObject());
+        switch (stype)
         {
-            if (bt > 10)
-                return false;
-            const unsigned k = static_cast<unsigned>(prop.This.GetKind());
-            if (k - 0xc < 4 &&
-                *reinterpret_cast<const UPInt*>(reinterpret_cast<const UByte*>(&prop.This) + 0x10) ==
-                    *reinterpret_cast<const UPInt*>(vm + 0x298))
+        case 0:
+        case 1:
+        {
+            if (altered && FUN_1424f8910(self, state, mn, false, altered))
+                return true;
+            if (FUN_1424f86d0(self, prop.This, false))
             {
-                GFx::ASString name(reinterpret_cast<const Traits*>(t)->GetSlotNameNode(AbsoluteIndex(prop.SlotIndex)));
-                int op = 0;
-                if (strcmp(name.ToCStr(), "undefined") == 0)
-                    op = 0x21;   // pushundefined
-                else if (memcmp(name.ToCStr(), "NaN", 4) == 0)
-                    op = 0x28;   // pushnan
-                if (op)
+            }
+            else if (stype == 0)
+                FUN_14251fb90(self, 0x65, scope_ind);   // getscopeobject
+            else if (!FUN_1424f86d0(self, prop.This, false))
+                FUN_14251fb90(self, 0x67, scope_ind);   // getouterscope
+            bool gp = get_prop;
+            if (!gp && consumer == 0x4a)
+            {
+                gp = true;
+                altered = gp;
+            }
+            if (gp)
+            {
+                const int bt = (static_cast<int>(*siw) << 0x16) >> 0x1b;
+                if (bt > 10)
                 {
-                    FUN_14251f930(self, op);
-                    Sfr17PushOp(Sfr17OpStack(state), Value::GetUndefined());
+                    const int vind = (static_cast<int>(*siw) << 5) >> 0xf;
+                    if (vind >= 0 && !tr->IsInterface())
+                    {
+                        InstanceTraits::Traits* itr;
+                        if (bt == 11)
+                        {
+                            FUN_14251fb90(self, 0xb6, static_cast<unsigned>(slot_ind + 1));   // getslot
+                            itr = &reinterpret_cast<const TR::State*>(state)->GetFunctType(tr->GetVT().GetValue(AbsoluteIndex(static_cast<SPInt>(static_cast<int>(*siw) << 5) >> 0xf)));
+                        }
+                        else
+                        {
+                            FUN_14251fa10(self, 0x43, static_cast<SPInt>(vind), 0);   // callmethod (getter)
+                            itr = &FUN_14250a060(self->GetVM(), tr->GetVT().GetValue(AbsoluteIndex(static_cast<SPInt>(static_cast<int>(*siw) << 5) >> 0xf)));
+                        }
+                        Sfr17OpStack(state).PushBack(Value(*itr, self->CanBeNull(*itr)));
+                        return true;
+                    }
+                }
+                FUN_14251fb90(self, 0xb6, static_cast<unsigned>(slot_ind + 1));   // getslot
+                if (gp)
+                {
+                    Value type;
+                    char ok;
+                    if (!*TR::Sfr33TRStateAccess17::PropType(state, &ok, tr, si, type))
+                        return false;
+                    if (altered)
+                        type.SetArtificialClass();
+                    Sfr17OpStack(state).PushBack(type);
                     return true;
                 }
             }
-            if (!FUN_1424f86d0(self, prop.This, false))
-                return false;
-            {
-                Value v;
-                char ok;
-                if (!*Scaleform::GFx::AS3::TR::Sfr33TRStateAccess17::PropType(state, &ok, Sfr33TracerThisTraits(vm, prop.This), si, v))
-                    return false;
-                if (not_null)
-                    *reinterpret_cast<unsigned*>(&v) |= 0x400;
-                Sfr17OpStack(state).PushBack(v);
-            }
-            FUN_14251fb90(self, 0xb6, static_cast<unsigned>(prop.SlotIndex + 1));   // getslot
-            return true;
-        }
-        const unsigned k = static_cast<unsigned>(prop.This.GetKind());
-        if (k - 8 < 2)
-            FUN_14251fb90(self, 0xb6, static_cast<unsigned>(prop.SlotIndex + 1));   // getslot
-        else if (k == 0)
-            FUN_14251f930(self, 0x21);   // pushundefined
-        else if (k == 1)
-            FUN_14251f930(self, prop.This.AsBool() ? 0x26 : 0x27);   // pushtrue / pushfalse
-        else if (k == 4)
-        {
-            if (!prop.This.IsNaN())
-                return false;
-            FUN_14251f930(self, 0x28);   // pushnan
-        }
-        else if (k == 0xc || k == 0xd)
-        {
-            if (!FUN_1424f86d0(self, prop.This, false))
-                return false;
-        }
-        else
-            return false;
-        Sfr17OpStack(state).PushBack(prop.This);
-        return true;
-    }
-    if (not_null && FUN_1424f8910(self, state, mn, false, true))
-        return true;
-    if (!FUN_1424f86d0(self, prop.This, false))
-        FUN_14251fb90(self, stype == 0 ? 0x65 : 0x67, scope_index);   // getscopeobject / getouterscope
-    if (!get_prop)
-    {
-        if (consumer == 0x4a)
-        {
-            get_prop = true;
-            not_null = true;
-        }
-        else
-        {
             Sfr17OpStack(state).PushBack(prop.This);
             return true;
         }
+        case 2:
+        {
+            if (altered && FUN_1424f8910(self, state, mn, false, altered))
+                return true;
+            Object* const obj = prop.This.GetObject();
+            if (get_prop)
+            {
+                if ((static_cast<int>(*siw) << 0x16) >> 0x1b <= 10)
+                {
+                    const Value& _this = prop.This;
+                    if (static_cast<unsigned>(_this.GetKind()) - 0xc <= 3 && obj == *reinterpret_cast<Object* const*>(reinterpret_cast<const UByte*>(&self->GetVM()) + 0x298))
+                    {
+                        const Slots& slots = *tr;
+                        const bool inherited = Sfr33TrSlotInherited(slots, slot_ind);
+                        const GFx::ASString name(inherited ? slots.Parent->GetSlotNameNode(AbsoluteIndex(slot_ind))
+                                                      : reinterpret_cast<const Sfr33TrSlotEntry*>(slots.VArray.GetDataPtr())[static_cast<UPInt>(static_cast<UInt32>(slot_ind)) - slots.FirstOwnSlotNum].Name);
+                        int e = 1;
+                        if (!(name == "undefined"))
+                            e = !(name == "NaN") ? 0 : 2;
+                        if (e != 0)
+                        {
+                            FUN_14251f930(self, e == 1 ? 0x21 : 0x28);
+                            Sfr17PushOp(Sfr17OpStack(state), Value::GetUndefined());
+                            return true;
+                        }
+                    }
+                    if (FUN_1424f86d0(self, prop.This, false))
+                    {
+                        {
+                            Value type;
+                            char ok;
+                            if (!*TR::Sfr33TRStateAccess17::PropType(state, &ok, Sfr33TracerTraitsOf(self, prop.This, prop.This.GetObject()), si, type))
+                                return false;
+                            if (altered)
+                                type.SetArtificialClass();
+                            Sfr17OpStack(state).PushBack(type);
+                        }
+                        FUN_14251fb90(self, 0xb6, static_cast<unsigned>(slot_ind + 1));   // getslot
+                        return true;
+                    }
+                }
+            }
+            else
+            {
+                const Value& value = prop.This;
+                bool rc = true;
+                switch (static_cast<unsigned>(value.GetKind()))
+                {
+                case 8:
+                case 9:
+                    FUN_14251fb90(self, 0xb6, static_cast<unsigned>(slot_ind + 1));   // getslot
+                    break;
+                case 0:
+                    FUN_14251f930(self, 0x21);   // pushundefined
+                    break;
+                case 1:
+                    FUN_14251f930(self, value.AsBool() ? 0x26 : 0x27);   // pushtrue / pushfalse
+                    break;
+                case 4:
+                    if (!value.IsNaN())
+                        return false;
+                    FUN_14251f930(self, 0x28);   // pushnan
+                    break;
+                case 0xc:
+                case 0xd:
+                    rc = FUN_1424f86d0(self, value, false);
+                    break;
+                default:
+                    return false;
+                }
+                if (rc)
+                    Sfr17OpStack(state).PushBack(value);
+                return rc;
+            }
+            break;
+        }
+        default:
+            break;
+        }
     }
-    const int vind = (static_cast<int>(siw) << 5) >> 0xf;
-    if (bt > 10 && vind >= 0 && !((t[0x68] >> 2) & 1))
-    {
-        const Traits& tr = *reinterpret_cast<const Traits*>(t);
-        const InstanceTraits::Traits* ret;
-        if (bt == 11)
-        {
-            FUN_14251fb90(self, 0xb6, static_cast<unsigned>(prop.SlotIndex + 1));   // getslot
-            Value f = tr.GetVT().GetValue(AbsoluteIndex(vind));
-            ret = &reinterpret_cast<const TR::State*>(state)->GetFunctType(f);
-        }
-        else
-        {
-            FUN_14251fa10(self, 0x43, static_cast<UPInt>(static_cast<SPInt>(vind)), 0);   // callmethod (getter)
-            Value f = tr.GetVT().GetValue(AbsoluteIndex(vind));
-            ret = reinterpret_cast<const InstanceTraits::Traits*>(FUN_14250a060(reinterpret_cast<UPInt>(vm), &f));
-        }
-        Value v;
-        Sfr33TracerValueSet(v, ((static_cast<unsigned>(reinterpret_cast<const Tracer*>(self)->CanBeNull(*ret)) & ~8u) << 5) | 8,
-                            const_cast<InstanceTraits::Traits*>(ret), false);
-        Sfr17OpStack(state).PushBack(v);
+    else if (get_prop && FUN_1424f8910(self, state, mn, false, false))
         return true;
-    }
-    FUN_14251fb90(self, 0xb6, static_cast<unsigned>(prop.SlotIndex + 1));   // getslot
-    Value v;
-    char ok;
-    if (!*Scaleform::GFx::AS3::TR::Sfr33TRStateAccess17::PropType(state, &ok, t, si, v))
-        return false;
-    if (not_null)
-        *reinterpret_cast<unsigned*>(&v) |= 0x400;
-    Sfr17OpStack(state).PushBack(v);
-    return true;
+    return false;
 }
 
 __declspec(noinline) void* FUN_142501310(Scaleform::GFx::AS3::VM& vm, void* scope, const Scaleform::GFx::AS3::Multiname& mn);   // find mn on one scope
