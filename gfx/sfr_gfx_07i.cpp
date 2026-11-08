@@ -41,7 +41,6 @@ extern char DAT_14318f020[];
 extern char DAT_14318f048[];
 extern char DAT_14318f060[];
 extern char DAT_14318f040[];
-extern char DAT_14318f030[];
 
 void FUN_14015b310(void*, UPInt);
 void FUN_14261fa90(char*);

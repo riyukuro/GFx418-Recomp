@@ -22,14 +22,15 @@
 #include <string.h>
 #include <windows.h>
 
+struct Sd_14318ec30; extern Sd_14318ec30 DAT_14318ec30;   // vtable image (data_rdata_sf_b)
+struct Sd_14318ee08; extern Sd_14318ee08 DAT_14318ee08;   // vtable image (data_rdata_sf_b)
+struct Sd_14318f068; extern Sd_14318f068 DAT_14318f068;   // vtable image (data_rdata_sf_b)
+struct Sd_14318f030; extern Sd_14318f030 DAT_14318f030;   // vtable image (data_rdata_sf_b)
+struct Sd_14318efe8; extern Sd_14318efe8 DAT_14318efe8;   // vtable image (data_rdata_sf_b)
+
 namespace Scaleform { namespace GFx {
 
-extern char DAT_14318ec30[];
-extern char DAT_14318ee08[];
 extern void* DAT_143b16080;
-extern char DAT_14318f068[];
-extern char DAT_14318f030[];
-extern char DAT_14318efe8[];
 extern int DAT_143a2f428;
 
 void FUN_14015b310(void*, UPInt);
@@ -47,7 +48,7 @@ void FUN_1426206f0(U**, void*);
 // @0x14261e1c0
 void* FUN_14261e1c0(void* self, unsigned long long flags)
 {
-    *(void**)self = DAT_14318ec30;
+    *(void**)self = &::DAT_14318ec30;
     if (flags & 1)
         ::operator delete(self, 8);
     return self;
@@ -56,7 +57,7 @@ void* FUN_14261e1c0(void* self, unsigned long long flags)
 // @0x14261e1f0
 void* FUN_14261e1f0(void* self, unsigned long long flags)
 {
-    *(void**)self = DAT_14318ec30;
+    *(void**)self = &::DAT_14318ec30;
     if (flags & 1)
         ::operator delete(self, 8);
     return self;
@@ -99,8 +100,8 @@ struct Sfr31StaticState
     void* VTable;
     // noinline: cl folds an inline store into a constant-initialised static, an ADDR64 to the exe's DAT_14318ee08 in
     // the hook DLL's .data (ms2symobj --check); the exe stores the vtable at run time too
-    __declspec(noinline) Sfr31StaticState() { VTable = DAT_14318ee08; }
-    ~Sfr31StaticState() { VTable = DAT_14318ec30; }
+    __declspec(noinline) Sfr31StaticState() { VTable = &::DAT_14318ee08; }
+    ~Sfr31StaticState() { VTable = &::DAT_14318ec30; }
 };
 
 // The shared empty state, made on first use; returned (rax in the exe: the movie loader calls through it).
@@ -598,7 +599,7 @@ void* FUN_14261ffe0(void* self, unsigned flags) { return RawDeletingDtor(self, f
 // @0x14261f4a0
 void* FUN_14261f4a0(char* self)
 {
-    *(void**)self = DAT_14318f068;
+    *(void**)self = &::DAT_14318f068;
     *(int*)(self + 8) = 1;
     RawField<U>(self, 0x10) = 0;
     RawField<U>(self, 0x18) = 0;
@@ -647,7 +648,7 @@ void* FUN_14261f4a0(char* self)
         if (type)
         {
             memset(type + 8, 0, 0x28);
-            *(void**)type = DAT_14318f030;
+            *(void**)type = &::DAT_14318f030;
             *(int*)(type + 8) = 1;
             new (type + 0x10) StringLH();
         }
@@ -711,7 +712,7 @@ void FUN_14261fa90(char* self)
     FUN_14261f9e0(RawFieldPtr<U>(self, 0x20));
     FUN_14261f8b0(RawFieldPtr<U>(self, 0x18));
     RawClearPlainSetAt(RawFieldPtr<U>(self, 0x10), 0x30);
-    *(void**)self = DAT_14318efe8;
+    *(void**)self = &::DAT_14318efe8;
     reinterpret_cast<RefCountImplCore*>(self)->RefCountImplCore::~RefCountImplCore();
 }
 

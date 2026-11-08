@@ -14,9 +14,10 @@
 #include "ms2/scaleform/include/render/render_matrix2x4.h"
 #include "ms2/scaleform/kernel/sf_allocator.h"
 
+struct Sd_14318efe8; extern Sd_14318efe8 DAT_14318efe8;   // vtable image (data_rdata_sf_b)
+
 namespace Scaleform { namespace GFx {
 
-extern char DAT_14318efe8[];
 
 }} void __empty_global_delete(void*, unsigned __int64) noexcept; namespace Scaleform { namespace GFx {   // 0x14015b310 (was FUN_14015b310)
 
@@ -37,7 +38,7 @@ static inline void RawDeleteBranch(void* self, unsigned flags, UPInt size)
 // @0x142620160
 void* FUN_142620160(void* self, unsigned flags)
 {
-    RawField<void*>(self, 0) = DAT_14318efe8;
+    RawField<void*>(self, 0) = &::DAT_14318efe8;
     RawRefCountCoreDtor(self);
     RawDeleteBranch(self, flags, 0x10);
     return self;

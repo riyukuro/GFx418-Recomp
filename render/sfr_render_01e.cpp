@@ -18,10 +18,11 @@
 #include "ms2/scaleform/include/gfx/as2/as2_soundobject.h"
 #include "ms2/scaleform/include/gfx/xml/xml_support.h"   // XML::Support::ParseFile, folded with FUN_14259d950
 
+struct Sd_143184be8; extern Sd_143184be8 DAT_143184be8;   // vtable image (data_rdata_sf_b)
+struct Sd_143184c18; extern Sd_143184c18 DAT_143184c18;   // vtable image (data_rdata_sf_b)
+
 namespace Scaleform { namespace GFx {
 
-extern char DAT_143184be8[];
-extern char DAT_143184c18[];
 
 
 // ReleaseInternal is protected in RefCountBaseGC.
@@ -176,7 +177,7 @@ void* FUN_142591be0(void* self, void* renderer, float maxTimeDifference, unsigne
     RawField<float>(self, 0x18) = maxTimeDifference;
     ::new (self) RefCountImplCore;
     RawField<unsigned>(self, 0x20) = syncType;
-    RawField<void*>(self, 0) = DAT_143184be8;
+    RawField<void*>(self, 0) = &::DAT_143184be8;
     RawField<int>(self, 0x10) = 0x1d;
     RawField<unsigned>(self, 0x1c) = checkFrameInterval;
     if (renderer)
@@ -187,7 +188,7 @@ void* FUN_142591be0(void* self, void* renderer, float maxTimeDifference, unsigne
     if (reader)
     {
         RawField<int>(reader, 8) = 1;
-        RawField<void*>(reader, 0) = DAT_143184c18;
+        RawField<void*>(reader, 0) = &::DAT_143184c18;
         RawField<void*>(self, 0x30) = reader;
         return self;
     }
@@ -202,7 +203,7 @@ void* FUN_142591be0(void* self, void* renderer, float maxTimeDifference, unsigne
 // @0x142591c90
 void FUN_142591c90(void* self)
 {
-    RawField<void*>(self, 0) = DAT_143184be8;
+    RawField<void*>(self, 0) = &::DAT_143184be8;
     if (RawField<void*>(self, 0x30))
         FUN_14257dcd0(RawField<void*>(self, 0x30));
     if (RawField<void*>(self, 0x28))
