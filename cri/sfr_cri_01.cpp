@@ -29,11 +29,11 @@ void* FUN_14257dc50(void* object);
 extern const void* const DAT_1431b8fc8[];
 extern const void* const DAT_1431b8fa0[];
 extern const void* const DAT_1431b8e08[];
-extern const void* const DAT_1431b9028[];
-extern const void* const DAT_1431b8fd0[];
-extern const void* const DAT_1431b8db0[];
-extern const void* const DAT_1431b8f18[];
-extern const void* const DAT_1431b8f30[];
+extern "C" const void* const DAT_1431b9028[];
+extern "C" const void* const DAT_1431b8fd0[];
+extern "C" const void* const DAT_1431b8db0[];
+extern "C" const void* const DAT_1431b8f18[];
+extern "C" const void* const DAT_1431b8f30[];
 namespace Scaleform { namespace GFx { class StateBag { public: Ptr<Log> GetLog() const; }; } }   // view: GetLog = FUN_1425b38b0
 
 CriMvSoundInterface::~CriMvSoundInterface() {}

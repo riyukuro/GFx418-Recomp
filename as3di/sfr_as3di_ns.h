@@ -11,8 +11,8 @@
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace fl {
-extern const char* const NS_AS3;           // "http://adobe.com/AS3/2006/builtin"
-extern const char* const NS_flash_proxy;   // "http://www.adobe.com/flash/proxy"
+extern const char* NS_AS3;                 // "http://adobe.com/AS3/2006/builtin"
+extern const char* NS_flash_proxy;         // "http://www.adobe.com/flash/proxy"
 }
 
 namespace Instances { namespace fl {
