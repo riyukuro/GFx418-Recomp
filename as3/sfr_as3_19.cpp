@@ -7751,11 +7751,30 @@ static __forceinline UPInt Sfr19GetAvmIntf(UPInt dobj)
     return reinterpret_cast<Sfr19AvmSub*>(dobj + *reinterpret_cast<const UByte*>(dobj + 0x6d) * 4)->GetAvm();
 }
 
+// AvmDisplayObjContainer::GetAS3ChildByName (SDK, inlined): the child's AS3 object; the caller holds it in an SPtr.
+static __forceinline AS3::Object* Sfr19GetAS3ChildByName(DisplayList* dl, const ASString& key)
+{
+    DisplayObject* ch = dl->GetDisplayObjectByName(key, true);
+    if (ch)
+    {
+        const UPInt sub = reinterpret_cast<UPInt>(ch) + *reinterpret_cast<const UByte*>(reinterpret_cast<UPInt>(ch) + 0x6d) * 4;
+        typedef void (*MakeAvmFn)(UPInt, bool);
+        reinterpret_cast<MakeAvmFn>(AS3::Sfr31Rd(AS3::Sfr31Rd(sub, 0), 0x78))(sub, true);   // CreateASInstance(true)
+        union { UPInt v; AS3::Object* p; } u;
+        u.p = AS3::Sfr31Rd(sub, 0x10) ? reinterpret_cast<AS3::Object*>(AS3::Sfr31Rd(sub, 0x10)) : reinterpret_cast<AS3::Object*>(AS3::Sfr31Rd(sub, 8));
+        if (u.v & 1)
+            u.v -= 1;
+        return u.p;
+    }
+    return NULL;
+}
+
 // ---- batch 69
 // AS3ValueObjectInterface::SetMember: sets the named member of an object from a GFx value. "*" is the any-name and a leading "@" makes
 // the name an attribute. A name that is already a child of a display object is refused with a log message.
-// MS2-FUNCTIONAL 0x142527d60: raw-offset model; the exe spills gfxValue/name to other frame slots in the prolog, the
-// PostProcessName rename branches are laid out in another order, and the name Value / Multiname sit in other slots
+// MS2-FUNCTIONAL 0x142527d60: the child lookup is the SDK's inlined GetAS3ChildByName with its SPtr temporary; the exe
+// keeps a second null test before the SPtr release and strips the GC tag with a branch where ours uses cmove. The
+// name's frame-home store sits one instruction later in the exe's prolog; the rest is offset shift from those.
 // @0x142527d60
 bool AS3ValueObjectInterface::SetMember(void* pdata, const char* name, const Value& value, bool)
 {
@@ -7763,6 +7782,7 @@ bool AS3ValueObjectInterface::SetMember(void* pdata, const char* name, const Val
     const UPInt self = reinterpret_cast<UPInt>(this);
     Object* obj = static_cast<Object*>(pdata);
     const void* gfxValue = &value;
+    const char* const fmtName = name;
     const UPInt root = Sfr31Rd(Sfr31Rd(self, 8), 0x18);
     VM& vm = *reinterpret_cast<VM*>(Sfr31Rd(root, 0x48));
     ASStringManager* mgr = reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348));
@@ -7783,25 +7803,13 @@ bool AS3ValueObjectInterface::SetMember(void* pdata, const char* name, const Val
             owner = 0x18;
         ASString key(reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348))->CreateStringNode(name));
         DisplayList* dl = reinterpret_cast<DisplayList*>(Sfr31Rd(owner, 0) + 0xd8);
-        DisplayObject* ch = dl->GetDisplayObjectByName(key, true);
-        if (ch != NULL)
+        if (AS3::SPtr<AS3::Object>(Sfr19GetAS3ChildByName(dl, key)))
         {
-            const UPInt sub = reinterpret_cast<UPInt>(ch) + *reinterpret_cast<const UByte*>(reinterpret_cast<UPInt>(ch) + 0x6d) * 4;
-            typedef void (*MakeAvmFn)(UPInt, bool);
-            reinterpret_cast<MakeAvmFn>(Sfr31Rd(Sfr31Rd(sub, 0), 0x78))(sub, true);
-            UPInt avmObj = Sfr31Rd(sub, 0x10);
-            if (avmObj == 0)
-                avmObj = Sfr31Rd(sub, 8);
-            if (avmObj & 1)
-                avmObj -= 1;
-            if (avmObj != 0)
-            {
-                String msg;
-                Scaleform::Format(msg, "Property '{0}' already exists as a DisplayObject. SetMember aborted.", name);
-                typedef void (*LogFn)(UPInt, int, const char*);
-                reinterpret_cast<LogFn>(Sfr31Rd(Sfr31Rd(root + 0x28, 0), 8))(root + 0x28, 1, msg.ToCStr());
-                return false;
-            }
+            String msg;
+            Scaleform::Format(msg, "Property '{0}' already exists as a DisplayObject. SetMember aborted.", fmtName);
+            typedef void (*LogFn)(UPInt, int, const char*);
+            reinterpret_cast<LogFn>(Sfr31Rd(Sfr31Rd(root + 0x28, 0), 8))(root + 0x28, 1, msg.ToCStr());
+            return false;
         }
     }
     AS3::Value val;
