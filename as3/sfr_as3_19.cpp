@@ -407,7 +407,6 @@ namespace Scaleform { struct MS2_LoadedMovieDefInfo { Ptr<GFx::MovieDefImpl> pMo
 // through the real ArrayBase<ArrayData<WeakPtr<DisplayObject>>>::RemoveAt (0x1425224f0, called out of line)
 typedef Scaleform::ArrayBase<Scaleform::ArrayData<Scaleform::WeakPtr<Scaleform::GFx::DisplayObject>, Scaleform::AllocatorLH<Scaleform::WeakPtr<Scaleform::GFx::DisplayObject>, 2>, Scaleform::ArrayDefaultPolicy> > Sfr19WeakDispArray;
 #define FUN_1425224f0(arr, idx) ((static_cast<Sfr19WeakDispArray*>(static_cast<void*>(arr))->*static_cast<void (Sfr19WeakDispArray::*)(Scaleform::UPInt)>(&Sfr19WeakDispArray::RemoveAt))(idx))
-inline void FUN_14261d270(void* node, int mode) { static_cast<Scaleform::Render::TreeNode*>(node)->SetEdgeAAMode(static_cast<Scaleform::Render::EdgeAAMode>(mode)); }   // TreeNode::SetEdgeAAMode
 inline const void* FUN_1425f1d00(void* dispObj) { return &static_cast<const Scaleform::GFx::DisplayObjectBase*>(dispObj)->GetCxform(); }   // DisplayObjectBase::GetCxform
 inline void FUN_1425f4060(void* dispObj, const void* cx) { static_cast<Scaleform::GFx::DisplayObjectBase*>(dispObj)->SetCxform(*static_cast<const Scaleform::Render::Cxform*>(cx)); }   // DisplayObjectBase::SetCxform
 inline void FUN_1425bc060(void* textField) { static_cast<Scaleform::GFx::TextField*>(textField)->SetDirtyFlag(); }   // TextField::SetDirtyFlag
@@ -8561,230 +8560,224 @@ void MovieRoot::UnloadMovie(Instances::fl_display::Loader* ploader, bool dropAll
     }
 }
 // ---- batch 77
-static inline double Sfr31DblAt(const unsigned char* base, UPInt off) { return *reinterpret_cast<const double*>(base + off); }
 static inline bool Sfr31NotNaN(double v) { return v == v; }
-
-// Wraps an angle in degrees into (-180, 180].
-static inline double Sfr31WrapDeg(double v)
-{
-    const double m = fmod(v, 360.0);
-    if (m <= 180.0)
-        return m < -180.0 ? m + 360.0 : m;
-    return m - 360.0;
-}
 
 }}} // namespace Scaleform::GFx::AS3
 namespace Scaleform { namespace GFx {
 
+// NumberUtil::IsNaN, forced inline: the exe inlines it at SetDisplayInfo's rotation test and keeps 100.0 in a register across it; the plain inline stays a call there.
+static __forceinline bool Sfr19IsNaN(Double v)
+{
+    union { Double d; UInt64 i; } u; u.d = v;
+    return (u.i & UInt64(0x7FF0000000000000)) == UInt64(0x7FF0000000000000) && (u.i & UInt64(0x000FFFFFFFFFFFFF)) != 0;
+}
+namespace AS3 { bool FUN_142513e50(const DisplayObjectBase* pobj); }
 // AS3ValueObjectInterface::SetDisplayInfo (vftable slot 20): applies the fields of a DisplayInfo to the display object of
 // an AS3 DisplayObject node (pdata). The exe calls it through the vftable (this=rcx, pdata=rdx, info=r8).
-// MS2-FUNCTIONAL 0x142526730: same field order and twips rounding; the text rect space DisplayInfo scratch and the stale-value paths use NaN
 // @0x142526730
-bool AS3ValueObjectInterface::SetDisplayInfo(void* pdata, const Value::DisplayInfo& info)
+bool AS3ValueObjectInterface::SetDisplayInfo(void* pdata, const GFx::Value::DisplayInfo& cinfo)
 {
+    using AS3::FUN_142513e50;
     using namespace AS3;
-    const UPInt node = reinterpret_cast<UPInt>(pdata);
-    const unsigned char* d = reinterpret_cast<const unsigned char*>(&info);
-    const UPInt traits = Sfr31Rd(node, 0x20);
-    if (*reinterpret_cast<const UInt32*>(traits + 0x70) - 0x11u > 0xb || ((*reinterpret_cast<const UByte*>(traits + 0x68) >> 5) & 1) != 0)
+    typedef GFx::Value::DisplayInfo DI;
+    Object* obj = reinterpret_cast<Object*>(pdata);
+    if (!(UInt32(obj->GetTraits().GetTraitsType()) - 0x11u < 0xc && obj->GetTraits().IsInstanceTraits()))
         return false;
-    const UPInt self = Sfr31Rd(node, 0x58);
-    void* const dob = reinterpret_cast<void*>(self);
-    const UPInt vt = Sfr31Rd(self, 0);
-    typedef UPInt (*VfPtr)(void*);
-    typedef void (*VfVoid)(void*);
-    typedef void (*VfPtrArg)(void*, const void*);
-    typedef void (*VfInt)(void*, int);
-    typedef double (*VfDbl)(void*);
-    typedef void (*VfDblArg)(void*, double);
-    const bool notText = static_cast<int>(reinterpret_cast<VfPtr>(Sfr31Rd(vt, 0x258))(dob)) != 4;
-    bool changed = false;
-    UInt16 f = *reinterpret_cast<const UInt16*>(d + 0xd4);
-    const double nan = FUN_1425e3ee0();
-    if ((f >> 14) & 1)
-        FUN_14261d270(reinterpret_cast<void*>(FUN_1425f26c0(dob)), *reinterpret_cast<const int*>(d + 0xd0));
-    const double alpha = Sfr31DblAt(d, 0x28);
-    if (((f >> 5) & 1) && Sfr31NotNaN(alpha))
+    DisplayObjectBase* pd = reinterpret_cast<DisplayObjectBase*>(Sfr31Rd(reinterpret_cast<UPInt>(pdata), 0x58));
+    typedef DisplayObjectBase::GeomDataType GD;
+    bool Update3DTransforms = false;
+    const bool istf = pd->GetType() == CharacterDef::TextField;
+    if (cinfo.IsFlagSet(DI::V_edgeaaMode))
+        pd->GetRenderNode()->SetEdgeAAMode(static_cast<Render::EdgeAAMode>(cinfo.GetEdgeAAMode()));
+    if (cinfo.IsFlagSet(DI::V_alpha))
     {
-        alignas(16) UInt32 cx[8];   // a Cxform: SetCxform copies it with movaps
-        memcpy(cx, FUN_1425f1d00(dob), sizeof(cx));
-        *reinterpret_cast<float*>(cx + 3) = static_cast<float>(alpha / 100.0);
-        FUN_1425f4060(dob, cx);
-        reinterpret_cast<VfInt>(Sfr31Rd(vt, 0x188))(dob, 0);
-    }
-    f = *reinterpret_cast<const UInt16*>(d + 0xd4);
-    if ((f >> 6) & 1)
-        reinterpret_cast<VfInt>(Sfr31Rd(vt, 0x1a0))(dob, d[0x30]);
-    const UPInt data = Sfr31Rd(self, 0x50);
-    f = *reinterpret_cast<const UInt16*>(d + 0xd4);
-    if ((f >> 7) & 1)
-    {
-        double z = Sfr31DblAt(d, 0x38) * 20.0;
-        if (!Sfr31NotNaN(z) || z == HUGE_VAL || z == -HUGE_VAL)
-            z = 0.0;
-        double* slot = reinterpret_cast<double*>(data + 0x40);
-        if (z != *slot)
+        if (!NumberUtil::IsNaN(cinfo.GetAlpha()))
         {
-            *slot = z;
-            changed = true;
+            Render::Cxform cx = pd->GetCxform();
+            cx.M[0][3] = float(cinfo.GetAlpha() / 100.);
+            pd->SetCxform(cx);
+            pd->SetAcceptAnimMoves(0);
         }
-        f = *reinterpret_cast<const UInt16*>(d + 0xd4);
     }
-    if ((f >> 10) & 1)
+    if (cinfo.IsFlagSet(DI::V_visible))
+        pd->SetVisible(cinfo.GetVisible());
+    if (cinfo.IsFlagSet(DI::V_z))
     {
-        double s = Sfr31DblAt(d, 0x50);
-        if (!Sfr31NotNaN(s) || s == HUGE_VAL || s == -HUGE_VAL)
-            s = 100.0;
-        double* slot = reinterpret_cast<double*>(data + 0x48);
-        if (*slot != s)
+        Double zval = cinfo.GetZ() * 20.0;
+        if (NumberUtil::IsNaN(zval))
+            zval = 0;
+        if (NumberUtil::IsNEGATIVE_INFINITY(zval) || NumberUtil::IsPOSITIVE_INFINITY(zval))
+            zval = 0;
+        GD* tfgeomData = pd->pGeomData;
+        if (zval != tfgeomData->Z)
         {
-            *slot = s;
-            changed = true;
+            tfgeomData->Z = zval;
+            Update3DTransforms = true;
         }
-        f = *reinterpret_cast<const UInt16*>(d + 0xd4);
     }
-    if (((f >> 8) & 1) && Sfr31DblAt(d, 0x40) != *reinterpret_cast<double*>(data + 0x50))
+    if (cinfo.IsFlagSet(DI::V_zscale))
     {
-        *reinterpret_cast<double*>(data + 0x50) = Sfr31WrapDeg(Sfr31DblAt(d, 0x40));
-        changed = true;
-        f = *reinterpret_cast<const UInt16*>(d + 0xd4);
-    }
-    if (((f >> 9) & 1) && Sfr31DblAt(d, 0x48) != *reinterpret_cast<double*>(data + 0x58))
-    {
-        *reinterpret_cast<double*>(data + 0x58) = Sfr31WrapDeg(Sfr31DblAt(d, 0x48));
-        changed = true;
-    }
-    if (changed)
-        reinterpret_cast<VfVoid>(Sfr31Rd(vt, 0x58))(dob);
-    if ((*reinterpret_cast<const UInt16*>(d + 0xd4) >> 11) & 1)
-    {
-        const double fov = Sfr31DblAt(d, 0x58);
-        if (fov != reinterpret_cast<VfDbl>(Sfr31Rd(vt, 0x120))(dob))
-            reinterpret_cast<VfDblArg>(Sfr31Rd(vt, 0x118))(dob, fmod(fov, 180.0));
-    }
-    f = *reinterpret_cast<const UInt16*>(d + 0xd4);
-    if ((f >> 12) & 1)
-    {
-        reinterpret_cast<VfPtrArg>(Sfr31Rd(vt, 0x38))(dob, d + 0x90);
-        f = *reinterpret_cast<const UInt16*>(d + 0xd4);
-    }
-    if ((f >> 13) & 1)
-    {
-        reinterpret_cast<VfPtrArg>(Sfr31Rd(vt, 0x48))(dob, d + 0x60);
-        f = *reinterpret_cast<const UInt16*>(d + 0xd4);
-    }
-    if ((f & 0x1f) == 0)
-        return true;
-    if (!notText)
-    {
-        *reinterpret_cast<UInt32*>(self + 0xfc) |= 0x2000;
-        FUN_1425bc060(dob);
-    }
-    reinterpret_cast<VfInt>(Sfr31Rd(vt, 0x188))(dob, 0);
-    const UPInt geom = Sfr31Rd(self, 0x50);   // reread: the calls above can allocate the geometry data (exe 0x142526b46)
-    typedef const float* (*MatFn)(void*);
-    alignas(16) float m[8];   // a Matrix2F (aligned like the exe frame slot)
-    memcpy(m, reinterpret_cast<MatFn>(Sfr31Rd(vt, 0x10))(dob), sizeof(m));
-    double x, y;
-    if (notText || (f & 3) == 0)
-    {
-        x = (f & 1) ? Sfr31DblAt(d, 0) : nan;
-        y = ((f >> 1) & 1) ? Sfr31DblAt(d, 8) : nan;
-    }
-    else
-    {
-        alignas(16) float tr[56] = {};
-        FUN_1425be970(dob, tr, d);
-        f = *reinterpret_cast<const UInt16*>(d + 0xd4);
-        x = tr[0];
-        y = tr[1];
-    }
-    int* const pd = reinterpret_cast<int*>(geom);
-    if (f & 0x1c)
-    {
-        const double a = static_cast<float>(pd[0xc]);
-        const double b = static_cast<float>(pd[8]);
-        const double c = static_cast<float>(pd[0xd]);
-        const double e = static_cast<float>(pd[9]);
-        const double rot0 = atan2(a, b);
-        const double sx0 = sqrt(b * b + a * a);
-        const double sy0 = sqrt(e * e + c * c);
-        double rad = *reinterpret_cast<double*>(pd + 6) * 3.141592653589793;
-        double xs = *reinterpret_cast<double*>(pd + 2) / 100.0;
-        double ys = *reinterpret_cast<double*>(pd + 4) / 100.0;
-        const double rotIn = (f & 4) ? Sfr31DblAt(d, 0x10) : nan;
-        if (Sfr31NotNaN(rotIn))
+        Double newZScale = cinfo.GetZScale();
+        if (NumberUtil::IsNaN(newZScale) || NumberUtil::IsNEGATIVE_INFINITY(newZScale) || NumberUtil::IsPOSITIVE_INFINITY(newZScale))
+            newZScale = 100.;
+        GD* tfgeomData = pd->pGeomData;
+        if (tfgeomData->ZScale != newZScale)
         {
-            const double w = Sfr31WrapDeg(rotIn);
-            *reinterpret_cast<double*>(pd + 6) = w;
-            rad = w * 3.141592653589793;
+            tfgeomData->ZScale = newZScale;
+            Update3DTransforms = true;
         }
-        double xdiv = sx0, ydiv = sy0;
-        const double nx = ((*reinterpret_cast<const UInt16*>(d + 0xd4) >> 3) & 1) ? Sfr31DblAt(d, 0x18) / 100.0 : nan;
-        if (nx != xs && Sfr31NotNaN(nx) && nx - nx == 0.0)
+    }
+    if (cinfo.IsFlagSet(DI::V_xrotation))
+    {
+        Double rval = cinfo.GetXRotation();
+        GD* tfgeomData = pd->pGeomData;
+        if (rval != tfgeomData->XRotation)
         {
-            *reinterpret_cast<double*>(pd + 2) = Sfr31DblAt(d, 0x18);
-            if (sx0 == 0.0 || nx > 1e16)
-            {
-                xs = 0.0;
-                xdiv = 1.0;
-            }
-            else
-                xs = nx;
+            Double r = fmod(rval, 360.);
+            if (r > 180)
+                r -= 360;
+            else if (r < -180)
+                r += 360;
+            tfgeomData->XRotation = r;
+            Update3DTransforms = true;
         }
-        const double ny = ((*reinterpret_cast<const UInt16*>(d + 0xd4) >> 4) & 1) ? Sfr31DblAt(d, 0x20) / 100.0 : nan;
-        if (ny != ys && Sfr31NotNaN(ny) && ny - ny == 0.0)
+    }
+    if (cinfo.IsFlagSet(DI::V_yrotation))
+    {
+        Double rval = cinfo.GetYRotation();
+        GD* tfgeomData = pd->pGeomData;
+        if (rval != tfgeomData->YRotation)
         {
-            *reinterpret_cast<double*>(pd + 4) = Sfr31DblAt(d, 0x20);
-            if (sy0 == 0.0 || ny > 1e16)
-            {
-                ys = 0.0;
-                ydiv = 1.0;
-            }
-            else
-                ys = ny;
+            Double r = fmod(rval, 360.);
+            if (r > 180)
+                r -= 360;
+            else if (r < -180)
+                r += 360;
+            tfgeomData->YRotation = r;
+            Update3DTransforms = true;
         }
-        GFx::ASCharacter_MatrixScaleAndRotate2x2(*reinterpret_cast<Render::Matrix2F*>(m), static_cast<float>(xs / xdiv), static_cast<float>(ys / ydiv), static_cast<float>(rad / 180.0 - rot0));
     }
-    // x/y hold the text rect space position on the text path (exe xmm11/xmm10, 0x142526edb).
-    if (Sfr31NotNaN((f & 1) ? x : nan))
+    if (Update3DTransforms)
+        pd->UpdateTransform3D();
+    if (cinfo.IsFlagSet(DI::V_FOV))
     {
-        double v = (f & 1) ? x : nan;
-        if (v == HUGE_VAL || v == -HUGE_VAL)
-            v = 0.0;
-        v = floor(v * 20.0);
-        pd[0] = static_cast<int>(v);
-        m[3] = static_cast<float>(static_cast<int>(v));
+        Double rval = cinfo.GetFOV();
+        if (rval != pd->GetFOV())
+            pd->SetFOV(fmod(rval, 180.));
     }
-    if (Sfr31NotNaN(((f >> 1) & 1) ? y : nan))
+    if (cinfo.IsFlagSet(DI::V_projMatrix3D))
+        pd->SetProjectionMatrix3D(*cinfo.GetProjectionMatrix3D());
+    if (cinfo.IsFlagSet(DI::V_viewMatrix3D))
+        pd->SetViewMatrix3D(*cinfo.GetViewMatrix3D());
+    if (cinfo.IsFlagSet(DI::V_x | DI::V_y | DI::V_rotation | DI::V_xscale | DI::V_yscale))
     {
-        double v = ((f >> 1) & 1) ? y : nan;
-        if (v == HUGE_VAL || v == -HUGE_VAL)
-            v = 0.0;
-        v = floor(v * 20.0);
-        pd[1] = static_cast<int>(v);
-        m[7] = static_cast<float>(static_cast<int>(v));
-    }
-    if (reinterpret_cast<const Render::Matrix2x4<float>*>(m)->IsValid())
-    {
-        if (reinterpret_cast<DisplayObjectBase*>(self)->Is3D())
-            reinterpret_cast<VfVoid>(Sfr31Rd(vt, 0x58))(dob);
+        if (istf)
+        {
+            *reinterpret_cast<UInt32*>(reinterpret_cast<char*>(pd) + 0xfc) |= 0x2000;
+            FUN_1425bc060(pd);
+        }
+        pd->SetAcceptAnimMoves(0);
+        GD* tfgeomData = pd->pGeomData;
+        Render::Matrix2F m = pd->GetMatrix();
+        struct { double x, y; } pt;   // deliberately uninitialised: exe reads the stale slot when a flag is off
+        if (istf && cinfo.IsFlagSet(DI::V_x | DI::V_y))
+        {
+            Render::PointF tpt = static_cast<TextField*>(pd)->TransformToTextRectSpace(cinfo);
+            pt.x = tpt.x;
+            pt.y = tpt.y;
+        }
         else
-            reinterpret_cast<VfPtrArg>(Sfr31Rd(vt, 0x18))(dob, m);
-    }
-    if (!notText)
-    {
-        if (f & 1)
         {
-            double v = x * 20.0;
-            v = v <= 0.0 ? v - 0.5 : v + 0.5;
-            pd[0] = static_cast<int>(v);
+            if (cinfo.IsFlagSet(DI::V_x))
+                pt.x = cinfo.GetX();
+            if (cinfo.IsFlagSet(DI::V_y))
+                pt.y = cinfo.GetY();
         }
-        if ((f >> 1) & 1)
+        if (cinfo.IsFlagSet(DI::V_rotation | DI::V_xscale | DI::V_yscale))
         {
-            double v = y * 20.0;
-            v = v <= 0.0 ? v - 0.5 : v + 0.5;
-            pd[1] = static_cast<int>(v);
+            Render::Matrix2F om = tfgeomData->OrigMatrix;
+            om.Tx() = m.Tx();
+            om.Ty() = m.Ty();
+            Double origRotation = om.GetRotationDouble();
+            Double origXScale = om.GetXScaleDouble();
+            Double origYScale = om.GetYScaleDouble();
+            Double newXScale = tfgeomData->XScale / 100;
+            Double newYScale = tfgeomData->YScale / 100;
+            Double newRotation = tfgeomData->Rotation * 3.141592653589793 / 180.;
+            Double rval = cinfo.IsFlagSet(DI::V_rotation) ? cinfo.GetRotation() : NumberUtil::NaN();
+            if (!Sfr19IsNaN(rval))
+            {
+                newRotation = fmod(rval, 360.);
+                if (newRotation > 180)
+                    newRotation -= 360;
+                else if (newRotation < -180)
+                    newRotation += 360;
+                tfgeomData->Rotation = newRotation;
+                newRotation = newRotation * 3.141592653589793 / 180.;
+            }
+            Double nx = cinfo.IsFlagSet(DI::V_xscale) ? (cinfo.GetXScale() / 100) : NumberUtil::NaN();
+            if (nx != newXScale && !NumberUtil::IsNaNOrInfinity(nx))
+            {
+                tfgeomData->XScale = cinfo.GetXScale();
+                if (origXScale == 0 || nx > 1E+16)
+                {
+                    nx = 0;
+                    origXScale = 1;
+                }
+                newXScale = nx;
+            }
+            Double ny = cinfo.IsFlagSet(DI::V_yscale) ? (cinfo.GetYScale() / 100) : NumberUtil::NaN();
+            if (ny != newYScale && !NumberUtil::IsNaNOrInfinity(ny))
+            {
+                tfgeomData->YScale = cinfo.GetYScale();
+                if (origYScale == 0 || ny > 1E+16)
+                {
+                    ny = 0;
+                    origYScale = 1;
+                }
+                newYScale = ny;
+            }
+            GFx::ASCharacter_MatrixScaleAndRotate2x2(om, float(newXScale / origXScale), float(newYScale / origYScale),
+                float(newRotation - origRotation));
+            m = om;
+        }
+        Double xval = cinfo.IsFlagSet(DI::V_x) ? pt.x : NumberUtil::NaN();
+        if (!NumberUtil::IsNaN(xval))
+        {
+            if (NumberUtil::IsNEGATIVE_INFINITY(xval) || NumberUtil::IsPOSITIVE_INFINITY(xval))
+                xval = 0;
+            tfgeomData->X = int(floor(xval * 20.0));
+            m.Tx() = (float)tfgeomData->X;
+        }
+        Double yval = cinfo.IsFlagSet(DI::V_y) ? pt.y : NumberUtil::NaN();
+        if (!NumberUtil::IsNaN(yval))
+        {
+            if (NumberUtil::IsNEGATIVE_INFINITY(yval) || NumberUtil::IsPOSITIVE_INFINITY(yval))
+                yval = 0;
+            tfgeomData->Y = int(floor(yval * 20.0));
+            m.Ty() = (float)tfgeomData->Y;
+        }
+        if (m.IsValid())
+        {
+            // The exe reads the vptr before the Is3D call (it knows the callee leaves it alone) and keeps it in rbx.
+            void** vt = *reinterpret_cast<void***>(pd);
+            if (FUN_142513e50(pd))
+                reinterpret_cast<void (*)(DisplayObjectBase*)>(vt[0x58 / 8])(pd);
+            else
+                reinterpret_cast<void (*)(DisplayObjectBase*, const Render::Matrix2F&)>(vt[0x18 / 8])(pd, m);
+        }
+        if (istf)
+        {
+            if (cinfo.IsFlagSet(DI::V_x))
+            {
+                double v = pt.x * 20.0;
+                tfgeomData->X = int(v > 0.0 ? v + 0.5 : v - 0.5);
+            }
+            if (cinfo.IsFlagSet(DI::V_y))
+            {
+                double v = pt.y * 20.0;
+                tfgeomData->Y = int(v > 0.0 ? v + 0.5 : v - 0.5);
+            }
         }
     }
     return true;
