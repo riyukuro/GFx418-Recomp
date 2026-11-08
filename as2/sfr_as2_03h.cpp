@@ -43,9 +43,10 @@ inline ASString CapsManufacturer(ASStringContext* psc) { return psc->CreateConst
 inline ASString CapsOS(ASStringContext* psc) { return psc->CreateConstString("Windows"); }
 inline ASString CapsVersion(ASStringContext* psc) { return psc->CreateConstString("WIN 8,0,0,0"); }
 
-// MS2-FUNCTIONAL: LTCG alias floor. At the six Value(ASString temp) sites the exe sinks the ASString AddRef past the
-// Value stores and merges it with the Value AddRef (add [node+0x18],2; we emit two incs, 2 bytes each = the 12-byte gap).
-// A __declspec(restrict) CreateConstStringNode does not reproduce it. The vptr/flags store order at entry also differs.
+// MS2-FUNCTIONAL: scheduling only, same size as the exe. At the six string-valued sites a named ASString str + Value(str)
+// gives the exe's merged AddRef (add [node+0x18],2); the SDK's Value(ASString temp) gives two incs. Left: the exe copies
+// the node to rbx right after each CreateConstStringNode call (ours after the Value stores), and the vptr lea / flags
+// store order at entry.
 // @0x142919ee0
 CapabilitiesCtorFunction::CapabilitiesCtorFunction(ASStringContext* psc)
     : CFunctionObject(psc, ObjectInlineCtorTag())
@@ -67,14 +68,32 @@ CapabilitiesCtorFunction::CapabilitiesCtorFunction(ASStringContext* psc)
     Object::SetMemberRaw(psc, psc->CreateConstString("hasVideoEncoder"), no, flags);
     Object::SetMemberRaw(psc, psc->CreateConstString("isDebugger"), no, flags);
     Object::SetMemberRaw(psc, psc->CreateConstString("localFileReadDisable"), no, flags);
-    Object::SetMemberRaw(psc, psc->CreateConstString("language"), psc->CreateConstString("en"), flags);
-    Object::SetMemberRaw(psc, psc->CreateConstString("manufacturer"), CapsManufacturer(psc), flags);
-    Object::SetMemberRaw(psc, psc->CreateConstString("os"), CapsOS(psc), flags);
+    {
+        ASString str(psc->CreateConstString("en"));
+        Object::SetMemberRaw(psc, psc->CreateConstString("language"), Value(str), flags);
+    }
+    {
+        ASString str(CapsManufacturer(psc));
+        Object::SetMemberRaw(psc, psc->CreateConstString("manufacturer"), Value(str), flags);
+    }
+    {
+        ASString str(CapsOS(psc));
+        Object::SetMemberRaw(psc, psc->CreateConstString("os"), Value(str), flags);
+    }
     Object::SetMemberRaw(psc, psc->CreateConstString("pixelAspectRatio"), Value(1), flags);
-    Object::SetMemberRaw(psc, psc->CreateConstString("playerType"), psc->CreateConstString("External"), flags);
-    Object::SetMemberRaw(psc, psc->CreateConstString("screenColor"), psc->CreateConstString("color"), flags);
+    {
+        ASString str(psc->CreateConstString("External"));
+        Object::SetMemberRaw(psc, psc->CreateConstString("playerType"), Value(str), flags);
+    }
+    {
+        ASString str(psc->CreateConstString("color"));
+        Object::SetMemberRaw(psc, psc->CreateConstString("screenColor"), Value(str), flags);
+    }
     Object::SetMemberRaw(psc, psc->CreateConstString("screenDPI"), Value(72), flags);
-    Object::SetMemberRaw(psc, psc->CreateConstString("version"), CapsVersion(psc), flags);
+    {
+        ASString str(CapsVersion(psc));
+        Object::SetMemberRaw(psc, psc->CreateConstString("version"), Value(str), flags);
+    }
     Object::SetMemberRaw(psc, psc->CreateConstString("windowlessDisable"), no, flags);
     Object::SetMemberRaw(psc, psc->CreateConstString("screenResolutionX"), Value(Value::UNSET), flags);
     Object::SetMemberRaw(psc, psc->CreateConstString("screenResolutionY"), Value(Value::UNSET), flags);
