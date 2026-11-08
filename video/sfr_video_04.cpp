@@ -60,10 +60,9 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 class NetStream;
 void FUN_140006ba0(NetStream* pnetStream, Sprite* pchar);         // sfr_video_01: NetStream's provider->SetAudioTarget
 } } }
-extern ExeDecl<void*>::type DAT_1431b7b50;                             // AS3 ClassInfo (data_rdata_sf_video)
-extern ExeDecl<void*>::type DAT_1431b7160;                             // AS3 ClassInfo (data_rdata_sf_video)
-// The module's null-terminated AS3 class info table the VM registers (exe .data 0x143a462f0: { &DAT_1431b7b50,
-// &DAT_1431b7160, 0 }). Filled at run time: the hook DLL cannot take exe addresses in static data.
+namespace Scaleform { namespace GFx { namespace AS3 { struct ClassInfo; namespace fl_net { extern const ClassInfo NetStreamCI; } namespace fl_media { extern const ClassInfo VideoCI; } } } }
+// The module's null-terminated AS3 class info table the VM registers (exe .data 0x143a462f0: { &VideoCI,
+// &NetStreamCI, 0 }). Filled at run time: the hook DLL cannot take exe addresses in static data.
 const void* DAT_143a462f0[3];
 
 namespace
@@ -224,8 +223,8 @@ DisplayObjectBase* AS3VideoSupportImpl::CreateASCharacter(MovieImpl* proot, Char
 // (lea rdx, 0x143a462f0: the table's address, not a pointer stored there).
 void AS3VideoSupportImpl::RegisterASClasses(AS3::VM* pvm)
 {
-    DAT_143a462f0[0] = &DAT_1431b7b50;
-    DAT_143a462f0[1] = &DAT_1431b7160;
+    DAT_143a462f0[0] = &::Scaleform::GFx::AS3::fl_media::VideoCI;
+    DAT_143a462f0[1] = &::Scaleform::GFx::AS3::fl_net::NetStreamCI;
     AS3::FUN_1425210d0(*pvm, (const AS3::ClassInfo**)DAT_143a462f0);
 }
 

@@ -170,14 +170,15 @@ extern ExeDecl<void*>::type DAT_1431b7c70[];
 //
 //
 //
-extern ExeDecl<void*>::type DAT_1431b7160; extern ExeDecl<void*>::type DAT_1431b7900[];
-#define VideoClassInfoA DAT_1431b7160
+namespace Scaleform { namespace GFx { namespace AS3 { struct ClassInfo; namespace fl_net { extern const ClassInfo NetStreamCI; } namespace fl_media { extern const ClassInfo VideoCI; } } } }
+extern ExeDecl<void*>::type DAT_1431b7900[];
+#define VideoClassInfoA ::Scaleform::GFx::AS3::fl_net::NetStreamCI
 #define VideoClassVtableA (*DAT_1431b7900)
 extern void* DAT_1431b71b0[]; extern void* DAT_1431b7260[];
 #define VideoInstanceVtableA (*DAT_1431b71b0)
 #define VideoCTraitsVtable (*DAT_1431b7260)
-extern ExeDecl<void*>::type DAT_1431b7b50; extern ExeDecl<void*>::type DAT_1431b7d50[];
-#define VideoClassInfoB DAT_1431b7b50
+extern ExeDecl<void*>::type DAT_1431b7d50[];
+#define VideoClassInfoB ::Scaleform::GFx::AS3::fl_media::VideoCI
 #define VideoClassVtableB (*DAT_1431b7d50)
 extern ExeDecl<void*>::type DAT_1431b7c70[];
 #define VideoInstanceVtableB (*DAT_1431b7c70)
