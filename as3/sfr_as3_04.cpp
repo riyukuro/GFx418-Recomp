@@ -4351,7 +4351,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return this;
     }
 
-    // MS2-FUNCTIONAL: the exe calls SetParent and the SPtr<XML> assignment out of line
     // @0x14241f1a0
     CheckResult XMLElement::Replace(UPInt ind, const Value& value)
     {
@@ -4364,20 +4363,21 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
             Children[ind] = NULL;
         }
 
-        if (value.IsObject() && IsXMLObject(value.GetObject()) &&
-            static_cast<XML*>(value.GetObject())->GetKind() != kAttr)
+        if (IsXMLObject(value) && static_cast<XML*>(value.GetObject())->GetKind() != kAttr)
         {
             XML* x = static_cast<XML*>(value.GetObject());
-            if (x->GetKind() == kElement)
+            if (static_cast<XML*>(value.GetObject())->GetKind() == kElement)
             {
-                for (XML* p = this; p; p = p->Parent)
+                XML* node = this;
+                while (node != NULL)
                 {
-                    if (p == x)
+                    if (node == x)
                     {
-                        VM& vm = GetVM();
-                        vm.ThrowTypeError(VM::Error(VM::eXMLIllegalCyclicalLoop, vm));
+                        GetVM().ThrowTypeError(VM::Error(VM::eXMLIllegalCyclicalLoop, GetVM()));
                         return false;
                     }
+
+                    node = node->Parent;
                 }
             }
 
@@ -4395,8 +4395,9 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         {
             if (Children[ind])
                 Children[ind]->Parent = NULL;
+            InstanceTraits::fl::XML& itr = static_cast<InstanceTraits::fl::XML&>(GetInstanceTraits());
             ASString str = value.AsString();
-            Children[ind] = Pickable<XML>(new(GetVM().GetMemoryHeap()) XMLText(GetInstanceTraits(), str, this));
+            Children[ind] = Pickable<XML>(new(itr.GetVM().GetMemoryHeap()) XMLText(itr, str, this));
         }
 
         return result;
