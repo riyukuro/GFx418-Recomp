@@ -2104,13 +2104,18 @@ static __forceinline void Sfr19PostProcessName(Multiname& mn)
     ASString n = mn.Name.AsString();
     if (n.GetSize() == 0)
         return;
+    ASStringManager* sm = n.GetManager();
+    // the two renames to the empty name share one assignment
     if (n[0] == '*')
-        FUN_1424e0d40(mn.Name, ASString(n.GetManager()->GetEmptyStringNode()));
-    else if (n[0] == '@')
+        goto empty_name;
+    if (n[0] == '@')
     {
         mn.Kind = static_cast<Abc::MultinameKind>(mn.Kind | 8);
         if (n.GetSize() == 2 && n[1] == '*')
-            FUN_1424e0d40(mn.Name, ASString(n.GetManager()->GetEmptyStringNode()));
+        {
+        empty_name:
+            FUN_1424e0d40(mn.Name, ASString(sm->GetEmptyStringNode()));
+        }
         else
             FUN_1424e0d40(mn.Name, ASString(n.SubstringNode(1, n.GetSize())));
     }
@@ -7120,7 +7125,37 @@ struct Sfr19ExecInArgs
     union { Value _2; };
     Value& _1;
 };
-// MS2-FUNCTIONAL 0x14253b020: the exe (LTCG) gives the cached flags/kind/weak proxy different registers and loads the object before storing its copy; 988 vs 1010 bytes
+// MS2-FUNCTIONAL 0x14253b020: same size and code; only the prolog differs: the exe (LTCG) loads the popped object (movups) and its Bonus before storing the Flags copy, ours after
+// Value::IsNullOrUndefined, the 4.2 form (IsNull tests objects only, into a result).
+static __forceinline bool Sfr19IsNullOrUndef(const Value& v)
+{
+    if (v.GetKind() == Value::kUndefined)
+        return true;
+    bool result;
+    if (v.IsObject())
+        result = v.GetObject() == NULL;
+    else
+        result = false;
+    return result;
+}
+// The release of the popped object at each exit (the SH2 dtor), from its flags and weak proxy cached up front.
+struct Sfr19ExecInRelease
+{
+    __forceinline Sfr19ExecInRelease(Value& v, UInt32 f, WeakProxy* wp) : V(v), Of(f), Wp(wp) { }
+    __forceinline ~Sfr19ExecInRelease()
+    {
+        if ((Of & 0x1f) > 9)
+        {
+            if (static_cast<UInt8>(Of >> 9) & 1)
+                Wp->Release();
+            else
+                ValueAssignCopies::ReleaseStrong19(V);
+        }
+    }
+    Value& V;
+    const UInt32 Of;
+    WeakProxy* const Wp;
+};
 // @0x14253b020
 void Sfr31ExecIn(UPInt vmAddr)
 {
@@ -7130,45 +7165,25 @@ void Sfr31ExecIn(UPInt vmAddr)
     Value& name = stack._1;
     const UInt32 of = *reinterpret_cast<const UInt32*>(&obj);
     WeakProxy* const owp = *reinterpret_cast<WeakProxy* const*>(reinterpret_cast<const char*>(&obj) + 8);
-    const UInt32 ok = of & 0x1f;
-    const bool isObj = Value::IsObject(static_cast<Value::KindType>(ok));
-    if (ok == 0 || (isObj && obj.GetObject() == NULL))
+    Sfr19ExecInRelease release(obj, of, owp);
+    if (Sfr19IsNullOrUndef(obj))
+        return vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x3f1), vm));
+    const bool isObj = Value::IsObject(static_cast<Value::KindType>(of & 0x1f));
+    Multiname prop_name(vm.GetPublicNamespace(), name, Multiname::InlineCtorTag());
+    if (isObj)
     {
-        vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x3f1), vm));
-        if (ok > 9)
+        Object* o = obj.GetObject();
+        const Traits& tr = o->GetTraits();
+        if (tr.IsArrayLike() || (tr.GetTraitsType() == Traits_XML && tr.IsInstanceTraits()))
         {
-            if ((of >> 9) & 1)
-                owp->Release();
-            else
-                ValueAssignCopies::ReleaseStrong19(obj);
+            Value value = Value::GetUndefined();
+            name.SetBool(o->GetProperty(prop_name, value));
+            return;
         }
-        return;
     }
-    {
-        Multiname prop_name(vm.GetPublicNamespace(), name, Multiname::InlineCtorTag());
-        if (isObj)
-        {
-            Object* o = obj.GetObject();
-            const Traits& tr = o->GetTraits();
-            if (tr.IsArrayLike() || (tr.GetTraitsType() == Traits_XML && tr.IsInstanceTraits()))
-            {
-                Value value = Value::GetUndefined();
-                name.SetBool(o->GetProperty(prop_name, value));
-                goto done;
-            }
-        }
-        PropRef prop;
-        FUN_142501b00(&prop, &vm, &obj, &prop_name, 0);
-        name.SetBool(Sfr19PropFound(prop));
-    }
-done:
-    if (ok > 9)
-    {
-        if ((of >> 9) & 1)
-            owp->Release();
-        else
-            ValueAssignCopies::ReleaseStrong19(obj);
-    }
+    PropRef prop;
+    FUN_142501b00(&prop, &vm, &obj, &prop_name, 0);
+    name.SetBool(Sfr19PropFound(prop));
 }
 
 // ---- batch 61
