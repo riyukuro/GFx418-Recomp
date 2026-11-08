@@ -137,8 +137,8 @@ static SF_FORCEINLINE Environment* Level0Env(const MovieImpl* pmovieImpl)
 
 // Writes count host values of one type into the array at path from index on, growing it as needed; a missing
 // or non-array variable becomes a new Array.
-// MS2-FUNCTIONAL: SDK body; in the string cases the exe merges the ASString and Value AddRefs into one add 2 after
-// the Value stores (cl knows the out-of-TU callees keep the temp's address), ours does two incs around them
+// The string cases name the ASString (str) and pass Value(str): the exe merges its AddRef and the Value's into one
+// add 2 after the Value stores. Passing Value(CreateString(..)) gives two incs around them.
 // @0x14298d1e0
 bool MovieRoot::SetVariableArray(SetArrayTypeArg type, const char* ppathToVar, unsigned index, const void* pdata,
                                  unsigned count, SetVarTypeArg setType)
@@ -201,14 +201,20 @@ bool MovieRoot::SetVariableArray(SetArrayTypeArg type, const char* ppathToVar, u
         {
             const char* const* parr = static_cast<const char* const*>(pdata);
             for (unsigned i = 0; i < count; ++i)
-                parray->SetElement(i + index, Value(GetStringManager()->CreateString(parr[i])));
+            {
+                ASString str(GetStringManager()->CreateString(parr[i]));
+                parray->SetElement(i + index, Value(str));
+            }
             break;
         }
     case Movie::SA_StringW:
         {
             const wchar_t* const* parr = static_cast<const wchar_t* const*>(pdata);
             for (unsigned i = 0; i < count; ++i)
-                parray->SetElement(i + index, Value(GetStringManager()->CreateString(parr[i])));
+            {
+                ASString str(GetStringManager()->CreateString(parr[i]));
+                parray->SetElement(i + index, Value(str));
+            }
             break;
         }
     }
