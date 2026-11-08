@@ -7201,24 +7201,27 @@ __forceinline Multiname::Multiname(Instances::Namespace& ns, const Value& name, 
         }
     }
     Sfr17ValueInline::Assign(Name, name);
-    // PostProcessName(false) (0x14251cef0, sfr_as3_18) inlined: the three renames share one assignment
+    // PostProcessName(false) (0x14251cef0, sfr_as3_18) inlined, in the SDK switch form (AS3_Object.cpp)
     if (Name.IsString())
     {
-        ASString n = Name.AsString();
-        if (n.GetSize() != 0)
+        const ASString n = Name.AsString();
+        if (!n.IsEmpty())
         {
-            if (n[0] == '*')
-                goto empty_name;
-            if (n[0] == '@')
+            ASStringManager* sm = n.GetManager();
+            switch (n[0])
             {
+            case '@':
                 Kind = static_cast<Abc::MultinameKind>(Kind | 8);
                 if (n.GetSize() == 2 && n[1] == '*')
-                {
-                empty_name:
-                    FUN_1424e0d40(Name, ASString(n.GetManager()->GetEmptyStringNode()));
-                }
+                    FUN_1424e0d40(Name, ASString(sm->GetEmptyStringNode()));
                 else
                     FUN_1424e0d40(Name, ASString(n.SubstringNode(1, n.GetSize())));
+                break;
+            case '*':
+                FUN_1424e0d40(Name, ASString(sm->GetEmptyStringNode()));
+                break;
+            default:
+                break;
             }
         }
     }
@@ -9760,9 +9763,12 @@ static SF_FORCEINLINE bool Sfr31ExtractPathAndName(UPInt root, const char* fullP
     return true;
 }
 
+// Object vftable view: slot 6 (+0x30) is SetProperty (CheckResult by sret); called as call [rax+0x30] like the exe
+struct Sfr31SetPropHolder { virtual void S0()=0; virtual void S1()=0; virtual void S2()=0; virtual void S3()=0; virtual void S4()=0; virtual void S5()=0;
+                            virtual CheckResult SetProp(const Multiname&, const Value&) = 0; };
 // MovieRoot::SetVariable: sets the member after the last '.' of the path on the object the rest of the path resolves to
 // ("root" when there is no dot). setType 1 keeps the value for a target that does not exist yet, 2 keeps it permanently.
-// MS2-FUNCTIONAL 0x14252a700: frame slots differ (the exe keeps the Value/Multiname temporaries and rdi/r12 home slots elsewhere) and the sticky-node Value copy lays out its kind dispatch in another order; the sticky node is a local class standing in for the exe one
+// MS2-FUNCTIONAL 0x14252a700: frame slots only (the exe saves rbx/rdi/r12/r13/r15 lower in the frame and shifts every temporary by 8); the code is otherwise op-for-op. The sticky node is a local class standing in for the exe one
 // @0x14252a700
 char Sfr31MovieRootSetVariable(UPInt root, const char* path, const void* gfxValue, int setType)
 {
@@ -9783,10 +9789,8 @@ char Sfr31MovieRootSetVariable(UPInt root, const char* path, const void* gfxValu
 
     Value converted;
     FUN_1425048d0(root, gfxValue, &converted);
-    typedef char* (*SetPropFn)(void*, void*, void*, void*);
     const UPInt obj = Sfr31Rd(reinterpret_cast<UPInt>(&targetVal), 0x10);
-    UPInt resSlot = 0;
-    char result = *reinterpret_cast<SetPropFn>(Sfr31Rd(Sfr31Rd(obj, 0), 0x30))(reinterpret_cast<void*>(obj), &resSlot, &mn, &converted);
+    char result = reinterpret_cast<Sfr31SetPropHolder*>(obj)->SetProp(mn, converted);
     if (((result == 0 && setType != 0) || setType == 2) && *reinterpret_cast<const UInt32*>(memberNode + 0x20) != 0)
     {
         Sfr31AvmStickyVarNode* node = static_cast<Sfr31AvmStickyVarNode*>(
