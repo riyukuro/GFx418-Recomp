@@ -866,27 +866,41 @@ namespace Classes { namespace fl_gfx
             result = NULL;
     }
 
-    // MS2-FUNCTIONAL: xmm2/xmm3 swapped in the point transform; the exe's no-main-movie path clears result through rdx
+    // MS2-FUNCTIONAL 0x1424cb000: SDK body (early else result = NULL; return); only float(x)/float(y) sit in xmm3/xmm2 in the exe
+    // (ours xmm2/xmm3); SetPoint, ctor, by-value Transform and term-order variants all keep the swap
     // @0x1424cb000
     void Extensions::getTopMostEntity(SPtr<Instances::fl_display::DisplayObject>& result, Value::Number x,
                                       Value::Number y, bool testAll)
     {
-        MovieImpl* proot = static_cast<ASVM&>(GetVM()).GetMovieImpl();
+        ASVM& asvm = static_cast<ASVM&>(GetVM());
+        MovieImpl* proot = asvm.GetMovieImpl();
+
+        x = x * 20.0;
+        y = y * 20.0;
+        Render::PointF mousePos(Render::PointF::NoInit);
+
         if (proot->pMainMovie)
         {
             Render::Matrix2F m;
             proot->pMainMovie->GetWorldMatrix(&m);
-            Render::PointF pt = m.Transform(Render::PointF((float)(x * 20.0), (float)(y * 20.0)));
-            GFx::InteractiveObject* ptop = proot->GetTopMostEntity(pt, 0, testAll, NULL);
-            if (ptop)
-            {
-                AvmInteractiveObj15* pavm = ToAvmInteractiveObj15(ptop);
-                pavm->CreateASInstance(true);
-                result = pavm->GetAS3Obj();
-                return;
-            }
+            Render::PointF a;
+            a.SetPoint(float(x), float(y));
+            Render::MS2_Transform(m, &mousePos, a);
         }
-        result = NULL;
+        else
+        {
+            result = NULL;
+            return;
+        }
+        GFx::InteractiveObject* ptopCh = proot->GetTopMostEntity(mousePos, 0, testAll, NULL);
+        if (ptopCh)
+        {
+            AvmInteractiveObj15* avobj = ToAvmInteractiveObj15(ptopCh);
+            avobj->CreateASInstance(true);
+            result = avobj->GetAS3Obj();
+        }
+        else
+            result = NULL;
     }
 
     // @0x1424cad40
