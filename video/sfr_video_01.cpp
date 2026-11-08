@@ -65,7 +65,7 @@ extern ExeDecl<void*>::type DAT_1431b5310;
 #define NetStreamPrototypeInterfaceVtable DAT_1431b5310
 extern ExeDecl<void*>::type DAT_1431b5300;
 #define NetStreamPrototypeBaseVtable DAT_1431b5300
-extern ExeDecl<Scaleform::GFx::AS2::NameFunction>::type DAT_1431b4d80;
+extern ExeDecl<Scaleform::GFx::AS2::NameFunction>::type DAT_1431b4d80[];   // NetStreamProto's function table (5 entries + { 0, 0 })
 #define NetStreamCloseFunctionTable DAT_1431b4d80
 
 extern void FUN_14257dcb0(void*);
@@ -4248,7 +4248,7 @@ template<> Prototype<NetStream>::Prototype(ASStringContext* psc, Object* pprotot
 NetStreamProto::NetStreamProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
     : Prototype<NetStream>(psc, pprototype, constructor)
 {
-    InitFunctionMembers(this, psc, &NetStreamCloseFunctionTable, PropFlags(1));
+    InitFunctionMembers(this, psc, NetStreamCloseFunctionTable, PropFlags(1));
 }
 //
 //
