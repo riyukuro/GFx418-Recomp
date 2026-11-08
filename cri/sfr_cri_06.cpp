@@ -318,7 +318,7 @@ extern "C" longlong _DAT_143d49ee0;
 extern "C" longlong _DAT_143d49ee8;
 extern "C" longlong _DAT_143d49ef0;
 extern "C" longlong _DAT_143d49ef8;
-extern "C" unsigned short _DAT_143d49f80;
+// _DAT_143d49f80: stored through DAT_143d49f80 (data_cri), no alias
 extern "C" unsigned short _DAT_143d49f82;
 extern "C" unsigned short _DAT_143d49f84;
 extern "C" unsigned short _DAT_143d49f86;
@@ -342,7 +342,7 @@ extern "C" unsigned short _DAT_143d49fa8;
 extern "C" unsigned short _DAT_143d49faa;
 extern "C" unsigned short _DAT_143d49fac;
 extern "C" unsigned short _DAT_143d49fae;
-extern "C" unsigned short _DAT_143d4a080;
+// _DAT_143d4a080: stored through DAT_143d4a080 (data_cri), no alias
 extern "C" unsigned short _DAT_143d4a082;
 extern "C" unsigned short _DAT_143d4a084;
 extern "C" unsigned short _DAT_143d4a086;
@@ -374,13 +374,13 @@ extern "C" unsigned short _DAT_143d4a0b8;
 extern "C" unsigned short _DAT_143d4a0ba;
 extern "C" unsigned short _DAT_143d4a0bc;
 extern "C" unsigned short _DAT_143d4a0be;
-extern "C" unsigned short _DAT_143d4a200;
+// _DAT_143d4a200: stored through DAT_143d4a200 (data_cri), no alias
 extern "C" unsigned short _DAT_143d4a202;
-extern "C" unsigned short _DAT_143d4a240;
+// _DAT_143d4a240: stored through DAT_143d4a240 (data_cri), no alias
 extern "C" unsigned short _DAT_143d4a242;
 extern "C" unsigned short _DAT_143d4a244;
 extern "C" unsigned short _DAT_143d4a246;
-extern "C" unsigned short _DAT_143d4a2c0;
+// _DAT_143d4a2c0: stored through DAT_143d4a2c0 (data_cri), no alias
 extern "C" unsigned short _DAT_143d4a2c2;
 extern "C" unsigned short _DAT_143d4a2c4;
 extern "C" unsigned short _DAT_143d4a2c6;
@@ -396,7 +396,7 @@ extern "C" unsigned short _DAT_143d4a2d8;
 extern "C" unsigned short _DAT_143d4a2da;
 extern "C" unsigned short _DAT_143d4a2dc;
 extern "C" unsigned short _DAT_143d4a2de;
-extern "C" unsigned short _DAT_143d4a300;
+// _DAT_143d4a300: stored through DAT_143d4a300 (data_cri), no alias
 extern "C" unsigned short _DAT_143d4a302;
 extern "C" unsigned short _DAT_143d4a304;
 extern "C" unsigned short _DAT_143d4a306;
@@ -428,7 +428,7 @@ extern "C" longlong _DAT_143d4a3a0;
 extern "C" longlong _DAT_143d4a3a8;
 extern "C" longlong _DAT_143d4a3b0;
 extern "C" int _DAT_143d4a3b8;
-extern "C" unsigned short _DAT_143d4a3c0;
+// _DAT_143d4a3c0: stored through DAT_143d4a3c0 (data_cri), no alias
 extern "C" unsigned short _DAT_143d4a3c2;
 extern "C" longlong _DAT_143d4a400;
 extern "C" longlong _DAT_143d4a408;
@@ -466,7 +466,7 @@ extern "C" unsigned short _DAT_143d4a8a0;
 extern "C" unsigned short _DAT_143d4a8a2;
 extern "C" unsigned short _DAT_143d4a8bc;
 extern "C" unsigned short _DAT_143d4a8be;
-extern "C" unsigned short _DAT_143d4aa80;
+// _DAT_143d4aa80: stored through DAT_143d4aa80 (data_cri), no alias
 extern "C" unsigned short _DAT_143d4aa82;
 extern "C" unsigned short _DAT_143d4aa84;
 extern "C" unsigned short _DAT_143d4aa86;
@@ -6916,7 +6916,7 @@ void mpvvlc_InitMbaiIpic()
     for (k = 0; k < 0x10; k++) *q++ = (short)(i << 4 | 0x4409);
     for (k = 0; k < 0x10; k++) *q++ = (short)(i << 4 | 0x408);
   }
-  _DAT_143d4a240 = 0x240;
+  *(unsigned short*)&DAT_143d4a240 = 0x240;
   _DAT_143d4a242 = 0x240;
   _DAT_143d4a244 = 0x240;
   _DAT_143d4a246 = 0x240;
@@ -6950,7 +6950,7 @@ void mpvvlc_InitMbaiPpic()
   int k;
   
   _DAT_143d4aa90 = 0x23b;
-  _DAT_143d4aa80 = 0x240;
+  *(unsigned short*)&DAT_143d4aa80 = 0x240;
   _DAT_143d4aa82 = 0x240;
   _DAT_143d4aa84 = 0x240;
   _DAT_143d4aa86 = 0x240;
@@ -6993,7 +6993,7 @@ void mpvvlc_InitMbaiPpic()
     for (k = 0; k < 4; k++) *p++ = (short)(i << 4 | 0x8809);
     for (k = 0; k < 8; k++) *p++ = (short)(i << 4 | 0xa808);
   }
-  _DAT_143d4a200 = 0x240;
+  *(unsigned short*)&DAT_143d4a200 = 0x240;
   _DAT_143d4a202 = 0x240;
   p = (short *)CRI_FILL_ADDR(DAT_143d4a204);
   for (i = 7; i >= 6; i--) {
@@ -7022,7 +7022,7 @@ void mpvvlc_InitMbaiBpic()
   int k;
   
   _DAT_143d49f90 = 0x23b;
-  _DAT_143d49f80 = 0x240;
+  *(unsigned short*)&DAT_143d49f80 = 0x240;
   _DAT_143d49f82 = 0x240;
   _DAT_143d49f84 = 0x240;
   _DAT_143d49f86 = 0x240;
@@ -7068,7 +7068,7 @@ void mpvvlc_InitMbaiBpic()
     for (k = 0; k < 4; k++) *p++ = (short)(i << 4 | 0xb009);
     for (k = 0; k < 4; k++) *p++ = (short)(i << 4 | 0xb809);
   }
-  _DAT_143d4a3c0 = 0x240;
+  *(unsigned short*)&DAT_143d4a3c0 = 0x240;
   _DAT_143d4a3c2 = 0x240;
   p = (short *)CRI_FILL_ADDR(DAT_143d4a3c4);
   for (i = 7; i >= 6; i--) {
@@ -7097,7 +7097,7 @@ void mpvvlc_InitMbTypePpic()
   longlong l_v1;
   short *pu_v2;
   
-  _DAT_143d4a300 = 0x1106;
+  *(unsigned short*)&DAT_143d4a300 = 0x1106;
   _DAT_143d4a302 = 0x1205;
   _DAT_143d4a304 = 0x1a05;
   _DAT_143d4a306 = 0x105;
@@ -7127,7 +7127,7 @@ void mpvvlc_InitMbTypeBpic()
   longlong l_v1;
   short *pu_v2;
   
-  _DAT_143d4a080 = 0x1f00;
+  *(unsigned short*)&DAT_143d4a080 = 0x1f00;
   _DAT_143d4a082 = 0x1106;
   _DAT_143d4a084 = 0x1606;
   _DAT_143d4a086 = 0x1a06;
@@ -7196,7 +7196,7 @@ void mpvvlc_InitMotion()
     for (k = 0; k < 8; k++) *p++ = (short)(i & 0xff | 0x800);
     for (k = 0; k < 8; k++) *p++ = (short)(-i & 0xff | 0x800);
   }
-  _DAT_143d4a2c0 = 0x7f;
+  *(unsigned short*)&DAT_143d4a2c0 = 0x7f;
   _DAT_143d4a2c2 = 0x7f;
   for (k = 0; k < 0x10; k++) {
     *p++ = 0x704;

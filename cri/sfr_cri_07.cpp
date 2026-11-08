@@ -425,7 +425,7 @@ extern "C" longlong _DAT_143d68890;
 extern "C" longlong _DAT_143d68898;
 extern "C" longlong _DAT_143d688a0;
 extern "C" longlong _DAT_143d688a8;
-extern "C" longlong _DAT_143d74820;
+// _DAT_143d74820: stored through DAT_143d74820 (data_cri), no alias
 extern "C" longlong _DAT_143d74828;
 extern "C" longlong _DAT_143d74830;
 extern "C" longlong _DAT_143d74838;
@@ -52252,7 +52252,7 @@ cri_u8 svm_reset_variable()
 {
   int i;
   
-  _DAT_143d74820 = 0;
+  *(longlong*)&DAT_143d74820 = 0;
   _DAT_143d74828 = 0;
   _DAT_143d74830 = 0;
   _DAT_143d74838 = 0;
