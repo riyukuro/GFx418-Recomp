@@ -32,6 +32,7 @@
 #include "ms2/scaleform/include/gfx/gfx_loaderimpl.h"
 #include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
+#include "ms2/scaleform/include/gfx/as3/as3_stickyvarnode.h"
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_stage.h"
 #include "ms2/scaleform/include/gfx/gfx_textfield.h"
@@ -9768,7 +9769,7 @@ struct Sfr31SetPropHolder { virtual void S0()=0; virtual void S1()=0; virtual vo
                             virtual CheckResult SetProp(const Multiname&, const Value&) = 0; };
 // MovieRoot::SetVariable: sets the member after the last '.' of the path on the object the rest of the path resolves to
 // ("root" when there is no dot). setType 1 keeps the value for a target that does not exist yet, 2 keeps it permanently.
-// MS2-FUNCTIONAL 0x14252a700: frame slots only (the exe saves rbx/rdi/r12/r13/r15 lower in the frame and shifts every temporary by 8); the code is otherwise op-for-op. The sticky node is a local class standing in for the exe one
+// MS2-FUNCTIONAL 0x14252a700: frame slot only. Same length and op-for-op; the exe keeps the target ASString in the +0x10 home slot, ours at rbp-0x79, so 81 bytes of slot offsets differ.
 // @0x14252a700
 char Sfr31MovieRootSetVariable(UPInt root, const char* path, const void* gfxValue, int setType)
 {
@@ -9780,10 +9781,9 @@ char Sfr31MovieRootSetVariable(UPInt root, const char* path, const void* gfxValu
         target = reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348))->CreateString("root");
     }
     Value targetVal;
-    if (!FUN_142506000(root, &targetVal, *reinterpret_cast<const UPInt*>(Sfr31Rd(reinterpret_cast<UPInt>(&target), 0))))
+    if (!FUN_142506000(root, &targetVal, reinterpret_cast<UPInt>(target.ToCStr())))
         return 0;
 
-    const UPInt memberNode = Sfr31Rd(reinterpret_cast<UPInt>(&member), 0);
     Multiname mn(*reinterpret_cast<Instances::Namespace*>(Sfr31Rd(Sfr31Rd(root, 0x48), 0x1d0)), Value(member, Value::InlineStr),
                  Multiname::InlineAssignTag());
 
@@ -9791,16 +9791,13 @@ char Sfr31MovieRootSetVariable(UPInt root, const char* path, const void* gfxValu
     FUN_1425048d0(root, gfxValue, &converted);
     const UPInt obj = Sfr31Rd(reinterpret_cast<UPInt>(&targetVal), 0x10);
     char result = reinterpret_cast<Sfr31SetPropHolder*>(obj)->SetProp(mn, converted);
-    if (((result == 0 && setType != 0) || setType == 2) && *reinterpret_cast<const UInt32*>(memberNode + 0x20) != 0)
+    if (((result == 0 && setType != 0) || setType == 2) && member.GetSize() != 0)
     {
-        Sfr31AvmStickyVarNode* node = static_cast<Sfr31AvmStickyVarNode*>(
-            SF_HEAP_ALLOC(reinterpret_cast<MovieImpl*>(Sfr31Rd(root, 0x10))->GetMovieHeap(), sizeof(Sfr31AvmStickyVarNode), 0x147));   // movie heap, as the exe ([[root+0x10]+0x40])
-        node->VTbl = Sfr31AvmStickyTable;
-        new (&node->Name) ASString(member);
-        node->pNext = NULL;
-        node->Permanent = setType == 2;
-        new (&node->Val) Value(converted);
-        reinterpret_cast<MovieImpl*>(Sfr31Rd(root, 0x10))->AddStickyVariableNode(target, reinterpret_cast<MovieImpl::StickyVarNode*>(node));
+        // SDK: SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) StickyVarNode(name, v, permanent), added when the allocation worked
+        MovieRoot::StickyVarNode* pnode = SF_HEAP_NEW(reinterpret_cast<MovieImpl*>(Sfr31Rd(root, 0x10))->GetMovieHeap())
+            MovieRoot::StickyVarNode(member, converted, setType == 2);
+        if (pnode)
+            reinterpret_cast<MovieImpl*>(Sfr31Rd(root, 0x10))->AddStickyVariableNode(target, pnode);
     }
     const UPInt vm = Sfr31Rd(root, 0x48);
     if (*reinterpret_cast<const UByte*>(vm + 0x180) != 0)
@@ -10098,3 +10095,5 @@ template void decltype(GFx::AS3::Slots::SetType::mHash)::BaseType::setRawCapacit
 template void MS2_StringValueSet::setRawCapacity(void* pheapAddr, UPInt newSize);   // 0x142542450
 template void MS2_GCRootSet::setRawCapacity(void* pheapAddr, UPInt newSize);   // 0x1425425e0
 }
+// MS2-PIN: ??_7StickyVarNode@MovieImpl@GFx@Scaleform@@6B@ 0x14317ca50
+// MS2-PIN: ??_7StickyVarNode@MovieRoot@AS3@GFx@Scaleform@@6B@ 0x14317d8c8
