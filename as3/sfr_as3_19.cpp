@@ -448,7 +448,12 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 void FUN_142501e80(void* state, void* propRef, void* multiname, void* a, void* b);   // Tracer: resolve a multiname to a property reference
 // Defined below under their recovered names (the callers used to spell them FUN_<va>, which never linked).
 char* Sfr27SlotSetValueThis(const SlotInfo* si, char* ret, VM* vm, const Value* v, const Value* thisV, VTable* vt);
-char* Sfr27SlotSetValueObj(const SlotInfo* si, char* ret, VM* vm, const Value* v, Object* obj);
+// SlotInfo::SetSlotValue(Object*) returns its CheckResult through the hidden return slot; the callers hand that slot in.
+static __forceinline char* Sfr27SlotSetValueObj(const SlotInfo* si, char* ret, VM* vm, const Value* v, Object* obj)
+{
+    ::new (ret) CheckResult(si->SetSlotValue(*vm, *v, obj));
+    return ret;
+}
 char* Sfr27SetPropertyOfValue(char* ret, VM* vm, const Value* obj, const Multiname* mn, const Value* v);
 void  Sfr31TraceNoteJump(UPInt tr, SPInt base, UPInt blk, SInt32 off, SInt32 arg);
 __declspec(noinline) void Sfr31ValueToBool(Value* v);   // the exe calls it out of line
@@ -1771,16 +1776,18 @@ char* Sfr27SlotSetValueThis(const SlotInfo* si, char* ret, VM* vm, const Value* 
     return ret;
 }
 
-// MS2-FUNCTIONAL 0x142529720: SDK SlotInfo::SetSlotValue(Object*) shape; the exe cross-jumps the two coerce-error tails the other way, keeps the setter Value in another slot, and tests ReadOnly as a byte, so the layout and slots differ
+// MS2-FUNCTIONAL 0x142529720: SDK SlotInfo::SetSlotValue(Object*) as the member returning CheckResult (sret), same size as the exe; left: the setter call's _this/result Values sit in each other's slots and the exe inlines Value(obj), where ours calls the ctor.
 // The same for an Object receiver; the error texts name the object's traits.
 // @0x142529720
-char* Sfr27SlotSetValueObj(const SlotInfo* si, char* ret, VM* vm, const Value* v, Object* obj)
+CheckResult SlotInfo::SetSlotValue(VM& vmRef, const Value& vRef, Object* const obj) const
 {
-    if (si->ReadOnly && !(static_cast<int>(VmRd(vm, 0x30)) > 0))
+    const SlotInfo* si = this;
+    VM* vm = &vmRef;
+    const Value* v = &vRef;
+    if ((*reinterpret_cast<const UInt8*>(si) & 1) && !(static_cast<int>(VmRd(vm, 0x30)) > 0))
     {
         vm->ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x432), *vm, si->Name->pData, obj->GetTraits().GetName().ToCStr()));
-        *ret = 0;
-        return ret;
+        return false;
     }
     Value coerced;
     if (v->GetKind() == Value::kClass || si->BindType > 10)
@@ -1791,14 +1798,12 @@ char* Sfr27SlotSetValueObj(const SlotInfo* si, char* ret, VM* vm, const Value* v
         if (ct == NULL)
         {
             vm->ThrowVerifyError(VM::Error(static_cast<VM::ErrorID>(0x3f6), *vm, Value(si->GetDataTypeName(*vm), Value::InlineStr)));
-            *ret = 0;
-            return ret;
+            return false;
         }
         if (!ct->Coerce(*v, coerced))
         {
             vm->ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x40a), *vm, *v, Value(si->GetDataTypeName(*vm), Value::InlineStr)));
-            *ret = 0;
-            return ret;
+            return false;
         }
     }
     const UInt32 ind = si->ValueInd;
@@ -1875,28 +1880,23 @@ char* Sfr27SlotSetValueObj(const SlotInfo* si, char* ret, VM* vm, const Value* v
         if (sk < 0xc && sk - 5 > 2)
         {
             vm->ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x3ee), *vm, setter));
-            *ret = 0;
-            return ret;
+            return false;
         }
         Value result(Value::GetUndefined());
         vm->ExecuteInternalUnsafe(setter, Value(obj), result, 1, &coerced, false);
         if (vm->IsException())
         {
-            *ret = 0;
-            return ret;
+            return false;
         }
         break;
     }
     case SlotInfo::BT_Code:
         vm->ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x40d), *vm, si->Name->pData, obj->GetTraits().GetName().ToCStr()));
-        *ret = 0;
-        return ret;
+        return false;
     default:
-        *ret = 0;
-        return ret;
+        return false;
     }
-    *ret = 1;
-    return ret;
+    return true;
 }
 
 

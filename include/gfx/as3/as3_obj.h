@@ -248,6 +248,8 @@ public:
     ASString GetDataTypeName(VM& vm) const;
     // (appended, sfr24) stores v into this slot of _this (setters run; vt: the vtable of a super call). 0x142529030
     CheckResult SetSlotValue(VM& vm, const Value& v, const Value& _this, const VTable* vt = NULL) const;
+    // (appended, perm71) stores v into this slot of obj (coerced to the slot type; setters run). 0x142529720
+    CheckResult SetSlotValue(VM& vm, const Value& v, Object* const obj) const;
 };
 
 // Hash functor of the slot name set.

@@ -18,7 +18,12 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 UPInt  Sfr31ResolveClassTraits(UPInt vm, UPInt file, UPInt mn);                      // VM: the class traits mn names
 void   Sfr31VMRaiseError(UPInt vm, const unsigned long* error, UPInt classInfo);        // VM: raise as class ci
 Value* Sfr33GetDefaultValue(VM* vm, Value* result, const ClassTraits::Traits& tr);     // VM: default of tr
-char*  Sfr27SlotSetValueObj(const SlotInfo* si, char* ok, VM* vm, const Value* v, Object* obj);  // set slot
+// SlotInfo::SetSlotValue(Object*) returns its CheckResult through the hidden return slot (ok).
+static __forceinline char* Sfr27SlotSetValueObj(const SlotInfo* si, char* ok, VM* vm, const Value* v, Object* obj)
+{
+    ::new (ok) CheckResult(si->SetSlotValue(*vm, *v, obj));
+    return ok;
+}
 }}}
 Scaleform::GFx::AS3::Instances::Namespace* FUN_142415c20(Scaleform::GFx::AS3::InstanceTraits::fl::Namespace* self,
                                                          Scaleform::GFx::AS3::Abc::NamespaceKind kind,
