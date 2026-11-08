@@ -156,7 +156,7 @@ typedef ThunkFunc3<Instances::fl_utils::ByteArray, 12, const Value, Instances::f
 template <> const TFunc_Instances_fl_utils_ByteArray_readBytes::TMethod TFunc_Instances_fl_utils_ByteArray_readBytes::Method = &Instances::fl_utils::ByteArray::readBytes;
 // Proxy (10 entries: callProperty, deleteProperty, getDescendants, getProperty, ...)
 // @0x14014a110
-static ThunkNamespaces<10> NamespacesOf_Proxy(DAT_143a2d158, 0xc8, fl::NS_flash_proxy);
+static ThunkNamespaces<10> NamespacesOf_Proxy(DAT_143a2d220, 0x0, fl::NS_flash_proxy);
 typedef ThunkFunc0<Classes::fl_gfx::Extensions, 1, bool> TFunc_Classes_fl_gfx_Extensions_enabledGet;
 // @0x14014a160
 template <> const TFunc_Classes_fl_gfx_Extensions_enabledGet::TMethod TFunc_Classes_fl_gfx_Extensions_enabledGet::Method = &Classes::fl_gfx::Extensions::enabledGet;

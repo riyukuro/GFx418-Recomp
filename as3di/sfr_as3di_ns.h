@@ -32,7 +32,7 @@ static __declspec(noinline) bool SetThunkNamespaces(const void* table, UPInt off
 }}} // namespace Scaleform::GFx::AS3
 
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_143a2aab0[];   // Function prototype, then the fl class tables
-extern const char* const DAT_143a2d158[];                       // ... Proxy's table at +0xc8
+extern const Scaleform::GFx::AS3::ThunkInfo DAT_143a2d220[];   // Proxy (callProperty ..)
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_143a2d5c0[];   // the Object methods of a class object
 extern "C" unsigned char DAT_143a2dd50[];                       // ... the fl_vec Vector tables
 
