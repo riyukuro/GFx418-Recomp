@@ -4562,9 +4562,7 @@ namespace Scaleform { namespace GFx { namespace AS3
 
 // The array element types of the Array sort helpers and of the XML parser's node-kind stack.
 // ==== sfr21: the remaining members of this range =====================================================================
-// the Unicode character class tables (Scaleform Kernel)
-extern const Scaleform::UInt16 DAT_143186050[];   // alpha
-extern const Scaleform::UInt16 DAT_1431866f0[];   // digit
+// the Unicode character class tables (Scaleform Kernel): Scaleform::UnicodeAlphaBits / UnicodeDigitBits (sf_std.h)
 
 namespace Scaleform { namespace GFx { namespace AS3
 {
@@ -4815,7 +4813,7 @@ namespace Instances { namespace fl
         }
 
         wchar_t ch = (wchar_t)name.GetCharAt(0);
-        if (!UnicodeCharIs(DAT_143186050, ch) && ch != '_')     // SFiswalpha
+        if (!UnicodeCharIs(Scaleform::UnicodeAlphaBits, ch) && ch != '_')     // SFiswalpha
         {
             result = false;
             return;
@@ -4824,7 +4822,7 @@ namespace Instances { namespace fl
         for (unsigned i = 1; i < name.GetLength(); i++)
         {
             wchar_t ch = (wchar_t)name.GetCharAt(i);
-            if (UnicodeCharIs(DAT_1431866f0, ch) || UnicodeCharIs(DAT_143186050, ch) || (ch == '.') || (ch == '-') || (ch == '_'))
+            if (UnicodeCharIs(Scaleform::UnicodeDigitBits, ch) || UnicodeCharIs(Scaleform::UnicodeAlphaBits, ch) || (ch == '.') || (ch == '-') || (ch == '_'))
                 continue;
             else
             {
