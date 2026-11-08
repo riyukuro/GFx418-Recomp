@@ -444,7 +444,13 @@ inline void FUN_142545310(Scaleform::UPInt entry, void* out) { ::new (out) Scale
 namespace Scaleform { namespace GFx { namespace AS3 {
 void FUN_142501e80(void* state, void* propRef, void* multiname, void* a, void* b);   // Tracer: resolve a multiname to a property reference
 // Defined below under their recovered names (the callers used to spell them FUN_<va>, which never linked).
-char* Sfr27SlotSetValueThis(const SlotInfo* si, char* ret, VM* vm, const Value* v, const Value* thisV, VTable* vt);
+// SlotInfo::SetSlotValue(Value receiver) returns its CheckResult through the hidden return slot; the exe callers read the flag
+// through the returned pointer, so the result is stored to the caller's flag here.
+static __forceinline char* Sfr27SlotSetValueThis(const SlotInfo* si, char* ret, VM* vm, const Value* v, const Value* thisV, VTable* vt)
+{
+    *ret = si->SetSlotValue(*vm, *v, *thisV, vt);
+    return ret;
+}
 // SlotInfo::SetSlotValue(Object*) returns its CheckResult through the hidden return slot; the callers hand that slot in.
 static __forceinline char* Sfr27SlotSetValueObj(const SlotInfo* si, char* ret, VM* vm, const Value* v, Object* obj)
 {
@@ -1638,16 +1644,22 @@ void Sfr27ExecSetSlot(VM* vm, SPInt slot)
 
 // ---- SlotInfo::SetSlotValue (two entry points: with the receiver's Value and VTable, or with the Object) ----
 
-// MS2-FUNCTIONAL 0x142529030: SDK SlotInfo::SetSlotValue shape (one switch, error temps in the throw); the exe frame is 0x10 larger (setter Value shares the 0x432 error slot), tests ReadOnly as a byte and reloads the BindType dword, so slots and registers differ
+// MS2-FUNCTIONAL 0x142529030: the SDK member SlotInfo::SetSlotValue (CheckResult by sret), one switch, error temps in the throw.
+// ReadOnly is read as a byte, as in the exe, which then reloads the BindType dword. Left: the exe frame is 0x10 larger
+// (the setter Value gets its own slot, shared with the 0x432 error, where cl folds it onto the coerce-error Value temp), so slot
+// offsets differ.
 // Store v into slot si of the object held by thisV (setters run with thisV as receiver).
 // @0x142529030
-char* Sfr27SlotSetValueThis(const SlotInfo* si, char* ret, VM* vm, const Value* v, const Value* thisV, VTable* vt)
+CheckResult SlotInfo::SetSlotValue(VM& vmRef, const Value& vRef, const Value& thisRef, const VTable* vt) const
 {
-    if (si->ReadOnly && !(static_cast<int>(VmRd(vm, 0x30)) > 0))
+    const SlotInfo* const si = this;
+    VM* vm = &vmRef;
+    const Value* v = &vRef;
+    const Value* thisV = &thisRef;
+    if ((*reinterpret_cast<const UInt8*>(si) & 1) && !(static_cast<int>(VmRd(vm, 0x30)) > 0))
     {
         vm->ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x432), *vm, si->Name->pData, *thisV));
-        *ret = 0;
-        return ret;
+        return false;
     }
     Value coerced;
     if (v->GetKind() == Value::kClass || si->BindType > 10)
@@ -1658,14 +1670,12 @@ char* Sfr27SlotSetValueThis(const SlotInfo* si, char* ret, VM* vm, const Value* 
         if (ct == NULL)
         {
             vm->ThrowVerifyError(VM::Error(static_cast<VM::ErrorID>(0x3f6), *vm, Value(si->GetDataTypeName(*vm), Value::InlineStr)));
-            *ret = 0;
-            return ret;
+            return false;
         }
         if (!ct->Coerce(*v, coerced))
         {
             vm->ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x40a), *vm, *v, Value(si->GetDataTypeName(*vm), Value::InlineStr)));
-            *ret = 0;
-            return ret;
+            return false;
         }
     }
     const UInt32 ind = si->ValueInd;
@@ -1734,26 +1744,23 @@ char* Sfr27SlotSetValueThis(const SlotInfo* si, char* ret, VM* vm, const Value* 
     }
     case 10: case SlotInfo::BT_Get:
         vm->ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x432), *vm, si->Name->pData, *thisV));
-        *ret = 0;
-        return ret;
+        return false;
     case SlotInfo::BT_Set: case SlotInfo::BT_GetSet:
     {
         if (vt == NULL)
-            vt = reinterpret_cast<VTable*>(FUN_14250fa80(reinterpret_cast<UPInt>(&vm->GetValueTraits(*thisV))));
+            vt = reinterpret_cast<const VTable*>(FUN_14250fa80(reinterpret_cast<UPInt>(&vm->GetValueTraits(*thisV))));
         Value setter = vt->GetValue(AbsoluteIndex(ind + 1));
         const UInt32 sk = static_cast<UInt32>(setter.GetKind());
         if (sk < 0xc && sk - 5 > 2)
         {
             vm->ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x3ee), *vm, setter));
-            *ret = 0;
-            return ret;
+            return false;
         }
         Value result(Value::GetUndefined());
         vm->ExecuteInternalUnsafe(setter, *thisV, result, 1, &coerced, false);
         if (vm->IsException())
         {
-            *ret = 0;
-            return ret;
+            return false;
         }
         break;
     }
@@ -1762,15 +1769,12 @@ char* Sfr27SlotSetValueThis(const SlotInfo* si, char* ret, VM* vm, const Value* 
         const UInt32 k = static_cast<UInt32>(thisV->GetKind());
         const bool primitive = k < 5 || k == 10;
         vm->ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(primitive ? 0x420 : 0x40d), *vm, si->Name->pData, *thisV));
-        *ret = 0;
-        return ret;
+        return false;
     }
     default:
-        *ret = 0;
-        return ret;
+        return false;
     }
-    *ret = 1;
-    return ret;
+    return true;
 }
 
 // MS2-FUNCTIONAL 0x142529720: SDK SlotInfo::SetSlotValue(Object*) as the member returning CheckResult (sret), same size as the exe; left: the setter call's _this/result Values sit in each other's slots and the exe inlines Value(obj), where ours calls the ctor.
