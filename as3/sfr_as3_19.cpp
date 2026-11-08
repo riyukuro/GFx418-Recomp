@@ -8402,32 +8402,37 @@ static inline bool Sfr31DispBelongsTo(UPInt dobj, UPInt def)
     return file != 0 && Sfr31Rd(Sfr31Rd(file, 0x28), 0x188) == def;
 }
 
+// ArrayData<Ptr<...>>::Resize (0x1425245c0), out of line as in the exe.
+void Sfr31ResizeObjZero(UPInt* arr, UPInt n);
+
 // Drops the display objects of the movie definition def from an array of display object pointers (data, size, capacity).
 static void Sfr31DropDispOfDef(UPInt* arr, UPInt def)
 {
     UPInt i = 0;
     while (i < arr[1])
     {
+        // Ptr<DisplayObject> copy: AddRef through the element, then the element read again
         UPInt* data = reinterpret_cast<UPInt*>(arr[0]);
+        if (data[i] != 0)
+            ++*reinterpret_cast<int*>(data[i] + 8);
         const UPInt elem = data[i];
-        if (elem == 0)
+        if (elem != 0 && Sfr31DispBelongsTo(elem, def))
         {
-            ++i;
-            continue;
+            if (arr[1] == 1)
+                Sfr31ResizeObjZero(arr, 0);
+            else
+            {
+                if (data[i] != 0)
+                    FUN_14257dcd0(reinterpret_cast<void*>(data[i]));
+                data = reinterpret_cast<UPInt*>(arr[0]);
+                memmove(data + i, data + i + 1, (arr[1] - i) * 8 - 8);
+                --arr[1];
+            }
         }
-        ++*reinterpret_cast<int*>(elem + 8);
-        if (!Sfr31DispBelongsTo(elem, def))
-            ++i;
-        else if (arr[1] == 1)
-            reinterpret_cast<Scaleform::Sfr19RolloverData*>(arr)->Resize(0);
         else
-        {
+            ++i;
+        if (elem != 0)
             FUN_14257dcd0(reinterpret_cast<void*>(elem));
-            data = reinterpret_cast<UPInt*>(arr[0]);
-            memmove(data + i, data + i + 1, (arr[1] - i) * 8 - 8);
-            --arr[1];
-        }
-        FUN_14257dcd0(reinterpret_cast<void*>(elem));
     }
 }
 
@@ -8435,7 +8440,9 @@ static void Sfr31DropDispOfDef(UPInt* arr, UPInt def)
 // its last user left (the objects, listeners, timers, fonts and root display objects of it are dropped too when asked to) and the
 // text format caches are flushed.
 // MS2-FUNCTIONAL 0x1425305f0: SDK 4.2 shape (SPtr loaderInfo/content, Ptr defimpl, typed LoadedMovieDefs/event-chain hashes);
-// the exe inlines RemoveLoadedMovieDef as a bool and keeps this in r12, so registers and the frame (0x90 vs 0x80) still differ
+// display drop loop copies each element as a Ptr (reread after AddRef) and shrinks to 0 via the out-of-line Resize (0x1425245c0);
+// the exe inlines RemoveLoadedMovieDef as a bool, keeps this in r12, biases the group-loop pointer to +0x18 and strips tag bits
+// with test/dec where ours uses cmove, so registers and the frame (0x90 vs 0x80) still differ
 // @0x1425305f0
 void MovieRoot::UnloadMovie(Instances::fl_display::Loader* ploader, bool dropAll, bool flagRoot)
 {
