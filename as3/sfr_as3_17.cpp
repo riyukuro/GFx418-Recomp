@@ -3612,7 +3612,6 @@ struct Sfr33TracerStorage
     Sfr33TracerStorage() {}   // a user ctor keeps cl from treating the local as a /GS buffer (the exe frame has no cookie)
 };
 
-UPInt* FUN_1424d9f30(UPInt* self, UPInt heap, UPInt body, UPInt ops, UPInt extra);   // Tracer::Tracer
 void* FUN_1424e6aa0(Tracer* tracer, const void* blocks, UPInt pos, int a, bool b);   // Tracer: the block starting at pos
 static inline void FUN_142530220(void* tracer, UPInt pos, void* block) { ::Scaleform::GFx::AS3::Sfr31TraceBlock(reinterpret_cast<Scaleform::UPInt>(tracer), pos, reinterpret_cast<Scaleform::UPInt>(block)); }   // Tracer::TraceBlock
 
@@ -3746,9 +3745,8 @@ const ArrayLH_POD<UPInt, StatMV_VM_AbcFile_Mem>& Sfr33CallFrameGetCode(CallFrame
     {
         VM& vm = file.GetVM();
         Sfr33TracerStorage tr;
-        FUN_1424d9f30(&tr.Q00, reinterpret_cast<UPInt>(vm.GetMemoryHeap()), reinterpret_cast<UPInt>(&cf),
-                      reinterpret_cast<UPInt>(&code), reinterpret_cast<UPInt>(&(*reinterpret_cast<ArrayLH<Abc::MethodBodyInfo::Exception,
-                          StatMV_VM_VMAbcFile_Mem>*>(pf + 0xd0))[ind]));   // Exceptions
+        ::new (static_cast<void*>(&tr.Q00)) Tracer(vm.GetMemoryHeap(), cf, code,
+            (*reinterpret_cast<ArrayLH<Abc::MethodBodyInfo::Exception, StatMV_VM_VMAbcFile_Mem>*>(pf + 0xd0))[ind]);   // Exceptions
         if (!vm.IsException())
             reinterpret_cast<Tracer*>(&tr)->EmitCode();
         FUN_1424df070(&tr);

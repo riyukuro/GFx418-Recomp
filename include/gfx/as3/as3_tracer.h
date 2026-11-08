@@ -114,6 +114,8 @@ private:
     // The List<TR::Block> sentinel: it points at itself while the list is empty.
     struct BlockList
     {
+        BlockList() : pPrev(reinterpret_cast<TR::Block*>(this)), pNext(reinterpret_cast<TR::Block*>(this)) {}
+
         TR::Block* pPrev;
         TR::Block* pNext;
     };

@@ -1982,7 +1982,6 @@ __declspec(safebuffers) CheckResult Tracer::MergeLists(TR::State& to, const TR::
 // ---- VMAbcFile::GetOpCode (traces a method body on first use) ----
 extern "C" void FUN_1424df070(void* tracer);   // Tracer::~Tracer (sfr_as3_16, C linkage)
 namespace Scaleform { namespace GFx { namespace AS3 {
-UPInt* FUN_1424d9f30(UPInt* self, UPInt heap, UPInt body, UPInt ops, UPInt extra);   // Tracer::Tracer (sfr_as3_15)
 
 // MS2-FUNCTIONAL 0x14250c860: the exe splits the shrink-wrapped slow path into a chained unwind fragment
 // @0x14250c860
@@ -1993,8 +1992,7 @@ __declspec(safebuffers) const ArrayLH_POD<UPInt, StatMV_VM_AbcFile_Mem>& VMAbcFi
     {
         VM& vm = GetVM();
         struct { UPInt q[0x140 / sizeof(UPInt)]; } tr;   // raw storage of the Tracer
-        FUN_1424d9f30(tr.q, reinterpret_cast<UPInt>(vm.GetMemoryHeap()), reinterpret_cast<UPInt>(&cf),
-                      reinterpret_cast<UPInt>(&OpCodeArray[mbi_ind]), reinterpret_cast<UPInt>(&Exceptions[mbi_ind]));
+        ::new (static_cast<void*>(tr.q)) Tracer(vm.GetMemoryHeap(), cf, OpCodeArray[mbi_ind], Exceptions[mbi_ind]);
         if (!vm.IsException())
             reinterpret_cast<Tracer*>(&tr)->EmitCode();
         FUN_1424df070(&tr);

@@ -41,6 +41,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_mnhash.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
+#include "ms2/scaleform/include/gfx/as3/as3_tracer.h"
 #include "ms2/scaleform/include/gfx/gfx_interactiveobject.h"
 #include "ms2/scaleform/include/gfx/gfx_imemanager.h"
 #include "ms2/scaleform/include/gfx/gfx_imecandidateliststyle.h"
@@ -4134,171 +4135,248 @@ void* FUN_1424d8640(void* self, MemoryContextImpl* pctx, MovieImpl* pmovie, ASSu
 #pragma comment(linker, "/alternatename:??0MovieRoot@AS3@GFx@Scaleform@@QEAA@PEAVMemoryContextImpl@123@PEAVMovieImpl@23@PEAVASSupport@23@@Z=?FUN_1424d8640@AS3@GFx@Scaleform@@YAPEAXPEAXPEAVMemoryContextImpl@123@PEAVMovieImpl@23@PEAVASSupport@23@@Z")
 #endif
 // ---- Tracer constructor ----
-extern const void* DAT_14317b938[];      // Tracer vftable
-
-namespace
+struct Sfr30ArrV
 {
-inline UPInt& Sfr30Rd(UPInt base, UPInt off) { return *reinterpret_cast<UPInt*>(base + off); }
-inline Value Sfr30InstanceValue(UPInt traits, Value::TraceNullType nn)
+    void* Data; UPInt Size; UPInt Cap; MemoryHeap* Heap;
+    void Init(MemoryHeap* h) { Data = NULL; Size = 0; Cap = 0; Heap = h; }
+};
+struct Sfr30StView { void* pTracer; UPInt BCP; UPInt OpcodeCP; Sfr30ArrV Arrays[3]; UInt8* Bits; UInt32 BitCount; };
+typedef ArrayDataBase<Value, AllocatorDH<Value, 2>, ArrayDefaultPolicy> Sfr30ValueArr;
+static SF_FORCEINLINE const Value& Sfr30Undefined()
 {
-    return Value(*reinterpret_cast<InstanceTraits::Traits*>(traits), nn);
+    static const Value v;   // the exe inlines Value::GetUndefined here (thread-safe guard in the frame); this copy has its own guard
+    return v;
 }
-inline void Sfr30MarkReg(UPInt state, UPInt ind)
+static SF_FORCEINLINE void Sfr30PushUndefined(Sfr30ValueArr& a)
 {
-    UByte* bits = reinterpret_cast<UByte*>(Sfr30Rd(state, 0x78));
-    bits[ind >> 3] = static_cast<UByte>(bits[ind >> 3] | (1u << (ind & 7)));
+    const Value& u = Sfr30Undefined();
+    a.ResizeNoConstruct(reinterpret_cast<Sfr30ArrV&>(a).Heap, a.Size + 1);
+    ::new (static_cast<void*>(a.Data + a.Size - 1)) Value(u);
 }
-}
-
-// The tracer's entry state: register 0 is the receiver, then undefined locals, then the typed parameters.
-// MS2-FUNCTIONAL: raw words over the Tracer and its State (neither is modelled); the exe's inlined null-string special
-// case of the verify-error argument is not reproduced
-// @0x1424d9f30
-UPInt* FUN_1424d9f30(UPInt* self, UPInt heap, UPInt body, UPInt ops, UPInt extra)
+struct Sfr30InlineReleaseValue
 {
-    self[3] = heap;
-    self[0] = reinterpret_cast<UPInt>(DAT_14317b938);
-    self[6] = extra;
-    *reinterpret_cast<unsigned*>(self + 1) = 0;
-    reinterpret_cast<UByte*>(self)[0xc] = 0;
-    reinterpret_cast<UByte*>(self)[0x10] = 0;
-    self[4] = body;
-    self[5] = ops;
-    self[7] = 0;
-    const UPInt file = Sfr30Rd(body, 0x28);
-    const UPInt abc = Sfr30Rd(file, 0x28);
-    const UPInt methodInfo = reinterpret_cast<UPInt*>(Sfr30Rd(abc, 0x170))[*reinterpret_cast<int*>(body + 0x30)];
-    UPInt sv = Sfr30Rd(methodInfo, 0x38);
-    ::FUN_142545310(reinterpret_cast<UPInt>(&sv), self + 8);
-    self[10] = self[8];
-    self[11] = self[9];
-    self[0xc] = 0;
-    self[0xd] = 0;
-    for (unsigned off = 0x70; off <= 0xf0; off += 0x20)
+    union
     {
-        UPInt* a = self + off / 8;
-        a[0] = 0;
-        a[1] = 0;
-        a[2] = 0;
-        a[3] = heap;
+        UPInt Align;
+        UByte Buf[sizeof(Value)];
+    };
+    Value& Get() { return *reinterpret_cast<Value*>(Buf); }
+    static void ReleaseGC(Object* p)
+    {
+        if (!(reinterpret_cast<UPInt>(p) & 1) && p)
+            p->Release();
     }
-    self[0x120 / 8] = 0;
-    self[0x128 / 8] = 0;
-    self[0x130 / 8] = 0;
-    self[0x138 / 8] = heap;
-    UPInt* sentinel = self + 0x110 / 8;
-    sentinel[0] = reinterpret_cast<UPInt>(sentinel);
-    sentinel[1] = reinterpret_cast<UPInt>(sentinel);
-
-    const UPInt vm = Sfr30Rd(file, 0x20);
-    reinterpret_cast<UByte*>(self)[0xc] = *reinterpret_cast<UByte*>(Sfr30Rd(vm, 0x20) + 0xc);
-    *reinterpret_cast<unsigned*>(self + 1) = 3;
-    self[0xc] = Sfr30Rd(vm, 0x78);
-    if (self[0xc])
-        --self[0xc];
-    reinterpret_cast<Sfr34OpArray*>(ops)->Resize(0);
-    if (self[9] > Sfr30Rd(ops, 0x10))
-        reinterpret_cast<Sfr34OpBase*>(ops)->Reserve(reinterpret_cast<void*>(ops), self[9]);
-    reinterpret_cast<Sfr34OpArrayDH*>(self + 0x1a)->Resize(self[9]);
-
-    // The entry State: owner, three Value-or-byte arrays and the register bit set.
-    UPInt* state = static_cast<UPInt*>(reinterpret_cast<MemoryHeap*>(heap)->Alloc(0x88));
-    if (state)
+    __forceinline ~Sfr30InlineReleaseValue()
     {
-        state[0] = reinterpret_cast<UPInt>(self);
-        state[1] = 0;
-        state[2] = 0;
-        for (unsigned off = 0x18; off <= 0x58; off += 0x20)
+        Value& v = Get();
+        if (!v.IsRefCounted())
+            return;
+        if (v.IsWeakRef())
         {
-            UPInt* a = state + off / 8;
-            a[0] = 0;
-            a[1] = 0;
-            a[2] = 0;
-            a[3] = heap;
+            (*reinterpret_cast<WeakProxy**>(Buf + 0x08))->Release();
+            return;
         }
-        AllocInfo info(StatMV_VM_Tracer_Mem, 0, 0);
-        const unsigned nregs = *reinterpret_cast<unsigned*>(methodInfo + 0x20);
-        *reinterpret_cast<unsigned*>(state + 0x80 / 8) = nregs;
-        const unsigned bytes = (nregs + 7) >> 3;
-        void* bits = reinterpret_cast<MemoryHeap*>(heap)->Alloc(bytes, &info);
-        state[0x78 / 8] = reinterpret_cast<UPInt>(bits);
-        memset(bits, 0, bytes);
+        switch (v.GetKind())
+        {
+        case Value::kString:
+            (*reinterpret_cast<ASStringNode**>(Buf + 0x10))->Release();
+            break;
+        case Value::kNamespace:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kObject:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kClass:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kFunction:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kThunkFunction:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kThunkClosure:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x18));
+            break;
+        case Value::kVTableIndClosure:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x18));
+            break;
+        default:
+            break;
+        }
     }
-    UPInt* states = self + 0xf0 / 8;
+};
+SF_FORCEINLINE Value::Value(const ASString& v, InlineStrType)
+    : Flags(kString)
+    , value(v.GetNode())
+{
+    if (v.GetNode() == v.GetManager()->GetNullStringNode())
     {
-        UPInt n = states[1] + 1;
-        if (n >= states[2])
-            reinterpret_cast<Sfr34StateArray*>(states)->Reserve(reinterpret_cast<const void*>(states[3]), n + (n >> 2));
-        states[1] = n;
-        reinterpret_cast<UPInt*>(states[0])[n - 1] = reinterpret_cast<UPInt>(state);
+        SetKind(kObject);
+        value = (Object*)NULL;
     }
-
-    // register 0: the receiver
-    ArrayDH<Value>& regs = *reinterpret_cast<ArrayDH<Value>*>(state + 0x18 / 8);
-    const UPInt owner = Sfr30Rd(body, 0x40);
-    const UPInt objectITraits = Sfr30Rd(Sfr30Rd(Sfr30Rd(file, 0x20), 0x1f8), 0xc0);
-    if (owner && (reinterpret_cast<UByte*>(owner)[0x68] >> 5 & 1))
-        regs.PushBack(Value(*reinterpret_cast<ClassTraits::Traits*>(owner), Value::NotNull));
-    else if (owner && (*reinterpret_cast<unsigned*>(body + 0x88) & 0x1f) != 0xe)
-        regs.PushBack(Sfr30InstanceValue(owner, Value::NotNull));
     else
-        regs.PushBack(Sfr30InstanceValue(objectITraits, Value::NotNull));
-    Sfr30MarkReg(reinterpret_cast<UPInt>(state), 0);
-
-    // undefined locals
-    const UPInt abcInfo = Sfr30Rd(abc, 0xf8);
-    const UPInt sig = reinterpret_cast<UPInt*>(abcInfo)[*reinterpret_cast<int*>(methodInfo + 0x18)];
-    const int nlocals = *reinterpret_cast<int*>(methodInfo + 0x20);
-    for (int i = 1; i < nlocals; ++i)
-        regs.PushBack(Value());
-
-    // typed parameters
-    UPInt reg = 1;
-    const UPInt nparams = Sfr30Rd(sig, 0x18);
-    const unsigned* ids = reinterpret_cast<const unsigned*>(Sfr30Rd(sig, 0x10));
-    for (UPInt i = 0; i < nparams; ++i)
+        value.VS._1.VStr->AddRef();
+}
+// MS2-FUNCTIONAL Tracer::Tracer, rewritten from the SDK with real types. What remains: this/heap/States sit in other registers,
+// the exe keeps AllocInfo and the MethodInfo pointer in the 5th parameter's home, and the RegChanged bit sets are or-byte here, bts there.
+// @0x1424d9f30
+Tracer::Tracer(MemoryHeap* heap, const CallFrame& cf, ArrayLH_POD<UPInt, StatMV_VM_AbcFile_Mem>& wc,
+               Abc::MethodBodyInfo::Exception& we)
+    : Done(false)
+    , Heap(heap)
+    , CF(cf)
+    , WCode(wc)
+    , WException(we)
+    , CurrOffset(0)
+    , BCode(Abc::StringView(cf.pFile->GetAbcFile().MethodBodies.Info[cf.MBIIndex]->code.code.Data).ToStringDataPtr())
+    , pCode(reinterpret_cast<const UInt8*>(BCode.ToCStr()))
+    , CodeEnd(BCode.GetSize())
+    , PrintOffset(0)
+    , CurrBlock(NULL)
+    , OrigOpcodePos(heap)
+    , NewOpcodePos(heap)
+    , PosToRecalculate(heap)
+    , Orig2newPosMap(heap)
+    , States(heap)
+    , CatchTraits(heap)
+{
+    VM& vm = GetVM();
     {
-        const unsigned id = ids[i];
-        const UPInt mn = id ? Sfr30Rd(abc, 0xb8) + UPInt(id) * 16 : abc + 0xe8;
-        const UPInt cls = Sfr31ResolveClassTraits(vm, file, mn);
-        if (!cls)
+        SetNeedToCheckOpCode(vm.GetUI().NeedToCheckOpCode());
+        SetCurrState(FlashUI::sStep);
+        PrintOffset = *reinterpret_cast<const UPInt*>(reinterpret_cast<const UByte*>(&vm) + 0x78);
+        if (PrintOffset)
+            --PrintOffset;
+    }
+    reinterpret_cast<Sfr34OpArray&>(WCode).Resize(0);
+    if (BCode.GetSize() > reinterpret_cast<Sfr34OpBase&>(WCode).Policy.GetCapacity())
+        reinterpret_cast<Sfr34OpBase&>(WCode).Reserve(&WCode, BCode.GetSize());
+    reinterpret_cast<Sfr34OpArrayDH&>(Orig2newPosMap).Resize(BCode.GetSize());
+
+    TR::State* st = static_cast<TR::State*>(Heap->Alloc(0x88, static_cast<const AllocInfo*>(NULL)));
+    if (st)
+    {
+        Sfr30StView& sv = reinterpret_cast<Sfr30StView&>(*st);
+        sv.pTracer = this;
+        sv.BCP = 0;
+        sv.OpcodeCP = 0;
+        sv.Arrays[0].Init(Heap);
+        sv.Arrays[1].Init(Heap);
+        sv.Arrays[2].Init(Heap);
+        AllocInfo info(StatMV_VM_Tracer_Mem, 0, 0);
+        const UInt32 nregs = CF.pFile->GetAbcFile().MethodBodies.Info[CF.MBIIndex]->local_reg_count;
+        sv.BitCount = nregs;
+        const UInt32 bytes = (nregs + 7) >> 3;
+        sv.Bits = static_cast<UInt8*>(Heap->Alloc(bytes, &info));
+        memset(sv.Bits, 0, bytes);
+    }
+    {
+        Sfr34StateArray& a = reinterpret_cast<Sfr34StateArray&>(States);
+        const UPInt n = a.Size + 1;
+        if (n < a.Size)
         {
-            ASString name = reinterpret_cast<VMAbcFile*>(file)->GetInternedString(*reinterpret_cast<int*>(mn + 8));
-            Value arg(name);
-            VM::Error err(static_cast<VM::ErrorID>(0x3f6), *reinterpret_cast<VM*>(vm), arg);
-            Sfr31VMRaiseError(vm, reinterpret_cast<const unsigned long*>(&err), reinterpret_cast<UPInt>(&fl::VerifyErrorCI));
-            return self;
+            if (n < (a.Policy.GetCapacity() >> 1))
+                a.Reserve(reinterpret_cast<const void*>(reinterpret_cast<Sfr30ArrV&>(States).Heap), n);
         }
-        const UPInt t = Sfr30Rd(cls, 0xc0);
-        const bool prim = t == Sfr30Rd(Sfr30Rd(vm, 0x220), 0xc0) || t == Sfr30Rd(Sfr30Rd(vm, 0x228), 0xc0) ||
-                          t == Sfr30Rd(Sfr30Rd(vm, 0x218), 0xc0) || t == Sfr30Rd(Sfr30Rd(vm, 0x210), 0xc0);
-        regs[reg] = Sfr30InstanceValue(t, prim ? Value::NotNull : Value::NullOrNot);
-        Sfr30MarkReg(reinterpret_cast<UPInt>(state), reg);
-        ++reg;
+        else if (n >= a.Policy.GetCapacity())
+            a.Reserve(reinterpret_cast<const void*>(reinterpret_cast<Sfr30ArrV&>(States).Heap), n + (n >> 2));
+        a.Size = n;
+        a.Data[n - 1] = st;
     }
 
-    // the rest-array / arguments register
-    const UByte flags = *reinterpret_cast<UByte*>(sig);
-    if (flags & 5)
+    ArrayDH<Value>& reg_file = st->GetRegisters();
+    UInt8*& bits = reinterpret_cast<Sfr30StView&>(*st).Bits;
+    unsigned reg = 1;
     {
-        regs[reg] = Sfr30InstanceValue(Sfr30Rd(Sfr30Rd(vm, 0x238), 0xc0), Value::NotNull);
-        Sfr30MarkReg(reinterpret_cast<UPInt>(state), reg);
+        const Traits* ot = CF.OriginationTraits;
+        union { UPInt w[3]; UByte b[sizeof(Value)]; } hold;
+        Value* hv = reinterpret_cast<Value*>(&hold);
+        if (ot)
+        {
+            if (ot->IsClassTraits())
+                ::new (static_cast<void*>(hv)) Value(const_cast<ClassTraits::Traits&>(static_cast<const ClassTraits::Traits&>(*ot)), Value::NotNull);
+            else if (CF.Invoker.GetKind() == Value::kFunction)
+                ::new (static_cast<void*>(hv)) Value(GetVM().GetClassTraitsObject().GetInstanceTraits(), Value::NotNull);
+            else
+                ::new (static_cast<void*>(hv)) Value(const_cast<InstanceTraits::Traits&>(static_cast<const InstanceTraits::Traits&>(*ot)), Value::NotNull);
+        }
+        else
+            ::new (static_cast<void*>(hv)) Value(GetVM().GetClassTraitsObject().GetInstanceTraits(), Value::NotNull);
+        reg_file.PushBack(*hv);
+        bits[0] = static_cast<UInt8>(bits[0] | 1);
     }
-
-    // the entry block, linked at the head of the block list
-    UPInt* node = static_cast<UPInt*>(reinterpret_cast<MemoryHeap*>(heap)->Alloc(0x28));
+    const Abc::File& file = CF.pFile->GetAbcFile();
+    const Abc::MethodBodyInfo& mbi = *file.MethodBodies.Info[CF.MBIIndex];
+    const Abc::MethodInfo& mi = *file.Methods.Info[mbi.method_info_ind];
+    const SInt32 maxInd = mbi.local_reg_count;
+    for (SInt32 i = 1; i < maxInd; ++i)
+        Sfr30PushUndefined(reinterpret_cast<Sfr30ValueArr&>(reg_file));
+    const UPInt param_count = mi.ParamTypes.GetSize();
+    for (UPInt i = 0; i < param_count; ++i)
+    {
+        const UInt32 id = mi.ParamTypes[i];
+        const Abc::File& pf = CF.pFile->GetAbcFile();
+        const Abc::Multiname& amn = pf.Const_Pool.GetMultiname(id);
+        const ClassTraits::Traits* tr = reinterpret_cast<const ClassTraits::Traits*>(
+            Sfr31ResolveClassTraits(reinterpret_cast<UPInt>(&vm), reinterpret_cast<UPInt>(CF.pFile), reinterpret_cast<UPInt>(&amn)));
+        if (tr)
+        {
+            InstanceTraits::Traits& itr = tr->GetInstanceTraits();
+            VM& v2 = GetVM();
+            const Value::TraceNullType nn = (&itr == &v2.GetClassTraitsSInt().GetInstanceTraits() || &itr == &v2.GetClassTraitsUInt().GetInstanceTraits() ||
+                                             &itr == &v2.GetClassTraitsNumber().GetInstanceTraits() || &itr == &v2.GetClassTraitsBoolean().GetInstanceTraits())
+                                                ? Value::NotNull : Value::NullOrNot;
+            {
+                Sfr30InlineReleaseValue t;
+                ::new (t.Buf) Value(itr, nn);
+                reg_file[reg] = t.Get();
+            }
+            bits[reg >> 3] = static_cast<UInt8>(bits[reg >> 3] | (1u << (reg & 7)));
+            ++reg;
+        }
+        else
+        {
+            ASString name = CF.pFile->GetInternedString(amn.NameIndex);
+            Sfr30InlineReleaseValue arg;
+            ::new (arg.Buf) Value(name, Value::InlineStr);
+            VM::Error err(static_cast<VM::ErrorID>(0x3f6), vm, arg.Get());
+            Sfr31VMRaiseError(reinterpret_cast<UPInt>(&vm), reinterpret_cast<const unsigned long*>(&err), reinterpret_cast<UPInt>(&fl::VerifyErrorCI));
+            return;
+        }
+    }
+    if ((mi.Flags & Abc::MethodInfo::fNEED_REST))
+    {
+        {
+            Sfr30InlineReleaseValue t;
+            ::new (t.Buf) Value(vm.GetClassTraitsArray().GetInstanceTraits(), Value::NotNull);
+            reg_file[reg] = t.Get();
+        }
+        bits[reg >> 3] = static_cast<UInt8>(bits[reg >> 3] | (1u << (reg & 7)));
+    }
+    else if ((mi.Flags & Abc::MethodInfo::fNEED_ARGUMENTS))
+    {
+        {
+            Sfr30InlineReleaseValue t;
+            ::new (t.Buf) Value(vm.GetClassTraitsArray().GetInstanceTraits(), Value::NotNull);
+            reg_file[reg] = t.Get();
+        }
+        bits[reg >> 3] = static_cast<UInt8>(bits[reg >> 3] | (1u << (reg & 7)));
+    }
+    UPInt* node = static_cast<UPInt*>(Heap->Alloc(0x28, static_cast<const AllocInfo*>(NULL)));
     if (node)
     {
-        *reinterpret_cast<unsigned*>(node + 2) |= 1;
-        *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(node) + 0x14) = 0;
-        node[3] = reinterpret_cast<UPInt>(state);
+        *reinterpret_cast<UInt32*>(node + 2) |= 1;
+        *reinterpret_cast<UInt32*>(reinterpret_cast<UByte*>(node) + 0x14) = 0;
+        node[3] = reinterpret_cast<UPInt>(st);
         node[4] = 0;
     }
-    node[0] = sentinel[0];
-    node[1] = reinterpret_cast<UPInt>(sentinel);
-    reinterpret_cast<UPInt*>(sentinel[0])[1] = reinterpret_cast<UPInt>(node);
-    sentinel[0] = reinterpret_cast<UPInt>(node);
-    return self;
+    TR::Block* b = reinterpret_cast<TR::Block*>(node);
+    b->pPrev = Blocks.pPrev;
+    b->pNext = reinterpret_cast<TR::Block*>(&Blocks);
+    Blocks.pPrev->pNext = b;
+    Blocks.pPrev = b;
 }
 }} // namespace GFx::AS3
 
@@ -4850,6 +4928,9 @@ void SoundTransform::panSet(const Value& result, Value::Number v) { SF_UNUSED(re
 // MS2-PIN: ??_7AvmStaticText@AS3@GFx@Scaleform@@6B@ 0x14317e9b8
 // MS2-PIN: ??_7LoadQueueEntryMT_LoadMovie@AS3@GFx@Scaleform@@6B@ 0x14317d890
 // MS2-PIN: ??0VM@AS3@GFx@Scaleform@@QEAA@AEAVFlashUI@123@AEAVFileLoader@123@AEAVStringManager@123@AEAVASRefCountCollector@123@@Z 0x1424dae90
+// MS2-PIN: ??0Tracer@AS3@GFx@Scaleform@@QEAA@PEAVMemoryHeap@3@AEBVCallFrame@123@AEAV?$ArrayLH_POD@_K$0BFC@UArrayDefaultPolicy@Scaleform@@@3@AEAUException@MethodBodyInfo@Abc@123@@Z 0x1424d9f30
+// MS2-PIN: ??_7Tracer@AS3@GFx@Scaleform@@6B@ 0x14317b938
+// MS2-PIN: ??_7FlashUI@AS3@GFx@Scaleform@@6B@ 0x14317b648
 
 // The two vftable images the dead-store sequence above writes, bound by alternatename to the real vftables so the
 // fullexe link needs no alias for them.
