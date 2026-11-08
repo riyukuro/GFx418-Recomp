@@ -233,9 +233,71 @@ void FUN_142943480(const FnCall& fn)
     }
 }
 
+struct Sfr05mCopyTag {};
+
+// FunctionRefBase::SetLocalFrame (exe 0x142981e70), expanded in place as the exe has it in the ToFunction copy.
+static SF_FORCEINLINE void sfr05mFunctionRefSetLocalFrame(FunctionRefBase* p, LocalFrame* localFrame, bool weakRef)
+{
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->Release();
+    p->pLocalFrame = localFrame;
+    if (weakRef)
+        p->Flags |= FunctionRefBase::FuncRef_Weak;
+    else
+        p->Flags &= ~FunctionRefBase::FuncRef_Weak;
+    if (p->pLocalFrame && !(p->Flags & FunctionRefBase::FuncRef_Weak))
+        p->pLocalFrame->AddRef();
+}
+
+// FunctionRefBase::Init(orig) with the SetLocalFrame call expanded.
+template<>
+SF_FORCEINLINE FunctionRef::FunctionRef(const FunctionRefBase& orig, Sfr05mCopyTag)
+{
+    Flags    = 0;
+    Function = orig.Function;
+    if (!(Flags & FuncRef_Internal) && Function)
+        Function->AddRef();
+    pLocalFrame = 0;
+    if (orig.pLocalFrame)
+        sfr05mFunctionRefSetLocalFrame(this, orig.pLocalFrame, (orig.Flags & FuncRef_Weak) != 0);
+}
+
+// The SDK's out-of-line Value::ToFunction (a switch), which the exe inlines here.
+struct Sfr05mValueAccess : Value
+{
+    using Value::ResolveFunctionName;
+};
+static SF_FORCEINLINE FunctionRef sfr05mToFunction(const Value& v, const Environment* penv)
+{
+    switch (v.GetType())
+    {
+    case Value::FUNCTIONNAME:
+        return static_cast<const Sfr05mValueAccess&>(v).ResolveFunctionName(penv);
+    case Value::FUNCTION:
+        return FunctionRef(v.V.FunctionValue, Sfr05mCopyTag());
+    default:;
+    }
+    return FunctionRef();
+}
+
+// GlobalContext::GetBuiltin (SDK inline): the builtin string of the movie root's string manager.
+static SF_FORCEINLINE const ASString& sfr05mGetBuiltin(const GlobalContext* gc, ASBuiltinType btype)
+{
+    return static_cast<MovieRoot*>(gc->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(btype);
+}
+
+// The exe (LTCG) inlines ObjectInterface::ToAvmCharacter / ToASObject here, type re-test included.
+static SF_FORCEINLINE AvmCharacter* sfr05mToAvmCharacter(ObjectInterface* p)
+{
+    return p->IsASCharacter() ? static_cast<AvmCharacter*>(p) : 0;
+}
+static SF_FORCEINLINE Object* sfr05mToASObject(ObjectInterface* p)
+{
+    return p->IsASObject() ? static_cast<Object*>(p) : 0;
+}
+
 // The name of the class the object (or its prototype) is a member of _global under, "name.prototype" for a
 // prototype; "unknown" when none.
-// MS2-FUNCTIONAL: the object and function casts are written as the inline accessors.
 // @0x1429437e0
 ASString GlobalContext::FindClassName(Environment* penv, ObjectInterface* iobj)
 {
@@ -243,18 +305,21 @@ ASString GlobalContext::FindClassName(Environment* penv, ObjectInterface* iobj)
     {
         Object* obj;
         if (iobj->IsASCharacter())
-            obj = static_cast<AvmCharacter*>(iobj)->GetASObject();
+            obj = sfr05mToAvmCharacter(iobj)->GetASObject();
         else
-            obj = iobj->IsASObject() ? static_cast<Object*>(iobj) : 0;
+            obj = sfr05mToASObject(iobj);
 
-        ASStringHash_GC<Member>::ConstIterator it = pGlobal->Members.Begin();
-        for (; it != pGlobal->Members.End(); ++it)
+        // The set's own Iterator (no slice to ConstIterator): the exe keeps { pHash, Index } in registers.
+        typedef ASStringHash_GC<Member>::SetType MemberSet;
+        MemberSet::Iterator it = const_cast<MemberSet&>(pGlobal->Members.GetSet()).Begin();
+        for (; it != pGlobal->Members.GetSet().End(); ++it)
         {
             const ASString& nm  = it->First;
-            const Value&    val = it->Second.mValue;
+            const Member&   m   = it->Second;
+            const Value&    val = m.mValue;
             if (obj->IsFunction())
             {
-                if (val.IsFunction() && val.ToFunction(penv).GetObjectPtr() == obj)
+                if (val.IsFunction() && sfr05mToFunction(val, penv).GetObjectPtr() == obj)
                     return nm;
             }
             else
@@ -263,14 +328,13 @@ ASString GlobalContext::FindClassName(Environment* penv, ObjectInterface* iobj)
                     return nm;
                 if (val.IsFunction())
                 {
-                    FunctionRef f = val.ToFunction(penv);
+                    FunctionRef f = sfr05mToFunction(val, penv);
                     Value       protoVal;
-                    if (f->GetMemberRaw(penv->GetSC(),
-                                        static_cast<MovieRoot*>(pMovieRoot->pASMovieRoot)
-                                            ->GetStringManager()->GetBuiltin(ASBuiltin_prototype),
-                                        &protoVal) &&
-                        protoVal.IsObject() && protoVal.ToObject(penv) == obj)
-                        return nm + ".prototype";
+                    if (f->GetMemberRaw(penv->GetSC(), sfr05mGetBuiltin(this, ASBuiltin_prototype), &protoVal))
+                    {
+                        if (protoVal.IsObject() && protoVal.ToObject(penv) == obj)
+                            return nm + ".prototype";
+                    }
                 }
             }
         }
