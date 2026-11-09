@@ -2642,7 +2642,7 @@ int FUN_140069ac4(longlong cri_p0, int cri_p1, byte *cri_p2, uint cri_p3, int *c
             f_v49 = pf_v37[-1];
             u_v38 = s_v8 * u_v38 + s_v7;
             pf_v1 = (float *)(l_v43 + *pl_v44);
-            f_v45 = (float)(ushort)((u_v33 & 0x1fff) + 1) * 3.0517578e-05;
+            f_v45 = (float)(ushort)((u_v33 & 0x1fff) + 1) * 3.0517578e-05f;
             pf_v35 = pf_v1;
             pb_v36 = arg3 + 2;
             do {
@@ -2683,10 +2683,10 @@ int FUN_140069ac4(longlong cri_p0, int cri_p1, byte *cri_p2, uint cri_p3, int *c
               pf_v35 = pf_v35 + 8;
               pb_v36 = arg3;
             } while (l_v41 != 0);
-            pf_v37[-1] = pf_v1[0x1f] + 1.9074068e-06;
+            pf_v37[-1] = pf_v1[0x1f] + 1.9074068e-06f;
             u_v42 = u_v42 + 1;
             pl_v44 = pl_v44 + 1;
-            *pf_v37 = pf_v1[0x1e] + 1.9074068e-06;
+            *pf_v37 = pf_v1[0x1e] + 1.9074068e-06f;
             pf_v37 = pf_v37 + 2;
           } while (u_v42 < b_v6);
         }
