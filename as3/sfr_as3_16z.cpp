@@ -1078,7 +1078,13 @@ void FUN_1424dc350(void* p);
 void FUN_1424dc260(void* p);
 void FUN_1424dd500(void* p);            // ASVM::~ASVM
 void FUN_1425456e0(void* p);            // Abc::File::~File
+#ifdef MS2_HOOK_DLL
 void FUN_14257eb30(void* p);
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("??1EntryData@ContextImpl@Render@Scaleform@@UEAA@XZ")(void* p);
+#define FUN_14257eb30 __identifier("??1EntryData@ContextImpl@Render@Scaleform@@UEAA@XZ")
+#endif
 void FUN_1424dc630(void* p);
 void FUN_1424de650(void* p);            // MovieRoot::~MovieRoot
 typedef ArrayDataBase<SPtr<Instances::Namespace>, AllocatorLH<SPtr<Instances::Namespace>, 2>, ArrayDefaultPolicy> Sfr16zNsArr; // (C3) FUN_1423f0720 = its dtor

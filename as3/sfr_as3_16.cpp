@@ -865,7 +865,13 @@ extern "C" void* Sfr16ScalarDeletingDtor_1424e1f80(void* self, unsigned int flag
 // @0x1424e1fe0
 extern "C" void* Sfr16ScalarDeletingDtor_1424e1fe0(void* self, unsigned int flags) { return Sfr16ScalarDeletingDtorNts(self, flags); }
 
+#ifdef MS2_HOOK_DLL
 extern void FUN_14257eb30(void*);
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("??1EntryData@ContextImpl@Render@Scaleform@@UEAA@XZ")(void*);
+#define FUN_14257eb30 __identifier("??1EntryData@ContextImpl@Render@Scaleform@@UEAA@XZ")
+#endif
 struct Sfr36StateAccess : Scaleform::Render::StateData
 {
     using StateData::destroyBag_NotEmpty;

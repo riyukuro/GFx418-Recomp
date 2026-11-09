@@ -177,10 +177,6 @@ EntryData* Entry::getWritableData(unsigned bits)
 
 EntryData::~EntryData() {}
 // sfr_as3_16 / sfr_video_02 / sfr_gfx_01i (C++) and sfr_as3_16z (extern "C") call this as FUN_14257eb30, bound here.
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:?FUN_14257eb30@@YAXPEAX@Z=??1EntryData@ContextImpl@Render@Scaleform@@UEAA@XZ")
-#pragma comment(linker, "/alternatename:FUN_14257eb30=??1EntryData@ContextImpl@Render@Scaleform@@UEAA@XZ")
-#endif
 
 // @0x14257f3d0
 void EntryPage::AddEntriesToList(EntryList* list)

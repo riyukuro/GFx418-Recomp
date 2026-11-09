@@ -126,4 +126,3 @@ DisplayObjectBase::TopMostResult GenericDisplayObj::GetTopMostMouseEntity(const 
 }}} // namespace Scaleform::GFx::AS2
 
 // data_rdata_sf_b names the vftable slot by its address
-#pragma comment(linker, "/alternatename:?FUN_1429565c0@@YAXXZ=?CSSHolder_GetTextStyleManager@AS2@GFx@Scaleform@@YAPEBXPEBX@Z")

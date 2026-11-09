@@ -273,7 +273,13 @@ namespace Scaleform { namespace GFx { void ASUserData_SetLastObjectValue(ASUserD
 inline void FUN_1425303b0(Scaleform::UPInt entry) { Scaleform::GFx::AS3::Sfr31ClassTraitsCleanup(entry); }
 // ArrayBase<ArrayData<VMAbcFile*>>::Clear. Kept as an extern alias: with the real member's COMDAT in this TU,
 // cl regallocs Sfr31ShutdownRegistered without the exe's r14 save (matched -> functional).
+#ifdef MS2_HOOK_DLL
 void FUN_1424ef2a0(Scaleform::UPInt array);
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("?Clear@?$ArrayBase@U?$ArrayData@PEAVVMAbcFile@AS3@GFx@Scaleform@@U?$AllocatorLH_POD@PEAVVMAbcFile@AS3@GFx@Scaleform@@$0BEJ@@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAXXZ")(Scaleform::UPInt array);
+#define FUN_1424ef2a0 __identifier("?Clear@?$ArrayBase@U?$ArrayData@PEAVVMAbcFile@AS3@GFx@Scaleform@@U?$AllocatorLH_POD@PEAVVMAbcFile@AS3@GFx@Scaleform@@$0BEJ@@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAXXZ")
+#endif
 inline int FUN_1425de200(int mouseState) { return Scaleform::GFx::Button::GetButtonState(static_cast<Scaleform::GFx::ButtonRecord::MouseState>(mouseState)); }   // MouseState -> ButtonState
 inline void FUN_1425048d0(Scaleform::UPInt movieRoot, const void* gfxValue, Scaleform::GFx::AS3::Value* out) { reinterpret_cast<Scaleform::GFx::AS3::MovieRoot*>(movieRoot)->GFxValue2ASValue(*static_cast<const Scaleform::GFx::Value*>(gfxValue), out); }   // MovieRoot::GFxValue2ASValue
 inline void FUN_1424213b0(Scaleform::UPInt sparseArray, Scaleform::UInt32 ind, const Scaleform::GFx::AS3::Value* v) { reinterpret_cast<Scaleform::GFx::AS3::SparseArray*>(sparseArray)->Set(ind, *v); }   // SparseArray::Set
@@ -10121,7 +10127,17 @@ typedef GFx::AS3::SPtr<GFx::AS3::GASRefCountBase> MS2_GCRootPtr;
 typedef HashSetBase<MS2_GCRootPtr, FixedSizeHash<MS2_GCRootPtr>, FixedSizeHash<MS2_GCRootPtr>, AllocatorLH<MS2_GCRootPtr, 2>,
                     HashsetCachedEntry<MS2_GCRootPtr, FixedSizeHash<MS2_GCRootPtr> > > MS2_GCRootSet;
 
+// The exe folds this AllocatorGH instance with the AllocatorDH one (0x1424d2890, sfr_as3_15), so the call goes straight to that.
+#ifdef MS2_HOOK_DLL
 extern template void MS2_ObjPtrSet::add<const void*>(void*, const void* const&, UPInt);
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("??$add@PEBX@?$HashSetBase@PEBXV?$FixedSizeHash@PEBX@Scaleform@@V12@U?$AllocatorDH@PEBX$01@2@V?$HashsetCachedEntry@PEBXV?$FixedSizeHash@PEBX@Scaleform@@@2@@Scaleform@@AEAAXPEAXAEBQEBX_K@Z")(void*, void*, const void* const&, UPInt);
+template <> template <> inline void MS2_ObjPtrSet::add<const void*>(void* pheapAddr, const void* const& key, UPInt hashValue)
+{
+    __identifier("??$add@PEBX@?$HashSetBase@PEBXV?$FixedSizeHash@PEBX@Scaleform@@V12@U?$AllocatorDH@PEBX$01@2@V?$HashsetCachedEntry@PEBXV?$FixedSizeHash@PEBX@Scaleform@@@2@@Scaleform@@AEAAXPEAXAEBQEBX_K@Z")(this, pheapAddr, key, hashValue);
+}
+#endif
 extern template void MS2_ObjPtrSet::Clear();
 template<class T> struct MS2_SetValueOf;
 template<class C, class H, class AH, class A, class E>

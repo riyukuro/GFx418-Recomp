@@ -4109,8 +4109,6 @@ void ClassHash_RemoveCaseCheck(ASStringHash<FunctionRef>* phash, const ASString&
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BAI@@Scaleform@@6B@ 0x14318ccd8
 
 // data_rdata_sf_b names these vftable slots by their address
-#pragma comment(linker, "/alternatename:?FUN_14295d440@@YAXXZ=?CSSHolder_HasStyleSheet@GFx@Scaleform@@YA_NPEBX@Z")
-#pragma comment(linker, "/alternatename:?FUN_142966210@@YAXXZ=?LocalFrame_VSlot4@AS2@GFx@Scaleform@@YA_NPEBX@Z")
 
 // MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS2@GFx@Scaleform@@6B@ 0x143215370
 // MS2-PIN: ??_7ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215410

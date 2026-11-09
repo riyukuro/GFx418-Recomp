@@ -1673,7 +1673,13 @@ SF_NOINLINE TreeRoot::NodeData::NodeData(const NodeData& src)
 // here (gfx_rendertree.h), so they are written out: the children's shared array, the states, then the entry data
 // (0x14257eb30), in reverse member order.
 }} // namespace Scaleform::Render
+#ifdef MS2_HOOK_DLL
 void FUN_14257eb30(void* entryData);   // ContextImpl::EntryData::~EntryData
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("??1EntryData@ContextImpl@Render@Scaleform@@UEAA@XZ")(void* entryData);   // ContextImpl::EntryData::~EntryData
+#define FUN_14257eb30 __identifier("??1EntryData@ContextImpl@Render@Scaleform@@UEAA@XZ")
+#endif
 namespace Scaleform { namespace Render {
 
 static SF_INLINE void destroyChildren(TreeNodeArray& children)

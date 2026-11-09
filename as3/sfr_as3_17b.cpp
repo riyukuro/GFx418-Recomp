@@ -115,16 +115,41 @@ __declspec(noalias) CheckResult AbstractLessThan(Boolean3& result, const Value& 
 }}}
 void FUN_14252ecb0(void* vm, const void* error, const void* classInfo);  // ThrowErrorInternal
 void FUN_1424dd460(void* self);
+#ifdef MS2_HOOK_DLL
 void FUN_1423f1470(void* self);  // ~Value out of line
-#pragma comment(linker, "/alternatename:?FUN_1423f1470@@YAXPEAX@Z=??1Value@AS3@GFx@Scaleform@@QEAA@XZ")
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("??1Value@AS3@GFx@Scaleform@@QEAA@XZ")(void* self);  // ~Value out of line
+#define FUN_1423f1470 __identifier("??1Value@AS3@GFx@Scaleform@@QEAA@XZ")
+#endif
+#ifdef MS2_HOOK_DLL
 void FUN_142421ed0(void* self);  // Value::SetNull out of line
-#pragma comment(linker, "/alternatename:?FUN_142421ed0@@YAXPEAX@Z=?SetNull@Value@AS3@GFx@Scaleform@@QEAAXXZ")
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("?SetNull@Value@AS3@GFx@Scaleform@@QEAAXXZ")(void* self);  // Value::SetNull out of line
+#define FUN_142421ed0 __identifier("?SetNull@Value@AS3@GFx@Scaleform@@QEAAXXZ")
+#endif
+#ifdef MS2_HOOK_DLL
 void FUN_14251cb40(void* a, unsigned __int64 n);  // ArrayBase::PopBack out of line
-#pragma comment(linker, "/alternatename:?FUN_14251cb40@@YAXPEAX_K@Z=?PopBack@?$ArrayBase@U?$ArrayDataDH@VValue@AS3@GFx@Scaleform@@U?$AllocatorDH@VValue@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_K@Z")
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("?PopBack@?$ArrayBase@U?$ArrayDataDH@VValue@AS3@GFx@Scaleform@@U?$AllocatorDH@VValue@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_K@Z")(void* a, unsigned __int64 n);  // ArrayBase::PopBack out of line
+#define FUN_14251cb40 __identifier("?PopBack@?$ArrayBase@U?$ArrayDataDH@VValue@AS3@GFx@Scaleform@@U?$AllocatorDH@VValue@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_K@Z")
+#endif
+#ifdef MS2_HOOK_DLL
 bool FUN_142419cd0(const void* v);  // IsXMLObject(const Value&) out of line
-#pragma comment(linker, "/alternatename:?FUN_142419cd0@@YA_NPEBX@Z=?IsXMLObject@AS3@GFx@Scaleform@@YA_NAEBVValue@123@@Z")
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" bool __identifier("?IsXMLObject@AS3@GFx@Scaleform@@YA_NAEBVValue@123@@Z")(const void* v);  // IsXMLObject(const Value&) out of line
+#define FUN_142419cd0 __identifier("?IsXMLObject@AS3@GFx@Scaleform@@YA_NAEBVValue@123@@Z")
+#endif
+#ifdef MS2_HOOK_DLL
 bool FUN_142419ca0(const void* v);  // IsXMLListObject(const Value&) out of line
-#pragma comment(linker, "/alternatename:?FUN_142419ca0@@YA_NPEBX@Z=?IsXMLListObject@AS3@GFx@Scaleform@@YA_NAEBVValue@123@@Z")
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" bool __identifier("?IsXMLListObject@AS3@GFx@Scaleform@@YA_NAEBVValue@123@@Z")(const void* v);  // IsXMLListObject(const Value&) out of line
+#define FUN_142419ca0 __identifier("?IsXMLListObject@AS3@GFx@Scaleform@@YA_NAEBVValue@123@@Z")
+#endif
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 

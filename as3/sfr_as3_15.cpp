@@ -4081,10 +4081,15 @@ struct Sfr15MouseStateInit
 // - the keyboard forwarder is a placement new: the object, or null when the heap returns null;
 // - the MovieImpl flags word is read, masked and written back as one store.
 // The stores and the values they write are the exe's, so behaviour does not change.
-// It is reached as ??0MovieRoot (alias to FUN_1424d8640), from the AS3 support's
+// It is reached as ??0MovieRoot, from the AS3 support's
 // CreateASMovieRoot (call at 0x1423dc77d).
 // @0x1424d8640
+#ifdef MS2_HOOK_DLL
 void* FUN_1424d8640(void* self, MemoryContextImpl* pctx, MovieImpl* pmovie, ASSupport* psupport)
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void* __identifier("??0MovieRoot@AS3@GFx@Scaleform@@QEAA@PEAVMemoryContextImpl@123@PEAVMovieImpl@23@PEAVASSupport@23@@Z")(void* self, MemoryContextImpl* pctx, MovieImpl* pmovie, ASSupport* psupport)
+#endif
 {
     UPInt* w = static_cast<UPInt*>(self);
     UByte* b = static_cast<UByte*>(self);

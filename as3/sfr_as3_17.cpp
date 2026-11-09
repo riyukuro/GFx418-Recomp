@@ -6684,9 +6684,6 @@ void FUN_142500260(Scaleform::UPInt vmp, unsigned int ind, Scaleform::UPInt trai
 template void Scaleform::ArrayBase<Scaleform::ArrayData<Scaleform::GFx::AS3::VMAbcFile*, Scaleform::AllocatorLH_POD<Scaleform::GFx::AS3::VMAbcFile*, Scaleform::GFx::AS3::StatMV_VM_VM_Mem>, Scaleform::ArrayDefaultPolicy> >::Clear();
 // sfr_as3_19 calls this instance by its exe name (an opaque extern keeps Sfr31ShutdownRegistered's r14 save,
 // 0x142530d50); the name binds to this body here. The hook DLL binds the FUN_ name by its symbols row.
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:?FUN_1424ef2a0@@YAX_K@Z=?Clear@?$ArrayBase@U?$ArrayData@PEAVVMAbcFile@AS3@GFx@Scaleform@@U?$AllocatorLH_POD@PEAVVMAbcFile@AS3@GFx@Scaleform@@$0BEJ@@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAXXZ")
-#endif
 
 // INST-CheckExp-BEGIN
 template void Scaleform::HashSetBase<Scaleform::HashNode<int,Scaleform::AutoPtr<Scaleform::ArrayLH<Scaleform::WeakPtr<Scaleform::GFx::DisplayObject>,2,Scaleform::ArrayDefaultPolicy> >,Scaleform::IdentityHash<int> >,Scaleform::HashNode<int,Scaleform::AutoPtr<Scaleform::ArrayLH<Scaleform::WeakPtr<Scaleform::GFx::DisplayObject>,2,Scaleform::ArrayDefaultPolicy> >,Scaleform::IdentityHash<int> >::NodeHashF,Scaleform::HashNode<int,Scaleform::AutoPtr<Scaleform::ArrayLH<Scaleform::WeakPtr<Scaleform::GFx::DisplayObject>,2,Scaleform::ArrayDefaultPolicy> >,Scaleform::IdentityHash<int> >::NodeAltHashF,Scaleform::AllocatorLH<int,2>,Scaleform::HashsetNodeEntry<Scaleform::HashNode<int,Scaleform::AutoPtr<Scaleform::ArrayLH<Scaleform::WeakPtr<Scaleform::GFx::DisplayObject>,2,Scaleform::ArrayDefaultPolicy> >,Scaleform::IdentityHash<int> >,Scaleform::HashNode<int,Scaleform::AutoPtr<Scaleform::ArrayLH<Scaleform::WeakPtr<Scaleform::GFx::DisplayObject>,2,Scaleform::ArrayDefaultPolicy> >,Scaleform::IdentityHash<int> >::NodeHashF> >::CheckExpand(void*);

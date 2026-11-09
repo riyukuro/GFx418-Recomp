@@ -117,7 +117,13 @@ static __forceinline void Video02ResizeFills(void* array, const void* heapAddr, 
     void (Video02FillData::*resize)(const void*, Scaleform::UPInt) = &Video02FillData::ResizeNoConstruct;
     (static_cast<Video02FillData*>(array)->*resize)(heapAddr, newSize);
 }
+#ifdef MS2_HOOK_DLL
 extern void FUN_14257eb30(void*);
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("??1EntryData@ContextImpl@Render@Scaleform@@UEAA@XZ")(void*);
+#define FUN_14257eb30 __identifier("??1EntryData@ContextImpl@Render@Scaleform@@UEAA@XZ")
+#endif
 #define DAT_143b15f60 (static_cast<void*>(Scaleform::Memory::pGlobalHeap))
 #include "../include/render/render_gradients.h"   // GradientData, for ComplexFill's Ptr<GradientData>
 namespace Scaleform { namespace Render { inline ComplexFill::ComplexFill() : BindIndex(~0u) {} }}   // the SDK ctor (as in sfr_gfx_06e): the fill below stores ??_7ComplexFill by name

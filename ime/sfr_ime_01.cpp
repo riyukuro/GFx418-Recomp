@@ -202,10 +202,15 @@ extern "C" void FUN_1423c9330(unsigned long long, unsigned long long);
 #include "../include/video/video_video.h"   // (C3) FUN_1423ca2b0 = Ime01CueArr::Reserve; typedef below
 // ~ArrayLH<String> (0x1422fbf60). Not the real dtor: called as ~ArrayLH it inlines and the two dtor bodies
 // below no longer match.
+#ifdef MS2_HOOK_DLL
 extern "C" void FUN_1422fbf60(void*);
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("??1?$ArrayLH@VString@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@QEAA@XZ")(void*);
+#define FUN_1422fbf60 __identifier("??1?$ArrayLH@VString@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@QEAA@XZ")
+#endif
 #ifndef MS2_HOOK_DLL
 // the body is the client's /Od instantiation of that dtor
-#pragma comment(linker, "/alternatename:FUN_1422fbf60=??1?$ArrayLH@VString@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@QEAA@XZ")
 #endif
 typedef Scaleform::ArrayLH<Scaleform::String> Ime01StringArray; typedef Scaleform::ArrayDataBase<Scaleform::GFx::Video::VideoPlayer::CuePoint, Scaleform::AllocatorGH<Scaleform::GFx::Video::VideoPlayer::CuePoint, 2>, Scaleform::ArrayDefaultPolicy> Ime01CueArr; template<> void Ime01CueArr::Reserve(const void*, Scaleform::UPInt);   // PushBack 0x1422fd480 (Ime01StringArray)
 template<> void Scaleform::ArrayBase<Scaleform::ArrayData<Scaleform::String, Scaleform::AllocatorLH<Scaleform::String, 2>, Scaleform::ArrayDefaultPolicy> >::PushBack(const Scaleform::String&);   // out of line in the exe (0x1422fd480)

@@ -172,7 +172,12 @@ void FUN_1425916c0(void* self, void* psc, void* object)
 
 // Audio state: sync settings, the sound renderer (counted) and a default tag reader object.
 // @0x142591be0
+#ifdef MS2_HOOK_DLL
 void* FUN_142591be0(void* self, void* renderer, float maxTimeDifference, unsigned checkFrameInterval, unsigned syncType)
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void* __identifier("??0Audio@GFx@Scaleform@@QEAA@PEAVSoundRenderer@Sound@2@MIW4SyncTypeFlags@AudioBase@12@@Z")(void* self, void* renderer, float maxTimeDifference, unsigned checkFrameInterval, unsigned syncType)
+#endif
 {
     RawField<float>(self, 0x18) = maxTimeDifference;
     ::new (self) RefCountImplCore;
