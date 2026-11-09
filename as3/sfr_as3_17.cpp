@@ -3830,7 +3830,13 @@ void Tracer::EmitCode()
     }
     Done = true;
 }
+#ifdef MS2_HOOK_DLL
 extern "C" void FUN_1424df070(void* tracer);   // Tracer::~Tracer (sfr_as3_16, C linkage)
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("??1Tracer@AS3@GFx@Scaleform@@UEAA@XZ")(void* tracer);   // Tracer::~Tracer (sfr_as3_16)
+#define FUN_1424df070 __identifier("??1Tracer@AS3@GFx@Scaleform@@UEAA@XZ")
+#endif
 
 // The interpreter code of the frame's method body, traced from its bytecode on first use.
 // @0x142508330

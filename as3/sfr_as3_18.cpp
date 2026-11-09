@@ -1980,7 +1980,13 @@ __declspec(safebuffers) CheckResult Tracer::MergeLists(TR::State& to, const TR::
 }}} // namespace Scaleform::GFx::AS3
 
 // ---- VMAbcFile::GetOpCode (traces a method body on first use) ----
+#ifdef MS2_HOOK_DLL
 extern "C" void FUN_1424df070(void* tracer);   // Tracer::~Tracer (sfr_as3_16, C linkage)
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("??1Tracer@AS3@GFx@Scaleform@@UEAA@XZ")(void* tracer);   // Tracer::~Tracer (sfr_as3_16)
+#define FUN_1424df070 __identifier("??1Tracer@AS3@GFx@Scaleform@@UEAA@XZ")
+#endif
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // MS2-FUNCTIONAL 0x14250c860: the exe splits the shrink-wrapped slow path into a chained unwind fragment
@@ -9272,7 +9278,12 @@ bool FUN_14251a330(UPInt) { return false; }
 bool FUN_14251ac90(UPInt) { return false; }
 // Tracer::OnOpCode
 // @0x14251acb0
+#ifdef MS2_HOOK_DLL
 bool FUN_14251acb0(UPInt) { return false; }
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" bool __identifier("?OnOpCode@Tracer@AS3@GFx@Scaleform@@UEAA_N_K@Z")(UPInt) { return false; }
+#endif
 // @0x142514280
 bool FUN_142514280(UPInt) { return true; }
 // @0x142518740
@@ -9451,7 +9462,12 @@ void FUN_14251ac60(UPInt self)
 // Tracer::Output: passed on to the FlashUI of the traced call frame's VM.
 // Raw-layout walk (CallFrame +0x20 -> +0x28 -> +0x20 -> +0x20)
 // @0x14251bda0
+#ifdef MS2_HOOK_DLL
 void FUN_14251bda0(UPInt self, FlashUI::OutputMessageType type, const char* msg)
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("?Output@Tracer@AS3@GFx@Scaleform@@UEAAXW4OutputMessageType@FlashUI@234@PEBD@Z")(UPInt self, FlashUI::OutputMessageType type, const char* msg)
+#endif
 {
     reinterpret_cast<FlashUI*>(AccRd(AccRd(AccRd(AccRd(self, 0x20), 0x28), 0x20), 0x20))->Output(type, msg);
 }

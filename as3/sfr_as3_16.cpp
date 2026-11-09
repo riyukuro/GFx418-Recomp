@@ -445,6 +445,10 @@ template<> SF_NOINLINE Sfr16SPtrArrayData::~ArrayDataBase();
 
 // SDK Tracer::~Tracer: the block list is freed, then the states; the arrays release themselves.
 // @0x1424df070
+#ifndef MS2_HOOK_DLL
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+#define FUN_1424df070 __identifier("??1Tracer@AS3@GFx@Scaleform@@UEAA@XZ")
+#endif
 extern "C" void FUN_1424df070(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
@@ -799,7 +803,13 @@ unsigned char* FUN_1424e0940(unsigned char* dst, const unsigned char* src)
     return dst;
 }
 
+#ifdef MS2_HOOK_DLL
 extern "C" void FUN_14015b310(void*, Scaleform::UPInt);
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("?__empty_global_delete@@YAXPEAX_K@Z")(void*, Scaleform::UPInt);
+#define FUN_14015b310 __identifier("?__empty_global_delete@@YAXPEAX_K@Z")
+#endif
 
 namespace {
 void* Sfr16ScalarDeletingDtor(void* self, unsigned int flags)

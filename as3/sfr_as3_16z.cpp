@@ -1095,7 +1095,13 @@ extern "C" void __identifier("??1EntryData@ContextImpl@Render@Scaleform@@UEAA@XZ
 void FUN_1424dc630(void* p);
 void FUN_1424de650(void* p);            // MovieRoot::~MovieRoot
 typedef ArrayDataBase<SPtr<Instances::Namespace>, AllocatorLH<SPtr<Instances::Namespace>, 2>, ArrayDefaultPolicy> Sfr16zNsArr; // (C3) FUN_1423f0720 = its dtor
+#ifdef MS2_HOOK_DLL
 void FUN_1424df070(void* p);            // Tracer::~Tracer
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("??1Tracer@AS3@GFx@Scaleform@@UEAA@XZ")(void* p);   // Tracer::~Tracer (sfr_as3_16)
+#define FUN_1424df070 __identifier("??1Tracer@AS3@GFx@Scaleform@@UEAA@XZ")
+#endif
 void FUN_1424df380(void* p);            // VM::~VM
 }
 

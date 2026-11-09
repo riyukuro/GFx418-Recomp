@@ -8,7 +8,13 @@
 
 #include "ms2/scaleform/include/render/text_filterdesc.h"
 
+#ifdef MS2_HOOK_DLL
 extern "C" void FUN_14015b310(void*, unsigned long long);
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("?__empty_global_delete@@YAXPEAX_K@Z")(void*, unsigned long long);
+#define FUN_14015b310 __identifier("?__empty_global_delete@@YAXPEAX_K@Z")
+#endif
 
 namespace Scaleform { namespace Render { namespace Text {
 

@@ -8403,7 +8403,13 @@ static inline bool Sfr31DispBelongsTo(UPInt dobj, UPInt def)
 }
 
 // ArrayData<Ptr<...>>::Resize (0x1425245c0), out of line as in the exe.
+#ifdef MS2_HOOK_DLL
 void Sfr31ResizeObjZero(UPInt* arr, UPInt n);
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("?Resize@?$ArrayData@V?$Ptr@VInteractiveObject@GFx@Scaleform@@@Scaleform@@U?$AllocatorLH@V?$Ptr@VInteractiveObject@GFx@Scaleform@@@Scaleform@@$0BED@@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAX_K@Z")(UPInt* arr, UPInt n);
+#define Sfr31ResizeObjZero __identifier("?Resize@?$ArrayData@V?$Ptr@VInteractiveObject@GFx@Scaleform@@@Scaleform@@U?$AllocatorLH@V?$Ptr@VInteractiveObject@GFx@Scaleform@@@Scaleform@@$0BED@@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAX_K@Z")
+#endif
 
 // Drops the display objects of the movie definition def from an array of display object pointers (data, size, capacity).
 static void Sfr31DropDispOfDef(UPInt* arr, UPInt def)

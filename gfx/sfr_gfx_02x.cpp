@@ -32,7 +32,13 @@ extern Sd_143184be8 DAT_143184be8;   // ??_7Audio@GFx@Scaleform@@6B@ (data_rdata
 
 namespace Scaleform { namespace GFx {
 
+#ifdef MS2_HOOK_DLL
 void FUN_14015b310(void*, UPInt);    // sized delete
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("?__empty_global_delete@@YAXPEAX_K@Z")(void*, UPInt);    // sized delete
+#define FUN_14015b310 __identifier("?__empty_global_delete@@YAXPEAX_K@Z")
+#endif
 
 // RefCountBase<T, Stat> scalar deleting destructor (folded for the 0x10-byte classes, three copies here).
 // MS2-FUNCTIONAL: raw-layout COMDAT (folded identical bodies of many RefCountBase instances)

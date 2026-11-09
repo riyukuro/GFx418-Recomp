@@ -74,7 +74,7 @@ void SJRBF_Finish(void);
 void FUN_14004e2a0(void*);
 extern "C" void criSj_Destroy(void*);
 void* FUN_14004fe20(void*, CriUint32, CriUint32);
-void criVmpv_Destroy(void*);
+extern "C" void criVmpv_Destroy(void*);
 extern "C" CriSint32 FUN_14003cff0(void*);   // C3: defined in the C unit sfr_cri_03d
 CriUint32 criVdecCmn_GetNumPictureData(const void* decoder);
 void* criUtfRtv_CreateByUtfHeapWithHeapType(void*, CriUint32, const void*, CriUint32);
@@ -1202,7 +1202,7 @@ void criVmpv_Finalize(void);
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 CriSint32 FUN_14003c190(CriSint32 width, CriSint32 height, CriSint32 requestedFrames);
 
-void criVmpv_Destroy(void* handle);
+extern "C" void criVmpv_Destroy(void* handle);
 
 void criVmpv_StopComplete(void* handle);
 

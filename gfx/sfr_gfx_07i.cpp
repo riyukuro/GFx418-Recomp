@@ -42,7 +42,13 @@ extern char DAT_14318f048[];
 extern char DAT_14318f060[];
 extern char DAT_14318f040[];
 
+#ifdef MS2_HOOK_DLL
 void FUN_14015b310(void*, UPInt);
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("?__empty_global_delete@@YAXPEAX_K@Z")(void*, UPInt);
+#define FUN_14015b310 __identifier("?__empty_global_delete@@YAXPEAX_K@Z")
+#endif
 void FUN_14261fa90(char*);
 void FUN_142624840(U**, void*, U);
 void FUN_142624af0(U**, void*, U);

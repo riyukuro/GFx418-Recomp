@@ -34,7 +34,13 @@ namespace Scaleform { namespace GFx {
 extern void* DAT_143b16080;
 extern int DAT_143a2f428;
 
+#ifdef MS2_HOOK_DLL
 void FUN_14015b310(void*, UPInt);
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("?__empty_global_delete@@YAXPEAX_K@Z")(void*, UPInt);
+#define FUN_14015b310 __identifier("?__empty_global_delete@@YAXPEAX_K@Z")
+#endif
 void FUN_142624700(U, U, int, int, U);
 void FUN_142624840(U**, void*, U);
 void FUN_142624d70(U**, void*, U);

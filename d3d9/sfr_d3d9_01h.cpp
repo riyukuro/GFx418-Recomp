@@ -21,7 +21,13 @@ extern "C" char DAT_1431beef0[];
 extern "C" char DAT_1431bede8[];   // audio event listener
 extern "C" char DAT_1431bcbe8[];   // RefCountBase
 
+#ifdef MS2_HOOK_DLL
 void FUN_14015b310(void*, UPInt);           // sized operator delete (Scaleform heap)
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("?__empty_global_delete@@YAXPEAX_K@Z")(void*, UPInt);           // sized operator delete (Scaleform heap)
+#define FUN_14015b310 __identifier("?__empty_global_delete@@YAXPEAX_K@Z")
+#endif
 void FUN_142743580(void* self);             // audio channel dtor (sfr_kernel_03o)
 void FUN_1427434d0(U** self);               // array-valued set Clear (sfr_kernel_03o)
 extern "C" void FUN_142747b30(void*);       // audio event listener: shut down

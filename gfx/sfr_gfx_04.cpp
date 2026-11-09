@@ -135,7 +135,13 @@ public:
     virtual CharacterDefType GetType() const;
 };
 
+#ifdef MS2_HOOK_DLL
 extern "C" void FUN_14015b310(void*, unsigned long long);
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("?__empty_global_delete@@YAXPEAX_K@Z")(void*, unsigned long long);
+#define FUN_14015b310 __identifier("?__empty_global_delete@@YAXPEAX_K@Z")
+#endif
 
 // The shape data without styles of the empty shape (GFx_ShapeSwf). Read and Clone are defined in sfr_gfx_08j.
 class ConstShapeNoStyles : public ShapeDataBase

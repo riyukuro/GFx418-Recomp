@@ -142,7 +142,13 @@ static __forceinline BOOL cx18_ImmSetCompositionStringW(HIMC context, DWORD inde
     return ImmSetCompositionStringW(context, index, const_cast<LPVOID>(comp), compBytes, const_cast<LPVOID>(read), readBytes);
 }
 
+#ifdef MS2_HOOK_DLL
 extern "C" void FUN_14015b310(void*, unsigned long long);
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("?__empty_global_delete@@YAXPEAX_K@Z")(void*, unsigned long long);
+#define FUN_14015b310 __identifier("?__empty_global_delete@@YAXPEAX_K@Z")
+#endif
 // AvmMovieClip::~AvmMovieClip 0x1424ddcb0 (sfr_as3_16) is the in-place destructor of FUN_1423dbb60 below.
 // The RefCount base destructors, called directly as the exe calls them.
 static inline void RawRefCountCoreDtor(void* p) { static_cast<Scaleform::RefCountImplCore*>(p)->Scaleform::RefCountImplCore::~RefCountImplCore(); }

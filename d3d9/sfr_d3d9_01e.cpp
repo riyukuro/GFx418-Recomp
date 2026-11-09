@@ -1746,7 +1746,13 @@ void FUN_14272e8f0(RenderBuffer* p)
     p->RenderBuffer::~RenderBuffer();
 }
 
+#ifdef MS2_HOOK_DLL
 void FUN_14015b310(void*, UPInt);   // sized operator delete (__empty_global_delete)
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("?__empty_global_delete@@YAXPEAX_K@Z")(void*, UPInt);   // sized operator delete (__empty_global_delete)
+#define FUN_14015b310 __identifier("?__empty_global_delete@@YAXPEAX_K@Z")
+#endif
 
 // a RefCountNTSImplCore deleting dtor
 // written from the decompile

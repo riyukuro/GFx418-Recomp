@@ -200,8 +200,6 @@ extern "C" void* __identifier("??0Audio@GFx@Scaleform@@QEAA@PEAVSoundRenderer@So
     RawField<void*>(self, 0x30) = 0;
     return self;
 }
-#ifndef MS2_HOOK_DLL
-#endif
 
 // @0x142591c90
 void FUN_142591c90(void* self)
