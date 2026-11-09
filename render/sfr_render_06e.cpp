@@ -189,10 +189,14 @@ SKI_MaskEnd::RQII_EndMask SKI_MaskEnd::EndMaskItem;
 SKI_MaskEnd            SKI_MaskEnd::Instance;
 
 // by SortKeyMaskType: push, push clipped, end, pop
+// The hook DLL binds these statics to the exe, and a static table would hold ADDR64s against exe globals; it builds the
+// table where it is used.
+#ifndef MS2_HOOK_DLL
 static SortKeyInterface* SKI_MaskTable[4] =
 {
     &SKI_MaskStart::Instance, &SKI_MaskStart::InstanceClipped, &SKI_MaskEnd::Instance, &SKI_MaskEnd::Instance
 };
+#endif
 
 SKI_BlendMode::RQII_BlendMode SKI_BlendMode::BlendModeItem;
 SKI_BlendMode          SKI_BlendMode::InstanceStart(SortKey_BlendModeStart,
@@ -552,6 +556,14 @@ SortKey::SortKey(PrimitiveFill* fill, bool is3D)
 // @0x1426bc910
 SortKey::SortKey(SortKeyMaskType maskType)
 {
+#ifdef MS2_HOOK_DLL
+    // volatile stores: clang folds an initialized local array into .rdata
+    SortKeyInterface* volatile SKI_MaskTable[4];
+    SKI_MaskTable[0] = &SKI_MaskStart::Instance;
+    SKI_MaskTable[1] = &SKI_MaskStart::InstanceClipped;
+    SKI_MaskTable[2] = &SKI_MaskEnd::Instance;
+    SKI_MaskTable[3] = &SKI_MaskEnd::Instance;
+#endif
     pImpl = SKI_MaskTable[maskType];
     Data  = (SortKeyData)(SPInt)maskType;
     addRef();
@@ -739,13 +751,6 @@ void MaskBundle::RemoveEntries(UPInt index, UPInt count)
 }
 
 }} // namespace Scaleform::Render
-// The mask key statics keep no symbol row (06e takes their addresses in static data, so a row would make the hook DLL
-// rebind them to the exe); sfr_atexit_01's dtor thunks name them by their DAT_ addresses, bound here.
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:DAT_143a2fd28=?Instance@SKI_MaskStart@Render@Scaleform@@2V123@A")
-#pragma comment(linker, "/alternatename:DAT_143a2fd38=?InstanceClipped@SKI_MaskStart@Render@Scaleform@@2V123@A")
-#pragma comment(linker, "/alternatename:DAT_143a2fd50=?Instance@SKI_MaskEnd@Render@Scaleform@@2V123@A")
-#endif
 
 // the scalar deleting destructors (the key interfaces' are folded copies) and the vftables
 // MS2-PIN: ??_GSKI_Primitive@Render@Scaleform@@UEAAPEAXI@Z 0x1426bb7c0

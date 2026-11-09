@@ -91,13 +91,28 @@ namespace Scaleform { namespace GFx {
 extern "C" char DAT_143a2dd20[];
 extern "C" char DAT_143b15780[];
 extern "C" char DAT_143a2f650[];
-// SKI_MaskStart::Instance / InstanceClipped and SKI_MaskEnd::Instance (sfr_render_06e) stay DAT_ names: 06e takes
-// their addresses in static data (the mask key table), so a real-name row would make the hook DLL rebind the
-// definitions to the exe (ADDR64 against an exe global). sfr_render_06e binds these names to the definitions
-// (definer-form /alternatename, full exe only).
+// SKI_MaskStart::Instance / InstanceClipped and SKI_MaskEnd::Instance (sfr_render_06e). The hook build binds the DAT_ names by VA.
+#ifdef MS2_HOOK_DLL
 extern "C" char DAT_143a2fd28[];
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" char __identifier("?Instance@SKI_MaskStart@Render@Scaleform@@2V123@A")[];
+#define DAT_143a2fd28 __identifier("?Instance@SKI_MaskStart@Render@Scaleform@@2V123@A")
+#endif
+#ifdef MS2_HOOK_DLL
 extern "C" char DAT_143a2fd38[];
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" char __identifier("?InstanceClipped@SKI_MaskStart@Render@Scaleform@@2V123@A")[];
+#define DAT_143a2fd38 __identifier("?InstanceClipped@SKI_MaskStart@Render@Scaleform@@2V123@A")
+#endif
+#ifdef MS2_HOOK_DLL
 extern "C" char DAT_143a2fd50[];
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" char __identifier("?Instance@SKI_MaskEnd@Render@Scaleform@@2V123@A")[];
+#define DAT_143a2fd50 __identifier("?Instance@SKI_MaskEnd@Render@Scaleform@@2V123@A")
+#endif
 
 }}
 
