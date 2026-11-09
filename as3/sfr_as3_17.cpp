@@ -4844,12 +4844,15 @@ void XMLSupportImpl::DescribeType(VM& vm, SPtr<Instances::fl::XML>& result, cons
         for (UPInt i = 0; i < slotNum; ++i)
         {
             const SlotInfo& si = tr.GetSlotInfo(AbsoluteIndex(i));
+            const ClassTraits::Traits* next = Sfr33SlotDataType(&si, &vm);
             const SInt32 key = si.ValueInd;
             if (UPInt* found = slots.Get(key))
             {
+                // Exe bug, kept: no null test on prev. The key is a byte offset for a var and a vtable index for a
+                // method, so a var can share a key with a later method. A var whose declared type does not resolve
+                // has a null data type, and IsParentTypeOf(null, method type) reads null+0xc0 (0x1424f5df2).
                 const ClassTraits::Traits* prev = Sfr33SlotDataType(&tr.GetSlotInfo(AbsoluteIndex(*found)), &vm);
-                const ClassTraits::Traits* next = Sfr33SlotDataType(&si, &vm);
-                if (prev == next || (prev && next && FUN_1425149a0(*prev, *next)))
+                if (FUN_1425149a0(*prev, *next))
                     *found = i;
             }
             else
