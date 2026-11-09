@@ -147,12 +147,18 @@ struct CriUsfHeaderFields
     CriUint8 Kind;          // 0x0f
     CriUint32 Words[5];     // 0x10
 };
-extern "C" CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config);
-CriSint32 FUN_140045910(const CriSint32*);
-CriSint32 FUN_140045ed0(const CriSint32*);
+// In the exe the criSjUni/criSjRbf work-size functions sit in their own obj, so their callers here see an opaque
+// external. A plain same-TU definition lets VC9 track the callee's register use and changes the callers' register
+// allocation; a noinline inline (selectany COMDAT) definition hides it the same way. The hook DLL keeps the plain form.
+#ifdef MS2_HOOK_DLL
+#define CRI_SJ_WORKSIZE_LINKAGE
+#else
+#define CRI_SJ_WORKSIZE_LINKAGE __declspec(noinline) inline
+#endif
+extern "C" CRI_SJ_WORKSIZE_LINKAGE CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config);
 void criErr_Notify(CriSint32 category, const CriChar8* message);
 extern "C" void* criSjUni_Create(const void*, void*, CriSint32);
-extern "C" CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config);
+extern "C" CRI_SJ_WORKSIZE_LINKAGE CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config);
 extern "C" void* criSjRbf_Create(const void*, void*, CriSint32);
 void FUN_140045998(void*);
 void FUN_140045fdc(void*);
@@ -188,7 +194,7 @@ void mvPlyAdec_TerminateSupplyAudioDecoder(void* object);
 // @0x140046324
 void* criSjUni_CreateByHeap(const void* config, void* heap, CriUint32 allocationMode)
 {
-    CriSint32 size = FUN_140045910((const CriSint32*)config) + 8; // criSjUni_CalculateWorkSize, called as the external
+    CriSint32 size = criSjUni_CalculateWorkSize((const CriSint32*)config) + 8; // criSjUni_CalculateWorkSize, called as the external
     void** allocation = (void**)criHeap_Alloc((CriHeap)heap, size, "CriSjUni", 8, (CriSint32)allocationMode);
     if (!allocation)
     {
@@ -210,7 +216,7 @@ void* criSjUni_CreateByHeap(const void* config, void* heap, CriUint32 allocation
 // @0x1400464f4
 void* criSjRbf_CreateByHeap(const void* config, void* heap, CriUint32 allocationMode)
 {
-    CriSint32 size = FUN_140045ed0((const CriSint32*)config) + 8; // criSjRbf_CalculateWorkSize, called as the external
+    CriSint32 size = criSjRbf_CalculateWorkSize((const CriSint32*)config) + 8; // criSjRbf_CalculateWorkSize, called as the external
     void** allocation = (void**)criHeap_Alloc((CriHeap)heap, size, "CriSjRbf", 8, (CriSint32)allocationMode);
     if (!allocation)
     {
@@ -349,7 +355,7 @@ extern "C" CriSint32 criSjUni_GetRequiredMemorySizeWithConfig(CriUint32 first, C
 {
     CriSint32 headerBytes = criHeap_DebugGetWorstExtraSize(8);
     CriUint32 config[3] = { settings[0], first, second };
-    return FUN_140045910((const CriSint32*)config) + headerBytes * 2;
+    return criSjUni_CalculateWorkSize((const CriSint32*)config) + headerBytes * 2;
 }
 
 // MS2-FUNCTIONAL: request work sizing for the default one-block stream-joint setup.
@@ -760,7 +766,7 @@ extern "C" void criUsfDmx_SetOutputSj(void* demux, CriUint32 index, void* stream
 
 // MS2-FUNCTIONAL: compute the executable's fixed and per-chain work-area size.
 // @0x140045910
-extern "C" CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config)
+extern "C" CRI_SJ_WORKSIZE_LINKAGE CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config)
 {
     CriSint32 base = 0x58;
     if (config[0] == 1)
@@ -773,16 +779,16 @@ extern "C" CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config)
 extern "C" CriSint32 criUsfDmx_CalculateWorkSizeWithWork(CriSint32 outputCount)
 {
     CriSint32 config[3] = { 1, 0, 0x80 };
-    CriSint32 inputBytes = (FUN_140045910(config) + 7) / 8 * 8;
+    CriSint32 inputBytes = (criSjUni_CalculateWorkSize(config) + 7) / 8 * 8;
     config[2] = 0x80;
-    CriSint32 outputUnits = (FUN_140045910(config) + 7) / 8;
+    CriSint32 outputUnits = (criSjUni_CalculateWorkSize(config) + 7) / 8;
     CriSint32 recordUnits = (outputCount * 0x10 + 0x17) / 8;
     return inputBytes + (outputUnits + recordUnits) * 8 + 0x48;
 }
 
 // MS2-FUNCTIONAL: calculate ring-buffer work size from its synchronization flag and pool sizes.
 // @0x140045ed0
-extern "C" CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config)
+extern "C" CRI_SJ_WORKSIZE_LINKAGE CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config)
 {
     CriSint32 size = 0x58;
     if (config[0] == 1)
@@ -1481,7 +1487,7 @@ extern "C" CriSint32 criSjRbf_GetRequiredMemorySizeWithConfig(CriUint32 first, C
     struct Setup { CriUint32 Flags, First, Second, Third; CriUint64 Reserved; };
     CriSint32 overhead = criHeap_DebugGetWorstExtraSize(8);
     Setup setup = { settings[0], first, second, third, 0 };
-    return FUN_140045ed0((const CriSint32*)&setup) + overhead * 2;
+    return criSjRbf_CalculateWorkSize((const CriSint32*)&setup) + overhead * 2;
 }
 
 // MS2-FUNCTIONAL: create a standard ring-buffer stream joint using the static CRI pool descriptor.
@@ -2940,9 +2946,3 @@ void* FUN_140039ea8(void* work, CriSint32 size);
 extern "C" void* FUN_140039ea8(void* work, int size);
 void* FUN_1400385c8(void* work, CriUint32 size);
 extern "C" void* FUN_1400385c8(void* work, unsigned long long size);
-// The FUN_140045910/FUN_140045ed0 callers above (and sfr_cri_03a's) keep the external call form: a call to the
-// same-TU definition changes their register allocation. The names bind to the definitions here.
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:?FUN_140045910@@YAJPEBJ@Z=criSjUni_CalculateWorkSize")
-#pragma comment(linker, "/alternatename:?FUN_140045ed0@@YAJPEBJ@Z=criSjRbf_CalculateWorkSize")
-#endif

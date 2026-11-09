@@ -155,8 +155,6 @@ struct CriUsfHeaderFields
     CriUint32 Words[5];     // 0x10
 };
 extern "C" CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config);
-CriSint32 FUN_140045910(const CriSint32*);
-CriSint32 FUN_140045ed0(const CriSint32*);
 extern "C" void* criSjUni_Create(const void*, void*, CriSint32);
 extern "C" CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config);
 extern "C" void* criSjRbf_Create(const void*, void*, CriSint32);
