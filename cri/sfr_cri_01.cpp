@@ -178,8 +178,20 @@ namespace Video {
 
 // The video character definition is recovered with Video_VideoCharacter; here only its inline construction, which
 // fills the Resource / CharacterDef / VideoCharacterDef image (0x30 bytes) and stores the two vtables.
+#ifdef MS2_HOOK_DLL
 extern "C" const void* const MS2_SF_Resource_vftable[];            // ??_7Resource@GFx@Scaleform@@6B@ 0x143149880
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" const void* const __identifier("??_7Resource@GFx@Scaleform@@6B@")[];            // ??_7Resource@GFx@Scaleform@@6B@ 0x143149880
+#define MS2_SF_Resource_vftable __identifier("??_7Resource@GFx@Scaleform@@6B@")
+#endif
+#ifdef MS2_HOOK_DLL
 extern "C" const void* const MS2_SF_VideoCharacterDef_vftable[];   // ??_7VideoCharacterDef@Video@GFx@Scaleform@@6B@ 0x14318b778
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" const void* const __identifier("??_7VideoCharacterDef@Video@GFx@Scaleform@@6B@")[];   // ??_7VideoCharacterDef@Video@GFx@Scaleform@@6B@ 0x14318b778
+#define MS2_SF_VideoCharacterDef_vftable __identifier("??_7VideoCharacterDef@Video@GFx@Scaleform@@6B@")
+#endif
 
 struct VideoCharacterDef
 {

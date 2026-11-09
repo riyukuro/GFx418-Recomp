@@ -1080,7 +1080,13 @@ void Object::ForEachChild_GC(Collector* prcc, GcOp op) const
 // ---- sfr33: MovieRoot / Stage helpers ----
 // AS3 Event class's object factory (unrecovered).
 // the AS3 MovieDefRootNode vftable
+#ifdef MS2_HOOK_DLL
 extern "C" const void* DAT_14317d8c0;
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void (*const __identifier("??_7MovieDefRootNode@AS3@GFx@Scaleform@@6B@")[])();
+#define DAT_14317d8c0 (*(const void**)__identifier("??_7MovieDefRootNode@AS3@GFx@Scaleform@@6B@"))
+#endif
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1167,9 +1173,21 @@ private:
 
 // VM: runs the queued class constructors (unrecovered).
 // the AS3 ObjectInterface (AS3ValueObjectInterface) vftable
+#ifdef MS2_HOOK_DLL
 extern "C" const void* DAT_14317eff8;
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void (*const __identifier("??_7AS3ValueObjectInterface@GFx@Scaleform@@6B@")[])();
+#define DAT_14317eff8 (*(const void**)__identifier("??_7AS3ValueObjectInterface@GFx@Scaleform@@6B@"))
+#endif
 
+#ifdef MS2_HOOK_DLL
 extern "C" const void* DAT_14317ef38[];      // UserDefinedFunction vftable
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void (*const __identifier("??_7UserDefinedFunction@AS3@GFx@Scaleform@@6B@")[])();      // UserDefinedFunction vftable
+#define DAT_14317ef38 ((const void**)__identifier("??_7UserDefinedFunction@AS3@GFx@Scaleform@@6B@"))
+#endif
 int FUN_140ccaae0(const char* fmt, ...);   // log printf
 
 namespace Scaleform { namespace GFx { namespace AS3 {

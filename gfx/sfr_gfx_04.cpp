@@ -156,10 +156,6 @@ using EmptyVideoDefImage = Video::VideoCharacterDef;
 
 Video::VideoCharacterDef::VideoCharacterDef() {}
 // sfr_cri_01's inline VideoCharacterDef construction names the two vftables this ctor emits by extern "C" views.
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:MS2_SF_Resource_vftable=??_7Resource@GFx@Scaleform@@6B@")
-#pragma comment(linker, "/alternatename:MS2_SF_VideoCharacterDef_vftable=??_7VideoCharacterDef@Video@GFx@Scaleform@@6B@")
-#endif
 
 Video::VideoCharacterDef::~VideoCharacterDef() {}
 

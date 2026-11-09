@@ -2574,7 +2574,13 @@ template<> SF_NOINLINE Sfr16AdbPod::~ArrayDataBase();      // 0x1424dc3d0
 bool FUN_142522a60(Scaleform::GFx::AS3::VM* vm, void* file);
 void FUN_1424dcc30(void* self);
 void FUN_1424dcdd0(void* self);
+#ifdef MS2_HOOK_DLL
 extern const void* DAT_14317b750[];     // VMAbcFile
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void (*const __identifier("??_7VMAbcFile@AS3@GFx@Scaleform@@6B@")[])();     // VMAbcFile
+#define DAT_14317b750 ((const void**)__identifier("??_7VMAbcFile@AS3@GFx@Scaleform@@6B@"))
+#endif
 
 // VMAbcFile's non-deleting teardown: the member cleanup sequence its scalar deleting dtor (0x1424e3eb0) inlines.
 // Every member teardown is an out-of-line call in the exe.

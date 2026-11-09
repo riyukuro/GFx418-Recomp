@@ -59,11 +59,29 @@ namespace Scaleform { namespace GFx { namespace AS2 { template<> Prototype<Video
 //
 //
 #endif
+#ifdef MS2_HOOK_DLL
 extern ExeDecl<void*>::type DAT_1431b53c0;
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void (*const __identifier("??_7?$Prototype@VNetStream@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")[])();
+#define DAT_1431b53c0 (*(ExeDecl<void*>::type*)__identifier("??_7?$Prototype@VNetStream@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@"))
+#endif
 #define NetStreamPrototypeVtable DAT_1431b53c0
+#ifdef MS2_HOOK_DLL
 extern ExeDecl<void*>::type DAT_1431b5310;
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void (*const __identifier("??_7?$Prototype@VNetStream@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@")[])();
+#define DAT_1431b5310 (*(ExeDecl<void*>::type*)__identifier("??_7?$Prototype@VNetStream@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@"))
+#endif
 #define NetStreamPrototypeInterfaceVtable DAT_1431b5310
+#ifdef MS2_HOOK_DLL
 extern ExeDecl<void*>::type DAT_1431b5300;
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void (*const __identifier("??_7?$Prototype@VNetStream@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@")[])();
+#define DAT_1431b5300 (*(ExeDecl<void*>::type*)__identifier("??_7?$Prototype@VNetStream@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@"))
+#endif
 #define NetStreamPrototypeBaseVtable DAT_1431b5300
 extern ExeDecl<Scaleform::GFx::AS2::NameFunction>::type DAT_1431b4d80[];   // NetStreamProto's function table (5 entries + { 0, 0 })
 #define NetStreamCloseFunctionTable DAT_1431b4d80

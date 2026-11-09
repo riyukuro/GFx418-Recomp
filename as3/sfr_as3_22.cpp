@@ -71,9 +71,21 @@ extern "C" Sd_1431bede8 DAT_1431bede8;
 #define AS3AudioEventVtable (*reinterpret_cast<void**>(&DAT_1431bede8))
 extern "C" char DAT_1431bcbb0[];   // the sound objects' outermost base
 #define AS3SoundObjectBaseVtable DAT_1431bcbb0
+#ifdef MS2_HOOK_DLL
 extern unsigned char DAT_142dc9d48[];   // RefCountImplCore vftable (SwfSoundStreamer ctor chain); the name data_data_game.cpp declares
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void (*const __identifier("??_7RefCountImplCore@Scaleform@@6B@")[])();   // RefCountImplCore vftable (SwfSoundStreamer ctor chain); the name data_data_game.cpp declares
+#define DAT_142dc9d48 ((unsigned char*)__identifier("??_7RefCountImplCore@Scaleform@@6B@"))
+#endif
 #define DAT_142dc9d48_RefCountImplCore DAT_142dc9d48
+#ifdef MS2_HOOK_DLL
 extern "C" char DAT_1431b80b8[];   // SoundRenderer::AuxStreamer vftable
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void (*const __identifier("??_7AuxStreamer@SoundRenderer@Sound@Scaleform@@6B@")[])();   // SoundRenderer::AuxStreamer vftable
+#define DAT_1431b80b8 ((char*)__identifier("??_7AuxStreamer@SoundRenderer@Sound@Scaleform@@6B@"))
+#endif
 struct Sd_1431bec40;
 extern "C" Sd_1431bec40 DAT_1431bec40;
 #define AS3AudioListNodeVtable (*reinterpret_cast<void**>(&DAT_1431bec40))

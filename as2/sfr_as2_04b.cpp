@@ -147,13 +147,49 @@ public:
 
 
 // The base vftables the inlined destructors store.
+#ifdef MS2_HOOK_DLL
 extern const void* DAT_143215f60[];
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" const void* __identifier("??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")[];
+#define DAT_143215f60 __identifier("??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
+#endif
 using Scaleform::GFx::AS3::DAT_14317afe8;
+#ifdef MS2_HOOK_DLL
 extern const void* DAT_143215fa8[];
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" const void* __identifier("??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@")[];
+#define DAT_143215fa8 __identifier("??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
+#endif
+#ifdef MS2_HOOK_DLL
 extern const void* DAT_143216050[];
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" const void* __identifier("??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@")[];
+#define DAT_143216050 __identifier("??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@")
+#endif
+#ifdef MS2_HOOK_DLL
 extern const void* DAT_143217750[];
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" const void* __identifier("??_7GFxAS2LoadQueueEntryMT_LoadMovie@AS2@GFx@Scaleform@@6B@")[];
+#define DAT_143217750 __identifier("??_7GFxAS2LoadQueueEntryMT_LoadMovie@AS2@GFx@Scaleform@@6B@")
+#endif
+#ifdef MS2_HOOK_DLL
 extern const void* DAT_143217780[];
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" const void* __identifier("??_7GFxAS2LoadQueueEntryMT_LoadXML@AS2@GFx@Scaleform@@6B@")[];
+#define DAT_143217780 __identifier("??_7GFxAS2LoadQueueEntryMT_LoadXML@AS2@GFx@Scaleform@@6B@")
+#endif
+#ifdef MS2_HOOK_DLL
 extern const void* DAT_1432177b0[];
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" const void* __identifier("??_7GFxAS2LoadQueueEntryMT_LoadCSS@AS2@GFx@Scaleform@@6B@")[];
+#define DAT_1432177b0 __identifier("??_7GFxAS2LoadQueueEntryMT_LoadCSS@AS2@GFx@Scaleform@@6B@")
+#endif
 
 // The Prototype<X> destructors called by name emit these vftables here as well.
 // MS2-PIN: ??_7?$Prototype@VBooleanObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@ 0x14321b730
@@ -900,9 +936,3 @@ void* DeleteAs2_14292b7a0(void* p, unsigned flags)
 // MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432155c0
 // MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215648
 
-// The three Prototype<Object,Environment> vftable images stored above, bound by alternatename to the real vftables.
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:?DAT_143215f60@AS2@GFx@Scaleform@@3PAPEBXA=??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@")
-#pragma comment(linker, "/alternatename:?DAT_143215fa8@AS2@GFx@Scaleform@@3PAPEBXA=??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6BObjectInterface@123@@")
-#pragma comment(linker, "/alternatename:?DAT_143216050@AS2@GFx@Scaleform@@3PAPEBXA=??_7?$Prototype@VObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@6B@")
-#endif

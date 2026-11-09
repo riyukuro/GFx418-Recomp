@@ -40,11 +40,29 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 
 // Vftables of the loader-thread entries and file tasks (their members are only reached as raw words here).
 // MS2-PIN: ??_7Task@GFx@Scaleform@@6B@ 0x143188d98
+#ifdef MS2_HOOK_DLL
 extern const void* DAT_143217750[]; // GFxAS2LoadQueueEntryMT_LoadMovie
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" const void* __identifier("??_7GFxAS2LoadQueueEntryMT_LoadMovie@AS2@GFx@Scaleform@@6B@")[]; // GFxAS2LoadQueueEntryMT_LoadMovie
+#define DAT_143217750 __identifier("??_7GFxAS2LoadQueueEntryMT_LoadMovie@AS2@GFx@Scaleform@@6B@")
+#endif
 extern const void* DAT_143217768[]; // XML file task
+#ifdef MS2_HOOK_DLL
 extern const void* DAT_143217780[]; // GFxAS2LoadQueueEntryMT_LoadXML
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" const void* __identifier("??_7GFxAS2LoadQueueEntryMT_LoadXML@AS2@GFx@Scaleform@@6B@")[]; // GFxAS2LoadQueueEntryMT_LoadXML
+#define DAT_143217780 __identifier("??_7GFxAS2LoadQueueEntryMT_LoadXML@AS2@GFx@Scaleform@@6B@")
+#endif
 extern const void* DAT_143217798[]; // CSS file task
+#ifdef MS2_HOOK_DLL
 extern const void* DAT_1432177b0[]; // GFxAS2LoadQueueEntryMT_LoadCSS
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" const void* __identifier("??_7GFxAS2LoadQueueEntryMT_LoadCSS@AS2@GFx@Scaleform@@6B@")[]; // GFxAS2LoadQueueEntryMT_LoadCSS
+#define DAT_1432177b0 __identifier("??_7GFxAS2LoadQueueEntryMT_LoadCSS@AS2@GFx@Scaleform@@6B@")
+#endif
 
 typedef GFxAS2LoadQueueEntry::HolderType HolderType;
 

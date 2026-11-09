@@ -1091,12 +1091,30 @@ static inline void* Sfr21Mem(void* p, UPInt off) { return *reinterpret_cast<void
 // The base vftables the inlined base destructors store before the out-of-line base destructor runs.
 extern const void* DAT_14317c9e0[];     // GFx::MovieDefRootNode
 extern const void* DAT_14317afe8[];     // empty interface (0x1424e2e70)
+#ifdef MS2_HOOK_DLL
 extern const void* DAT_14317b750[];     // VMAbcFile
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" const void* __identifier("??_7VMAbcFile@AS3@GFx@Scaleform@@6B@")[];     // VMAbcFile
+#define DAT_14317b750 __identifier("??_7VMAbcFile@AS3@GFx@Scaleform@@6B@")
+#endif
+#ifdef MS2_HOOK_DLL
 extern const void* DAT_14317bde0[];     // ASMovieRootBase
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" const void* __identifier("??_7ASMovieRootBase@GFx@Scaleform@@6B@")[];     // ASMovieRootBase
+#define DAT_14317bde0 __identifier("??_7ASMovieRootBase@GFx@Scaleform@@6B@")
+#endif
 //
 //
 extern const void* DAT_14317d8a8[];     // ASVM::AbcFileWithMovieDef
+#ifdef MS2_HOOK_DLL
 extern const void* DAT_14317d8c0[];     // AS3::MovieDefRootNode
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" const void* __identifier("??_7MovieDefRootNode@AS3@GFx@Scaleform@@6B@")[];     // AS3::MovieDefRootNode
+#define DAT_14317d8c0 __identifier("??_7MovieDefRootNode@AS3@GFx@Scaleform@@6B@")
+#endif
 extern const void* DAT_14317de60[];     // AvmLoader
 extern const void* DAT_14317e228[];     // AvmLoader +0x18
 extern const void* DAT_14317e330[];     // AvmLoader +0x140
