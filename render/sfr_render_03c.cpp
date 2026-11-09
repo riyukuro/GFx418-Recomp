@@ -801,9 +801,3 @@ void TreeRoot::SetViewport(const Viewport& vp)
 // MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x14261b8b0
 // MS2-PIN: ??_GTreeCacheContainer@Render@Scaleform@@UEAAPEAXI@Z 0x14261b970
 
-// gfx_rendertree.h keeps NodeData's pVTable as a data member and declares the TreeContainer::NodeData vftable as an
-// extern array (the player stores it by name); bind it to the vftable this unit emits and pins.
-// The hook DLL binds these names to the exe by their symbols rows (a second /alternatename would conflict).
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:?TreeContainerNodeDataVTable@Render@Scaleform@@3QBQEBXB=??_7NodeData@TreeContainer@Render@Scaleform@@6B@")
-#endif

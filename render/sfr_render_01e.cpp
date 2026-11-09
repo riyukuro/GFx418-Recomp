@@ -201,8 +201,6 @@ extern "C" void* __identifier("??0Audio@GFx@Scaleform@@QEAA@PEAVSoundRenderer@So
     return self;
 }
 #ifndef MS2_HOOK_DLL
-// the Audio ctor (0x142591be0): callers that construct GFx::Audio by name bind here
-#pragma comment(linker, "/alternatename:??0Audio@GFx@Scaleform@@QEAA@PEAVSoundRenderer@Sound@2@MIW4SyncTypeFlags@AudioBase@12@@Z=?FUN_142591be0@GFx@Scaleform@@YAPEAXPEAX0MII@Z")
 #endif
 
 // @0x142591c90

@@ -24,6 +24,14 @@
 #include "../render/render_matrix4x4.h"
 #include "../render/render_states.h"
 
+#ifndef MS2_HOOK_DLL
+// The vftables the inline NodeData constructors store (see below), by their real names. C names, so at global scope.
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void (*const __identifier("??_7NodeData@TreeContainer@Render@Scaleform@@6B@")[])();
+#define MS2_TreeContainerNodeDataVTable ((const void* const*)__identifier("??_7NodeData@TreeContainer@Render@Scaleform@@6B@"))
+extern "C" void (*const __identifier("??_7NodeData@TreeShape@Render@Scaleform@@6B@")[])();
+#define MS2_TreeShapeNodeDataVTable ((const void* const*)__identifier("??_7NodeData@TreeShape@Render@Scaleform@@6B@"))
+#endif
 namespace Scaleform { namespace Render {
 
 class TreeCacheNode;
@@ -352,7 +360,10 @@ public:
 
 // The TreeContainer::NodeData vftable (0x143183280): the constructor below stores it the way the inlined
 // constructor of the render tree does.
+#ifdef MS2_HOOK_DLL
 extern const void* const TreeContainerNodeDataVTable[];
+#define MS2_TreeContainerNodeDataVTable Scaleform::Render::TreeContainerNodeDataVTable
+#endif
 
 class TreeContainer : public TreeNode
 {
@@ -362,19 +373,19 @@ public:
     public:
         NodeData() : TreeNode::NodeData(ET_Container)
         {
-            pVTable = TreeContainerNodeDataVTable;
+            pVTable = MS2_TreeContainerNodeDataVTable;
             Children.pNodes[0] = Children.pNodes[1] = 0;
         }
         // (appended, sfr_gfx_01i) the root's node data is a container of another entry type
         explicit NodeData(EntryType type) : TreeNode::NodeData(type)
         {
-            pVTable = TreeContainerNodeDataVTable;
+            pVTable = MS2_TreeContainerNodeDataVTable;
             Children.pNodes[0] = Children.pNodes[1] = 0;
         }
         // (appended, sfr_gfx_01i) the vftable is in place before the children are copied (inlined into the
         // TreeRoot::NodeData copy, 0x14256a630)
         NodeData(const NodeData& src)
-            : TreeNode::NodeData(src), Children((pVTable = TreeContainerNodeDataVTable, src.Children))
+            : TreeNode::NodeData(src), Children((pVTable = MS2_TreeContainerNodeDataVTable, src.Children))
         {
         }
         NodeData& operator=(const NodeData& src);   // the member-wise copy, out of line in sfr_render_03c
@@ -395,7 +406,10 @@ public:
 class ShapeMeshProvider;
 
 // The TreeShape::NodeData vftable (0x14317bc40), stored the way the inlined constructor does.
+#ifdef MS2_HOOK_DLL
 extern const void* const TreeShapeNodeDataVTable[];
+#define MS2_TreeShapeNodeDataVTable Scaleform::Render::TreeShapeNodeDataVTable
+#endif
 
 class TreeShape : public TreeNode
 {
@@ -405,7 +419,7 @@ public:
     public:
         NodeData() : TreeNode::NodeData(ET_Shape)
         {
-            pVTable       = TreeShapeNodeDataVTable;
+            pVTable       = MS2_TreeShapeNodeDataVTable;
             pMeshProvider = 0;
             MorphRatio    = 0;
         }

@@ -70,7 +70,14 @@ void FUN_1424dcc30(void* p);
 void FUN_1424dcdd0(void* p);
 void FUN_1424aa0f0(void* p);            // Text::TextFormat::~TextFormat
 namespace Scaleform { namespace GFx { namespace AS3 { class VM; class Multiname; }}}
+#ifdef MS2_HOOK_DLL
 namespace Scaleform { namespace Render { extern const void* const TreeShapeNodeDataVTable[]; }} // gfx_rendertree.h
+#define MS2_TreeShapeNodeDataVTable Scaleform::Render::TreeShapeNodeDataVTable
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void (*const __identifier("??_7NodeData@TreeShape@Render@Scaleform@@6B@")[])();
+#define MS2_TreeShapeNodeDataVTable ((const void* const*)__identifier("??_7NodeData@TreeShape@Render@Scaleform@@6B@"))
+#endif
 bool FUN_142522a60(Scaleform::GFx::AS3::VM* vm, void* file);
 
 // ArrayDataBase destructors the exe calls out of line (instantiated elsewhere)
@@ -1331,7 +1338,7 @@ void* DeleteAs3_1424e34c0(void* p, unsigned flags)
 // @0x1424e3510
 void* DeleteAs3_1424e3510(void* p, unsigned flags)
 {
-    Sfr21GVft(p, 0, Scaleform::Render::TreeShapeNodeDataVTable);
+    Sfr21GVft(p, 0, MS2_TreeShapeNodeDataVTable);
     if (char* s = static_cast<char*>(Sfr21Mem(p, 0x90)))
         (*reinterpret_cast<void (***)(void*)>(s + 0x10))[2](s + 0x10);
     Sfr21GNodeData(p);

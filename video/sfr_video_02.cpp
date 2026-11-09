@@ -3007,8 +3007,16 @@ Scaleform::Render::TreeNode::NodeData* FUN_140010ed0(
 
 namespace Scaleform { namespace Render {
 // the ContextImpl::ContextData_ImplMixin<TreeShape::NodeData, TreeNode::NodeData> vftable (0x14317bbf0)
+#ifdef MS2_HOOK_DLL
 extern const void* const TreeShapeNodeDataMixinVTable[];
+#define MS2_TreeShapeNodeDataMixinVTable Scaleform::Render::TreeShapeNodeDataMixinVTable
+#endif
 } }
+#ifndef MS2_HOOK_DLL
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void (*const __identifier("??_7?$ContextData_ImplMixin@VNodeData@TreeShape@Render@Scaleform@@V1TreeNode@34@@ContextImpl@Render@Scaleform@@6B@")[])();
+#define MS2_TreeShapeNodeDataMixinVTable ((const void* const*)__identifier("??_7?$ContextData_ImplMixin@VNodeData@TreeShape@Render@Scaleform@@V1TreeNode@34@@ContextImpl@Render@Scaleform@@6B@"))
+#endif
 
 // ContextData_ImplMixin<TreeShape::NodeData, TreeNode::NodeData>(EntryType): the base NodeData(type) ctor, then the
 // mixin vftable
@@ -3018,7 +3026,7 @@ Scaleform::Render::TreeNode::NodeData* FUN_140010ca0(
     Scaleform::Render::TreeNode::NodeData::EntryType type)
 {
     destination->Scaleform::Render::TreeNode::NodeData::NodeData(type);
-    destination->pVTable = Scaleform::Render::TreeShapeNodeDataMixinVTable;
+    destination->pVTable = MS2_TreeShapeNodeDataMixinVTable;
     return destination;
 }
 
@@ -3030,7 +3038,7 @@ Scaleform::Render::TreeNode::NodeData* FUN_140010fe0(
     Scaleform::Render::TreeNode::NodeData* destination, const Scaleform::Render::TreeNode::NodeData* source)
 {
     destination->Scaleform::Render::TreeNode::NodeData::NodeData(*source);
-    destination->pVTable = Scaleform::Render::TreeShapeNodeDataMixinVTable;
+    destination->pVTable = MS2_TreeShapeNodeDataMixinVTable;
     return destination;
 }
 
@@ -3070,7 +3078,7 @@ Scaleform::Render::TreeShape::NodeData* FUN_140011170(
     // The exe copy-constructs the base snapshot (0x1424d9220), then stores the TreeShape vftable.
     destination->Scaleform::Render::TreeNode::NodeData::NodeData(
         *static_cast<const Scaleform::Render::TreeNode::NodeData*>(source));   // in place, no null check
-    destination->pVTable = Scaleform::Render::TreeShapeNodeDataVTable;
+    destination->pVTable = MS2_TreeShapeNodeDataVTable;
     void* provider = *reinterpret_cast<void* const*>(reinterpret_cast<const unsigned char*>(source) + 0x90);
     if (provider) {
         void* refBase = static_cast<unsigned char*>(provider) + 0x10;
@@ -3100,7 +3108,7 @@ Scaleform::Render::TreeShape::NodeData* FUN_140011010(
     // The exe runs the base NodeData(ET_Shape) ctor (0x1424d9310) in place, no null check, then stores the TreeShape
     // vftable, then the provider and morph ratio.
     destination->Scaleform::Render::TreeNode::NodeData::NodeData(Scaleform::Render::ContextImpl::EntryData::ET_Shape);
-    destination->pVTable = Scaleform::Render::TreeShapeNodeDataVTable;
+    destination->pVTable = MS2_TreeShapeNodeDataVTable;
     typedef Scaleform::Ptr<Scaleform::Render::ShapeMeshProvider> ProviderPtr;
     reinterpret_cast<ProviderPtr*>(reinterpret_cast<unsigned char*>(destination) + 0x90)->ProviderPtr::Ptr(
         static_cast<Scaleform::Render::ShapeMeshProvider*>(provider));
@@ -3120,7 +3128,7 @@ Scaleform::Render::TreeShape::NodeData* FUN_1400111d0(
 void FUN_140011070(Scaleform::Render::TreeShape::NodeData* node)
 {
     typedef Scaleform::Ptr<Scaleform::Render::ShapeMeshProvider> ProviderPtr;
-    node->pVTable = Scaleform::Render::TreeShapeNodeDataVTable;
+    node->pVTable = MS2_TreeShapeNodeDataVTable;
     reinterpret_cast<ProviderPtr*>(reinterpret_cast<unsigned char*>(node) + 0x90)->~ProviderPtr();
     if (*reinterpret_cast<void**>(reinterpret_cast<char*>(node) + 0x40))
         static_cast<Scaleform::Render::Video02StateDataAccess*>(static_cast<void*>(reinterpret_cast<char*>(node) + 0x40))->destroyBag_NotEmpty();
@@ -3800,7 +3808,7 @@ Ptr<Render::TreeNode> Video02Character::CreateRenderNode(Render::ContextImpl::Co
     unsigned char* providerBase = shape + 0x10;
     if (nodeData) {
         reinterpret_cast<TreeNode::NodeData*>(nodeData)->TreeNode::NodeData::NodeData(static_cast<ContextImpl::EntryData::EntryType>(3));
-        *reinterpret_cast<const void* const**>(nodeData) = TreeShapeNodeDataVTable;
+        *reinterpret_cast<const void* const**>(nodeData) = MS2_TreeShapeNodeDataVTable;
         reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(providerBase))[1])(providerBase);
         *reinterpret_cast<void**>(nodeData + 0x90) = shape;
         *reinterpret_cast<float*>(nodeData + 0x98) = 0.0f;

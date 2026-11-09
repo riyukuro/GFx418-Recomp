@@ -28,7 +28,13 @@ static __declspec(noinline) bool SetThunkNamespaces(const void* table, UPInt off
 }}} // namespace Scaleform::GFx::AS3
 
 struct Sd_143a2a8b0; extern Sd_143a2a8b0 DAT_143a2a8b0;        // Object's AS3 methods. The exe reaches it as DateMonthNames+0x60; fullexe does not keep them adjacent
+#ifdef MS2_HOOK_DLL
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_143a2aab0[];   // Function prototype, then the fl class tables
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" const Scaleform::GFx::AS3::ThunkInfo __identifier("?DAT_143a2aab0@@3USd_143a2aab0@@A")[];   // Function prototype, then the fl class tables
+#define DAT_143a2aab0 __identifier("?DAT_143a2aab0@@3USd_143a2aab0@@A")
+#endif
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_143a2d220[];   // Proxy (callProperty ..)
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_143a2d5c0[];   // the Object methods of a class object
 extern "C" unsigned char DAT_143a2dd50[];                       // ... the fl_vec Vector tables

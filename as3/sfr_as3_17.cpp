@@ -6716,7 +6716,7 @@ ContextImpl::EntryData* Sfr33ShapeDataConstructCopy(const TreeShape::NodeData* s
     ContextImpl::ConstructCopyCalls++;
     TreeShape::NodeData* p = static_cast<TreeShape::NodeData*>(heap.Alloc(sizeof(TreeShape::NodeData)));
     new (p) TreeNode::NodeData(*self);
-    p->pVTable = TreeShapeNodeDataVTable;
+    p->pVTable = MS2_TreeShapeNodeDataVTable;
     if (self->pMeshProvider)
         self->pMeshProvider->AddRef();
     p->pMeshProvider = self->pMeshProvider;

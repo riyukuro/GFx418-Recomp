@@ -2559,10 +2559,6 @@ typedef HashSetBase<const void*, FixedSizeHash<const void*>, FixedSizeHash<const
                     HashsetCachedEntry<const void*, FixedSizeHash<const void*> > > MS2_ObjPtrSet;
 // @0x1424d2890
 template void MS2_ObjPtrSet::add<const void*>(void*, const void* const&, UPInt);
-// sfr_as3_19's AllocatorGH set calls its own add<const void*>; the exe folds that instance with this one.
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:??$add@PEBX@?$HashSetBase@PEBXV?$FixedSizeHash@PEBX@Scaleform@@V12@U?$AllocatorGH@PEBX$01@2@V?$HashsetCachedEntry@PEBXV?$FixedSizeHash@PEBX@Scaleform@@@2@@Scaleform@@AEAAXPEAXAEBQEBX_K@Z=??$add@PEBX@?$HashSetBase@PEBXV?$FixedSizeHash@PEBX@Scaleform@@V12@U?$AllocatorDH@PEBX$01@2@V?$HashsetCachedEntry@PEBXV?$FixedSizeHash@PEBX@Scaleform@@@2@@Scaleform@@AEAAXPEAXAEBQEBX_K@Z")
-#endif
 // A number formatted on its own ("{0}").
 // @0x1424d2410
 template String AsString<double>(const double&);
@@ -4146,11 +4142,6 @@ extern "C" void* __identifier("??0MovieRoot@AS3@GFx@Scaleform@@QEAA@PEAVMemoryCo
     b[0x6e1] = 0;
     return self;
 }
-// The AS3 support constructs the movie root by its real name; bind it to this body. The hook DLL binds the name to
-// the exe by its symbols row (a second /alternatename would conflict).
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:??0MovieRoot@AS3@GFx@Scaleform@@QEAA@PEAVMemoryContextImpl@123@PEAVMovieImpl@23@PEAVASSupport@23@@Z=?FUN_1424d8640@AS3@GFx@Scaleform@@YAPEAXPEAXPEAVMemoryContextImpl@123@PEAVMovieImpl@23@PEAVASSupport@23@@Z")
-#endif
 // ---- Tracer constructor ----
 struct Sfr30ArrV
 {

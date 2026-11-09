@@ -6179,7 +6179,13 @@ namespace Instances { namespace fl
 }} // namespace Instances::fl
 }}} // namespace Scaleform::GFx::AS3
 
+#ifdef MS2_HOOK_DLL
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_143a2aab0[3];   // the Function prototype methods added to its traits
+#else
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" const Scaleform::GFx::AS3::ThunkInfo __identifier("?DAT_143a2aab0@@3USd_143a2aab0@@A")[3];
+#define DAT_143a2aab0 __identifier("?DAT_143a2aab0@@3USd_143a2aab0@@A")
+#endif
 
 namespace Scaleform { namespace GFx { namespace AS3
 {

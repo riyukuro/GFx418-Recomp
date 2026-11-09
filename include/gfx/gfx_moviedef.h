@@ -816,6 +816,11 @@ struct ResourceBindData
 };
 
 // Index -> resource table of a MovieDefImpl. Once Frozen it is read without the lock (0x50 bytes).
+#ifndef MS2_HOOK_DLL
+class ResourceBinding;
+#pragma warning(disable : 4483)   // __identifier("<mangled name>")
+extern "C" void __identifier("?GetResourceData_Locked@ResourceBinding@GFx@Scaleform@@QEBAXPEAUResourceBindData@23@I@Z")(const ResourceBinding*, ResourceBindData*, unsigned);
+#endif
 class ResourceBinding
 {
     MemoryHeap*                pHeap;          // +0
@@ -848,7 +853,11 @@ public:
         if (Frozen && (index < ResourceCount))
             *pdata = pResources[index];
         else
+#ifdef MS2_HOOK_DLL
             FUN_142636720(pdata, index);
+#else
+            __identifier("?GetResourceData_Locked@ResourceBinding@GFx@Scaleform@@QEBAXPEAUResourceBindData@23@I@Z")(this, pdata, index);
+#endif
     }
     void FUN_142636720(ResourceBindData* pdata, unsigned index) const; // GetResourceData_Locked
 

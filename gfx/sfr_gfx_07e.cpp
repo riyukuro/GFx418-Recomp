@@ -248,10 +248,6 @@ void ResourceBinding::GetResourceData_Locked(ResourceBindData* pdata, unsigned i
     Lock::Locker lock(&ResourceLock);
     *pdata = (index < ResourceCount) ? pResources[index] : ResourceBindData();
 }
-// gfx_moviedef.h's GetResourceData_Opaque calls this as FUN_142636720 (kept unknown to cl), bound here.
-#ifndef MS2_HOOK_DLL
-#pragma comment(linker, "/alternatename:?FUN_142636720@ResourceBinding@GFx@Scaleform@@QEBAXPEAUResourceBindData@23@I@Z=?GetResourceData_Locked@ResourceBinding@GFx@Scaleform@@QEBAXPEAUResourceBindData@23@I@Z")
-#endif
 
 // The table grows in steps of 16 entries.
 // @0x142636820
