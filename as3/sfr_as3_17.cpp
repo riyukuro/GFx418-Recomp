@@ -8142,3 +8142,5 @@ const char* FUN_142508980(Scaleform::UPInt) { return "flash.text.TextField"; }
 // @0x142508990
 const char* FUN_142508990(Scaleform::UPInt) { return "flash.display.Shape"; }
 // MS2-PIN: ??__Ff@?1??GetFile@Sfr33NullFileLoader@AS3@GFx@Scaleform@@UEAAAEBV?$Ptr@VFile@Abc@AS3@GFx@Scaleform@@@4@_K@Z@YAXXZ 0x142cc92b0
+// MS2-PIN: ??_7FunctionBase@Instances@AS3@GFx@Scaleform@@6B@ 0x14313f8f8
+// MS2-PIN: ??_7UserDefinedFunction@AS3@GFx@Scaleform@@6B@ 0x14317ef38

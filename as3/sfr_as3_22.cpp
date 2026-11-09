@@ -4635,3 +4635,4 @@ template void Scaleform::ArrayDataBase<Scaleform::Ptr<Scaleform::GFx::AMP::Image
 template void Scaleform::ArrayDataBase<Scaleform::Ptr<Scaleform::GFx::AMP::MovieProfile>, Scaleform::AllocatorLH<Scaleform::Ptr<Scaleform::GFx::AMP::MovieProfile>, Scaleform::Stat_Default_Mem>, Scaleform::ArrayDefaultPolicy>::Reserve(const void* pheapAddr, Scaleform::UPInt newCapacity);
 // MS2-PIN: ?Reserve@?$ArrayDataBase@V?$Ptr@UImageInfo@AMP@GFx@Scaleform@@@Scaleform@@U?$AllocatorLH@V?$Ptr@UImageInfo@AMP@GFx@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x14268e4c0
 // MS2-PIN: ?Reserve@?$ArrayDataBase@V?$Ptr@UMovieProfile@AMP@GFx@Scaleform@@@Scaleform@@U?$AllocatorLH@V?$Ptr@UMovieProfile@AMP@GFx@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x14268e560
+// MS2-PIN: ??_7AuxStreamer@SoundRenderer@Sound@Scaleform@@6B@ 0x1431b80b8
