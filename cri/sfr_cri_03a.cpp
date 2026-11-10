@@ -139,7 +139,7 @@ void FUN_140053570(void*);
 void FUN_140050e90(void*);
 void FUN_140053e40(void*);
 unsigned int FUN_1400472c0(unsigned char const *, unsigned int);  // C3: the definition's signature
-Unk_CriUtfTable * FUN_140046e04(Unk_CriUtfTable *, void *, void *, Unk_CriUtfColumn *, void *, unsigned char const *, unsigned int, Unk_CriUtfInit const *, unsigned int);  // C3: the definition's signature
+Unk_CriUtfTable * ParseUtfTable(Unk_CriUtfTable *, void *, void *, Unk_CriUtfColumn *, void *, unsigned char const *, unsigned int, Unk_CriUtfInit const *, unsigned int);  // C3: the definition's signature
 const CriChar8* criUtfRtv_GetDataStr(const CriUtfRtvView*, CriUint32, CriUint32);
 extern "C" CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8*, CriUint32, CriUsfStandardHeader*);
 // CriUsfStandardHeader read through its parsed fields. The exe's header local is not a byte buffer (no /GS cookie).
@@ -558,7 +558,7 @@ void* criUtfRtv_CreateByUtfHeapWithHeapType(void* callbackBlock, CriUint32 alloc
 
     memset(rawRecords, 0, recordsSize);
     CriUint8* records = (size_t)rawRecords % 0x10 ? rawRecords - (size_t)rawRecords % 0x10 + 0x10 : rawRecords;
-    if (!FUN_140046e04((Unk_CriUtfTable *)table, rawTable, (void*)(size_t)fieldCount, (Unk_CriUtfColumn*)records, rawRecords,
+    if (!ParseUtfTable((Unk_CriUtfTable *)table, rawTable, (void*)(size_t)fieldCount, (Unk_CriUtfColumn*)records, rawRecords,
                        (const unsigned char*)data, size,
                        (const Unk_CriUtfInit*)callbackBlock, allocationMode))
     {

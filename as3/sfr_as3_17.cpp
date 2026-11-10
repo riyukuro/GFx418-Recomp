@@ -1188,7 +1188,7 @@ extern "C" const void* DAT_14317ef38[];      // UserDefinedFunction vftable
 extern "C" void (*const __identifier("??_7UserDefinedFunction@AS3@GFx@Scaleform@@6B@")[])();      // UserDefinedFunction vftable
 #define DAT_14317ef38 ((const void**)__identifier("??_7UserDefinedFunction@AS3@GFx@Scaleform@@6B@"))
 #endif
-int FUN_140ccaae0(const char* fmt, ...);   // log printf
+int Printf(const char* fmt, ...);   // log printf
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1333,7 +1333,7 @@ void Sfr33MovieRoot::CreateObject(GFx::Value* pvalue, const char* className, con
     }
     else
     {
-        FUN_140ccaae0("Exception in CreateObject(\"%s\"):\n\t", className);
+        Printf("Exception in CreateObject(\"%s\"):\n\t", className);
         VM* vm = *reinterpret_cast<VM**>(reinterpret_cast<UByte*>(this) + 0x48);
         vm->HandleException = false;
         vm->OutputError(vm->ExceptionObj);

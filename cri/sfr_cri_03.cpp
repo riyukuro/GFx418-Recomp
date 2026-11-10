@@ -155,7 +155,7 @@ void FUN_140053570(__int64);  // C3: the definition's signature
 void MPV_RequestStop(__int64); // C3: the definition's signature
 void criAdec_TerminateSupply(__int64); // C3: the definition's signature
 CriUint32 FUN_1400472c0(const CriUint8*, CriUint32);
-void* FUN_140046e04(void*, void*, CriUint32, void*, void*, const void*, CriUint32, void*, CriUint32);
+void* ParseUtfTable(void*, void*, CriUint32, void*, void*, const void*, CriUint32, void*, CriUint32);
 const CriChar8* criUtfRtv_GetDataStr(const CriUtfRtvView*, CriUint32, CriUint32);
 extern "C" CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8*, CriUint32, CriUsfStandardHeader*);
 // CriUsfStandardHeader read through its parsed fields. The exe's header local is not a byte buffer (no /GS cookie).

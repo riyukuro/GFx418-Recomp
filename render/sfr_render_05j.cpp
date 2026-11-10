@@ -28,7 +28,7 @@
 #include <string.h>
 
 // the CRT printf the pattern check reports through
-int FUN_140ccaae0(const char* fmt, ...);
+int Printf(const char* fmt, ...);
 
 namespace Scaleform { namespace Render {
 class TreeCacheNode;
@@ -1433,13 +1433,13 @@ void VerifyPattern(BundleEntryRange& pattern)
         BundleEntry*   chain     = ientry.GetEntry();
         TreeCacheNode* cacheNode = ientry->pSourceNode;
         if (!cacheNode->pRoot)
-            FUN_140ccaae0("Null pRoot in %p - %p node\n", ientry.GetEntry(), cacheNode);
+            Printf("Null pRoot in %p - %p node\n", ientry.GetEntry(), cacheNode);
 
         unsigned chainCount = 0;
         while (chain->pChain)
         {
             if (!chain->pSourceNode->pRoot)
-                FUN_140ccaae0("Null pRoot in %p - %p node - at chain loop %d\n", ientry.GetEntry(),
+                Printf("Null pRoot in %p - %p node - at chain loop %d\n", ientry.GetEntry(),
                               ientry->pSourceNode, chainCount);
             chain = chain->pChain;
             chainCount++;
@@ -1447,13 +1447,13 @@ void VerifyPattern(BundleEntryRange& pattern)
 
         if (ientry.GetEntry() != pattern.GetLast() && !ientry->HasNextPattern())
         {
-            FUN_140ccaae0("Frame %d: Null NextPattern after %p, count = %d\n", BundlePatternFrameId,
+            Printf("Frame %d: Null NextPattern after %p, count = %d\n", BundlePatternFrameId,
                           ientry.GetEntry(), count);
             TreeCacheNode* parent = cacheNode->GetParent();
-            FUN_140ccaae0("SourceNode = %p, parent = %p\n", cacheNode, parent);
+            Printf("SourceNode = %p, parent = %p\n", cacheNode, parent);
             while (parent)
             {
-                FUN_140ccaae0("%p Depth = %d\n", parent, parent->Depth);
+                Printf("%p Depth = %d\n", parent, parent->Depth);
                 parent = parent->GetParent();
             }
         }
