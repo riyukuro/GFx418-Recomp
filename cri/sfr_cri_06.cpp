@@ -520,7 +520,7 @@ extern "C" void* DAT_143fe8248;
 extern "C" void* DAT_143fe8250;
 void FUN_140054100(char *ctx);  // C3: the 05c definition, whose address is stored as the decode callback
 
-int FUN_140047750(Unk_M2vCtx *);  // C3: the definition's signature
+int SelectM2vContext(Unk_M2vCtx *);  // C3: the definition's signature
 void FUN_1400479e0();
 void CFT_Ycc420plnToArgb8888Init();
 void FUN_14004de60(__int64);  // C3: the definition's signature
@@ -1699,7 +1699,7 @@ cri_u4 FUN_140059030(cri_u8 arg1, cri_u8 arg2)
   int i_v1;
   uint u_v2;
   
-  i_v1 = FUN_140047750((Unk_M2vCtx *)arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
+  i_v1 = SelectM2vContext((Unk_M2vCtx *)arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
   if (i_v1 != 0) {
     return FUN_14005af30(0,0xff05020c);
   }
@@ -2609,7 +2609,7 @@ void FUN_14005af70(longlong arg1, cri_u8 arg2, cri_u8 arg3)
 {
   int i_v1;
   
-  i_v1 = FUN_140047750((Unk_M2vCtx *)arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
+  i_v1 = SelectM2vContext((Unk_M2vCtx *)arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
   if (i_v1 != 0) {
     FUN_14005af30(0,0xff050203);
     return;
@@ -2624,7 +2624,7 @@ void FUN_14005afd0(longlong arg1, cri_u8 *arg2)
 {
   int i_v1;
   
-  i_v1 = FUN_140047750((Unk_M2vCtx *)arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
+  i_v1 = SelectM2vContext((Unk_M2vCtx *)arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
   if (i_v1 != 0) {
     FUN_14005af30(0,0xff050204);
     return;
@@ -2821,7 +2821,7 @@ void FUN_14005b300(cri_u8 arg1, cri_u8 arg2)
   uint u_v2;
   cri_u8 u_v3;
   
-  i_v1 = FUN_140047750((Unk_M2vCtx *)arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
+  i_v1 = SelectM2vContext((Unk_M2vCtx *)arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
   if (i_v1 != 0) {
     FUN_14005af30(0,0xff05020a);
     return;
@@ -2852,7 +2852,7 @@ void FUN_14005b390(longlong arg1, cri_u8 arg2, void *arg3)
   ulonglong u_v6;
   int i_v7;
 
-  if (FUN_140047750((Unk_M2vCtx *)arg1) != 0) {  // the exe passes rcx through (the handle check returns -1 for 0)
+  if (SelectM2vContext((Unk_M2vCtx *)arg1) != 0) {  // the exe passes rcx through (the handle check returns -1 for 0)
     FUN_14005af30(0,0xff050209);
     return;
   }
@@ -3066,7 +3066,7 @@ void FUN_14005b860(longlong arg1)
 {
   int i_v1;
   
-  i_v1 = FUN_140047750((Unk_M2vCtx *)arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
+  i_v1 = SelectM2vContext((Unk_M2vCtx *)arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
   if (i_v1 != 0) {
     FUN_14005af30(0,0xff050210);
     return;
@@ -4713,7 +4713,7 @@ void FUN_14005e5b0(longlong arg1, void *arg2)
 {
   int i_v1;
   
-  i_v1 = FUN_140047750((Unk_M2vCtx *)arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
+  i_v1 = SelectM2vContext((Unk_M2vCtx *)arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
   if (i_v1 != 0) {
     FUN_14005af30(0,0xff05020c);
     return;
@@ -4727,7 +4727,7 @@ void FUN_14005e600(longlong arg1, cri_u4 *arg2)
 {
   int i_v1;
   
-  i_v1 = FUN_140047750((Unk_M2vCtx *)arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
+  i_v1 = SelectM2vContext((Unk_M2vCtx *)arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
   if (i_v1 != 0) {
     FUN_14005af30(0,0xff05020d);
     return;
@@ -4741,7 +4741,7 @@ void FUN_14005e650(longlong arg1, int *arg2, cri_u4 *arg3, cri_u4 *arg4)
 {
   int i_v1;
   
-  i_v1 = FUN_140047750((Unk_M2vCtx *)arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
+  i_v1 = SelectM2vContext((Unk_M2vCtx *)arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
   if (i_v1 != 0) {
     FUN_14005af30(0,0xff05020f);
   }
@@ -4758,7 +4758,7 @@ void FUN_14005e6c0(longlong arg1, cri_u4 *arg2, cri_u4 *arg3)
 {
   int i_v1;
   
-  i_v1 = FUN_140047750((Unk_M2vCtx *)arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
+  i_v1 = SelectM2vContext((Unk_M2vCtx *)arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
   if (i_v1 != 0) {
     FUN_14005af30(0,0xff05020e);
     return;

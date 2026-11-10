@@ -495,7 +495,7 @@ extern "C" void* DAT_143fe8248;
 extern "C" void* DAT_143fe8250;
 extern "C" cri_u1 LAB_140054100;
 
-cri_u8 FUN_140047750(cri_any = cri_any());
+cri_u8 SelectM2vContext(cri_any = cri_any());
 void FUN_1400479e0();
 void CFT_Ycc420plnToArgb8888Init();
 void FUN_14004de60(cri_any = cri_any());

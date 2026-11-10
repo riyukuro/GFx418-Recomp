@@ -127,7 +127,7 @@ void FUN_140040cc0(void*, CriUint32, CriSint32*, CriSint32*);
 void criErr_NotifyGeneric(CriSint32, const char*, CriSint32);
 void criErr_NotifyPrmArray(CriSint32, const char*, CriSint32, CriSint32, void*);
 extern "C" void FUN_140041110(void*, const char*, CriUint32);
-void FUN_140046d50(void*, CriSint32);
+void DestroySortIndex(void*, CriSint32);
 void FUN_140053570(void*);
 void FUN_140050e90(void*);
 void FUN_140053e40(void*);
@@ -423,7 +423,7 @@ void FUN_1400469c4(void* string, const CriChar8* format, ...)
 }
 #pragma optimize("", on)
 
-void FUN_1400478a0(void);
+void RegisterM2vDecoderFunctions(void);
 void CFT_Ycc420plnToArgb8888Init(void);
 void FUN_1400479e0(void);
 void criMovieDecoderCore_FourceLinkVersionInfo(void);
